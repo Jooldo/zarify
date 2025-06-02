@@ -5,10 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Package, Calendar, Phone, User } from 'lucide-react';
 
 const OrderDetails = ({ order }) => {
-  const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [suborderStatuses, setSuborderStatuses] = useState(
+    order.suborders.reduce((acc, sub) => ({
+      ...acc,
+      [sub.id]: sub.status
+    }), {})
+  );
 
   const statusOptions = [
     "Pending",
@@ -38,10 +44,21 @@ const OrderDetails = ({ order }) => {
     }
   };
 
-  const handleStatusUpdate = (newStatus) => {
-    setCurrentStatus(newStatus);
-    // Here you would typically make an API call to update the status
-    console.log(`Updating order ${order.id} status to: ${newStatus}`);
+  const handleSuborderStatusUpdate = (suborderId, newStatus) => {
+    setSuborderStatuses(prev => ({
+      ...prev,
+      [suborderId]: newStatus
+    }));
+    console.log(`Updating suborder ${suborderId} status to: ${newStatus}`);
+  };
+
+  const getOverallStatus = () => {
+    const statuses = Object.values(suborderStatuses);
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.some(s => s === "Dispatched")) return "Dispatched";
+    if (statuses.some(s => s === "Ready for Dispatch")) return "Ready for Dispatch";
+    if (statuses.some(s => s === "In Manufacturing")) return "In Manufacturing";
+    return "Pending";
   };
 
   return (
@@ -52,8 +69,8 @@ const OrderDetails = ({ order }) => {
           <h2 className="text-2xl font-bold">{order.id}</h2>
           <p className="text-gray-600">Order Details</p>
         </div>
-        <Badge variant={getStatusColor(currentStatus)} className="text-sm px-3 py-1">
-          {currentStatus}
+        <Badge variant={getStatusColor(getOverallStatus())} className="text-sm px-3 py-1">
+          Overall: {getOverallStatus()}
         </Badge>
       </div>
 
@@ -85,76 +102,89 @@ const OrderDetails = ({ order }) => {
         </CardContent>
       </Card>
 
-      {/* Order Items */}
+      {/* Suborders Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Order Items
+            Suborders
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {order.items.map((item, index) => (
-              <div key={index} className="border rounded-lg p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                  <div>
-                    <p className="text-sm text-gray-600">Category</p>
-                    <p className="font-medium">{item.category}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Subcategory</p>
-                    <p className="font-medium">{item.subcategory}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Size</p>
-                    <p className="font-medium">{item.size}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Quantity</p>
-                    <p className="font-medium">{item.quantity} pieces</p>
-                  </div>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Item Total:</span>
-                  <span className="font-medium">₹{item.price.toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Suborder ID</TableHead>
+                <TableHead>Product Type</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Update Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {order.suborders.map((suborder) => (
+                <TableRow key={suborder.id}>
+                  <TableCell className="font-medium text-blue-600">{suborder.id}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">{suborder.subcategory}</div>
+                      <div className="text-gray-500">{suborder.category} - {suborder.size}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{suborder.quantity} pieces</TableCell>
+                  <TableCell className="font-medium">₹{suborder.price.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusColor(suborderStatuses[suborder.id])}>
+                      {suborderStatuses[suborder.id]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 items-center">
+                      <Select
+                        value={suborderStatuses[suborder.id]}
+                        onValueChange={(value) => handleSuborderStatusUpdate(suborder.id, value)}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           
           <Separator className="my-4" />
           
           <div className="flex justify-between items-center text-lg font-bold">
-            <span>Total Amount:</span>
+            <span>Total Order Amount:</span>
             <span>₹{order.totalAmount.toLocaleString()}</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Status Update */}
+      {/* Bulk Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Update Status</CardTitle>
+          <CardTitle>Bulk Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-center">
-            <Select value={currentStatus} onValueChange={handleStatusUpdate}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Button>
               <Edit className="h-4 w-4 mr-2" />
-              Update Order
+              Update All Suborders
+            </Button>
+            <Button variant="outline">
+              Print Order Details
             </Button>
           </div>
         </CardContent>

@@ -19,46 +19,109 @@ const OrdersTab = () => {
       id: "ORD-001",
       customer: "Priya Sharma",
       phone: "+91 98765 43210",
-      status: "In Manufacturing",
       totalAmount: 2400,
-      items: [
-        { category: "Traditional", subcategory: "Meena Work", size: "0.25m", quantity: 2, price: 800 },
-        { category: "Traditional", subcategory: "Kundan Work", size: "0.30m", quantity: 1, price: 1600 }
-      ],
       createdDate: "2024-06-01",
-      expectedDelivery: "2024-06-10"
+      expectedDelivery: "2024-06-10",
+      suborders: [
+        {
+          id: "SUB-001-1",
+          category: "Traditional",
+          subcategory: "Meena Work",
+          size: "Medium (0.25m)",
+          quantity: 2,
+          price: 800,
+          status: "In Manufacturing"
+        },
+        {
+          id: "SUB-001-2", 
+          category: "Traditional",
+          subcategory: "Kundan Work",
+          size: "Large (0.30m)",
+          quantity: 1,
+          price: 1600,
+          status: "Pending"
+        }
+      ]
     },
     {
       id: "ORD-002",
-      customer: "Anjali Patel", 
-      phone: "+91 87654 32109",
-      status: "Ready for Dispatch",
+      customer: "Anjali Patel",
+      phone: "+91 87654 32109", 
       totalAmount: 1800,
-      items: [
-        { category: "Modern", subcategory: "Silver Chain", size: "0.20m", quantity: 2, price: 900 }
-      ],
       createdDate: "2024-05-28",
-      expectedDelivery: "2024-06-05"
+      expectedDelivery: "2024-06-05",
+      suborders: [
+        {
+          id: "SUB-002-1",
+          category: "Modern",
+          subcategory: "Silver Chain", 
+          size: "Small (0.20m)",
+          quantity: 2,
+          price: 900,
+          status: "Ready for Dispatch"
+        }
+      ]
     },
     {
       id: "ORD-003",
       customer: "Meera Singh",
-      phone: "+91 76543 21098", 
-      status: "Pending",
-      totalAmount: 3200,
-      items: [
-        { category: "Traditional", subcategory: "Temple Style", size: "0.35m", quantity: 1, price: 1200 },
-        { category: "Traditional", subcategory: "Meena Work", size: "0.25m", quantity: 2, price: 1000 }
-      ],
+      phone: "+91 76543 21098",
+      totalAmount: 3200, 
       createdDate: "2024-06-02",
-      expectedDelivery: "2024-06-12"
+      expectedDelivery: "2024-06-12",
+      suborders: [
+        {
+          id: "SUB-003-1",
+          category: "Traditional",
+          subcategory: "Temple Style",
+          size: "Extra Large (0.35m)",
+          quantity: 1,
+          price: 1200,
+          status: "Pending"
+        },
+        {
+          id: "SUB-003-2",
+          category: "Traditional", 
+          subcategory: "Meena Work",
+          size: "Medium (0.25m)",
+          quantity: 2,
+          price: 1000,
+          status: "Pending"
+        }
+      ]
     }
   ];
 
-  const filteredOrders = orders.filter(order => 
-    order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.id.toLowerCase().includes(searchTerm.toLowerCase())
+  // Flatten orders to show suborders in table
+  const flattenedOrders = orders.flatMap(order => 
+    order.suborders.map(suborder => ({
+      ...suborder,
+      orderId: order.id,
+      customer: order.customer,
+      phone: order.phone,
+      createdDate: order.createdDate,
+      expectedDelivery: order.expectedDelivery,
+      totalOrderAmount: order.totalAmount
+    }))
   );
+
+  const filteredOrders = flattenedOrders.filter(item => 
+    item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getOverallOrderStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return "Unknown";
+    
+    const statuses = order.suborders.map(sub => sub.status);
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.some(s => s === "Dispatched")) return "Dispatched";
+    if (statuses.some(s => s === "Ready for Dispatch")) return "Ready for Dispatch";
+    if (statuses.some(s => s === "In Manufacturing")) return "In Manufacturing";
+    return "Pending";
+  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -70,6 +133,8 @@ const OrdersTab = () => {
         return "default" as const;
       case "Dispatched":
         return "outline" as const;
+      case "Delivered":
+        return "default" as const;
       default:
         return "secondary" as const;
     }
@@ -82,7 +147,7 @@ const OrdersTab = () => {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search orders by customer or order ID..."
+            placeholder="Search orders by customer, order ID, or suborder ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -104,45 +169,54 @@ const OrdersTab = () => {
         </Dialog>
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table - Now showing suborders */}
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Order ID</TableHead>
+              <TableHead>Suborder ID</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Total Amount</TableHead>
+              <TableHead>Product Type</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Suborder Status</TableHead>
+              <TableHead>Overall Order Status</TableHead>
+              <TableHead>Suborder Amount</TableHead>
+              <TableHead>Total Order Amount</TableHead>
               <TableHead>Order Date</TableHead>
               <TableHead>Expected Delivery</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOrders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium">{order.id}</TableCell>
-                <TableCell>{order.customer}</TableCell>
-                <TableCell>{order.phone}</TableCell>
+            {filteredOrders.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.orderId}</TableCell>
+                <TableCell className="font-medium text-blue-600">{item.id}</TableCell>
+                <TableCell>{item.customer}</TableCell>
+                <TableCell>{item.phone}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(order.status)}>
-                    {order.status}
+                  <div className="text-sm">
+                    <div className="font-medium">{item.subcategory}</div>
+                    <div className="text-gray-500">{item.category} - {item.size}</div>
+                  </div>
+                </TableCell>
+                <TableCell>{item.quantity} pieces</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusVariant(item.status)}>
+                    {item.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="text-sm">
-                        {item.quantity}x {item.subcategory} ({item.size})
-                      </div>
-                    ))}
-                  </div>
+                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))}>
+                    {getOverallOrderStatus(item.orderId)}
+                  </Badge>
                 </TableCell>
-                <TableCell className="font-medium">₹{order.totalAmount.toLocaleString()}</TableCell>
-                <TableCell>{new Date(order.createdDate).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(order.expectedDelivery).toLocaleDateString()}</TableCell>
+                <TableCell className="font-medium">₹{item.price.toLocaleString()}</TableCell>
+                <TableCell className="font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
+                <TableCell>{new Date(item.createdDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(item.expectedDelivery).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Dialog>
@@ -151,8 +225,11 @@ const OrdersTab = () => {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <OrderDetails order={order} />
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Order Details</DialogTitle>
+                        </DialogHeader>
+                        <OrderDetails order={orders.find(o => o.id === item.orderId)} />
                       </DialogContent>
                     </Dialog>
                     <Button variant="outline" size="sm">

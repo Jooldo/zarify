@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +24,17 @@ const CreateOrderForm = ({ onClose }) => {
     "Bridal": ["Heavy Traditional", "Designer", "Kundan Heavy", "Polki Work"]
   };
 
-  const sizes = ["0.20m", "0.25m", "0.30m", "0.35m", "0.40m"];
+  const sizes = [
+    "Small (0.20m)", 
+    "Medium (0.25m)", 
+    "Large (0.30m)", 
+    "Extra Large (0.35m)", 
+    "XXL (0.40m)"
+  ];
+
+  const generateSuborderId = (orderIndex, itemIndex) => {
+    return `SUB-${String(orderIndex).padStart(3, '0')}-${itemIndex + 1}`;
+  };
 
   const addItem = () => {
     setItems([...items, {
@@ -47,7 +56,6 @@ const CreateOrderForm = ({ onClose }) => {
     const updatedItems = items.map((item, i) => {
       if (i === index) {
         const updated = { ...item, [field]: value };
-        // Reset subcategory if category changes
         if (field === 'category') {
           updated.subcategory = '';
         }
@@ -64,18 +72,28 @@ const CreateOrderForm = ({ onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const orderIndex = Math.floor(Math.random() * 1000); // In real app, this would come from the backend
+    
+    const suborders = items.map((item, index) => ({
+      id: generateSuborderId(orderIndex, index),
+      category: item.category,
+      subcategory: item.subcategory,
+      size: item.size,
+      quantity: item.quantity,
+      price: item.price * item.quantity,
+      status: "Pending"
+    }));
+
     const orderData = {
       customer: customerName,
       phone: customerPhone,
-      items: items,
+      suborders: suborders,
       totalAmount: calculateTotal(),
-      status: "Pending",
       createdDate: new Date().toISOString().split('T')[0],
       expectedDelivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     };
     
-    console.log('Creating order:', orderData);
-    // Here you would typically make an API call to create the order
+    console.log('Creating order with suborders:', orderData);
     onClose();
   };
 
@@ -110,11 +128,11 @@ const CreateOrderForm = ({ onClose }) => {
         </CardContent>
       </Card>
 
-      {/* Order Items */}
+      {/* Order Items - Each will become a suborder */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Order Items</CardTitle>
+            <CardTitle>Order Items (Each item will create a suborder)</CardTitle>
             <Button type="button" onClick={addItem} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Item
@@ -125,7 +143,12 @@ const CreateOrderForm = ({ onClose }) => {
           {items.map((item, index) => (
             <div key={index} className="border rounded-lg p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">Item {index + 1}</h4>
+                <h4 className="font-medium">
+                  Item {index + 1} 
+                  <Badge variant="outline" className="ml-2">
+                    Suborder ID: {generateSuborderId('XXX', index)}
+                  </Badge>
+                </h4>
                 {items.length > 1 && (
                   <Button
                     type="button"
