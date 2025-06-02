@@ -17,6 +17,7 @@ const FinishedGoodsInventory = () => {
   const finishedGoods = [
     {
       id: 1,
+      productCode: "TRD-MN-25",
       category: "Traditional",
       subcategory: "Meena Work",
       size: "0.25m",
@@ -27,6 +28,7 @@ const FinishedGoodsInventory = () => {
     },
     {
       id: 2,
+      productCode: "TRD-KN-30",
       category: "Traditional",
       subcategory: "Kundan Work",
       size: "0.30m",
@@ -37,6 +39,7 @@ const FinishedGoodsInventory = () => {
     },
     {
       id: 3,
+      productCode: "MOD-SC-20",
       category: "Modern",
       subcategory: "Silver Chain",
       size: "0.20m",
@@ -47,6 +50,7 @@ const FinishedGoodsInventory = () => {
     },
     {
       id: 4,
+      productCode: "TRD-TS-35",
       category: "Traditional",
       subcategory: "Temple Style",
       size: "0.35m",
@@ -57,6 +61,7 @@ const FinishedGoodsInventory = () => {
     },
     {
       id: 5,
+      productCode: "MOD-BD-25",
       category: "Modern",
       subcategory: "Beaded",
       size: "0.25m",
@@ -67,6 +72,7 @@ const FinishedGoodsInventory = () => {
     },
     {
       id: 6,
+      productCode: "BRD-HT-40",
       category: "Bridal",
       subcategory: "Heavy Traditional",
       size: "0.40m",
@@ -83,7 +89,8 @@ const FinishedGoodsInventory = () => {
   const filteredGoods = finishedGoods.filter(item => {
     const matchesSearch = 
       item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
+      item.subcategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.productCode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesSize = sizeFilter === 'all' || item.size === sizeFilter;
     return matchesSearch && matchesCategory && matchesSize;
@@ -102,22 +109,22 @@ const FinishedGoodsInventory = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search finished goods..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-8"
             />
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by category" />
+            <SelectTrigger className="w-40 h-8">
+              <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
@@ -128,7 +135,7 @@ const FinishedGoodsInventory = () => {
             </SelectContent>
           </Select>
           <Select value={sizeFilter} onValueChange={setSizeFilter}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-28 h-8">
               <SelectValue placeholder="Size" />
             </SelectTrigger>
             <SelectContent>
@@ -142,8 +149,8 @@ const FinishedGoodsInventory = () => {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+            <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+              <Plus className="h-3 w-3" />
               Add Product
             </Button>
           </DialogTrigger>
@@ -206,44 +213,46 @@ const FinishedGoodsInventory = () => {
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Category</TableHead>
-              <TableHead>Subcategory</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Current Stock</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Average Price</TableHead>
-              <TableHead>Total Value</TableHead>
-              <TableHead>Last Produced</TableHead>
-              <TableHead>Actions</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="px-2 py-1 text-xs font-medium">Product Code</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Category</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Subcategory</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Size</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Stock</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Status</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Avg Price</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Total Value</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Last Produced</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredGoods.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.category}</TableCell>
-                <TableCell>{item.subcategory}</TableCell>
-                <TableCell>{item.size}</TableCell>
-                <TableCell>{item.currentStock} pieces</TableCell>
-                <TableCell>
-                  <Badge variant={getStockStatusVariant(item.currentStock)}>
+              <TableRow key={item.id} className="h-10">
+                <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">{item.productCode}</TableCell>
+                <TableCell className="px-2 py-1 text-xs">{item.category}</TableCell>
+                <TableCell className="px-2 py-1 text-xs">{item.subcategory}</TableCell>
+                <TableCell className="px-2 py-1 text-xs">{item.size}</TableCell>
+                <TableCell className="px-2 py-1 text-xs">{item.currentStock}</TableCell>
+                <TableCell className="px-2 py-1">
+                  <Badge variant={getStockStatusVariant(item.currentStock)} className="text-xs px-1 py-0">
                     {getStockStatusText(item.currentStock)}
                   </Badge>
                 </TableCell>
-                <TableCell>₹{item.averagePrice}</TableCell>
-                <TableCell className="font-medium">₹{item.totalValue.toLocaleString()}</TableCell>
-                <TableCell>{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
+                <TableCell className="px-2 py-1 text-xs">₹{item.averagePrice}</TableCell>
+                <TableCell className="px-2 py-1 text-xs font-medium">₹{item.totalValue.toLocaleString()}</TableCell>
+                <TableCell className="px-2 py-1 text-xs">{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
+                <TableCell className="px-2 py-1">
+                  <div className="flex gap-1">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
                           Update
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Update Stock - {item.subcategory}</DialogTitle>
+                          <DialogTitle>Update Stock - {item.productCode}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
@@ -271,8 +280,8 @@ const FinishedGoodsInventory = () => {
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                      <Edit className="h-3 w-3" />
                     </Button>
                   </div>
                 </TableCell>
@@ -283,8 +292,8 @@ const FinishedGoodsInventory = () => {
       </div>
 
       {filteredGoods.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No finished goods found matching your search criteria.</p>
+        <div className="text-center py-8">
+          <p className="text-gray-500 text-sm">No finished goods found matching your search criteria.</p>
         </div>
       )}
     </div>
