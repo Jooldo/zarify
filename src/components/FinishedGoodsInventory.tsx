@@ -1,13 +1,13 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Edit, Package } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Plus, Edit } from 'lucide-react';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,10 +89,16 @@ const FinishedGoodsInventory = () => {
     return matchesSearch && matchesCategory && matchesSize;
   });
 
-  const getStockStatus = (stock) => {
-    if (stock <= 2) return { status: "Low", variant: "destructive" };
-    if (stock <= 5) return { status: "Medium", variant: "secondary" };
-    return { status: "Good", variant: "default" };
+  const getStockStatusVariant = (stock: number) => {
+    if (stock <= 2) return "destructive" as const;
+    if (stock <= 5) return "secondary" as const;
+    return "default" as const;
+  };
+
+  const getStockStatusText = (stock: number) => {
+    if (stock <= 2) return "Low";
+    if (stock <= 5) return "Medium";
+    return "Good";
   };
 
   return (
@@ -196,139 +202,84 @@ const FinishedGoodsInventory = () => {
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-500 p-3 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold">{filteredGoods.reduce((sum, item) => sum + item.currentStock, 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-green-500 p-3 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Product Types</p>
-                <p className="text-2xl font-bold">{filteredGoods.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-purple-500 p-3 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold">₹{filteredGoods.reduce((sum, item) => sum + item.totalValue, 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredGoods.map((item) => {
-          const stockInfo = getStockStatus(item.currentStock);
-          return (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{item.subcategory}</CardTitle>
-                    <p className="text-sm text-gray-600">{item.category}</p>
-                  </div>
-                  <Badge variant={stockInfo.variant}>
-                    {stockInfo.status}
+      {/* Finished Goods Table */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Category</TableHead>
+              <TableHead>Subcategory</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Current Stock</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Average Price</TableHead>
+              <TableHead>Total Value</TableHead>
+              <TableHead>Last Produced</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredGoods.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.category}</TableCell>
+                <TableCell>{item.subcategory}</TableCell>
+                <TableCell>{item.size}</TableCell>
+                <TableCell>{item.currentStock} pieces</TableCell>
+                <TableCell>
+                  <Badge variant={getStockStatusVariant(item.currentStock)}>
+                    {getStockStatusText(item.currentStock)}
                   </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Size</p>
-                    <p className="font-medium">{item.size}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Stock</p>
-                    <p className="font-medium">{item.currentStock} pieces</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Avg Price</p>
-                    <p className="font-medium">₹{item.averagePrice}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Value</p>
-                    <p className="font-medium">₹{item.totalValue.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">Last Produced</p>
-                  <p className="text-sm">{new Date(item.lastProduced).toLocaleDateString()}</p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Update Stock
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Update Stock - {item.subcategory}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Current Stock: {item.currentStock} pieces</Label>
+                </TableCell>
+                <TableCell>₹{item.averagePrice}</TableCell>
+                <TableCell className="font-medium">₹{item.totalValue.toLocaleString()}</TableCell>
+                <TableCell>{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Update
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Update Stock - {item.subcategory}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Current Stock: {item.currentStock} pieces</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="newStock">New Stock Quantity</Label>
+                            <Input id="newStock" type="number" placeholder={item.currentStock.toString()} />
+                          </div>
+                          <div>
+                            <Label htmlFor="updateReason">Reason for Update</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select reason" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="production">New Production</SelectItem>
+                                <SelectItem value="sale">Sold/Dispatched</SelectItem>
+                                <SelectItem value="damage">Damaged/Defective</SelectItem>
+                                <SelectItem value="correction">Stock Correction</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button className="w-full">Update Stock</Button>
                         </div>
-                        <div>
-                          <Label htmlFor="newStock">New Stock Quantity</Label>
-                          <Input id="newStock" type="number" placeholder={item.currentStock.toString()} />
-                        </div>
-                        <div>
-                          <Label htmlFor="updateReason">Reason for Update</Label>
-                          <Select>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select reason" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="production">New Production</SelectItem>
-                              <SelectItem value="sale">Sold/Dispatched</SelectItem>
-                              <SelectItem value="damage">Damaged/Defective</SelectItem>
-                              <SelectItem value="correction">Stock Correction</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button className="w-full">Update Stock</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {filteredGoods.length === 0 && (

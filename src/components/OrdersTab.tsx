@@ -1,13 +1,11 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Search, Plus, Edit } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Plus, Edit, Eye } from 'lucide-react';
 import OrderDetails from '@/components/OrderDetails';
 import CreateOrderForm from '@/components/CreateOrderForm';
 
@@ -62,18 +60,18 @@ const OrdersTab = () => {
     order.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusColor = (status) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case "Pending":
-        return "secondary";
+        return "secondary" as const;
       case "In Manufacturing":
-        return "default";
+        return "default" as const;
       case "Ready for Dispatch":
-        return "default";
+        return "default" as const;
       case "Dispatched":
-        return "outline";
+        return "outline" as const;
       default:
-        return "secondary";
+        return "secondary" as const;
     }
   };
 
@@ -106,57 +104,66 @@ const OrdersTab = () => {
         </Dialog>
       </div>
 
-      {/* Orders Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredOrders.map((order) => (
-          <Card key={order.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{order.id}</CardTitle>
-                <Badge variant={getStatusColor(order.status)}>
-                  {order.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="font-medium">{order.customer}</p>
-                <p className="text-sm text-gray-600">{order.phone}</p>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Amount:</span>
-                <span className="font-medium">₹{order.totalAmount.toLocaleString()}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Items:</span>
-                <span className="font-medium">{order.items.length} products</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Expected:</span>
-                <span className="text-sm">{new Date(order.expectedDelivery).toLocaleDateString()}</span>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      View Details
+      {/* Orders Table */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Total Amount</TableHead>
+              <TableHead>Order Date</TableHead>
+              <TableHead>Expected Delivery</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredOrders.map((order) => (
+              <TableRow key={order.id}>
+                <TableCell className="font-medium">{order.id}</TableCell>
+                <TableCell>{order.customer}</TableCell>
+                <TableCell>{order.phone}</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusVariant(order.status)}>
+                    {order.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="text-sm">
+                        {item.quantity}x {item.subcategory} ({item.size})
+                      </div>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium">₹{order.totalAmount.toLocaleString()}</TableCell>
+                <TableCell>{new Date(order.createdDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(order.expectedDelivery).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <OrderDetails order={order} />
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <OrderDetails order={order} />
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {filteredOrders.length === 0 && (

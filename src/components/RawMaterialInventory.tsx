@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Plus, Edit, AlertTriangle } from 'lucide-react';
 
 const RawMaterialInventory = () => {
@@ -91,10 +91,16 @@ const RawMaterialInventory = () => {
     return matchesSearch && matchesType;
   });
 
-  const getStockStatus = (current, minimum) => {
-    if (current <= minimum / 2) return { status: "Critical", variant: "destructive" };
-    if (current <= minimum) return { status: "Low", variant: "secondary" };
-    return { status: "Good", variant: "default" };
+  const getStockStatusVariant = (current: number, minimum: number) => {
+    if (current <= minimum / 2) return "destructive" as const;
+    if (current <= minimum) return "secondary" as const;
+    return "default" as const;
+  };
+
+  const getStockStatusText = (current: number, minimum: number) => {
+    if (current <= minimum / 2) return "Critical";
+    if (current <= minimum) return "Low";
+    return "Good";
   };
 
   return (
@@ -187,102 +193,87 @@ const RawMaterialInventory = () => {
         </Dialog>
       </div>
 
-      {/* Materials Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMaterials.map((material) => {
-          const stockInfo = getStockStatus(material.currentStock, material.minimumStock);
-          return (
-            <Card key={material.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{material.name}</CardTitle>
-                    <p className="text-sm text-gray-600">{material.type}</p>
-                  </div>
-                  <Badge variant={stockInfo.variant} className="flex items-center gap-1">
-                    {stockInfo.status === "Critical" && <AlertTriangle className="h-3 w-3" />}
-                    {stockInfo.status}
+      {/* Materials Table */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Material Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Current Stock</TableHead>
+              <TableHead>Minimum Stock</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Cost/Unit</TableHead>
+              <TableHead>Total Value</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Last Updated</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMaterials.map((material) => (
+              <TableRow key={material.id}>
+                <TableCell className="font-medium">{material.name}</TableCell>
+                <TableCell>{material.type}</TableCell>
+                <TableCell>{material.currentStock} {material.unit}</TableCell>
+                <TableCell>{material.minimumStock} {material.unit}</TableCell>
+                <TableCell>
+                  <Badge variant={getStockStatusVariant(material.currentStock, material.minimumStock)} className="flex items-center gap-1 w-fit">
+                    {getStockStatusText(material.currentStock, material.minimumStock) === "Critical" && <AlertTriangle className="h-3 w-3" />}
+                    {getStockStatusText(material.currentStock, material.minimumStock)}
                   </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Current Stock</p>
-                    <p className="font-medium">{material.currentStock} {material.unit}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Minimum Stock</p>
-                    <p className="font-medium">{material.minimumStock} {material.unit}</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Cost/Unit</p>
-                    <p className="font-medium">₹{material.costPerUnit}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Value</p>
-                    <p className="font-medium">₹{(material.currentStock * material.costPerUnit).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">Supplier</p>
-                  <p className="font-medium text-sm">{material.supplier}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">Last Updated</p>
-                  <p className="text-sm">{new Date(material.lastUpdated).toLocaleDateString()}</p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Update Stock
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Update Stock - {material.name}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Current Stock: {material.currentStock} {material.unit}</Label>
+                </TableCell>
+                <TableCell>₹{material.costPerUnit}</TableCell>
+                <TableCell className="font-medium">₹{(material.currentStock * material.costPerUnit).toLocaleString()}</TableCell>
+                <TableCell>{material.supplier}</TableCell>
+                <TableCell>{new Date(material.lastUpdated).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Update
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Update Stock - {material.name}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Current Stock: {material.currentStock} {material.unit}</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="newStock">New Stock Quantity</Label>
+                            <Input id="newStock" type="number" placeholder={material.currentStock.toString()} />
+                          </div>
+                          <div>
+                            <Label htmlFor="reason">Reason for Update</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select reason" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="purchase">New Purchase</SelectItem>
+                                <SelectItem value="consumption">Material Used</SelectItem>
+                                <SelectItem value="wastage">Wastage/Loss</SelectItem>
+                                <SelectItem value="correction">Stock Correction</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button className="w-full">Update Stock</Button>
                         </div>
-                        <div>
-                          <Label htmlFor="newStock">New Stock Quantity</Label>
-                          <Input id="newStock" type="number" placeholder={material.currentStock.toString()} />
-                        </div>
-                        <div>
-                          <Label htmlFor="reason">Reason for Update</Label>
-                          <Select>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select reason" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="purchase">New Purchase</SelectItem>
-                              <SelectItem value="consumption">Material Used</SelectItem>
-                              <SelectItem value="wastage">Wastage/Loss</SelectItem>
-                              <SelectItem value="correction">Stock Correction</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button className="w-full">Update Stock</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                      </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {filteredMaterials.length === 0 && (
