@@ -28,6 +28,7 @@ const OrdersTab = () => {
           category: "Traditional",
           subcategory: "Meena Work",
           size: "Medium (0.25m)",
+          productCode: "TRD-MNA-MD",
           quantity: 2,
           price: 800,
           status: "In Manufacturing"
@@ -37,6 +38,7 @@ const OrdersTab = () => {
           category: "Traditional",
           subcategory: "Kundan Work",
           size: "Large (0.30m)",
+          productCode: "TRD-KND-LG",
           quantity: 1,
           price: 1600,
           status: "Pending"
@@ -56,6 +58,7 @@ const OrdersTab = () => {
           category: "Modern",
           subcategory: "Silver Chain", 
           size: "Small (0.20m)",
+          productCode: "MOD-SLV-SM",
           quantity: 2,
           price: 900,
           status: "Ready for Dispatch"
@@ -75,6 +78,7 @@ const OrdersTab = () => {
           category: "Traditional",
           subcategory: "Temple Style",
           size: "Extra Large (0.35m)",
+          productCode: "TRD-TMP-XL",
           quantity: 1,
           price: 1200,
           status: "Pending"
@@ -84,6 +88,7 @@ const OrdersTab = () => {
           category: "Traditional", 
           subcategory: "Meena Work",
           size: "Medium (0.25m)",
+          productCode: "TRD-MNA-MD",
           quantity: 2,
           price: 1000,
           status: "Pending"
@@ -108,7 +113,8 @@ const OrdersTab = () => {
   const filteredOrders = flattenedOrders.filter(item => 
     item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase())
+    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.productCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getOverallOrderStatus = (orderId: string) => {
@@ -141,23 +147,23 @@ const OrdersTab = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Search and Add Button */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search orders by customer, order ID, or suborder ID..."
+            placeholder="Search orders..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-9"
           />
         </div>
         <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2 h-9 px-3">
               <Plus className="h-4 w-4" />
-              Create New Order
+              Create Order
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -169,60 +175,53 @@ const OrdersTab = () => {
         </Dialog>
       </div>
 
-      {/* Orders Table - Now showing suborders */}
+      {/* Compact Orders Table */}
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Suborder ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Product Type</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Suborder Status</TableHead>
-              <TableHead>Overall Order Status</TableHead>
-              <TableHead>Suborder Amount</TableHead>
-              <TableHead>Total Order Amount</TableHead>
-              <TableHead>Order Date</TableHead>
-              <TableHead>Expected Delivery</TableHead>
-              <TableHead>Actions</TableHead>
+            <TableRow className="h-10">
+              <TableHead className="py-2 px-3 text-xs font-medium">Order ID</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Suborder ID</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Customer</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Product Code</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Qty</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Sub Status</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Order Status</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Sub Amount</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Total Amount</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Order Date</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Expected</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredOrders.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.orderId}</TableCell>
-                <TableCell className="font-medium text-blue-600">{item.id}</TableCell>
-                <TableCell>{item.customer}</TableCell>
-                <TableCell>{item.phone}</TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <div className="font-medium">{item.subcategory}</div>
-                    <div className="text-gray-500">{item.category} - {item.size}</div>
-                  </div>
-                </TableCell>
-                <TableCell>{item.quantity} pieces</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(item.status)}>
+              <TableRow key={item.id} className="h-12 hover:bg-gray-50">
+                <TableCell className="py-2 px-3 text-sm font-medium">{item.orderId}</TableCell>
+                <TableCell className="py-2 px-3 text-sm text-blue-600 font-medium">{item.id}</TableCell>
+                <TableCell className="py-2 px-3 text-sm">{item.customer}</TableCell>
+                <TableCell className="py-2 px-3 text-sm font-mono bg-gray-50">{item.productCode}</TableCell>
+                <TableCell className="py-2 px-3 text-sm">{item.quantity}</TableCell>
+                <TableCell className="py-2 px-3">
+                  <Badge variant={getStatusVariant(item.status)} className="text-xs px-2 py-0">
                     {item.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))}>
+                <TableCell className="py-2 px-3">
+                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))} className="text-xs px-2 py-0">
                     {getOverallOrderStatus(item.orderId)}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium">₹{item.price.toLocaleString()}</TableCell>
-                <TableCell className="font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
-                <TableCell>{new Date(item.createdDate).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(item.expectedDelivery).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
+                <TableCell className="py-2 px-3 text-sm font-medium">₹{item.price.toLocaleString()}</TableCell>
+                <TableCell className="py-2 px-3 text-sm font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
+                <TableCell className="py-2 px-3 text-sm">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
+                <TableCell className="py-2 px-3 text-sm">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
+                <TableCell className="py-2 px-3">
+                  <div className="flex gap-1">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
+                        <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                          <Eye className="h-3 w-3" />
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -232,8 +231,8 @@ const OrdersTab = () => {
                         <OrderDetails order={orders.find(o => o.id === item.orderId)} />
                       </DialogContent>
                     </Dialog>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                      <Edit className="h-3 w-3" />
                     </Button>
                   </div>
                 </TableCell>
@@ -244,8 +243,8 @@ const OrdersTab = () => {
       </div>
 
       {filteredOrders.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No orders found matching your search.</p>
+        <div className="text-center py-8">
+          <p className="text-gray-500 text-sm">No orders found matching your search.</p>
         </div>
       )}
     </div>

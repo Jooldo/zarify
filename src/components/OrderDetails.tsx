@@ -115,7 +115,8 @@ const OrderDetails = ({ order }) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Suborder ID</TableHead>
-                <TableHead>Product Type</TableHead>
+                <TableHead>Product Code</TableHead>
+                <TableHead>Product Details</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
@@ -126,6 +127,7 @@ const OrderDetails = ({ order }) => {
               {order.suborders.map((suborder) => (
                 <TableRow key={suborder.id}>
                   <TableCell className="font-medium text-blue-600">{suborder.id}</TableCell>
+                  <TableCell className="font-mono text-sm bg-gray-50">{suborder.productCode}</TableCell>
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{suborder.subcategory}</div>
