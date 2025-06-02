@@ -1,11 +1,57 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import OrdersTab from '@/components/OrdersTab';
+import InventoryTab from '@/components/InventoryTab';
+import DashboardOverview from '@/components/DashboardOverview';
+import { Package, ClipboardList, BarChart3 } from 'lucide-react';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Anklet Manufacturing Management
+          </h1>
+          <p className="text-gray-600">
+            Track orders, manage inventory, and streamline your production workflow
+          </p>
+        </div>
+
+        {/* Main Tabs */}
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 mb-8">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Orders
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Inventory
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard">
+            <DashboardOverview />
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <OrdersTab />
+          </TabsContent>
+
+          <TabsContent value="inventory">
+            <InventoryTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
