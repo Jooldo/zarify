@@ -129,15 +129,24 @@ const ProductConfigTab = () => {
     return "default" as const;
   };
 
-  const getStockStatusText = (current: number, threshold: number) => {
-    if (current <= threshold / 2) return "Critical";
-    if (current <= threshold) return "Low";
-    return "Good";
+  const getShortfallVariant = (shortfall: number) => {
+    if (shortfall < 0) return "destructive" as const;
+    if (shortfall === 0) return "secondary" as const;
+    return "default" as const;
+  };
+
+  const calculateShortfall = (currentStock: number, requiredQuantity: number, inManufacturing: number) => {
+    return currentStock + inManufacturing - requiredQuantity;
   };
 
   const handleViewMaterials = (config: any) => {
     setSelectedConfig(config);
     setIsViewMaterialsOpen(true);
+  };
+
+  const handleDelete = (configId: string) => {
+    console.log('Deleting product config:', configId);
+    // Here you would typically make an API call to delete the config
   };
 
   return (
@@ -181,56 +190,62 @@ const ProductConfigTab = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required Qty</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Base Price</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredConfigs.map((config) => (
-              <TableRow key={config.id} className="h-10">
-                <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{config.productCode}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">
-                  <div>
-                    <div className="font-medium">{config.category}</div>
-                    <div className="text-gray-500">{config.subcategory}</div>
-                  </div>
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">{config.size}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">
-                  <Badge variant={getStockStatusVariant(config.currentStock, config.threshold)} className="text-xs px-1 py-0">
-                    {config.currentStock} units
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">{config.threshold}</TableCell>
-                <TableCell className="py-1 px-2 text-xs font-medium">{config.requiredQuantity}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{config.quantityInManufacturing}</TableCell>
-                <TableCell className="py-1 px-2 text-xs font-medium">₹{config.basePrice.toLocaleString()}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <Badge variant={config.isActive ? "default" : "secondary"} className="text-xs px-1 py-0">
-                    {config.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2">
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleViewMaterials(config)}
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredConfigs.map((config) => {
+              const shortfall = calculateShortfall(config.currentStock, config.requiredQuantity, config.quantityInManufacturing);
+              return (
+                <TableRow key={config.id} className="h-10">
+                  <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{config.productCode}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <div>
+                      <div className="font-medium">{config.category}</div>
+                      <div className="text-gray-500">{config.subcategory}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{config.size}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={getStockStatusVariant(config.currentStock, config.threshold)} className="text-xs px-1 py-0">
+                      {config.currentStock} units
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{config.threshold}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">{config.requiredQuantity}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{config.quantityInManufacturing}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-1 py-0">
+                      {shortfall > 0 ? '+' : ''}{shortfall}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleViewMaterials(config)}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 hover:bg-red-50 hover:border-red-200"
+                        onClick={() => handleDelete(config.id)}
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
