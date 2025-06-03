@@ -44,14 +44,24 @@ export const useProcurementRequests = () => {
 
       if (error) throw error;
       
-      // Filter out any records with 'None' status and ensure proper typing
-      const filteredRequests = (data || []).filter(
-        (request): request is ProcurementRequest => 
-          request.status !== 'None' && 
-          ['Pending', 'Approved', 'Received'].includes(request.status)
-      );
+      // Map the database response to our ProcurementRequest interface
+      const mappedRequests: ProcurementRequest[] = (data || [])
+        .filter(request => request.status !== 'None' && ['Pending', 'Approved', 'Received'].includes(request.status))
+        .map(request => ({
+          id: request.id,
+          request_number: request.request_number,
+          raw_material_id: request.raw_material_id,
+          quantity_requested: request.quantity_requested,
+          unit: request.unit,
+          supplier_id: request.supplier_id,
+          eta: request.eta,
+          notes: request.notes,
+          status: request.status as 'Pending' | 'Approved' | 'Received',
+          date_requested: request.date_requested,
+          raw_material: request.raw_material
+        }));
       
-      setRequests(filteredRequests);
+      setRequests(mappedRequests);
     } catch (error) {
       console.error('Error fetching procurement requests:', error);
       toast({
