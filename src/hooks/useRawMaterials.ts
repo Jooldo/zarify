@@ -21,6 +21,16 @@ export interface RawMaterial {
   };
 }
 
+export interface CreateRawMaterialData {
+  name: string;
+  type: string;
+  current_stock: number;
+  minimum_stock: number;
+  unit: string;
+  supplier_id?: string;
+  cost_per_unit?: number;
+}
+
 export const useRawMaterials = () => {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +57,41 @@ export const useRawMaterials = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createRawMaterial = async (materialData: CreateRawMaterialData) => {
+    try {
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .insert({
+          ...materialData,
+          required: 0,
+          in_procurement: 0,
+          request_status: 'None',
+          last_updated: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Raw material created successfully',
+      });
+
+      // Refresh the data
+      await fetchRawMaterials();
+      return data;
+    } catch (error) {
+      console.error('Error creating raw material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create raw material',
+        variant: 'destructive',
+      });
+      throw error;
     }
   };
 
@@ -88,5 +133,5 @@ export const useRawMaterials = () => {
     fetchRawMaterials();
   }, []);
 
-  return { rawMaterials, loading, refetch: fetchRawMaterials, updateRawMaterial };
+  return { rawMaterials, loading, refetch: fetchRawMaterials, updateRawMaterial, createRawMaterial };
 };

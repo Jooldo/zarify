@@ -5,14 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Package2, AlertCircle, Eye, Edit } from 'lucide-react';
+import { Search, Package2, AlertCircle, Eye, Edit } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
 import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog';
+import AddMaterialDialog from '@/components/inventory/AddMaterialDialog';
 
 const RawMaterialInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rawMaterials, loading, updateRawMaterial } = useRawMaterials();
+  const { rawMaterials, loading, updateRawMaterial, createRawMaterial } = useRawMaterials();
 
   const filteredMaterials = rawMaterials.filter(material =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,10 +71,7 @@ const RawMaterialInventory = () => {
               className="pl-10 h-8"
             />
           </div>
-          <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-            <Plus className="h-3 w-3" />
-            Add Material
-          </Button>
+          <AddMaterialDialog onAddMaterial={createRawMaterial} />
         </div>
       </div>
 
