@@ -11,9 +11,7 @@ const CreateOrderForm = ({ onClose }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [items, setItems] = useState([{
-    category: '',
-    subcategory: '',
-    size: '',
+    productCode: '',
     quantity: 1,
     price: 0
   }]);
@@ -24,9 +22,7 @@ const CreateOrderForm = ({ onClose }) => {
 
   const addItem = () => {
     setItems([...items, {
-      category: '',
-      subcategory: '',
-      size: '',
+      productCode: '',
       quantity: 1,
       price: 0
     }]);
@@ -41,11 +37,7 @@ const CreateOrderForm = ({ onClose }) => {
   const updateItem = (index, field, value) => {
     const updatedItems = items.map((item, i) => {
       if (i === index) {
-        const updated = { ...item, [field]: value };
-        if (field === 'category') {
-          updated.subcategory = '';
-        }
-        return updated;
+        return { ...item, [field]: value };
       }
       return item;
     });
@@ -62,9 +54,7 @@ const CreateOrderForm = ({ onClose }) => {
     
     const suborders = items.map((item, index) => ({
       id: generateSuborderId(orderIndex, index),
-      category: item.category,
-      subcategory: item.subcategory,
-      size: item.size,
+      productCode: item.productCode,
       quantity: item.quantity,
       price: item.price * item.quantity,
       status: "Created"

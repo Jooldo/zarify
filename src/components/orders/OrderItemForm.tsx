@@ -4,13 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
 
 interface OrderItemFormProps {
   item: {
-    category: string;
-    subcategory: string;
-    size: string;
+    productCode: string;
     quantity: number;
     price: number;
   };
@@ -29,19 +28,41 @@ const OrderItemForm = ({
   removeItem, 
   generateSuborderId 
 }: OrderItemFormProps) => {
-  const categories = {
-    "Traditional": ["Meena Work", "Kundan Work", "Temple Style", "Oxidized"],
-    "Modern": ["Silver Chain", "Gold Plated", "Beaded", "Charm Style"],
-    "Bridal": ["Heavy Traditional", "Designer", "Kundan Heavy", "Polki Work"]
-  };
-
-  const sizes = [
-    "Small (0.20m)", 
-    "Medium (0.25m)", 
-    "Large (0.30m)", 
-    "Extra Large (0.35m)", 
-    "XXL (0.40m)"
+  // Product configurations from Product Config tab
+  const productConfigs = [
+    {
+      productCode: "TRD-MNA-MD",
+      category: "Traditional",
+      subcategory: "Meena Work",
+      size: "Medium (0.25m)"
+    },
+    {
+      productCode: "TRD-KND-LG",
+      category: "Traditional",
+      subcategory: "Kundan Work",
+      size: "Large (0.30m)"
+    },
+    {
+      productCode: "MOD-SLV-SM",
+      category: "Modern",
+      subcategory: "Silver Chain",
+      size: "Small (0.20m)"
+    },
+    {
+      productCode: "TRD-TMP-XL",
+      category: "Traditional",
+      subcategory: "Temple Style",
+      size: "Extra Large (0.35m)"
+    },
+    {
+      productCode: "BRD-HEA-XL",
+      category: "Bridal",
+      subcategory: "Heavy Traditional",
+      size: "Extra Large (0.35m)"
+    }
   ];
+
+  const selectedProduct = productConfigs.find(config => config.productCode === item.productCode);
 
   return (
     <div className="border rounded-lg p-4 space-y-4">
@@ -65,63 +86,48 @@ const OrderItemForm = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          <Label>Category *</Label>
+        <div className="lg:col-span-3">
+          <Label>Product Code *</Label>
           <Select
-            value={item.category}
-            onValueChange={(value) => updateItem(index, 'category', value)}
+            value={item.productCode}
+            onValueChange={(value) => updateItem(index, 'productCode', value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Select product code" />
             </SelectTrigger>
             <SelectContent>
-              {Object.keys(categories).map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+              {productConfigs.map((config) => (
+                <SelectItem key={config.productCode} value={config.productCode}>
+                  {config.productCode} - {config.category} {config.subcategory} ({config.size})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div>
-          <Label>Subcategory *</Label>
-          <Select
-            value={item.subcategory}
-            onValueChange={(value) => updateItem(index, 'subcategory', value)}
-            disabled={!item.category}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select subcategory" />
-            </SelectTrigger>
-            <SelectContent>
-              {item.category && categories[item.category].map((subcat) => (
-                <SelectItem key={subcat} value={subcat}>
-                  {subcat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label>Size *</Label>
-          <Select
-            value={item.size}
-            onValueChange={(value) => updateItem(index, 'size', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select size" />
-            </SelectTrigger>
-            <SelectContent>
-              {sizes.map((size) => (
-                <SelectItem key={size} value={size}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {selectedProduct && (
+          <div className="lg:col-span-3">
+            <Card>
+              <CardContent className="p-3">
+                <h5 className="text-sm font-medium mb-2">Product Details</h5>
+                <div className="grid grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <span className="text-gray-500">Category:</span>
+                    <div className="font-medium">{selectedProduct.category}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Subcategory:</span>
+                    <div className="font-medium">{selectedProduct.subcategory}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Size:</span>
+                    <div className="font-medium">{selectedProduct.size}</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div>
           <Label>Quantity *</Label>

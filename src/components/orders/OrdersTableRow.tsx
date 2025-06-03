@@ -23,9 +23,13 @@ interface OrdersTableRowProps {
   orders: any[];
   getOverallOrderStatus: (orderId: string) => string;
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
+  getStockAvailable: (productCode: string) => number;
 }
 
-const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant }: OrdersTableRowProps) => {
+const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable }: OrdersTableRowProps) => {
+  const stockAvailable = getStockAvailable(item.productCode);
+  const isStockLow = stockAvailable < item.quantity;
+
   return (
     <TableRow className="h-10 hover:bg-gray-50">
       <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
@@ -33,6 +37,11 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant 
       <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
       <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{item.productCode}</TableCell>
       <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
+      <TableCell className="py-1 px-2 text-xs">
+        <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>
+          {stockAvailable}
+        </span>
+      </TableCell>
       <TableCell className="py-1 px-2">
         <Badge variant={getStatusVariant(item.status)} className="text-xs px-1 py-0">
           {item.status}

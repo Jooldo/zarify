@@ -5,6 +5,15 @@ import OrdersTable from './orders/OrdersTable';
 const OrdersTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Sample finished goods inventory data
+  const finishedGoodsInventory = [
+    { productCode: "TRD-MNA-MD", currentStock: 15 },
+    { productCode: "TRD-KND-LG", currentStock: 3 },
+    { productCode: "MOD-SLV-SM", currentStock: 25 },
+    { productCode: "TRD-TMP-XL", currentStock: 8 },
+    { productCode: "BRD-HEA-XL", currentStock: 2 }
+  ];
+
   const orders = [
     {
       id: "ORD-001",
@@ -139,6 +148,11 @@ const OrdersTab = () => {
     }
   };
 
+  const getStockAvailable = (productCode: string) => {
+    const stock = finishedGoodsInventory.find(item => item.productCode === productCode);
+    return stock ? stock.currentStock : 0;
+  };
+
   return (
     <div className="space-y-4">
       <OrdersHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
@@ -148,6 +162,7 @@ const OrdersTab = () => {
         orders={orders}
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
+        getStockAvailable={getStockAvailable}
       />
 
       {filteredOrders.length === 0 && (

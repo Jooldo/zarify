@@ -7,9 +7,10 @@ interface OrdersTableProps {
   orders: any[];
   getOverallOrderStatus: (orderId: string) => string;
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
+  getStockAvailable: (productCode: string) => number;
 }
 
-const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusVariant }: OrdersTableProps) => {
+const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable }: OrdersTableProps) => {
   return (
     <div className="bg-white rounded-lg border">
       <Table>
@@ -20,6 +21,7 @@ const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusV
             <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Stock Available</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Sub Amount</TableHead>
@@ -38,6 +40,7 @@ const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusV
               orders={orders}
               getOverallOrderStatus={getOverallOrderStatus}
               getStatusVariant={getStatusVariant}
+              getStockAvailable={getStockAvailable}
             />
           ))}
         </TableBody>
