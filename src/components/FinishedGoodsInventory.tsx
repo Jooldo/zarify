@@ -1,96 +1,23 @@
 
 import { useState } from 'react';
+import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import InventoryHeader from './inventory/InventoryHeader';
 import InventoryTableRow from './inventory/InventoryTableRow';
 
 const FinishedGoodsInventory = () => {
+  const { finishedGoods, loading } = useFinishedGoods();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sizeFilter, setSizeFilter] = useState('all');
 
-  const finishedGoods = [
-    {
-      id: 1,
-      productCode: "TRD-MN-25",
-      category: "Traditional",
-      subcategory: "Meena Work",
-      size: "0.25m",
-      currentStock: 8,
-      threshold: 10,
-      requiredQuantity: 15,
-      inManufacturing: 5,
-      lastProduced: "2024-05-30"
-    },
-    {
-      id: 2,
-      productCode: "TRD-KN-30",
-      category: "Traditional",
-      subcategory: "Kundan Work",
-      size: "0.30m",
-      currentStock: 5,
-      threshold: 8,
-      requiredQuantity: 12,
-      inManufacturing: 3,
-      lastProduced: "2024-05-28"
-    },
-    {
-      id: 3,
-      productCode: "MOD-SC-20",
-      category: "Modern",
-      subcategory: "Silver Chain",
-      size: "0.20m",
-      currentStock: 12,
-      threshold: 6,
-      requiredQuantity: 10,
-      inManufacturing: 2,
-      lastProduced: "2024-06-01"
-    },
-    {
-      id: 4,
-      productCode: "TRD-TS-35",
-      category: "Traditional",
-      subcategory: "Temple Style",
-      size: "0.35m",
-      currentStock: 3,
-      threshold: 5,
-      requiredQuantity: 8,
-      inManufacturing: 1,
-      lastProduced: "2024-05-25"
-    },
-    {
-      id: 5,
-      productCode: "MOD-BD-25",
-      category: "Modern",
-      subcategory: "Beaded",
-      size: "0.25m",
-      currentStock: 15,
-      threshold: 10,
-      requiredQuantity: 12,
-      inManufacturing: 0,
-      lastProduced: "2024-06-02"
-    },
-    {
-      id: 6,
-      productCode: "BRD-HT-40",
-      category: "Bridal",
-      subcategory: "Heavy Traditional",
-      size: "0.40m",
-      currentStock: 2,
-      threshold: 4,
-      requiredQuantity: 6,
-      inManufacturing: 2,
-      lastProduced: "2024-05-20"
-    }
-  ];
-
   const filteredGoods = finishedGoods.filter(item => {
     const matchesSearch = 
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.subcategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.productCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-    const matchesSize = sizeFilter === 'all' || item.size === sizeFilter;
+      item.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product_code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || item.product_config?.category === categoryFilter;
+    const matchesSize = sizeFilter === 'all' || item.product_config?.size === sizeFilter;
     return matchesSearch && matchesCategory && matchesSize;
   });
 
@@ -126,6 +53,10 @@ const FinishedGoodsInventory = () => {
     return "text-gray-600 font-bold";
   };
 
+  if (loading) {
+    return <div className="flex items-center justify-center p-8">Loading...</div>;
+  }
+
   return (
     <div className="space-y-4">
       <InventoryHeader
@@ -158,7 +89,18 @@ const FinishedGoodsInventory = () => {
             {filteredGoods.map((item) => (
               <InventoryTableRow
                 key={item.id}
-                item={item}
+                item={{
+                  id: item.id,
+                  productCode: item.product_code,
+                  category: item.product_config?.category || '',
+                  subcategory: item.product_config?.subcategory || '',
+                  size: item.product_config?.size || '',
+                  currentStock: item.current_stock,
+                  threshold: item.threshold,
+                  requiredQuantity: item.required_quantity,
+                  inManufacturing: item.in_manufacturing,
+                  lastProduced: item.last_produced || ''
+                }}
                 getStockStatusVariant={getStockStatusVariant}
                 getShortfallStyles={getShortfallStyles}
                 calculateShortfall={calculateShortfall}
