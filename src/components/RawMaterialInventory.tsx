@@ -1,8 +1,7 @@
 
 import { useState } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import InventoryHeader from './inventory/InventoryHeader';
-import InventorySearchAndFilters from './inventory/InventorySearchAndFilters';
+import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
 
 interface RawMaterialInventoryProps {
@@ -12,13 +11,13 @@ interface RawMaterialInventoryProps {
 const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) => {
   const { rawMaterials, loading, refetch } = useRawMaterials();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('All');
+  const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('All');
 
   const filteredMaterials = rawMaterials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          material.type.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'All' || material.type === filterType;
+    const matchesType = filterType === 'all' || material.type === filterType;
     
     let matchesStatus = true;
     if (filterStatus === 'Low Stock') {
@@ -46,22 +45,15 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
 
   return (
     <div className="space-y-4">
-      <InventoryHeader 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        categoryFilter={filterStatus}
-        setCategoryFilter={setFilterStatus}
-        sizeFilter={filterType}
-        setSizeFilter={setFilterType}
-        onProductAdded={handleMaterialAdded}
-      />
-      
-      <InventorySearchAndFilters
+      <RawMaterialsHeader
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterType={filterType}
         onFilterChange={setFilterType}
+        filterStatus={filterStatus}
+        onFilterStatusChange={setFilterStatus}
         materialTypes={materialTypes}
+        onMaterialAdded={handleMaterialAdded}
       />
       
       <RawMaterialsTable 
