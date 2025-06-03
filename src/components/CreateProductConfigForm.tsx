@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,13 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2 } from 'lucide-react';
 
-const CreateProductConfigForm = ({ onClose }) => {
+const CreateProductConfigForm = ({ onClose, initialData = null, isUpdate = false }) => {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [size, setSize] = useState('');
-  const [basePrice, setBasePrice] = useState('');
-  const [materialCost, setMaterialCost] = useState('');
-  const [laborCost, setLaborCost] = useState('');
   const [rawMaterials, setRawMaterials] = useState([]);
   const [currentMaterial, setCurrentMaterial] = useState({
     name: '',
@@ -37,6 +34,16 @@ const CreateProductConfigForm = ({ onClose }) => {
   ];
 
   const materialUnits = ["pieces", "meters", "kg", "grams", "rolls", "liters"];
+
+  // Initialize form with existing data if updating
+  useEffect(() => {
+    if (isUpdate && initialData) {
+      setCategory(initialData.category || '');
+      setSubcategory(initialData.subcategory || '');
+      setSize(initialData.size || '');
+      setRawMaterials(initialData.rawMaterials || []);
+    }
+  }, [isUpdate, initialData]);
 
   const generateProductCode = () => {
     if (!category || !subcategory || !size) return '';
@@ -69,16 +76,21 @@ const CreateProductConfigForm = ({ onClose }) => {
       subcategory,
       size,
       productCode: generateProductCode(),
-      basePrice: parseFloat(basePrice),
-      materialCost: parseFloat(materialCost),
-      laborCost: parseFloat(laborCost),
       rawMaterials,
       isActive: true
     };
     
-    console.log('Creating product config:', configData);
-    // Here you would typically make an API call to create the config
+    console.log(isUpdate ? 'Updating product config:' : 'Creating product config:', configData);
+    // Here you would typically make an API call to create/update the config
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (isUpdate && initialData) {
+      console.log('Deleting product config:', initialData.id);
+      // Here you would typically make an API call to delete the config
+      onClose();
+    }
   };
 
   return (
@@ -147,48 +159,6 @@ const CreateProductConfigForm = ({ onClose }) => {
               readOnly
               className="bg-gray-50"
               placeholder="Auto-generated"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="basePrice">Base Price (₹) *</Label>
-            <Input
-              id="basePrice"
-              type="number"
-              min="0"
-              step="0.01"
-              value={basePrice}
-              onChange={(e) => setBasePrice(e.target.value)}
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="materialCost">Material Cost (₹) *</Label>
-            <Input
-              id="materialCost"
-              type="number"
-              min="0"
-              step="0.01"
-              value={materialCost}
-              onChange={(e) => setMaterialCost(e.target.value)}
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <Label htmlFor="laborCost">Labor Cost (₹) *</Label>
-            <Input
-              id="laborCost"
-              type="number"
-              min="0"
-              step="0.01"
-              value={laborCost}
-              onChange={(e) => setLaborCost(e.target.value)}
-              placeholder="0.00"
-              required
             />
           </div>
         </CardContent>
@@ -283,13 +253,22 @@ const CreateProductConfigForm = ({ onClose }) => {
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-4 justify-end">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          Create Configuration
-        </Button>
+      <div className="flex gap-4 justify-between">
+        <div>
+          {isUpdate && (
+            <Button type="button" variant="destructive" onClick={handleDelete}>
+              Delete Configuration
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-4">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            {isUpdate ? 'Update Configuration' : 'Create Configuration'}
+          </Button>
+        </div>
       </div>
     </form>
   );

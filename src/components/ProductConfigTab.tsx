@@ -11,6 +11,7 @@ import CreateProductConfigForm from '@/components/CreateProductConfigForm';
 const ProductConfigTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateConfigOpen, setIsCreateConfigOpen] = useState(false);
+  const [isUpdateConfigOpen, setIsUpdateConfigOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<any>(null);
   const [isViewMaterialsOpen, setIsViewMaterialsOpen] = useState(false);
 
@@ -21,14 +22,7 @@ const ProductConfigTab = () => {
       subcategory: "Meena Work",
       size: "Small (0.20m)",
       productCode: "TRD-MEE-SM",
-      basePrice: 800,
-      materialCost: 300,
-      laborCost: 200,
       isActive: true,
-      currentStock: 5,
-      threshold: 10,
-      requiredQuantity: 25,
-      quantityInManufacturing: 8,
       rawMaterials: [
         { name: "Silver Chain", quantity: 0.3, unit: "meters" },
         { name: "Gold Kunda", quantity: 2, unit: "pieces" },
@@ -41,14 +35,7 @@ const ProductConfigTab = () => {
       subcategory: "Meena Work",
       size: "Medium (0.25m)",
       productCode: "TRD-MEE-MD",
-      basePrice: 1000,
-      materialCost: 400,
-      laborCost: 250,
       isActive: true,
-      currentStock: 3,
-      threshold: 8,
-      requiredQuantity: 20,
-      quantityInManufacturing: 12,
       rawMaterials: [
         { name: "Silver Chain", quantity: 0.4, unit: "meters" },
         { name: "Gold Kunda", quantity: 3, unit: "pieces" },
@@ -61,14 +48,7 @@ const ProductConfigTab = () => {
       subcategory: "Kundan Work", 
       size: "Large (0.30m)",
       productCode: "TRD-KUN-LG",
-      basePrice: 1600,
-      materialCost: 600,
-      laborCost: 400,
       isActive: true,
-      currentStock: 2,
-      threshold: 5,
-      requiredQuantity: 15,
-      quantityInManufacturing: 6,
       rawMaterials: [
         { name: "Silver Chain", quantity: 0.5, unit: "meters" },
         { name: "Gold Kunda", quantity: 5, unit: "pieces" },
@@ -81,14 +61,7 @@ const ProductConfigTab = () => {
       subcategory: "Silver Chain",
       size: "Small (0.20m)",
       productCode: "MOD-SIL-SM",
-      basePrice: 450,
-      materialCost: 200,
-      laborCost: 100,
       isActive: true,
-      currentStock: 8,
-      threshold: 12,
-      requiredQuantity: 30,
-      quantityInManufacturing: 15,
       rawMaterials: [
         { name: "Silver Chain", quantity: 0.25, unit: "meters" },
         { name: "Brass Beads", quantity: 6, unit: "pieces" }
@@ -100,14 +73,7 @@ const ProductConfigTab = () => {
       subcategory: "Heavy Traditional",
       size: "Extra Large (0.35m)",
       productCode: "BRD-HEA-XL",
-      basePrice: 2500,
-      materialCost: 1000,
-      laborCost: 800,
       isActive: false,
-      currentStock: 1,
-      threshold: 3,
-      requiredQuantity: 8,
-      quantityInManufacturing: 2,
       rawMaterials: [
         { name: "Silver Chain", quantity: 0.7, unit: "meters" },
         { name: "Gold Kunda", quantity: 8, unit: "pieces" },
@@ -123,25 +89,14 @@ const ProductConfigTab = () => {
     config.productCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStockStatusVariant = (current: number, threshold: number) => {
-    if (current <= threshold / 2) return "destructive" as const;
-    if (current <= threshold) return "secondary" as const;
-    return "default" as const;
-  };
-
-  const getShortfallVariant = (shortfall: number) => {
-    if (shortfall < 0) return "destructive" as const;
-    if (shortfall === 0) return "secondary" as const;
-    return "default" as const;
-  };
-
-  const calculateShortfall = (currentStock: number, requiredQuantity: number, inManufacturing: number) => {
-    return currentStock + inManufacturing - requiredQuantity;
-  };
-
   const handleViewMaterials = (config: any) => {
     setSelectedConfig(config);
     setIsViewMaterialsOpen(true);
+  };
+
+  const handleUpdate = (config: any) => {
+    setSelectedConfig(config);
+    setIsUpdateConfigOpen(true);
   };
 
   const handleDelete = (configId: string) => {
@@ -185,67 +140,54 @@ const ProductConfigTab = () => {
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Size</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Required Qty</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredConfigs.map((config) => {
-              const shortfall = calculateShortfall(config.currentStock, config.requiredQuantity, config.quantityInManufacturing);
-              return (
-                <TableRow key={config.id} className="h-10">
-                  <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{config.productCode}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <div>
-                      <div className="font-medium">{config.category}</div>
-                      <div className="text-gray-500">{config.subcategory}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{config.size}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <Badge variant={getStockStatusVariant(config.currentStock, config.threshold)} className="text-xs px-1 py-0">
-                      {config.currentStock} units
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{config.threshold}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">{config.requiredQuantity}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{config.quantityInManufacturing}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-1 py-0">
-                      {shortfall > 0 ? '+' : ''}{shortfall}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleViewMaterials(config)}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 w-6 p-0 hover:bg-red-50 hover:border-red-200"
-                        onClick={() => handleDelete(config.id)}
-                      >
-                        <Trash2 className="h-3 w-3 text-red-600" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filteredConfigs.map((config) => (
+              <TableRow key={config.id} className="h-10">
+                <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{config.productCode}</TableCell>
+                <TableCell className="py-1 px-2 text-xs font-medium">{config.category}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{config.subcategory}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{config.size}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  <Badge variant={config.isActive ? "default" : "secondary"} className="text-xs px-1 py-0">
+                    {config.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-1 px-2">
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleViewMaterials(config)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleUpdate(config)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 w-6 p-0 hover:bg-red-50 hover:border-red-200"
+                      onClick={() => handleDelete(config.id)}
+                    >
+                      <Trash2 className="h-3 w-3 text-red-600" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
@@ -255,6 +197,20 @@ const ProductConfigTab = () => {
           <p className="text-gray-500 text-sm">No product configurations found matching your search.</p>
         </div>
       )}
+
+      {/* Update Product Config Dialog */}
+      <Dialog open={isUpdateConfigOpen} onOpenChange={setIsUpdateConfigOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Update Product Configuration</DialogTitle>
+          </DialogHeader>
+          <CreateProductConfigForm 
+            onClose={() => setIsUpdateConfigOpen(false)}
+            initialData={selectedConfig}
+            isUpdate={true}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Raw Materials Dialog */}
       <Dialog open={isViewMaterialsOpen} onOpenChange={setIsViewMaterialsOpen}>
@@ -281,7 +237,6 @@ const ProductConfigTab = () => {
                   <TableRow className="h-8">
                     <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
                     <TableHead className="py-1 px-2 text-xs font-medium">Quantity per Unit</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Total Required</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -289,9 +244,6 @@ const ProductConfigTab = () => {
                     <TableRow key={index} className="h-8">
                       <TableCell className="py-1 px-2 text-xs font-medium">{material.name}</TableCell>
                       <TableCell className="py-1 px-2 text-xs">{material.quantity} {material.unit}</TableCell>
-                      <TableCell className="py-1 px-2 text-xs font-medium">
-                        {(material.quantity * (selectedConfig?.requiredQuantity || 0)).toFixed(2)} {material.unit}
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
