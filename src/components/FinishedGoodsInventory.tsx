@@ -25,7 +25,6 @@ const FinishedGoodsInventory = () => {
       threshold: 10,
       requiredQuantity: 15,
       inManufacturing: 5,
-      shortfall: 2, // currentStock + inManufacturing - requiredQuantity = 8 + 5 - 15 = -2
       lastProduced: "2024-05-30"
     },
     {
@@ -38,7 +37,6 @@ const FinishedGoodsInventory = () => {
       threshold: 8,
       requiredQuantity: 12,
       inManufacturing: 3,
-      shortfall: -4, // 5 + 3 - 12 = -4
       lastProduced: "2024-05-28"
     },
     {
@@ -51,7 +49,6 @@ const FinishedGoodsInventory = () => {
       threshold: 6,
       requiredQuantity: 10,
       inManufacturing: 2,
-      shortfall: 4, // 12 + 2 - 10 = 4
       lastProduced: "2024-06-01"
     },
     {
@@ -64,7 +61,6 @@ const FinishedGoodsInventory = () => {
       threshold: 5,
       requiredQuantity: 8,
       inManufacturing: 1,
-      shortfall: -4, // 3 + 1 - 8 = -4
       lastProduced: "2024-05-25"
     },
     {
@@ -77,7 +73,6 @@ const FinishedGoodsInventory = () => {
       threshold: 10,
       requiredQuantity: 12,
       inManufacturing: 0,
-      shortfall: 3, // 15 + 0 - 12 = 3
       lastProduced: "2024-06-02"
     },
     {
@@ -90,7 +85,6 @@ const FinishedGoodsInventory = () => {
       threshold: 4,
       requiredQuantity: 6,
       inManufacturing: 2,
-      shortfall: -2, // 2 + 2 - 6 = -2
       lastProduced: "2024-05-20"
     }
   ];
@@ -136,6 +130,10 @@ const FinishedGoodsInventory = () => {
     if (shortfall < 0) return "destructive" as const;
     if (shortfall === 0) return "secondary" as const;
     return "default" as const;
+  };
+
+  const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number) => {
+    return currentStock + inManufacturing - requiredQuantity;
   };
 
   return (
@@ -264,170 +262,173 @@ const FinishedGoodsInventory = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGoods.map((item) => (
-              <TableRow key={item.id} className="h-10">
-                <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">{item.productCode}</TableCell>
-                <TableCell className="px-2 py-1 text-xs">{item.category}</TableCell>
-                <TableCell className="px-2 py-1 text-xs">{item.subcategory}</TableCell>
-                <TableCell className="px-2 py-1 text-xs">{item.size}</TableCell>
-                <TableCell className="px-2 py-1 bg-blue-50">
-                  <Badge variant={getStockStatusVariant(item.currentStock, item.threshold)} className="text-xs px-2 py-1 font-bold">
-                    {item.currentStock}
-                  </Badge>
-                </TableCell>
-                <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.threshold}</TableCell>
-                <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.requiredQuantity}</TableCell>
-                <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.inManufacturing}</TableCell>
-                <TableCell className="px-2 py-1 bg-blue-50">
-                  <Badge variant={getShortfallVariant(item.shortfall)} className="text-xs px-2 py-1 font-bold">
-                    {item.shortfall > 0 ? `+${item.shortfall}` : item.shortfall}
-                  </Badge>
-                </TableCell>
-                <TableCell className="px-2 py-1 text-xs">{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
-                <TableCell className="px-2 py-1">
-                  <div className="flex gap-1">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Raw Materials Required - {item.productCode}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <Label className="font-medium">Shortfall Quantity:</Label>
-                              <div className="text-lg font-bold text-red-600">
-                                {Math.abs(item.shortfall)} units needed
+            {filteredGoods.map((item) => {
+              const shortfall = calculateShortfall(item.currentStock, item.inManufacturing, item.requiredQuantity);
+              return (
+                <TableRow key={item.id} className="h-10">
+                  <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">{item.productCode}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs">{item.category}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs">{item.subcategory}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs">{item.size}</TableCell>
+                  <TableCell className="px-2 py-1 bg-blue-50">
+                    <Badge variant={getStockStatusVariant(item.currentStock, item.threshold)} className="text-xs px-2 py-1 font-bold">
+                      {item.currentStock}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.threshold}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.requiredQuantity}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.inManufacturing}</TableCell>
+                  <TableCell className="px-2 py-1 bg-blue-50">
+                    <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-2 py-1 font-bold">
+                      {shortfall > 0 ? `+${shortfall}` : shortfall}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-2 py-1 text-xs">{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
+                  <TableCell className="px-2 py-1">
+                    <div className="flex gap-1">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Raw Materials Required - {item.productCode}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <Label className="font-medium">Shortfall Quantity:</Label>
+                                <div className="text-lg font-bold text-red-600">
+                                  {Math.abs(shortfall)} units {shortfall < 0 ? 'needed' : 'surplus'}
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="font-medium">Current Stock:</Label>
+                                <div className="text-lg font-bold text-blue-600">
+                                  {item.currentStock} units
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {shortfall < 0 && (
+                              <div className="space-y-3">
+                                <h4 className="font-medium text-sm">Raw Materials Required for Production:</h4>
+                                <div className="border rounded-lg">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="h-8">
+                                        <TableHead className="text-xs">Material</TableHead>
+                                        <TableHead className="text-xs">Required per Unit</TableHead>
+                                        <TableHead className="text-xs">Total Required</TableHead>
+                                        <TableHead className="text-xs">Available</TableHead>
+                                        <TableHead className="text-xs">Status</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {(rawMaterialsRequired[item.id] || []).map((material, index) => {
+                                        const totalRequired = material.required * Math.abs(shortfall);
+                                        const shortage = Math.max(0, totalRequired - material.available);
+                                        return (
+                                          <TableRow key={index} className="h-8">
+                                            <TableCell className="text-xs">{material.material}</TableCell>
+                                            <TableCell className="text-xs">{material.required} {material.unit}</TableCell>
+                                            <TableCell className="text-xs font-medium">{totalRequired} {material.unit}</TableCell>
+                                            <TableCell className="text-xs">{material.available} {material.unit}</TableCell>
+                                            <TableCell className="text-xs">
+                                              {shortage > 0 ? (
+                                                <Badge variant="destructive" className="text-xs">
+                                                  Need {shortage} {material.unit}
+                                                </Badge>
+                                              ) : (
+                                                <Badge variant="default" className="text-xs">
+                                                  Sufficient
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {shortfall >= 0 && (
+                              <div className="text-center py-4 text-green-600 font-medium">
+                                ✓ Stock levels are sufficient. No additional production needed.
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                            Update
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Update Stock - {item.productCode}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label>Current Stock: {item.currentStock} pieces</Label>
+                              </div>
+                              <div>
+                                <Label>Threshold: {item.threshold} pieces</Label>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="newStock">New Stock Quantity</Label>
+                                <Input id="newStock" type="number" placeholder={item.currentStock.toString()} />
+                              </div>
+                              <div>
+                                <Label htmlFor="newThreshold">New Threshold</Label>
+                                <Input id="newThreshold" type="number" placeholder={item.threshold.toString()} />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="requiredQty">Required Quantity</Label>
+                                <Input id="requiredQty" type="number" placeholder={item.requiredQuantity.toString()} />
+                              </div>
+                              <div>
+                                <Label htmlFor="inManufacturing">In Manufacturing</Label>
+                                <Input id="inManufacturing" type="number" placeholder={item.inManufacturing.toString()} />
                               </div>
                             </div>
                             <div>
-                              <Label className="font-medium">Current Stock:</Label>
-                              <div className="text-lg font-bold text-blue-600">
-                                {item.currentStock} units
-                              </div>
+                              <Label htmlFor="updateReason">Reason for Update</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="production">New Production</SelectItem>
+                                  <SelectItem value="sale">Sold/Dispatched</SelectItem>
+                                  <SelectItem value="damage">Damaged/Defective</SelectItem>
+                                  <SelectItem value="correction">Stock Correction</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
+                            <Button className="w-full">Update Stock</Button>
                           </div>
-                          
-                          {item.shortfall < 0 && (
-                            <div className="space-y-3">
-                              <h4 className="font-medium text-sm">Raw Materials Required for Production:</h4>
-                              <div className="border rounded-lg">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow className="h-8">
-                                      <TableHead className="text-xs">Material</TableHead>
-                                      <TableHead className="text-xs">Required per Unit</TableHead>
-                                      <TableHead className="text-xs">Total Required</TableHead>
-                                      <TableHead className="text-xs">Available</TableHead>
-                                      <TableHead className="text-xs">Status</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {(rawMaterialsRequired[item.id] || []).map((material, index) => {
-                                      const totalRequired = material.required * Math.abs(item.shortfall);
-                                      const shortage = Math.max(0, totalRequired - material.available);
-                                      return (
-                                        <TableRow key={index} className="h-8">
-                                          <TableCell className="text-xs">{material.material}</TableCell>
-                                          <TableCell className="text-xs">{material.required} {material.unit}</TableCell>
-                                          <TableCell className="text-xs font-medium">{totalRequired} {material.unit}</TableCell>
-                                          <TableCell className="text-xs">{material.available} {material.unit}</TableCell>
-                                          <TableCell className="text-xs">
-                                            {shortage > 0 ? (
-                                              <Badge variant="destructive" className="text-xs">
-                                                Need {shortage} {material.unit}
-                                              </Badge>
-                                            ) : (
-                                              <Badge variant="default" className="text-xs">
-                                                Sufficient
-                                              </Badge>
-                                            )}
-                                          </TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {item.shortfall >= 0 && (
-                            <div className="text-center py-4 text-green-600 font-medium">
-                              ✓ Stock levels are sufficient. No additional production needed.
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                          Update
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Update Stock - {item.productCode}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label>Current Stock: {item.currentStock} pieces</Label>
-                            </div>
-                            <div>
-                              <Label>Threshold: {item.threshold} pieces</Label>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="newStock">New Stock Quantity</Label>
-                              <Input id="newStock" type="number" placeholder={item.currentStock.toString()} />
-                            </div>
-                            <div>
-                              <Label htmlFor="newThreshold">New Threshold</Label>
-                              <Input id="newThreshold" type="number" placeholder={item.threshold.toString()} />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="requiredQty">Required Quantity</Label>
-                              <Input id="requiredQty" type="number" placeholder={item.requiredQuantity.toString()} />
-                            </div>
-                            <div>
-                              <Label htmlFor="inManufacturing">In Manufacturing</Label>
-                              <Input id="inManufacturing" type="number" placeholder={item.inManufacturing.toString()} />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="updateReason">Reason for Update</Label>
-                            <Select>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select reason" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="production">New Production</SelectItem>
-                                <SelectItem value="sale">Sold/Dispatched</SelectItem>
-                                <SelectItem value="damage">Damaged/Defective</SelectItem>
-                                <SelectItem value="correction">Stock Correction</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Button className="w-full">Update Stock</Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
