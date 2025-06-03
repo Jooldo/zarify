@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Trash2 } from 'lucide-react';
 
 const CreateProductConfigForm = ({ onClose }) => {
   const [category, setCategory] = useState('');
@@ -13,6 +15,12 @@ const CreateProductConfigForm = ({ onClose }) => {
   const [basePrice, setBasePrice] = useState('');
   const [materialCost, setMaterialCost] = useState('');
   const [laborCost, setLaborCost] = useState('');
+  const [rawMaterials, setRawMaterials] = useState([]);
+  const [currentMaterial, setCurrentMaterial] = useState({
+    name: '',
+    quantity: '',
+    unit: ''
+  });
 
   const categories = {
     "Traditional": ["Meena Work", "Kundan Work", "Temple Style", "Oxidized"],
@@ -28,6 +36,8 @@ const CreateProductConfigForm = ({ onClose }) => {
     { label: "XXL (0.40m)", value: "XXL (0.40m)" }
   ];
 
+  const materialUnits = ["pieces", "meters", "kg", "grams", "rolls", "liters"];
+
   const generateProductCode = () => {
     if (!category || !subcategory || !size) return '';
     
@@ -36,6 +46,20 @@ const CreateProductConfigForm = ({ onClose }) => {
     const sizeCode = size.split(' ')[0].substring(0, 2).toUpperCase();
     
     return `${catCode}-${subCode}-${sizeCode}`;
+  };
+
+  const addRawMaterial = () => {
+    if (currentMaterial.name && currentMaterial.quantity && currentMaterial.unit) {
+      setRawMaterials([...rawMaterials, {
+        ...currentMaterial,
+        quantity: parseFloat(currentMaterial.quantity)
+      }]);
+      setCurrentMaterial({ name: '', quantity: '', unit: '' });
+    }
+  };
+
+  const removeRawMaterial = (index) => {
+    setRawMaterials(rawMaterials.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e) => {
@@ -48,6 +72,7 @@ const CreateProductConfigForm = ({ onClose }) => {
       basePrice: parseFloat(basePrice),
       materialCost: parseFloat(materialCost),
       laborCost: parseFloat(laborCost),
+      rawMaterials,
       isActive: true
     };
     
@@ -166,6 +191,94 @@ const CreateProductConfigForm = ({ onClose }) => {
               required
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Raw Materials Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Raw Materials Required</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add New Material */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <Label htmlFor="materialName">Material Name</Label>
+              <Input
+                id="materialName"
+                value={currentMaterial.name}
+                onChange={(e) => setCurrentMaterial({...currentMaterial, name: e.target.value})}
+                placeholder="e.g., Silver Chain"
+              />
+            </div>
+            <div>
+              <Label htmlFor="materialQuantity">Quantity per Unit</Label>
+              <Input
+                id="materialQuantity"
+                type="number"
+                min="0"
+                step="0.01"
+                value={currentMaterial.quantity}
+                onChange={(e) => setCurrentMaterial({...currentMaterial, quantity: e.target.value})}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="materialUnit">Unit</Label>
+              <Select value={currentMaterial.unit} onValueChange={(value) => setCurrentMaterial({...currentMaterial, unit: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {materialUnits.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="button" onClick={addRawMaterial} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Material
+            </Button>
+          </div>
+
+          {/* Materials List */}
+          {rawMaterials.length > 0 && (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material Name</TableHead>
+                    <TableHead>Quantity per Unit</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rawMaterials.map((material, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{material.name}</TableCell>
+                      <TableCell>{material.quantity}</TableCell>
+                      <TableCell>{material.unit}</TableCell>
+                      <TableCell>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeRawMaterial(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
