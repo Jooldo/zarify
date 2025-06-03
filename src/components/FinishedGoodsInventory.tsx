@@ -126,10 +126,10 @@ const FinishedGoodsInventory = () => {
     return "default" as const;
   };
 
-  const getShortfallVariant = (shortfall: number) => {
-    if (shortfall < 0) return "destructive" as const;
-    if (shortfall === 0) return "secondary" as const;
-    return "default" as const;
+  const getShortfallStyles = (shortfall: number) => {
+    if (shortfall < 0) return "bg-red-800 text-white hover:bg-red-800";
+    if (shortfall > 0) return "bg-green-800 text-white hover:bg-green-800";
+    return "bg-gray-500 text-white hover:bg-gray-500";
   };
 
   const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number) => {
@@ -279,7 +279,7 @@ const FinishedGoodsInventory = () => {
                   <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.requiredQuantity}</TableCell>
                   <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.inManufacturing}</TableCell>
                   <TableCell className="px-2 py-1 bg-blue-50">
-                    <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-2 py-1 font-bold">
+                    <Badge className={`text-xs px-2 py-1 font-bold ${getShortfallStyles(shortfall)}`}>
                       {shortfall > 0 ? `+${shortfall}` : shortfall}
                     </Badge>
                   </TableCell>
