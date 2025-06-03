@@ -39,15 +39,15 @@ const InventoryTableRow = ({
       <TableCell className="px-2 py-1 text-xs">{item.category}</TableCell>
       <TableCell className="px-2 py-1 text-xs">{item.subcategory}</TableCell>
       <TableCell className="px-2 py-1 text-xs">{item.size}</TableCell>
-      <TableCell className="px-2 py-1 bg-blue-50">
+      <TableCell className="px-2 py-1">
         <Badge variant={getStockStatusVariant(item.currentStock, item.threshold)} className="text-xs px-2 py-1 font-bold">
           {item.currentStock}
         </Badge>
       </TableCell>
-      <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.threshold}</TableCell>
-      <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.requiredQuantity}</TableCell>
-      <TableCell className="px-2 py-1 text-xs bg-blue-50 font-medium">{item.inManufacturing}</TableCell>
-      <TableCell className="px-2 py-1 bg-blue-50">
+      <TableCell className="px-2 py-1 text-xs font-medium">{item.threshold}</TableCell>
+      <TableCell className="px-2 py-1 text-xs font-medium">{item.requiredQuantity}</TableCell>
+      <TableCell className="px-2 py-1 text-xs font-medium">{item.inManufacturing}</TableCell>
+      <TableCell className="px-2 py-1">
         <Badge className={`text-xs px-2 py-1 font-bold ${getShortfallStyles(shortfall)}`}>
           {shortfall > 0 ? `+${shortfall}` : shortfall}
         </Badge>

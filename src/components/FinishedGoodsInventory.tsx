@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import InventoryHeader from './inventory/InventoryHeader';
@@ -94,9 +95,9 @@ const FinishedGoodsInventory = () => {
   });
 
   const getStockStatusVariant = (stock: number, threshold: number) => {
-    if (stock <= threshold * 0.5) return "destructive" as const;
-    if (stock <= threshold) return "secondary" as const;
-    return "default" as const;
+    if (stock > threshold) return "default" as const;
+    if (stock === threshold) return "secondary" as const;
+    return "destructive" as const;
   };
 
   const getShortfallStyles = (shortfall: number) => {
@@ -128,11 +129,11 @@ const FinishedGoodsInventory = () => {
               <TableHead className="px-2 py-1 text-xs font-medium">Category</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Subcategory</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Size</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium bg-blue-50">Current Stock</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium bg-blue-50">Threshold</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium bg-blue-50">Required Qty</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium bg-blue-50">In Manufacturing</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium bg-blue-50">Shortfall</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Current Stock</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Threshold</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Required Qty</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">In Manufacturing</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Last Produced</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Actions</TableHead>
             </TableRow>
