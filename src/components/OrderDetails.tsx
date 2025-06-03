@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,12 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Package, Calendar, Phone, User } from 'lucide-react';
+import { Order } from '@/hooks/useOrders';
 
-const OrderDetails = ({ order }) => {
+interface OrderDetailsProps {
+  order: Order;
+}
+
+const OrderDetails = ({ order }: OrderDetailsProps) => {
+  // Add null check for order and order_items
+  if (!order || !order.order_items) {
+    return <div>Order not found or invalid order data.</div>;
+  }
+
   const [suborderStatuses, setSuborderStatuses] = useState(
-    order.suborders.reduce((acc, sub) => ({
+    order.order_items.reduce((acc, item) => ({
       ...acc,
-      [sub.id]: sub.status
+      [item.id]: item.status
     }), {})
   );
 
@@ -66,7 +77,7 @@ const OrderDetails = ({ order }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{order.id}</h2>
+          <h2 className="text-2xl font-bold">{order.order_number}</h2>
           <p className="text-gray-600">Order Details</p>
         </div>
         <Badge variant={getStatusColor(getOverallStatus())} className="text-sm px-3 py-1">
@@ -85,19 +96,19 @@ const OrderDetails = ({ order }) => {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-gray-500" />
-            <span>{order.customer}</span>
+            <span>{order.customer.name}</span>
           </div>
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-gray-500" />
-            <span>{order.phone}</span>
+            <span>{order.customer.phone || 'N/A'}</span>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500" />
-            <span>Order Date: {new Date(order.createdDate).toLocaleDateString()}</span>
+            <span>Order Date: {new Date(order.created_date).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500" />
-            <span>Expected: {new Date(order.expectedDelivery).toLocaleDateString()}</span>
+            <span>Expected: {order.expected_delivery ? new Date(order.expected_delivery).toLocaleDateString() : 'N/A'}</span>
           </div>
         </CardContent>
       </Card>
@@ -107,7 +118,7 @@ const OrderDetails = ({ order }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Suborders
+            Order Items
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -124,28 +135,28 @@ const OrderDetails = ({ order }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {order.suborders.map((suborder) => (
-                <TableRow key={suborder.id}>
-                  <TableCell className="font-medium text-blue-600">{suborder.id}</TableCell>
-                  <TableCell className="font-mono text-sm bg-gray-50">{suborder.productCode}</TableCell>
+              {order.order_items.map((orderItem) => (
+                <TableRow key={orderItem.id}>
+                  <TableCell className="font-medium text-blue-600">{orderItem.suborder_id}</TableCell>
+                  <TableCell className="font-mono text-sm bg-gray-50">{orderItem.product_config.product_code}</TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div className="font-medium">{suborder.subcategory}</div>
-                      <div className="text-gray-500">{suborder.category} - {suborder.size}</div>
+                      <div className="font-medium">{orderItem.product_config.subcategory}</div>
+                      <div className="text-gray-500">{orderItem.product_config.category} - {orderItem.product_config.size}</div>
                     </div>
                   </TableCell>
-                  <TableCell>{suborder.quantity} pieces</TableCell>
-                  <TableCell className="font-medium">₹{suborder.price.toLocaleString()}</TableCell>
+                  <TableCell>{orderItem.quantity} pieces</TableCell>
+                  <TableCell className="font-medium">₹{orderItem.total_price.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusColor(suborderStatuses[suborder.id])}>
-                      {suborderStatuses[suborder.id]}
+                    <Badge variant={getStatusColor(suborderStatuses[orderItem.id])}>
+                      {suborderStatuses[orderItem.id]}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2 items-center">
                       <Select
-                        value={suborderStatuses[suborder.id]}
-                        onValueChange={(value) => handleSuborderStatusUpdate(suborder.id, value)}
+                        value={suborderStatuses[orderItem.id]}
+                        onValueChange={(value) => handleSuborderStatusUpdate(orderItem.id, value)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
@@ -169,7 +180,7 @@ const OrderDetails = ({ order }) => {
           
           <div className="flex justify-between items-center text-lg font-bold">
             <span>Total Order Amount:</span>
-            <span>₹{order.totalAmount.toLocaleString()}</span>
+            <span>₹{order.total_amount.toLocaleString()}</span>
           </div>
         </CardContent>
       </Card>

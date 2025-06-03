@@ -30,6 +30,9 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
 
+  // Find the correct order by order_number instead of id
+  const order = orders.find(o => o.order_number === item.orderId);
+
   return (
     <TableRow className="h-10 hover:bg-gray-50">
       <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
@@ -59,19 +62,21 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
       <TableCell className="py-1 px-2 text-xs">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
       <TableCell className="py-1 px-2">
         <div className="flex gap-1">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                <Eye className="h-3 w-3" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Order Details</DialogTitle>
-              </DialogHeader>
-              <OrderDetails order={orders.find(o => o.id === item.orderId)} />
-            </DialogContent>
-          </Dialog>
+          {order && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                  <Eye className="h-3 w-3" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Order Details</DialogTitle>
+                </DialogHeader>
+                <OrderDetails order={order} />
+              </DialogContent>
+            </Dialog>
+          )}
           <Button variant="outline" size="sm" className="h-6 w-6 p-0">
             <Edit className="h-3 w-3" />
           </Button>
