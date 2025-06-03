@@ -39,6 +39,7 @@ export const useProcurementRequests = () => {
           raw_material:raw_materials(name, type)
         `)
         .eq('merchant_id', merchantId)
+        .neq('status', 'None')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

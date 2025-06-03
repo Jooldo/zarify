@@ -41,21 +41,27 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     }
   };
 
+  // Get unique material types for the filter
+  const materialTypes = ['all', ...Array.from(new Set(rawMaterials.map(m => m.type)))];
+
   return (
     <div className="space-y-4">
       <InventoryHeader 
-        title="Raw Material Inventory"
-        onMaterialAdded={handleMaterialAdded}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        categoryFilter={filterStatus}
+        setCategoryFilter={setFilterStatus}
+        sizeFilter={filterType}
+        setSizeFilter={setFilterType}
+        onProductAdded={handleMaterialAdded}
       />
       
       <InventorySearchAndFilters
         searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
+        onSearchChange={setSearchTerm}
         filterType={filterType}
-        setFilterType={setFilterType}
-        filterStatus={filterStatus}
-        setFilterStatus={setFilterStatus}
-        materials={rawMaterials}
+        onFilterChange={setFilterType}
+        materialTypes={materialTypes}
       />
       
       <RawMaterialsTable 
