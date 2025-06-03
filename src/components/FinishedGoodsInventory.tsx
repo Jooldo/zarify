@@ -1,120 +1,120 @@
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Plus, Package, AlertCircle } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import InventoryHeader from './inventory/InventoryHeader';
-import InventoryTableRow from './inventory/InventoryTableRow';
 
 const FinishedGoodsInventory = () => {
-  const { finishedGoods, loading } = useFinishedGoods();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sizeFilter, setSizeFilter] = useState('all');
+  const { finishedGoods, loading } = useFinishedGoods();
 
-  const filteredGoods = finishedGoods.filter(item => {
-    const matchesSearch = 
-      item.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.product_code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.product_config?.category === categoryFilter;
-    const matchesSize = sizeFilter === 'all' || item.product_config?.size === sizeFilter;
-    return matchesSearch && matchesCategory && matchesSize;
-  });
+  const filteredProducts = finishedGoods.filter(product =>
+    product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const getStockStatusVariant = (stock: number, threshold: number) => {
-    if (stock > threshold) return "default" as const;
-    if (stock === threshold) return "secondary" as const;
-    return "destructive" as const;
-  };
-
-  const getShortfallStyles = (shortfall: number) => {
-    if (shortfall < 0) return "bg-red-800 text-white hover:bg-red-800";
-    if (shortfall > 0) return "bg-green-800 text-white hover:bg-green-800";
-    return "bg-gray-500 text-white hover:bg-gray-500";
-  };
-
-  const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
-    return currentStock + inManufacturing - (requiredQuantity + threshold);
-  };
-
-  const getShortfallDisplay = (shortfall: number) => {
-    if (shortfall < 0) {
-      return `Deficit of ${Math.abs(shortfall)}`;
-    } else if (shortfall > 0) {
-      return `Surplus of ${shortfall}`;
-    } else {
-      return "Balanced";
-    }
-  };
-
-  const getShortfallTextColor = (shortfall: number) => {
-    if (shortfall < 0) return "text-red-800 font-bold";
-    if (shortfall > 0) return "text-green-800 font-bold";
-    return "text-gray-600 font-bold";
+  const getStockStatus = (currentStock: number, threshold: number) => {
+    if (currentStock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
+    if (currentStock <= threshold) return { label: 'Low Stock', variant: 'secondary' as const };
+    return { label: 'In Stock', variant: 'default' as const };
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8">Loading...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Finished Goods Inventory
+          </h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-lg">Loading finished goods...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <InventoryHeader
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        sizeFilter={sizeFilter}
-        setSizeFilter={setSizeFilter}
-      />
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Finished Goods Inventory
+        </h3>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+            <Plus className="h-3 w-3" />
+            Add Product
+          </Button>
+        </div>
+      </div>
 
+      {/* Products Table */}
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="px-2 py-1 text-xs font-medium">Product Code</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Category</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Subcategory</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Size</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Current Stock</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Required Qty</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">In Manufacturing</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Status</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Last Produced</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Actions</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Size</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGoods.map((item) => (
-              <InventoryTableRow
-                key={item.id}
-                item={{
-                  id: item.id,
-                  productCode: item.product_code,
-                  category: item.product_config?.category || '',
-                  subcategory: item.product_config?.subcategory || '',
-                  size: item.product_config?.size || '',
-                  currentStock: item.current_stock,
-                  threshold: item.threshold,
-                  requiredQuantity: item.required_quantity,
-                  inManufacturing: item.in_manufacturing,
-                  lastProduced: item.last_produced || ''
-                }}
-                getStockStatusVariant={getStockStatusVariant}
-                getShortfallStyles={getShortfallStyles}
-                calculateShortfall={calculateShortfall}
-                getShortfallDisplay={getShortfallDisplay}
-                getShortfallTextColor={getShortfallTextColor}
-              />
-            ))}
+            {filteredProducts.map((product) => {
+              const status = getStockStatus(product.current_stock, product.threshold);
+              return (
+                <TableRow key={product.id} className="h-10">
+                  <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{product.product_code}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">{product.product_config?.category || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.product_config?.subcategory || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.product_config?.size || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">{product.current_stock}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.threshold}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.required_quantity}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.in_manufacturing}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={status.variant} className="text-xs px-1 py-0">
+                      {status.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    {product.last_produced ? new Date(product.last_produced).toLocaleDateString() : 'Never'}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
-      {filteredGoods.length === 0 && (
+      {filteredProducts.length === 0 && !loading && (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">No finished goods found matching your search criteria.</p>
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">
+            {finishedGoods.length === 0 ? 'No finished goods found. Add some products to get started.' : 'No products found matching your search.'}
+          </p>
         </div>
       )}
     </div>

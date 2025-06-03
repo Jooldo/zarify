@@ -1,98 +1,135 @@
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Plus, Package2, AlertCircle } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import RawMaterialsTable from '@/components/inventory/RawMaterialsTable';
-import ProcurementRequestsTable from '@/components/inventory/ProcurementRequestsTable';
-import RaiseRequestDialog from '@/components/inventory/RaiseRequestDialog';
-import ViewRequestDialog from '@/components/inventory/ViewRequestDialog';
-import AddMaterialDialog from '@/components/inventory/AddMaterialDialog';
-import InventorySearchAndFilters from '@/components/inventory/InventorySearchAndFilters';
 
 const RawMaterialInventory = () => {
-  const { rawMaterials, loading } = useRawMaterials();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [isRaiseRequestOpen, setIsRaiseRequestOpen] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
-  const [isViewRequestOpen, setIsViewRequestOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const { rawMaterials, loading } = useRawMaterials();
 
-  const materialTypes = ["all", "Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
+  const filteredMaterials = rawMaterials.filter(material =>
+    material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    material.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    material.supplier?.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const filteredMaterials = rawMaterials.filter(material => {
-    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         material.type.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || material.type === filterType;
-    return matchesSearch && matchesType;
-  });
-
-  const handleRaiseRequest = (material: any) => {
-    setSelectedMaterial(material);
-    setIsRaiseRequestOpen(true);
+  const getStockStatus = (currentStock: number, minimumStock: number) => {
+    if (currentStock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
+    if (currentStock <= minimumStock) return { label: 'Low Stock', variant: 'secondary' as const };
+    return { label: 'In Stock', variant: 'default' as const };
   };
 
-  const handleViewRequest = (request: any) => {
-    setSelectedRequest(request);
-    setIsViewRequestOpen(true);
-  };
-
-  const handleUpdateRequestStatus = (requestId: string, newStatus: string) => {
-    // This will be implemented when we add procurement requests functionality
-    setIsViewRequestOpen(false);
+  const getRequestStatus = (status: string) => {
+    switch (status) {
+      case 'None': return { label: 'None', variant: 'outline' as const };
+      case 'Pending': return { label: 'Pending', variant: 'secondary' as const };
+      case 'Approved': return { label: 'Approved', variant: 'default' as const };
+      case 'Received': return { label: 'Received', variant: 'default' as const };
+      default: return { label: status, variant: 'outline' as const };
+    }
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8">Loading...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Package2 className="h-5 w-5" />
+            Raw Materials Inventory
+          </h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-lg">Loading raw materials...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Search and Filters */}
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <InventorySearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          filterType={filterType}
-          onFilterChange={setFilterType}
-          materialTypes={materialTypes}
-        />
-        <AddMaterialDialog />
-      </div>
-
-      {/* Combined Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Raw Materials Inventory & Requirements - Takes 2 columns */}
-        <div className="xl:col-span-2 space-y-4">
-          <h3 className="text-lg font-semibold">Raw Materials Inventory & Requirements</h3>
-          <RawMaterialsTable
-            materials={filteredMaterials}
-            onRaiseRequest={handleRaiseRequest}
-          />
-        </div>
-
-        {/* Active Procurement Requests - Takes 1 column */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Active Procurement Requests</h3>
-          <ProcurementRequestsTable
-            requests={[]} // Will be populated when procurement requests are implemented
-            onViewRequest={handleViewRequest}
-          />
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Package2 className="h-5 w-5" />
+          Raw Materials Inventory
+        </h3>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search materials..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+            <Plus className="h-3 w-3" />
+            Add Material
+          </Button>
         </div>
       </div>
 
-      {/* Dialogs */}
-      <RaiseRequestDialog
-        isOpen={isRaiseRequestOpen}
-        onOpenChange={setIsRaiseRequestOpen}
-        selectedMaterial={selectedMaterial}
-      />
+      {/* Materials Table */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="h-8">
+              <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Request Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMaterials.map((material) => {
+              const status = getStockStatus(material.current_stock, material.minimum_stock);
+              const requestStatus = getRequestStatus(material.request_status);
+              return (
+                <TableRow key={material.id} className="h-10">
+                  <TableCell className="py-1 px-2 text-xs font-medium">{material.name}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.type}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">{material.current_stock}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.minimum_stock}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.required}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.in_procurement}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.unit}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{material.supplier?.company_name || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={status.variant} className="text-xs px-1 py-0">
+                      {status.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={requestStatus.variant} className="text-xs px-1 py-0">
+                      {requestStatus.label}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
-      <ViewRequestDialog
-        isOpen={isViewRequestOpen}
-        onOpenChange={setIsViewRequestOpen}
-        selectedRequest={selectedRequest}
-        onUpdateRequestStatus={handleUpdateRequestStatus}
-      />
+      {filteredMaterials.length === 0 && !loading && (
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">
+            {rawMaterials.length === 0 ? 'No raw materials found. Add some materials to get started.' : 'No materials found matching your search.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
