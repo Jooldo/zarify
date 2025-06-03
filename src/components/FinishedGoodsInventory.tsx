@@ -1,15 +1,15 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Package, AlertCircle } from 'lucide-react';
+import { Search, Package, AlertCircle } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
+import AddProductDialog from '@/components/inventory/AddProductDialog';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { finishedGoods, loading } = useFinishedGoods();
+  const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   const filteredProducts = finishedGoods.filter(product =>
     product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,10 +57,7 @@ const FinishedGoodsInventory = () => {
               className="pl-10 h-8"
             />
           </div>
-          <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-            <Plus className="h-3 w-3" />
-            Add Product
-          </Button>
+          <AddProductDialog onProductAdded={refetch} />
         </div>
       </div>
 

@@ -5,9 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import OrderItemForm from './orders/OrderItemForm';
 
-const CreateOrderForm = ({ onClose }) => {
+interface CreateOrderFormProps {
+  onClose: () => void;
+  onOrderCreated: () => void;
+}
+
+const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [items, setItems] = useState([{
@@ -15,10 +22,8 @@ const CreateOrderForm = ({ onClose }) => {
     quantity: 1,
     price: 0
   }]);
-
-  const generateSuborderId = (orderIndex, itemIndex) => {
-    return `SUB-${String(orderIndex).padStart(3, '0')}-${itemIndex + 1}`;
-  };
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const addItem = () => {
     setItems([...items, {
@@ -28,13 +33,13 @@ const CreateOrderForm = ({ onClose }) => {
     }]);
   };
 
-  const removeItem = (index) => {
+  const removeItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
     }
   };
 
-  const updateItem = (index, field, value) => {
+  const updateItem = (index: number, field: string, value: any) => {
     const updatedItems = items.map((item, i) => {
       if (i === index) {
         return { ...item, [field]: value };
@@ -48,29 +53,97 @@ const CreateOrderForm = ({ onClose }) => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const orderIndex = Math.floor(Math.random() * 1000);
-    
-    const suborders = items.map((item, index) => ({
-      id: generateSuborderId(orderIndex, index),
-      productCode: item.productCode,
-      quantity: item.quantity,
-      price: item.price * item.quantity,
-      status: "Created"
-    }));
+    setLoading(true);
 
-    const orderData = {
-      customer: customerName,
-      phone: customerPhone,
-      suborders: suborders,
-      totalAmount: calculateTotal(),
-      createdDate: new Date().toISOString().split('T')[0],
-      expectedDelivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    };
-    
-    console.log('Creating order with suborders:', orderData);
-    onClose();
+    try {
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      // Create or find customer
+      let customerId;
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', customerPhone)
+        .eq('merchant_id', merchantId)
+        .single();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: customerName,
+            phone: customerPhone,
+            merchant_id: merchantId
+          })
+          .select('id')
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
+      }
+
+      // Generate order number
+      const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: customerId,
+          total_amount: calculateTotal(),
+          expected_delivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          merchant_id: merchantId,
+          status: 'Created'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map((item, index) => ({
+        order_id: order.id,
+        product_config_id: item.productCode, // Assuming productCode is the config ID
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+        suborder_id: `SUB-${orderNumber}-${index + 1}`,
+        merchant_id: merchantId,
+        status: 'Created'
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      toast({
+        title: 'Success',
+        description: 'Order created successfully',
+      });
+
+      onOrderCreated();
+      onClose();
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create order',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -124,7 +197,7 @@ const CreateOrderForm = ({ onClose }) => {
               items={items}
               updateItem={updateItem}
               removeItem={removeItem}
-              generateSuborderId={generateSuborderId}
+              generateSuborderId={(orderIndex: number, itemIndex: number) => `SUB-${orderIndex}-${itemIndex + 1}`}
             />
           ))}
 
@@ -141,8 +214,8 @@ const CreateOrderForm = ({ onClose }) => {
         <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-8 text-xs">
           Cancel
         </Button>
-        <Button type="submit" size="sm" className="h-8 text-xs">
-          Create Order
+        <Button type="submit" size="sm" className="h-8 text-xs" disabled={loading}>
+          {loading ? 'Creating...' : 'Create Order'}
         </Button>
       </div>
     </form>

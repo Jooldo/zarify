@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +9,13 @@ import { useRawMaterials } from '@/hooks/useRawMaterials';
 import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
 import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog';
 import AddMaterialDialog from '@/components/inventory/AddMaterialDialog';
+import RaiseRequestDialog from '@/components/inventory/RaiseRequestDialog';
 
 const RawMaterialInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rawMaterials, loading, updateRawMaterial, createRawMaterial } = useRawMaterials();
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [isRaiseRequestOpen, setIsRaiseRequestOpen] = useState(false);
+  const { rawMaterials, loading, updateRawMaterial, createRawMaterial, refetch } = useRawMaterials();
 
   const filteredMaterials = rawMaterials.filter(material =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,6 +37,11 @@ const RawMaterialInventory = () => {
       case 'Received': return { label: 'Received', variant: 'default' as const };
       default: return { label: status, variant: 'outline' as const };
     }
+  };
+
+  const handleRaiseRequest = (material) => {
+    setSelectedMaterial(material);
+    setIsRaiseRequestOpen(true);
   };
 
   if (loading) {
@@ -84,7 +91,6 @@ const RawMaterialInventory = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
@@ -103,7 +109,6 @@ const RawMaterialInventory = () => {
                   <TableCell className="py-1 px-2 text-xs">{material.type}</TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">{material.current_stock}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.minimum_stock}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{material.required}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.in_procurement}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.unit}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.supplier?.company_name || 'N/A'}</TableCell>
@@ -145,9 +150,16 @@ const RawMaterialInventory = () => {
                           <UpdateRawMaterialDialog material={material} onUpdate={updateRawMaterial} />
                         </DialogContent>
                       </Dialog>
-                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                        <Edit className="h-3 w-3" />
-                      </Button>
+                      {material.current_stock <= material.minimum_stock && material.request_status === 'None' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleRaiseRequest(material)}
+                        >
+                          Raise Request
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -165,6 +177,13 @@ const RawMaterialInventory = () => {
           </p>
         </div>
       )}
+
+      <RaiseRequestDialog
+        isOpen={isRaiseRequestOpen}
+        onOpenChange={setIsRaiseRequestOpen}
+        material={selectedMaterial}
+        onRequestCreated={refetch}
+      />
     </div>
   );
 };

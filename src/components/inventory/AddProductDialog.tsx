@@ -1,92 +1,162 @@
 
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 
-const AddProductDialog = () => {
-  const [selectedProductCode, setSelectedProductCode] = useState('');
-  const { productConfigs, loading } = useProductConfigs();
+interface AddProductDialogProps {
+  onProductAdded: () => void;
+}
 
-  const activeProductConfigs = productConfigs.filter(config => config.is_active);
-  const selectedConfig = activeProductConfigs.find(config => config.product_code === selectedProductCode);
+const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [productConfigId, setProductConfigId] = useState('');
+  const [currentStock, setCurrentStock] = useState('');
+  const [threshold, setThreshold] = useState('');
+  const [requiredQuantity, setRequiredQuantity] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const { productConfigs, loading: configsLoading } = useProductConfigs();
 
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        <div className="text-center py-4">
-          <div className="text-sm">Loading product configurations...</div>
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      // Get the selected product config to get the product code
+      const selectedConfig = productConfigs.find(config => config.id === productConfigId);
+      if (!selectedConfig) throw new Error('Product config not found');
+
+      // Create finished good
+      const { error } = await supabase
+        .from('finished_goods')
+        .insert({
+          product_config_id: productConfigId,
+          product_code: selectedConfig.product_code,
+          current_stock: parseInt(currentStock),
+          threshold: parseInt(threshold),
+          required_quantity: parseInt(requiredQuantity),
+          in_manufacturing: 0,
+          merchant_id: merchantId
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Finished good added successfully',
+      });
+
+      // Reset form
+      setProductConfigId('');
+      setCurrentStock('');
+      setThreshold('');
+      setRequiredQuantity('');
+      setIsOpen(false);
+      onProductAdded();
+    } catch (error) {
+      console.error('Error adding finished good:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add finished good',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-3">
-      <div>
-        <Label htmlFor="productCode" className="text-xs">Product Code</Label>
-        <Select value={selectedProductCode} onValueChange={setSelectedProductCode}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Select product code" />
-          </SelectTrigger>
-          <SelectContent>
-            {activeProductConfigs.map((config) => (
-              <SelectItem key={config.product_code} value={config.product_code} className="text-xs">
-                {config.product_code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      {selectedConfig && (
-        <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded text-xs">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+          <Plus className="h-3 w-3" />
+          Add Product
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Finished Good</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="text-xs font-medium">Category</Label>
-            <div className="text-xs text-gray-600">{selectedConfig.category}</div>
+            <Label htmlFor="productConfig">Product Configuration *</Label>
+            <Select 
+              value={productConfigId} 
+              onValueChange={setProductConfigId}
+              disabled={configsLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={configsLoading ? "Loading..." : "Select product configuration"} />
+              </SelectTrigger>
+              <SelectContent>
+                {productConfigs.map((config) => (
+                  <SelectItem key={config.id} value={config.id}>
+                    {config.product_code} - {config.category} {config.subcategory} ({config.size})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <Label className="text-xs font-medium">Subcategory</Label>
-            <div className="text-xs text-gray-600">{selectedConfig.subcategory}</div>
+            <Label htmlFor="currentStock">Current Stock *</Label>
+            <Input 
+              id="currentStock" 
+              type="number" 
+              value={currentStock}
+              onChange={(e) => setCurrentStock(e.target.value)}
+              placeholder="Enter current stock"
+              min="0"
+              required
+            />
           </div>
           <div>
-            <Label className="text-xs font-medium">Size</Label>
-            <div className="text-xs text-gray-600">{selectedConfig.size}</div>
+            <Label htmlFor="threshold">Threshold *</Label>
+            <Input 
+              id="threshold" 
+              type="number" 
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder="Enter minimum threshold"
+              min="0"
+              required
+            />
           </div>
           <div>
-            <Label className="text-xs font-medium">Status</Label>
-            <Badge variant="default" className="text-xs h-4 px-1">
-              {selectedConfig.is_active ? 'Active' : 'Inactive'}
-            </Badge>
+            <Label htmlFor="requiredQuantity">Required Quantity *</Label>
+            <Input 
+              id="requiredQuantity" 
+              type="number" 
+              value={requiredQuantity}
+              onChange={(e) => setRequiredQuantity(e.target.value)}
+              placeholder="Enter required quantity"
+              min="0"
+              required
+            />
           </div>
-        </div>
-      )}
-      
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label htmlFor="quantity" className="text-xs">Current Stock</Label>
-          <Input id="quantity" type="number" placeholder="0" className="h-8 text-xs" />
-        </div>
-        <div>
-          <Label htmlFor="threshold" className="text-xs">Threshold</Label>
-          <Input id="threshold" type="number" placeholder="0" className="h-8 text-xs" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label htmlFor="required" className="text-xs">Required Quantity</Label>
-          <Input id="required" type="number" placeholder="0" className="h-8 text-xs" />
-        </div>
-        <div>
-          <Label htmlFor="inManufacturing" className="text-xs">In Manufacturing</Label>
-          <Input id="inManufacturing" type="number" placeholder="0" className="h-8 text-xs" />
-        </div>
-      </div>
-      <Button className="w-full h-8 text-xs" disabled={!selectedProductCode}>Add to Inventory</Button>
-    </div>
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" className="flex-1" disabled={loading || !productConfigId}>
+              {loading ? 'Adding...' : 'Add Product'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

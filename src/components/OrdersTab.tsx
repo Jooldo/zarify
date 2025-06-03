@@ -5,7 +5,7 @@ import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 
 const OrdersTab = () => {
-  const { orders, loading } = useOrders();
+  const { orders, loading, refetch } = useOrders();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Sample finished goods inventory data for stock availability
@@ -81,7 +81,11 @@ const OrdersTab = () => {
 
   return (
     <div className="space-y-4">
-      <OrdersHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <OrdersHeader 
+        searchTerm={searchTerm} 
+        setSearchTerm={setSearchTerm}
+        onOrderCreated={refetch}
+      />
       
       <OrdersTable 
         filteredOrders={filteredOrders}
