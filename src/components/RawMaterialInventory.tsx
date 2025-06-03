@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ const RawMaterialInventory = () => {
   const [isRaiseRequestOpen, setIsRaiseRequestOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
 
+  // Combined raw materials data with requirements
   const rawMaterials = [
     {
       id: 1,
@@ -25,7 +27,10 @@ const RawMaterialInventory = () => {
       unit: "meters",
       lastUpdated: "2024-06-01",
       supplier: "Mumbai Silver Co.",
-      costPerUnit: 120
+      costPerUnit: 120,
+      required: 120,
+      shortfall: -105,
+      requestStatus: "Approved"
     },
     {
       id: 2,
@@ -36,7 +41,10 @@ const RawMaterialInventory = () => {
       unit: "pieces",
       lastUpdated: "2024-05-30",
       supplier: "Rajasthan Crafts",
-      costPerUnit: 25
+      costPerUnit: 25,
+      required: 50,
+      shortfall: -42,
+      requestStatus: "None"
     },
     {
       id: 3,
@@ -47,7 +55,10 @@ const RawMaterialInventory = () => {
       unit: "pieces",
       lastUpdated: "2024-06-02",
       supplier: "Delhi Accessories",
-      costPerUnit: 5
+      costPerUnit: 5,
+      required: 200,
+      shortfall: -175,
+      requestStatus: "None"
     },
     {
       id: 4,
@@ -58,7 +69,10 @@ const RawMaterialInventory = () => {
       unit: "rolls",
       lastUpdated: "2024-05-29",
       supplier: "Local Supplier",
-      costPerUnit: 15
+      costPerUnit: 15,
+      required: 30,
+      shortfall: -25,
+      requestStatus: "Pending"
     },
     {
       id: 5,
@@ -69,7 +83,10 @@ const RawMaterialInventory = () => {
       unit: "pieces",
       lastUpdated: "2024-06-01",
       supplier: "Artisan Supplies",
-      costPerUnit: 2
+      costPerUnit: 2,
+      required: 100,
+      shortfall: 50,
+      requestStatus: "None"
     },
     {
       id: 6,
@@ -80,7 +97,10 @@ const RawMaterialInventory = () => {
       unit: "rolls",
       lastUpdated: "2024-05-31",
       supplier: "Textile Hub",
-      costPerUnit: 30
+      costPerUnit: 30,
+      required: 25,
+      shortfall: -13,
+      requestStatus: "None"
     }
   ];
 
@@ -105,57 +125,6 @@ const RawMaterialInventory = () => {
       status: "Approved",
       supplier: "Mumbai Silver Co.",
       eta: "2024-06-05"
-    }
-  ];
-
-  const materialRequirements = [
-    {
-      materialName: "Silver Chain",
-      inStock: 15,
-      required: 120,
-      unit: "meters",
-      shortfall: -105,
-      requestStatus: "Approved"
-    },
-    {
-      materialName: "Gold Kunda",
-      inStock: 8,
-      required: 50,
-      unit: "pieces",
-      shortfall: -42,
-      requestStatus: "None"
-    },
-    {
-      materialName: "Small Ghungroo",
-      inStock: 25,
-      required: 200,
-      unit: "pieces",
-      shortfall: -175,
-      requestStatus: "None"
-    },
-    {
-      materialName: "Cotton Thread",
-      inStock: 5,
-      required: 30,
-      unit: "rolls",
-      shortfall: -25,
-      requestStatus: "Pending"
-    },
-    {
-      materialName: "Brass Beads",
-      inStock: 150,
-      required: 100,
-      unit: "pieces",
-      shortfall: 50,
-      requestStatus: "None"
-    },
-    {
-      materialName: "Silk Thread",
-      inStock: 12,
-      required: 25,
-      unit: "rolls",
-      shortfall: -13,
-      requestStatus: "None"
     }
   ];
 
@@ -289,17 +258,19 @@ const RawMaterialInventory = () => {
         </Dialog>
       </div>
 
-      {/* Combined Layout - Two Columns */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left Column - Raw Materials Inventory */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Raw Materials Inventory</h3>
+      {/* Combined Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Combined Raw Materials Inventory & Requirements - Takes 2 columns */}
+        <div className="xl:col-span-2 space-y-4">
+          <h3 className="text-lg font-semibold">Raw Materials Inventory & Requirements</h3>
           <div className="bg-white rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow className="h-8">
                   <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Stock</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Value</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
@@ -320,18 +291,42 @@ const RawMaterialInventory = () => {
                         <div className="text-gray-500">Min: {material.minimumStock}</div>
                       </div>
                     </TableCell>
+                    <TableCell className="py-1 px-2 text-xs">
+                      {material.required} {material.unit}
+                    </TableCell>
+                    <TableCell className={`py-1 px-2 text-xs ${getShortfallColor(material.shortfall)}`}>
+                      {material.shortfall > 0 ? '+' : ''}{material.shortfall} {material.unit}
+                    </TableCell>
                     <TableCell className="py-1 px-2">
-                      <Badge variant={getStockStatusVariant(material.currentStock, material.minimumStock)} className="flex items-center gap-1 w-fit text-xs px-1 py-0">
-                        {getStockStatusText(material.currentStock, material.minimumStock) === "Critical" && <AlertTriangle className="h-3 w-3" />}
-                        {getStockStatusText(material.currentStock, material.minimumStock)}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={getStockStatusVariant(material.currentStock, material.minimumStock)} className="flex items-center gap-1 w-fit text-xs px-1 py-0">
+                          {getStockStatusText(material.currentStock, material.minimumStock) === "Critical" && <AlertTriangle className="h-3 w-3" />}
+                          {getStockStatusText(material.currentStock, material.minimumStock)}
+                        </Badge>
+                        {material.requestStatus !== 'None' && (
+                          <Badge variant={getStatusVariant(material.requestStatus)} className="text-xs px-1 py-0">
+                            {material.requestStatus}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-1 px-2 text-xs font-medium">₹{(material.currentStock * material.costPerUnit).toLocaleString()}</TableCell>
                     <TableCell className="py-1 px-2">
                       <div className="flex gap-1">
-                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                          Update
-                        </Button>
+                        {material.requestStatus === 'None' && material.shortfall < 0 ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleRaiseRequest(material)}
+                          >
+                            Raise Request
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                            Update
+                          </Button>
+                        )}
                         <Button variant="outline" size="sm" className="h-6 w-6 p-0">
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -344,91 +339,42 @@ const RawMaterialInventory = () => {
           </div>
         </div>
 
-        {/* Right Column - Procurement Requests */}
+        {/* Active Procurement Requests - Takes 1 column */}
         <div className="space-y-4">
-          {/* Active Procurement Requests */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Active Procurement Requests</h3>
-            <div className="bg-white rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="h-8">
-                    <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
+          <h3 className="text-lg font-semibold">Active Procurement Requests</h3>
+          <div className="bg-white rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="h-8">
+                  <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {procurementRequests.map((request) => (
+                  <TableRow key={request.id} className="h-8">
+                    <TableCell className="py-1 px-2 text-xs font-medium">{request.id}</TableCell>
+                    <TableCell className="py-1 px-2 text-xs">{request.materialName}</TableCell>
+                    <TableCell className="py-1 px-2 text-xs">{request.quantityRequested} {request.unit}</TableCell>
+                    <TableCell className="py-1 px-2">
+                      <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
+                        {request.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="py-1 px-2">
+                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {procurementRequests.map((request) => (
-                    <TableRow key={request.id} className="h-8">
-                      <TableCell className="py-1 px-2 text-xs font-medium">{request.id}</TableCell>
-                      <TableCell className="py-1 px-2 text-xs">{request.materialName}</TableCell>
-                      <TableCell className="py-1 px-2 text-xs">{request.quantityRequested} {request.unit}</TableCell>
-                      <TableCell className="py-1 px-2">
-                        <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
-                          {request.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
-                      <TableCell className="py-1 px-2">
-                        <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          {/* Material Requirements Planning */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Material Requirements Planning</h3>
-            <div className="bg-white rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="h-8">
-                    <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Stock</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
-                    <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {materialRequirements.map((material, index) => (
-                    <TableRow key={index} className="h-8">
-                      <TableCell className="py-1 px-2 text-xs font-medium">{material.materialName}</TableCell>
-                      <TableCell className="py-1 px-2 text-xs">{material.inStock} {material.unit}</TableCell>
-                      <TableCell className="py-1 px-2 text-xs">{material.required} {material.unit}</TableCell>
-                      <TableCell className={`py-1 px-2 text-xs ${getShortfallColor(material.shortfall)}`}>
-                        {material.shortfall > 0 ? '+' : ''}{material.shortfall} {material.unit}
-                      </TableCell>
-                      <TableCell className="py-1 px-2">
-                        {material.requestStatus === 'None' && material.shortfall < 0 ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-6 px-2 text-xs"
-                            onClick={() => handleRaiseRequest(material)}
-                          >
-                            Raise Request
-                          </Button>
-                        ) : material.requestStatus !== 'None' ? (
-                          <Badge variant={getStatusVariant(material.requestStatus)} className="text-xs px-1 py-0">
-                            {material.requestStatus}
-                          </Badge>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>
@@ -437,13 +383,13 @@ const RawMaterialInventory = () => {
       <Dialog open={isRaiseRequestOpen} onOpenChange={setIsRaiseRequestOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Raise Procurement Request - {selectedMaterial?.materialName}</DialogTitle>
+            <DialogTitle>Raise Procurement Request - {selectedMaterial?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Current Stock</Label>
-                <Input value={`${selectedMaterial?.inStock || 0} ${selectedMaterial?.unit || ''}`} disabled />
+                <Input value={`${selectedMaterial?.currentStock || 0} ${selectedMaterial?.unit || ''}`} disabled />
               </div>
               <div>
                 <Label>Required Quantity</Label>
