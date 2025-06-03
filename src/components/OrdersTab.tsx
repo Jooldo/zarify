@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +31,7 @@ const OrdersTab = () => {
           productCode: "TRD-MNA-MD",
           quantity: 2,
           price: 800,
-          status: "In Manufacturing"
+          status: "In Progress"
         },
         {
           id: "SUB-001-2", 
@@ -42,7 +41,7 @@ const OrdersTab = () => {
           productCode: "TRD-KND-LG",
           quantity: 1,
           price: 1600,
-          status: "Pending"
+          status: "Created"
         }
       ]
     },
@@ -63,7 +62,7 @@ const OrdersTab = () => {
           productCode: "MOD-SLV-SM",
           quantity: 2,
           price: 900,
-          status: "Ready for Dispatch"
+          status: "Ready"
         }
       ]
     },
@@ -84,7 +83,7 @@ const OrdersTab = () => {
           productCode: "TRD-TMP-XL",
           quantity: 1,
           price: 1200,
-          status: "Pending"
+          status: "Created"
         },
         {
           id: "SUB-003-2",
@@ -94,7 +93,7 @@ const OrdersTab = () => {
           productCode: "TRD-MNA-MD",
           quantity: 2,
           price: 1000,
-          status: "Pending"
+          status: "Created"
         }
       ]
     }
@@ -123,28 +122,33 @@ const OrdersTab = () => {
 
   const getOverallOrderStatus = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
-    if (!order) return "Unknown";
+    if (!order) return "Created";
     
     const statuses = order.suborders.map(sub => sub.status);
+    
+    // If all suborders are "Delivered", order is "Delivered"
     if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.some(s => s === "Dispatched")) return "Dispatched";
-    if (statuses.some(s => s === "Ready for Dispatch")) return "Ready for Dispatch";
-    if (statuses.some(s => s === "In Manufacturing")) return "In Manufacturing";
-    return "Pending";
+    
+    // If all suborders are "Ready", order is "Ready"
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    
+    // If any suborder is "In Progress", order is "In Progress"
+    if (statuses.some(s => s === "In Progress")) return "In Progress";
+    
+    // Otherwise, order is "Created"
+    return "Created";
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Pending":
+      case "Created":
         return "secondary" as const;
-      case "In Manufacturing":
+      case "In Progress":
         return "default" as const;
-      case "Ready for Dispatch":
+      case "Ready":
         return "default" as const;
-      case "Dispatched":
-        return "outline" as const;
       case "Delivered":
-        return "default" as const;
+        return "outline" as const;
       default:
         return "secondary" as const;
     }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,28 +16,22 @@ const OrderDetails = ({ order }) => {
   );
 
   const statusOptions = [
-    "Pending",
-    "In Manufacturing", 
-    "Ready for Dispatch",
-    "Dispatched",
-    "Delivered",
-    "Cancelled"
+    "Created",
+    "In Progress", 
+    "Ready",
+    "Delivered"
   ];
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Pending":
+      case "Created":
         return "secondary";
-      case "In Manufacturing":
+      case "In Progress":
         return "default";
-      case "Ready for Dispatch":
+      case "Ready":
         return "default";
-      case "Dispatched":
-        return "outline";
       case "Delivered":
-        return "default";
-      case "Cancelled":
-        return "destructive";
+        return "outline";
       default:
         return "secondary";
     }
@@ -54,11 +47,18 @@ const OrderDetails = ({ order }) => {
 
   const getOverallStatus = () => {
     const statuses = Object.values(suborderStatuses);
+    
+    // If all suborders are "Delivered", order is "Delivered"
     if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.some(s => s === "Dispatched")) return "Dispatched";
-    if (statuses.some(s => s === "Ready for Dispatch")) return "Ready for Dispatch";
-    if (statuses.some(s => s === "In Manufacturing")) return "In Manufacturing";
-    return "Pending";
+    
+    // If all suborders are "Ready", order is "Ready"
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    
+    // If any suborder is "In Progress", order is "In Progress"
+    if (statuses.some(s => s === "In Progress")) return "In Progress";
+    
+    // Otherwise, order is "Created"
+    return "Created";
   };
 
   return (

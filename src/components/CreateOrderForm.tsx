@@ -81,7 +81,7 @@ const CreateOrderForm = ({ onClose }) => {
       size: item.size,
       quantity: item.quantity,
       price: item.price * item.quantity,
-      status: "Pending"
+      status: "Created"
     }));
 
     const orderData = {
