@@ -1,9 +1,9 @@
 
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Wrench } from 'lucide-react';
 import RawMaterialInventory from '@/components/RawMaterialInventory';
 import FinishedGoodsInventory from '@/components/FinishedGoodsInventory';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const InventoryTab = () => {
   return (

@@ -6,13 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Edit, AlertTriangle, ClipboardList, Package } from 'lucide-react';
-import ProcurementRequestsSection from '@/components/ProcurementRequestsSection';
+import { Search, Plus, Edit, AlertTriangle, Eye } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 const RawMaterialInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [isRaiseRequestOpen, setIsRaiseRequestOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
 
   const rawMaterials = [
     {
@@ -83,6 +84,81 @@ const RawMaterialInventory = () => {
     }
   ];
 
+  const procurementRequests = [
+    {
+      id: "PR-001",
+      materialName: "Cotton Thread",
+      quantityRequested: 50,
+      unit: "rolls",
+      dateRequested: "2024-06-01",
+      status: "Pending",
+      supplier: "Local Supplier",
+      eta: "2024-06-10",
+      notes: "Urgent requirement for large orders"
+    },
+    {
+      id: "PR-002",
+      materialName: "Silver Chain",
+      quantityRequested: 100,
+      unit: "meters",
+      dateRequested: "2024-05-30",
+      status: "Approved",
+      supplier: "Mumbai Silver Co.",
+      eta: "2024-06-05"
+    }
+  ];
+
+  const materialRequirements = [
+    {
+      materialName: "Silver Chain",
+      inStock: 15,
+      required: 120,
+      unit: "meters",
+      shortfall: -105,
+      requestStatus: "Approved"
+    },
+    {
+      materialName: "Gold Kunda",
+      inStock: 8,
+      required: 50,
+      unit: "pieces",
+      shortfall: -42,
+      requestStatus: "None"
+    },
+    {
+      materialName: "Small Ghungroo",
+      inStock: 25,
+      required: 200,
+      unit: "pieces",
+      shortfall: -175,
+      requestStatus: "None"
+    },
+    {
+      materialName: "Cotton Thread",
+      inStock: 5,
+      required: 30,
+      unit: "rolls",
+      shortfall: -25,
+      requestStatus: "Pending"
+    },
+    {
+      materialName: "Brass Beads",
+      inStock: 150,
+      required: 100,
+      unit: "pieces",
+      shortfall: 50,
+      requestStatus: "None"
+    },
+    {
+      materialName: "Silk Thread",
+      inStock: 12,
+      required: 25,
+      unit: "rolls",
+      shortfall: -13,
+      requestStatus: "None"
+    }
+  ];
+
   const materialTypes = ["all", "Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
 
   const filteredMaterials = rawMaterials.filter(material => {
@@ -104,182 +180,158 @@ const RawMaterialInventory = () => {
     return "Good";
   };
 
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'Pending': return "secondary" as const;
+      case 'Approved': return "default" as const;
+      case 'Fulfilled': return "outline" as const;
+      default: return "outline" as const;
+    }
+  };
+
+  const getShortfallColor = (shortfall: number) => {
+    if (shortfall < 0) return "text-red-600 font-medium";
+    return "text-green-600 font-medium";
+  };
+
+  const handleRaiseRequest = (material: any) => {
+    setSelectedMaterial(material);
+    setIsRaiseRequestOpen(true);
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Main Tabs for Inventory and Procurement */}
-      <Tabs defaultValue="inventory" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Raw Materials Inventory
-          </TabsTrigger>
-          <TabsTrigger value="procurement" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Procurement Requests
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory" className="space-y-4">
-          {/* Header with Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search materials..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-8"
-                />
-              </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40 h-8">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materialTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type === 'all' ? 'All Types' : type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-                  <Plus className="h-3 w-3" />
-                  Add Material
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Raw Material</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="materialName">Material Name</Label>
-                    <Input id="materialName" placeholder="Enter material name" />
-                  </div>
-                  <div>
-                    <Label htmlFor="materialType">Type</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materialTypes.slice(1).map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="currentStock">Current Stock</Label>
-                      <Input id="currentStock" type="number" placeholder="0" />
-                    </div>
-                    <div>
-                      <Label htmlFor="minStock">Minimum Stock</Label>
-                      <Input id="minStock" type="number" placeholder="0" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="unit">Unit</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pieces">Pieces</SelectItem>
-                        <SelectItem value="meters">Meters</SelectItem>
-                        <SelectItem value="rolls">Rolls</SelectItem>
-                        <SelectItem value="kg">Kilograms</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button className="flex-1">Add Material</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+    <div className="space-y-6">
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search materials..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
           </div>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-40 h-8">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              {materialTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type === 'all' ? 'All Types' : type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+              <Plus className="h-3 w-3" />
+              Add Material
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Raw Material</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="materialName">Material Name</Label>
+                <Input id="materialName" placeholder="Enter material name" />
+              </div>
+              <div>
+                <Label htmlFor="materialType">Type</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materialTypes.slice(1).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="currentStock">Current Stock</Label>
+                  <Input id="currentStock" type="number" placeholder="0" />
+                </div>
+                <div>
+                  <Label htmlFor="minStock">Minimum Stock</Label>
+                  <Input id="minStock" type="number" placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="unit">Unit</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pieces">Pieces</SelectItem>
+                    <SelectItem value="meters">Meters</SelectItem>
+                    <SelectItem value="rolls">Rolls</SelectItem>
+                    <SelectItem value="kg">Kilograms</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button className="flex-1">Add Material</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          {/* Materials Table */}
+      {/* Combined Layout - Two Columns */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Left Column - Raw Materials Inventory */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Raw Materials Inventory</h3>
           <div className="bg-white rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow className="h-8">
-                  <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Stock</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Cost/Unit</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Total Value</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Value</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredMaterials.map((material) => (
-                  <TableRow key={material.id} className="h-10">
-                    <TableCell className="py-1 px-2 text-xs font-medium">{material.name}</TableCell>
-                    <TableCell className="py-1 px-2 text-xs">{material.type}</TableCell>
-                    <TableCell className="py-1 px-2 text-xs">{material.currentStock} {material.unit}</TableCell>
-                    <TableCell className="py-1 px-2 text-xs">{material.minimumStock} {material.unit}</TableCell>
+                  <TableRow key={material.id} className="h-8">
+                    <TableCell className="py-1 px-2 text-xs">
+                      <div>
+                        <div className="font-medium">{material.name}</div>
+                        <div className="text-gray-500">{material.type}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-1 px-2 text-xs">
+                      <div>
+                        <div>{material.currentStock} {material.unit}</div>
+                        <div className="text-gray-500">Min: {material.minimumStock}</div>
+                      </div>
+                    </TableCell>
                     <TableCell className="py-1 px-2">
                       <Badge variant={getStockStatusVariant(material.currentStock, material.minimumStock)} className="flex items-center gap-1 w-fit text-xs px-1 py-0">
                         {getStockStatusText(material.currentStock, material.minimumStock) === "Critical" && <AlertTriangle className="h-3 w-3" />}
                         {getStockStatusText(material.currentStock, material.minimumStock)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-1 px-2 text-xs">₹{material.costPerUnit}</TableCell>
                     <TableCell className="py-1 px-2 text-xs font-medium">₹{(material.currentStock * material.costPerUnit).toLocaleString()}</TableCell>
-                    <TableCell className="py-1 px-2 text-xs">{material.supplier}</TableCell>
-                    <TableCell className="py-1 px-2 text-xs">{new Date(material.lastUpdated).toLocaleDateString()}</TableCell>
                     <TableCell className="py-1 px-2">
                       <div className="flex gap-1">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                              Update
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Update Stock - {material.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label>Current Stock: {material.currentStock} {material.unit}</Label>
-                              </div>
-                              <div>
-                                <Label htmlFor="newStock">New Stock Quantity</Label>
-                                <Input id="newStock" type="number" placeholder={material.currentStock.toString()} />
-                              </div>
-                              <div>
-                                <Label htmlFor="reason">Reason for Update</Label>
-                                <Select>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select reason" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="purchase">New Purchase</SelectItem>
-                                    <SelectItem value="consumption">Material Used</SelectItem>
-                                    <SelectItem value="wastage">Wastage/Loss</SelectItem>
-                                    <SelectItem value="correction">Stock Correction</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <Button className="w-full">Update Stock</Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                          Update
+                        </Button>
                         <Button variant="outline" size="sm" className="h-6 w-6 p-0">
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -290,18 +342,154 @@ const RawMaterialInventory = () => {
               </TableBody>
             </Table>
           </div>
+        </div>
 
-          {filteredMaterials.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-sm">No materials found matching your search.</p>
+        {/* Right Column - Procurement Requests */}
+        <div className="space-y-4">
+          {/* Active Procurement Requests */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Active Procurement Requests</h3>
+            <div className="bg-white rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-8">
+                    <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {procurementRequests.map((request) => (
+                    <TableRow key={request.id} className="h-8">
+                      <TableCell className="py-1 px-2 text-xs font-medium">{request.id}</TableCell>
+                      <TableCell className="py-1 px-2 text-xs">{request.materialName}</TableCell>
+                      <TableCell className="py-1 px-2 text-xs">{request.quantityRequested} {request.unit}</TableCell>
+                      <TableCell className="py-1 px-2">
+                        <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
+                          {request.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell className="py-1 px-2">
+                        <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </TabsContent>
+          </div>
 
-        <TabsContent value="procurement">
-          <ProcurementRequestsSection />
-        </TabsContent>
-      </Tabs>
+          {/* Material Requirements Planning */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Material Requirements Planning</h3>
+            <div className="bg-white rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-8">
+                    <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Stock</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
+                    <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {materialRequirements.map((material, index) => (
+                    <TableRow key={index} className="h-8">
+                      <TableCell className="py-1 px-2 text-xs font-medium">{material.materialName}</TableCell>
+                      <TableCell className="py-1 px-2 text-xs">{material.inStock} {material.unit}</TableCell>
+                      <TableCell className="py-1 px-2 text-xs">{material.required} {material.unit}</TableCell>
+                      <TableCell className={`py-1 px-2 text-xs ${getShortfallColor(material.shortfall)}`}>
+                        {material.shortfall > 0 ? '+' : ''}{material.shortfall} {material.unit}
+                      </TableCell>
+                      <TableCell className="py-1 px-2">
+                        {material.requestStatus === 'None' && material.shortfall < 0 ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleRaiseRequest(material)}
+                          >
+                            Raise Request
+                          </Button>
+                        ) : material.requestStatus !== 'None' ? (
+                          <Badge variant={getStatusVariant(material.requestStatus)} className="text-xs px-1 py-0">
+                            {material.requestStatus}
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Raise Procurement Request Dialog */}
+      <Dialog open={isRaiseRequestOpen} onOpenChange={setIsRaiseRequestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Raise Procurement Request - {selectedMaterial?.materialName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Current Stock</Label>
+                <Input value={`${selectedMaterial?.inStock || 0} ${selectedMaterial?.unit || ''}`} disabled />
+              </div>
+              <div>
+                <Label>Required Quantity</Label>
+                <Input value={`${selectedMaterial?.required || 0} ${selectedMaterial?.unit || ''}`} disabled />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="requestQuantity">Request Quantity</Label>
+              <Input 
+                id="requestQuantity" 
+                type="number" 
+                placeholder={Math.abs(selectedMaterial?.shortfall || 0).toString()}
+                defaultValue={Math.abs(selectedMaterial?.shortfall || 0)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="supplier">Supplier</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mumbai-silver">Mumbai Silver Co.</SelectItem>
+                  <SelectItem value="rajasthan-crafts">Rajasthan Crafts</SelectItem>
+                  <SelectItem value="delhi-accessories">Delhi Accessories</SelectItem>
+                  <SelectItem value="local-supplier">Local Supplier</SelectItem>
+                  <SelectItem value="artisan-supplies">Artisan Supplies</SelectItem>
+                  <SelectItem value="textile-hub">Textile Hub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="eta">Expected Delivery Date</Label>
+              <Input id="eta" type="date" />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" placeholder="Add any additional notes or requirements..." />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button className="flex-1">Submit Request</Button>
+              <Button variant="outline" onClick={() => setIsRaiseRequestOpen(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
