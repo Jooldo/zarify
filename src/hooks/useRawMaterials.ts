@@ -50,9 +50,43 @@ export const useRawMaterials = () => {
     }
   };
 
+  const updateRawMaterial = async (id: string, updates: {
+    current_stock?: number;
+    minimum_stock?: number;
+    required?: number;
+    in_procurement?: number;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from('raw_materials')
+        .update({
+          ...updates,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Raw material updated successfully',
+      });
+
+      // Refresh the data
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error('Error updating raw material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update raw material',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     fetchRawMaterials();
   }, []);
 
-  return { rawMaterials, loading, refetch: fetchRawMaterials };
+  return { rawMaterials, loading, refetch: fetchRawMaterials, updateRawMaterial };
 };

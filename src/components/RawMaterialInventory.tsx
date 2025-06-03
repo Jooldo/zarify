@@ -3,13 +3,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Package2, AlertCircle } from 'lucide-react';
+import { Search, Plus, Package2, AlertCircle, Eye, Edit } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
+import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog';
 
 const RawMaterialInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rawMaterials, loading } = useRawMaterials();
+  const { rawMaterials, loading, updateRawMaterial } = useRawMaterials();
 
   const filteredMaterials = rawMaterials.filter(material =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +92,7 @@ const RawMaterialInventory = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Request Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,6 +118,39 @@ const RawMaterialInventory = () => {
                     <Badge variant={requestStatus.variant} className="text-xs px-1 py-0">
                       {requestStatus.label}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <div className="flex gap-1">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>View Material - {material.name}</DialogTitle>
+                          </DialogHeader>
+                          <ViewRawMaterialDialog material={material} />
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                            Update
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Update Material - {material.name}</DialogTitle>
+                          </DialogHeader>
+                          <UpdateRawMaterialDialog material={material} onUpdate={updateRawMaterial} />
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
