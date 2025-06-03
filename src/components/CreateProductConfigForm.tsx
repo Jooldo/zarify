@@ -10,16 +10,18 @@ import RawMaterialsSection from './config/RawMaterialsSection';
 
 interface CreateProductConfigFormProps {
   onClose: () => void;
+  onSubmit?: (data: any) => Promise<void>;
   initialData?: any;
   isUpdate?: boolean;
 }
 
-const CreateProductConfigForm = ({ onClose, initialData, isUpdate = false }: CreateProductConfigFormProps) => {
+const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = false }: CreateProductConfigFormProps) => {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [size, setSize] = useState('');
   const [sizeValue, setSizeValue] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
     { material: '', quantity: 0, unit: 'grams' }
   ]);
@@ -57,7 +59,7 @@ const CreateProductConfigForm = ({ onClose, initialData, isUpdate = false }: Cre
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
   };
 
-  const removeRawMaterial = (index) => {
+  const removeRawMaterial = (index: number) => {
     if (rawMaterials.length > 1) {
       const newMaterials = [...rawMaterials];
       newMaterials.splice(index, 1);
@@ -65,7 +67,7 @@ const CreateProductConfigForm = ({ onClose, initialData, isUpdate = false }: Cre
     }
   };
 
-  const updateRawMaterial = (index, field, value) => {
+  const updateRawMaterial = (index: number, field: string, value: any) => {
     const updatedMaterials = rawMaterials.map((material, i) => {
       if (i === index) {
         return { ...material, [field]: value };
@@ -75,23 +77,41 @@ const CreateProductConfigForm = ({ onClose, initialData, isUpdate = false }: Cre
     setRawMaterials(updatedMaterials);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!category || !subcategory || !size || !sizeValue) {
+      alert('Please fill in all required fields');
+      return;
+    }
 
-    const productCode = generateProductCode();
+    setIsSubmitting(true);
 
-    const productConfigData = {
-      category,
-      subcategory,
-      size,
-      sizeValue,
-      isActive,
-      productCode,
-      rawMaterials
-    };
+    try {
+      const productCode = generateProductCode();
 
-    console.log(isUpdate ? 'Updating product config:' : 'Creating product config:', productConfigData);
-    onClose();
+      const productConfigData = {
+        category,
+        subcategory,
+        size,
+        sizeValue,
+        isActive,
+        productCode,
+        rawMaterials
+      };
+
+      if (onSubmit) {
+        await onSubmit(productConfigData);
+      } else {
+        console.log(isUpdate ? 'Updating product config:' : 'Creating product config:', productConfigData);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Failed to save product configuration. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -178,11 +198,23 @@ const CreateProductConfigForm = ({ onClose, initialData, isUpdate = false }: Cre
       />
 
       <div className="flex gap-2 justify-end pt-1">
-        <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-7 text-xs px-2">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onClose} 
+          size="sm" 
+          className="h-7 text-xs px-2"
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
-        <Button type="submit" size="sm" className="h-7 text-xs px-2">
-          {isUpdate ? 'Update' : 'Create'} Configuration
+        <Button 
+          type="submit" 
+          size="sm" 
+          className="h-7 text-xs px-2"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Saving...' : (isUpdate ? 'Update' : 'Create')} Configuration
         </Button>
       </div>
     </form>

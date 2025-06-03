@@ -4,21 +4,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Search, Plus, AlertCircle, Edit } from 'lucide-react';
 import CreateProductConfigForm from '@/components/CreateProductConfigForm';
+import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 const ProductConfigTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateConfigOpen, setIsCreateConfigOpen] = useState(false);
-
-  // Empty array since we're removing mock data
-  const productConfigs: any[] = [];
+  const { productConfigs, loading, createProductConfig } = useProductConfigs();
 
   const filteredConfigs = productConfigs.filter(config => 
     config.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     config.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    config.productCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    config.product_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleCreateConfig = async (configData: any) => {
+    try {
+      await createProductConfig(configData);
+      setIsCreateConfigOpen(false);
+    } catch (error) {
+      console.error('Failed to create product config:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Product Configurations</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-lg">Loading product configurations...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -44,7 +66,10 @@ const ProductConfigTab = () => {
             <DialogHeader>
               <DialogTitle>Create Product Configuration</DialogTitle>
             </DialogHeader>
-            <CreateProductConfigForm onClose={() => setIsCreateConfigOpen(false)} />
+            <CreateProductConfigForm 
+              onClose={() => setIsCreateConfigOpen(false)}
+              onSubmit={handleCreateConfig}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -63,16 +88,48 @@ const ProductConfigTab = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Empty table body since we removed mock data */}
+            {filteredConfigs.map((config) => (
+              <TableRow key={config.id} className="h-10">
+                <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">
+                  {config.product_code}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs font-medium">
+                  {config.category}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {config.subcategory}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {config.size}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  <Badge 
+                    variant={config.is_active ? "default" : "secondary"} 
+                    className="text-xs px-1 py-0"
+                  >
+                    {config.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
 
       {/* Empty state */}
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500 text-sm">No product configurations found. Add some configurations to get started.</p>
-      </div>
+      {filteredConfigs.length === 0 && !loading && (
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">
+            {productConfigs.length === 0 ? 'No product configurations found. Add some configurations to get started.' : 'No configurations found matching your search.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

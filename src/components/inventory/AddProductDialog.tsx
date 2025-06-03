@@ -5,55 +5,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 const AddProductDialog = () => {
   const [selectedProductCode, setSelectedProductCode] = useState('');
+  const { productConfigs, loading } = useProductConfigs();
 
-  const productConfigs = [
-    {
-      id: "PC-001",
-      category: "Traditional",
-      subcategory: "Meena Work",
-      size: "Small (0.20m)",
-      productCode: "TRD-MEE-SM",
-      isActive: true,
-    },
-    {
-      id: "PC-002", 
-      category: "Traditional",
-      subcategory: "Meena Work",
-      size: "Medium (0.25m)",
-      productCode: "TRD-MEE-MD",
-      isActive: true,
-    },
-    {
-      id: "PC-003",
-      category: "Traditional",
-      subcategory: "Kundan Work", 
-      size: "Large (0.30m)",
-      productCode: "TRD-KUN-LG",
-      isActive: true,
-    },
-    {
-      id: "PC-004",
-      category: "Modern",
-      subcategory: "Silver Chain",
-      size: "Small (0.20m)",
-      productCode: "MOD-SIL-SM",
-      isActive: true,
-    },
-    {
-      id: "PC-005",
-      category: "Bridal",
-      subcategory: "Heavy Traditional",
-      size: "Extra Large (0.35m)",
-      productCode: "BRD-HEA-XL",
-      isActive: false,
-    }
-  ];
+  const activeProductConfigs = productConfigs.filter(config => config.is_active);
+  const selectedConfig = activeProductConfigs.find(config => config.product_code === selectedProductCode);
 
-  const activeProductConfigs = productConfigs.filter(config => config.isActive);
-  const selectedConfig = activeProductConfigs.find(config => config.productCode === selectedProductCode);
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <div className="text-center py-4">
+          <div className="text-sm">Loading product configurations...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -65,8 +34,8 @@ const AddProductDialog = () => {
           </SelectTrigger>
           <SelectContent>
             {activeProductConfigs.map((config) => (
-              <SelectItem key={config.productCode} value={config.productCode} className="text-xs">
-                {config.productCode}
+              <SelectItem key={config.product_code} value={config.product_code} className="text-xs">
+                {config.product_code}
               </SelectItem>
             ))}
           </SelectContent>
@@ -89,7 +58,9 @@ const AddProductDialog = () => {
           </div>
           <div>
             <Label className="text-xs font-medium">Status</Label>
-            <Badge variant="default" className="text-xs h-4 px-1">Active</Badge>
+            <Badge variant="default" className="text-xs h-4 px-1">
+              {selectedConfig.is_active ? 'Active' : 'Inactive'}
+            </Badge>
           </div>
         </div>
       )}
