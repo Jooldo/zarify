@@ -43,7 +43,15 @@ export const useProcurementRequests = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+      
+      // Filter out any records with 'None' status and ensure proper typing
+      const filteredRequests = (data || []).filter(
+        (request): request is ProcurementRequest => 
+          request.status !== 'None' && 
+          ['Pending', 'Approved', 'Received'].includes(request.status)
+      );
+      
+      setRequests(filteredRequests);
     } catch (error) {
       console.error('Error fetching procurement requests:', error);
       toast({

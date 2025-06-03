@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Eye, Edit } from 'lucide-react';
 import RawMaterialsDialog from './RawMaterialsDialog';
-import UpdateStockDialog from './UpdateStockDialog';
 
 interface InventoryTableRowProps {
   item: {
@@ -70,19 +69,6 @@ const InventoryTableRow = ({
                 <DialogTitle>Raw Materials Required - {item.productCode}</DialogTitle>
               </DialogHeader>
               <RawMaterialsDialog item={item} shortfall={shortfall} />
-            </DialogContent>
-          </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                Update
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Update Stock - {item.productCode}</DialogTitle>
-              </DialogHeader>
-              <UpdateStockDialog item={item} />
             </DialogContent>
           </Dialog>
           <Button variant="outline" size="sm" className="h-6 w-6 p-0">
