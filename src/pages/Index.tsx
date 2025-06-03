@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import OrdersTab from '@/components/OrdersTab';
 import InventoryTab from '@/components/InventoryTab';
 import ProductConfigTab from '@/components/ProductConfigTab';
+import UsersTab from '@/components/UsersTab';
 import DashboardOverview from '@/components/DashboardOverview';
-import { Package, ClipboardList, BarChart3, Settings } from 'lucide-react';
+import { Package, ClipboardList, BarChart3, Settings, Users } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -26,7 +27,7 @@ const Index = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-4 mb-8">
+          <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-5 mb-8">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -42,6 +43,10 @@ const Index = () => {
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Product Config
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Users
             </TabsTrigger>
           </TabsList>
 
@@ -59,6 +64,10 @@ const Index = () => {
 
           <TabsContent value="products">
             <ProductConfigTab />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UsersTab />
           </TabsContent>
         </Tabs>
       </div>

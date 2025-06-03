@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Edit, AlertTriangle, Eye } from 'lucide-react';
+import { Search, Plus, Edit, Eye } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 const RawMaterialInventory = () => {
@@ -140,18 +140,6 @@ const RawMaterialInventory = () => {
     const matchesType = filterType === 'all' || material.type === filterType;
     return matchesSearch && matchesType;
   });
-
-  const getStockStatusVariant = (current: number, minimum: number) => {
-    if (current <= minimum / 2) return "destructive" as const;
-    if (current <= minimum) return "secondary" as const;
-    return "default" as const;
-  };
-
-  const getStockStatusText = (current: number, minimum: number) => {
-    if (current <= minimum / 2) return "Critical";
-    if (current <= minimum) return "Low";
-    return "Good";
-  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -317,8 +305,6 @@ const RawMaterialInventory = () => {
                   <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Stock Status</TableHead>
-                  <TableHead className="py-1 px-2 text-xs font-medium">Value</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -350,20 +336,6 @@ const RawMaterialInventory = () => {
                           {getStatusDisplay(status)}
                         </span>
                       </TableCell>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={getStockStatusVariant(material.currentStock, material.minimumStock)} className="flex items-center gap-1 w-fit text-xs px-1 py-0">
-                            {getStockStatusText(material.currentStock, material.minimumStock) === "Critical" && <AlertTriangle className="h-3 w-3" />}
-                            {getStockStatusText(material.currentStock, material.minimumStock)}
-                          </Badge>
-                          {material.requestStatus !== 'None' && (
-                            <Badge variant={getStatusVariant(material.requestStatus)} className="text-xs px-1 py-0">
-                              {material.requestStatus}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1 px-2 text-xs font-medium">₹{(material.currentStock * material.costPerUnit).toLocaleString()}</TableCell>
                       <TableCell className="py-1 px-2">
                         <div className="flex gap-1">
                           {material.requestStatus === 'None' && status > 0 ? (
@@ -403,6 +375,7 @@ const RawMaterialInventory = () => {
                   <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
+                  <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
                   <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
@@ -414,6 +387,7 @@ const RawMaterialInventory = () => {
                     <TableCell className="py-1 px-2 text-xs font-medium">{request.id}</TableCell>
                     <TableCell className="py-1 px-2 text-xs">{request.materialName}</TableCell>
                     <TableCell className="py-1 px-2 text-xs">{request.quantityRequested} {request.unit}</TableCell>
+                    <TableCell className="py-1 px-2 text-xs">{request.supplier}</TableCell>
                     <TableCell className="py-1 px-2">
                       <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
                         {request.status}
