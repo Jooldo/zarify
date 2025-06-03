@@ -1,17 +1,9 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Plus, Edit, Eye } from 'lucide-react';
-import OrderDetails from '@/components/OrderDetails';
-import CreateOrderForm from '@/components/CreateOrderForm';
+import OrdersHeader from './orders/OrdersHeader';
+import OrdersTable from './orders/OrdersTable';
 
 const OrdersTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
 
   const orders = [
     {
@@ -99,7 +91,6 @@ const OrdersTab = () => {
     }
   ];
 
-  // Flatten orders to show suborders in table
   const flattenedOrders = orders.flatMap(order => 
     order.suborders.map(suborder => ({
       ...suborder,
@@ -126,16 +117,10 @@ const OrdersTab = () => {
     
     const statuses = order.suborders.map(sub => sub.status);
     
-    // If all suborders are "Delivered", order is "Delivered"
     if (statuses.every(s => s === "Delivered")) return "Delivered";
-    
-    // If all suborders are "Ready", order is "Ready"
     if (statuses.every(s => s === "Ready")) return "Ready";
-    
-    // If any suborder is "In Progress", order is "In Progress"
     if (statuses.some(s => s === "In Progress")) return "In Progress";
     
-    // Otherwise, order is "Created"
     return "Created";
   };
 
@@ -156,101 +141,14 @@ const OrdersTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header with Search and Add Button */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search orders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-8"
-          />
-        </div>
-        <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-              <Plus className="h-3 w-3" />
-              Create Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Order</DialogTitle>
-            </DialogHeader>
-            <CreateOrderForm onClose={() => setIsCreateOrderOpen(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Compact Orders Table */}
-      <div className="bg-white rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs font-medium">Order ID</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Suborder ID</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Sub Amount</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Total Amount</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Created</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Expected</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredOrders.map((item) => (
-              <TableRow key={item.id} className="h-10 hover:bg-gray-50">
-                <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
-                <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.id}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
-                <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{item.productCode}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <Badge variant={getStatusVariant(item.status)} className="text-xs px-1 py-0">
-                    {item.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2">
-                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))} className="text-xs px-1 py-0">
-                    {getOverallOrderStatus(item.orderId)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs font-medium">₹{item.price.toLocaleString()}</TableCell>
-                <TableCell className="py-1 px-2 text-xs font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{new Date(item.updatedDate).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <div className="flex gap-1">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Order Details</DialogTitle>
-                        </DialogHeader>
-                        <OrderDetails order={orders.find(o => o.id === item.orderId)} />
-                      </DialogContent>
-                    </Dialog>
-                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <OrdersHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      
+      <OrdersTable 
+        filteredOrders={filteredOrders}
+        orders={orders}
+        getOverallOrderStatus={getOverallOrderStatus}
+        getStatusVariant={getStatusVariant}
+      />
 
       {filteredOrders.length === 0 && (
         <div className="text-center py-8">

@@ -1,11 +1,11 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import OrderItemForm from './orders/OrderItemForm';
 
 const CreateOrderForm = ({ onClose }) => {
   const [customerName, setCustomerName] = useState('');
@@ -17,20 +17,6 @@ const CreateOrderForm = ({ onClose }) => {
     quantity: 1,
     price: 0
   }]);
-
-  const categories = {
-    "Traditional": ["Meena Work", "Kundan Work", "Temple Style", "Oxidized"],
-    "Modern": ["Silver Chain", "Gold Plated", "Beaded", "Charm Style"],
-    "Bridal": ["Heavy Traditional", "Designer", "Kundan Heavy", "Polki Work"]
-  };
-
-  const sizes = [
-    "Small (0.20m)", 
-    "Medium (0.25m)", 
-    "Large (0.30m)", 
-    "Extra Large (0.35m)", 
-    "XXL (0.40m)"
-  ];
 
   const generateSuborderId = (orderIndex, itemIndex) => {
     return `SUB-${String(orderIndex).padStart(3, '0')}-${itemIndex + 1}`;
@@ -72,7 +58,7 @@ const CreateOrderForm = ({ onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const orderIndex = Math.floor(Math.random() * 1000); // In real app, this would come from the backend
+    const orderIndex = Math.floor(Math.random() * 1000);
     
     const suborders = items.map((item, index) => ({
       id: generateSuborderId(orderIndex, index),
@@ -99,7 +85,6 @@ const CreateOrderForm = ({ onClose }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Customer Information */}
       <Card>
         <CardHeader>
           <CardTitle>Customer Information</CardTitle>
@@ -128,7 +113,6 @@ const CreateOrderForm = ({ onClose }) => {
         </CardContent>
       </Card>
 
-      {/* Order Items - Each will become a suborder */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -141,118 +125,15 @@ const CreateOrderForm = ({ onClose }) => {
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">
-                  Item {index + 1} 
-                  <Badge variant="outline" className="ml-2">
-                    Suborder ID: {generateSuborderId('XXX', index)}
-                  </Badge>
-                </h4>
-                {items.length > 1 && (
-                  <Button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <Label>Category *</Label>
-                  <Select
-                    value={item.category}
-                    onValueChange={(value) => updateItem(index, 'category', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(categories).map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Subcategory *</Label>
-                  <Select
-                    value={item.subcategory}
-                    onValueChange={(value) => updateItem(index, 'subcategory', value)}
-                    disabled={!item.category}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subcategory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {item.category && categories[item.category].map((subcat) => (
-                        <SelectItem key={subcat} value={subcat}>
-                          {subcat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Size *</Label>
-                  <Select
-                    value={item.size}
-                    onValueChange={(value) => updateItem(index, 'size', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sizes.map((size) => (
-                        <SelectItem key={size} value={size}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Quantity *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                    placeholder="1"
-                  />
-                </div>
-
-                <div>
-                  <Label>Price per piece (₹) *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.price}
-                    onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <div className="w-full">
-                    <Label>Item Total</Label>
-                    <div className="h-10 flex items-center px-3 border rounded-md bg-gray-50">
-                      ₹{(item.price * item.quantity).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <OrderItemForm
+              key={index}
+              item={item}
+              index={index}
+              items={items}
+              updateItem={updateItem}
+              removeItem={removeItem}
+              generateSuborderId={generateSuborderId}
+            />
           ))}
 
           <div className="border-t pt-4">
@@ -264,7 +145,6 @@ const CreateOrderForm = ({ onClose }) => {
         </CardContent>
       </Card>
 
-      {/* Actions */}
       <div className="flex gap-4 justify-end">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
