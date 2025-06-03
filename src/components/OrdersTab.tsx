@@ -21,6 +21,7 @@ const OrdersTab = () => {
       phone: "+91 98765 43210",
       totalAmount: 2400,
       createdDate: "2024-06-01",
+      updatedDate: "2024-06-03",
       expectedDelivery: "2024-06-10",
       suborders: [
         {
@@ -51,6 +52,7 @@ const OrdersTab = () => {
       phone: "+91 87654 32109", 
       totalAmount: 1800,
       createdDate: "2024-05-28",
+      updatedDate: "2024-06-02",
       expectedDelivery: "2024-06-05",
       suborders: [
         {
@@ -71,6 +73,7 @@ const OrdersTab = () => {
       phone: "+91 76543 21098",
       totalAmount: 3200, 
       createdDate: "2024-06-02",
+      updatedDate: "2024-06-02",
       expectedDelivery: "2024-06-12",
       suborders: [
         {
@@ -105,6 +108,7 @@ const OrdersTab = () => {
       customer: order.customer,
       phone: order.phone,
       createdDate: order.createdDate,
+      updatedDate: order.updatedDate,
       expectedDelivery: order.expectedDelivery,
       totalOrderAmount: order.totalAmount
     }))
@@ -156,13 +160,13 @@ const OrdersTab = () => {
             placeholder="Search orders..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-9"
+            className="pl-10 h-8"
           />
         </div>
         <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 h-9 px-3">
-              <Plus className="h-4 w-4" />
+            <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+              <Plus className="h-3 w-3" />
               Create Order
             </Button>
           </DialogTrigger>
@@ -179,48 +183,50 @@ const OrdersTab = () => {
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
-            <TableRow className="h-10">
-              <TableHead className="py-2 px-3 text-xs font-medium">Order ID</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Suborder ID</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Customer</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Product Code</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Qty</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Sub Status</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Order Status</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Sub Amount</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Total Amount</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Order Date</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Expected</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium">Actions</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="py-1 px-2 text-xs font-medium">Order ID</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Suborder ID</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Sub Amount</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Total Amount</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Created</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Expected</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredOrders.map((item) => (
-              <TableRow key={item.id} className="h-12 hover:bg-gray-50">
-                <TableCell className="py-2 px-3 text-sm font-medium">{item.orderId}</TableCell>
-                <TableCell className="py-2 px-3 text-sm text-blue-600 font-medium">{item.id}</TableCell>
-                <TableCell className="py-2 px-3 text-sm">{item.customer}</TableCell>
-                <TableCell className="py-2 px-3 text-sm font-mono bg-gray-50">{item.productCode}</TableCell>
-                <TableCell className="py-2 px-3 text-sm">{item.quantity}</TableCell>
-                <TableCell className="py-2 px-3">
-                  <Badge variant={getStatusVariant(item.status)} className="text-xs px-2 py-0">
+              <TableRow key={item.id} className="h-10 hover:bg-gray-50">
+                <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
+                <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.id}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
+                <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{item.productCode}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
+                <TableCell className="py-1 px-2">
+                  <Badge variant={getStatusVariant(item.status)} className="text-xs px-1 py-0">
                     {item.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="py-2 px-3">
-                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))} className="text-xs px-2 py-0">
+                <TableCell className="py-1 px-2">
+                  <Badge variant={getStatusVariant(getOverallOrderStatus(item.orderId))} className="text-xs px-1 py-0">
                     {getOverallOrderStatus(item.orderId)}
                   </Badge>
                 </TableCell>
-                <TableCell className="py-2 px-3 text-sm font-medium">₹{item.price.toLocaleString()}</TableCell>
-                <TableCell className="py-2 px-3 text-sm font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
-                <TableCell className="py-2 px-3 text-sm">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="py-2 px-3 text-sm">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="py-2 px-3">
+                <TableCell className="py-1 px-2 text-xs font-medium">₹{item.price.toLocaleString()}</TableCell>
+                <TableCell className="py-1 px-2 text-xs font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{new Date(item.updatedDate).toLocaleDateString('en-IN')}</TableCell>
+                <TableCell className="py-1 px-2 text-xs">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
+                <TableCell className="py-1 px-2">
                   <div className="flex gap-1">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                        <Button variant="outline" size="sm" className="h-6 w-6 p-0">
                           <Eye className="h-3 w-3" />
                         </Button>
                       </DialogTrigger>
@@ -231,7 +237,7 @@ const OrdersTab = () => {
                         <OrderDetails order={orders.find(o => o.id === item.orderId)} />
                       </DialogContent>
                     </Dialog>
-                    <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
                       <Edit className="h-3 w-3" />
                     </Button>
                   </div>
