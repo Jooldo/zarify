@@ -8,6 +8,10 @@ type ProductConfig = Database['public']['Tables']['product_configs']['Row'] & {
     raw_material_id: string;
     quantity_required: number;
     unit: string;
+    raw_material?: {
+      name: string;
+      type: string;
+    };
   }[];
 };
 
@@ -26,7 +30,11 @@ export const useProductConfigs = () => {
           product_config_materials (
             raw_material_id,
             quantity_required,
-            unit
+            unit,
+            raw_material:raw_materials (
+              name,
+              type
+            )
           )
         `)
         .eq('is_active', true)
@@ -105,7 +113,7 @@ export const useProductConfigs = () => {
           .filter(material => material.material && material.quantity > 0)
           .map(material => ({
             product_config_id: config.id,
-            raw_material_id: material.material, // This should be the raw material ID
+            raw_material_id: material.material, // This is now the raw material ID from the dropdown
             quantity_required: material.quantity,
             unit: material.unit,
             merchant_id: merchantId

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Minus } from 'lucide-react';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface RawMaterial {
   material: string;
@@ -25,6 +26,8 @@ const RawMaterialsSection = ({
   removeRawMaterial, 
   updateRawMaterial 
 }: RawMaterialsSectionProps) => {
+  const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -41,12 +44,22 @@ const RawMaterialsSection = ({
           <div key={index} className="grid grid-cols-4 gap-2 items-end">
             <div>
               <Label className="text-xs">Material</Label>
-              <Input
-                value={material.material}
-                onChange={(e) => updateRawMaterial(index, 'material', e.target.value)}
-                placeholder="Gold Wire"
-                className="h-8 text-xs"
-              />
+              <Select 
+                value={material.material} 
+                onValueChange={(value) => updateRawMaterial(index, 'material', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRawMaterials.map((rawMat) => (
+                    <SelectItem key={rawMat.id} value={rawMat.id} className="text-xs">
+                      {rawMat.name} ({rawMat.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">Quantity</Label>
@@ -71,6 +84,8 @@ const RawMaterialsSection = ({
                   <SelectItem value="grams" className="text-xs">Grams</SelectItem>
                   <SelectItem value="pieces" className="text-xs">Pieces</SelectItem>
                   <SelectItem value="meters" className="text-xs">Meters</SelectItem>
+                  <SelectItem value="rolls" className="text-xs">Rolls</SelectItem>
+                  <SelectItem value="kg" className="text-xs">Kilograms</SelectItem>
                 </SelectContent>
               </Select>
             </div>

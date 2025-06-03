@@ -85,6 +85,13 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       return;
     }
 
+    // Validate that all raw materials have been selected
+    const invalidMaterials = rawMaterials.filter(material => !material.material || material.quantity <= 0);
+    if (invalidMaterials.length > 0) {
+      alert('Please select materials and enter valid quantities for all raw materials');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

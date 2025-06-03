@@ -16,6 +16,10 @@ interface ProductConfig {
     raw_material_id: string;
     quantity_required: number;
     unit: string;
+    raw_material?: {
+      name: string;
+      type: string;
+    };
   }[];
 }
 
@@ -74,16 +78,28 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
           <Label className="font-medium text-base">Raw Materials Required:</Label>
           <div className="mt-2 space-y-2">
             {config.product_config_materials.map((material, index) => (
-              <div key={index} className="p-2 bg-gray-50 rounded text-sm">
-                <div className="grid grid-cols-3 gap-2">
+              <div key={index} className="p-3 bg-gray-50 rounded text-sm">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <span className="font-medium">Material ID:</span> {material.raw_material_id}
+                    <span className="font-medium">Material:</span>{' '}
+                    <div className="text-base font-medium text-blue-700">
+                      {material.raw_material?.name || 'Unknown Material'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Type: {material.raw_material?.type || 'N/A'}
+                    </div>
                   </div>
                   <div>
-                    <span className="font-medium">Quantity:</span> {material.quantity_required}
+                    <span className="font-medium">Quantity Required:</span>{' '}
+                    <div className="text-base font-medium">
+                      {material.quantity_required} {material.unit}
+                    </div>
                   </div>
                   <div>
-                    <span className="font-medium">Unit:</span> {material.unit}
+                    <span className="font-medium">Unit:</span>{' '}
+                    <Badge variant="outline" className="text-xs">
+                      {material.unit}
+                    </Badge>
                   </div>
                 </div>
               </div>
