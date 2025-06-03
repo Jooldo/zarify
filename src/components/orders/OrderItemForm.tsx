@@ -1,11 +1,9 @@
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
+import { Minus } from 'lucide-react';
 
 interface OrderItemFormProps {
   item: {
@@ -17,149 +15,137 @@ interface OrderItemFormProps {
   items: any[];
   updateItem: (index: number, field: string, value: any) => void;
   removeItem: (index: number) => void;
-  generateSuborderId: (orderIndex: string, itemIndex: number) => string;
+  generateSuborderId: (orderIndex: number, itemIndex: number) => string;
 }
 
-const OrderItemForm = ({ 
-  item, 
-  index, 
-  items, 
-  updateItem, 
-  removeItem, 
-  generateSuborderId 
-}: OrderItemFormProps) => {
-  // Product configurations from Product Config tab
+const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSuborderId }: OrderItemFormProps) => {
   const productConfigs = [
     {
-      productCode: "TRD-MNA-MD",
+      id: "PC-001",
       category: "Traditional",
       subcategory: "Meena Work",
-      size: "Medium (0.25m)"
+      size: "Small (0.20m)",
+      productCode: "TRD-MEE-SM",
+      isActive: true,
     },
     {
-      productCode: "TRD-KND-LG",
+      id: "PC-002", 
       category: "Traditional",
-      subcategory: "Kundan Work",
-      size: "Large (0.30m)"
+      subcategory: "Meena Work",
+      size: "Medium (0.25m)",
+      productCode: "TRD-MEE-MD",
+      isActive: true,
     },
     {
-      productCode: "MOD-SLV-SM",
+      id: "PC-003",
+      category: "Traditional",
+      subcategory: "Kundan Work", 
+      size: "Large (0.30m)",
+      productCode: "TRD-KUN-LG",
+      isActive: true,
+    },
+    {
+      id: "PC-004",
       category: "Modern",
       subcategory: "Silver Chain",
-      size: "Small (0.20m)"
+      size: "Small (0.20m)",
+      productCode: "MOD-SIL-SM",
+      isActive: true,
     },
     {
-      productCode: "TRD-TMP-XL",
-      category: "Traditional",
-      subcategory: "Temple Style",
-      size: "Extra Large (0.35m)"
-    },
-    {
-      productCode: "BRD-HEA-XL",
+      id: "PC-005",
       category: "Bridal",
       subcategory: "Heavy Traditional",
-      size: "Extra Large (0.35m)"
+      size: "Extra Large (0.35m)",
+      productCode: "BRD-HEA-XL",
+      isActive: false,
     }
   ];
 
-  const selectedProduct = productConfigs.find(config => config.productCode === item.productCode);
+  const selectedConfig = productConfigs.find(config => config.productCode === item.productCode);
 
   return (
-    <div className="border rounded-lg p-4 space-y-4">
+    <div className="border rounded p-2 space-y-2 bg-gray-50">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium">
-          Item {index + 1} 
-          <Badge variant="outline" className="ml-2">
-            Suborder ID: {generateSuborderId('XXX', index)}
+        <span className="text-xs font-medium">Item {index + 1}</span>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs h-4 px-1">
+            {generateSuborderId(1, index)}
           </Badge>
-        </h4>
-        {items.length > 1 && (
           <Button
             type="button"
-            onClick={() => removeItem(index)}
             variant="outline"
             size="sm"
+            onClick={() => removeItem(index)}
+            disabled={items.length === 1}
+            className="h-6 w-6 p-0"
           >
-            <Trash2 className="h-4 w-4" />
+            <Minus className="h-3 w-3" />
           </Button>
-        )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-3">
-          <Label>Product Code *</Label>
-          <Select
-            value={item.productCode}
-            onValueChange={(value) => updateItem(index, 'productCode', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select product code" />
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <Label className="text-xs">Product Code *</Label>
+          <Select value={item.productCode} onValueChange={(value) => updateItem(index, 'productCode', value)}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Select product" />
             </SelectTrigger>
             <SelectContent>
               {productConfigs.map((config) => (
-                <SelectItem key={config.productCode} value={config.productCode}>
-                  {config.productCode} - {config.category} {config.subcategory} ({config.size})
+                <SelectItem key={config.productCode} value={config.productCode} className="text-xs">
+                  {config.productCode}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {selectedProduct && (
-          <div className="lg:col-span-3">
-            <Card>
-              <CardContent className="p-3">
-                <h5 className="text-sm font-medium mb-2">Product Details</h5>
-                <div className="grid grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <span className="text-gray-500">Category:</span>
-                    <div className="font-medium">{selectedProduct.category}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Subcategory:</span>
-                    <div className="font-medium">{selectedProduct.subcategory}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Size:</span>
-                    <div className="font-medium">{selectedProduct.size}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         <div>
-          <Label>Quantity *</Label>
+          <Label className="text-xs">Quantity *</Label>
           <Input
             type="number"
-            min="1"
             value={item.quantity}
-            onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-            placeholder="1"
+            onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+            min="1"
+            className="h-8 text-xs"
+            required
           />
         </div>
 
         <div>
-          <Label>Price per piece (₹) *</Label>
+          <Label className="text-xs">Price per Unit *</Label>
           <Input
             type="number"
-            min="0"
-            step="0.01"
             value={item.price}
-            onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
+            onChange={(e) => updateItem(index, 'price', Number(e.target.value))}
+            min="0"
+            className="h-8 text-xs"
+            placeholder="₹0"
+            required
           />
         </div>
+      </div>
 
-        <div className="flex items-end">
-          <div className="w-full">
-            <Label>Item Total</Label>
-            <div className="h-10 flex items-center px-3 border rounded-md bg-gray-50">
-              ₹{(item.price * item.quantity).toLocaleString()}
-            </div>
+      {selectedConfig && (
+        <div className="grid grid-cols-3 gap-2 p-2 bg-white rounded border text-xs">
+          <div>
+            <span className="font-medium">Category:</span> {selectedConfig.category}
+          </div>
+          <div>
+            <span className="font-medium">Type:</span> {selectedConfig.subcategory}
+          </div>
+          <div>
+            <span className="font-medium">Size:</span> {selectedConfig.size}
           </div>
         </div>
+      )}
+
+      <div className="text-right">
+        <span className="text-xs font-medium">
+          Subtotal: ₹{(item.price * item.quantity).toLocaleString()}
+        </span>
       </div>
     </div>
   );

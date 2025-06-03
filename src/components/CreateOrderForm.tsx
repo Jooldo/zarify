@@ -74,29 +74,31 @@ const CreateOrderForm = ({ onClose }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <Card>
-        <CardHeader>
-          <CardTitle>Customer Information</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Customer Information</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-0">
           <div>
-            <Label htmlFor="customerName">Customer Name *</Label>
+            <Label htmlFor="customerName" className="text-xs">Customer Name *</Label>
             <Input
               id="customerName"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Enter customer name"
+              className="h-8 text-xs"
               required
             />
           </div>
           <div>
-            <Label htmlFor="customerPhone">Phone Number *</Label>
+            <Label htmlFor="customerPhone" className="text-xs">Phone Number *</Label>
             <Input
               id="customerPhone"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="+91 XXXXX XXXXX"
+              className="h-8 text-xs"
               required
             />
           </div>
@@ -104,16 +106,16 @@ const CreateOrderForm = ({ onClose }) => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle>Order Items (Each item will create a suborder)</CardTitle>
-            <Button type="button" onClick={addItem} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
+            <CardTitle className="text-sm">Order Items</CardTitle>
+            <Button type="button" onClick={addItem} variant="outline" size="sm" className="h-7 text-xs">
+              <Plus className="h-3 w-3 mr-1" />
               Add Item
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 pt-0">
           {items.map((item, index) => (
             <OrderItemForm
               key={index}
@@ -126,8 +128,8 @@ const CreateOrderForm = ({ onClose }) => {
             />
           ))}
 
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center text-lg font-bold">
+          <div className="border-t pt-3">
+            <div className="flex justify-between items-center text-sm font-bold">
               <span>Total Order Amount:</span>
               <span>₹{calculateTotal().toLocaleString()}</span>
             </div>
@@ -135,11 +137,11 @@ const CreateOrderForm = ({ onClose }) => {
         </CardContent>
       </Card>
 
-      <div className="flex gap-4 justify-end">
-        <Button type="button" variant="outline" onClick={onClose}>
+      <div className="flex gap-2 justify-end pt-2">
+        <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-8 text-xs">
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" size="sm" className="h-8 text-xs">
           Create Order
         </Button>
       </div>

@@ -56,16 +56,16 @@ const AddProductDialog = () => {
   const selectedConfig = activeProductConfigs.find(config => config.productCode === selectedProductCode);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div>
-        <Label htmlFor="productCode">Product Code</Label>
+        <Label htmlFor="productCode" className="text-xs">Product Code</Label>
         <Select value={selectedProductCode} onValueChange={setSelectedProductCode}>
-          <SelectTrigger>
+          <SelectTrigger className="h-8 text-xs">
             <SelectValue placeholder="Select product code" />
           </SelectTrigger>
           <SelectContent>
             {activeProductConfigs.map((config) => (
-              <SelectItem key={config.productCode} value={config.productCode}>
+              <SelectItem key={config.productCode} value={config.productCode} className="text-xs">
                 {config.productCode}
               </SelectItem>
             ))}
@@ -74,47 +74,47 @@ const AddProductDialog = () => {
       </div>
       
       {selectedConfig && (
-        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+        <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded text-xs">
           <div>
-            <Label className="text-sm font-medium">Category</Label>
-            <div className="text-sm text-gray-600">{selectedConfig.category}</div>
+            <Label className="text-xs font-medium">Category</Label>
+            <div className="text-xs text-gray-600">{selectedConfig.category}</div>
           </div>
           <div>
-            <Label className="text-sm font-medium">Subcategory</Label>
-            <div className="text-sm text-gray-600">{selectedConfig.subcategory}</div>
+            <Label className="text-xs font-medium">Subcategory</Label>
+            <div className="text-xs text-gray-600">{selectedConfig.subcategory}</div>
           </div>
           <div>
-            <Label className="text-sm font-medium">Size</Label>
-            <div className="text-sm text-gray-600">{selectedConfig.size}</div>
+            <Label className="text-xs font-medium">Size</Label>
+            <div className="text-xs text-gray-600">{selectedConfig.size}</div>
           </div>
           <div>
-            <Label className="text-sm font-medium">Status</Label>
-            <Badge variant="default" className="text-xs">Active</Badge>
+            <Label className="text-xs font-medium">Status</Label>
+            <Badge variant="default" className="text-xs h-4 px-1">Active</Badge>
           </div>
         </div>
       )}
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="quantity">Current Stock</Label>
-          <Input id="quantity" type="number" placeholder="0" />
+          <Label htmlFor="quantity" className="text-xs">Current Stock</Label>
+          <Input id="quantity" type="number" placeholder="0" className="h-8 text-xs" />
         </div>
         <div>
-          <Label htmlFor="threshold">Threshold</Label>
-          <Input id="threshold" type="number" placeholder="0" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="required">Required Quantity</Label>
-          <Input id="required" type="number" placeholder="0" />
-        </div>
-        <div>
-          <Label htmlFor="inManufacturing">In Manufacturing</Label>
-          <Input id="inManufacturing" type="number" placeholder="0" />
+          <Label htmlFor="threshold" className="text-xs">Threshold</Label>
+          <Input id="threshold" type="number" placeholder="0" className="h-8 text-xs" />
         </div>
       </div>
-      <Button className="w-full" disabled={!selectedProductCode}>Add to Inventory</Button>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label htmlFor="required" className="text-xs">Required Quantity</Label>
+          <Input id="required" type="number" placeholder="0" className="h-8 text-xs" />
+        </div>
+        <div>
+          <Label htmlFor="inManufacturing" className="text-xs">In Manufacturing</Label>
+          <Input id="inManufacturing" type="number" placeholder="0" className="h-8 text-xs" />
+        </div>
+      </div>
+      <Button className="w-full h-8 text-xs" disabled={!selectedProductCode}>Add to Inventory</Button>
     </div>
   );
 };
