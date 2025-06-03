@@ -40,7 +40,8 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
       // Generate request number
       const requestNumber = `PR-${Date.now().toString().slice(-6)}`;
 
-      // Create procurement request
+      // For now, we'll not use supplier_id since we don't have a suppliers table with UUIDs
+      // Instead, we'll store the supplier name in notes or handle it differently
       const { error } = await supabase
         .from('procurement_requests')
         .insert({
@@ -48,9 +49,9 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           raw_material_id: material.id,
           quantity_requested: parseInt(requestQuantity),
           unit: material.unit,
-          supplier_id: supplier || null,
+          supplier_id: null, // Set to null for now
           eta: eta || null,
-          notes: notes || null,
+          notes: supplier ? `Supplier: ${supplier}${notes ? '\n' + notes : ''}` : notes || null,
           merchant_id: merchantId,
           status: 'Pending'
         });
@@ -121,12 +122,12 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
                 <SelectValue placeholder="Select supplier (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mumbai-silver">Mumbai Silver Co.</SelectItem>
-                <SelectItem value="rajasthan-crafts">Rajasthan Crafts</SelectItem>
-                <SelectItem value="delhi-accessories">Delhi Accessories</SelectItem>
-                <SelectItem value="local-supplier">Local Supplier</SelectItem>
-                <SelectItem value="artisan-supplies">Artisan Supplies</SelectItem>
-                <SelectItem value="textile-hub">Textile Hub</SelectItem>
+                <SelectItem value="Mumbai Silver Co.">Mumbai Silver Co.</SelectItem>
+                <SelectItem value="Rajasthan Crafts">Rajasthan Crafts</SelectItem>
+                <SelectItem value="Delhi Accessories">Delhi Accessories</SelectItem>
+                <SelectItem value="Local Supplier">Local Supplier</SelectItem>
+                <SelectItem value="Artisan Supplies">Artisan Supplies</SelectItem>
+                <SelectItem value="Textile Hub">Textile Hub</SelectItem>
               </SelectContent>
             </Select>
           </div>

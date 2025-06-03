@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +63,24 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
 
       if (merchantError) throw merchantError;
 
+      // Validate that all product codes exist and get their UUIDs
+      const productCodes = items.map(item => item.productCode);
+      const { data: productConfigs, error: configError } = await supabase
+        .from('product_configs')
+        .select('id, product_code')
+        .in('product_code', productCodes)
+        .eq('merchant_id', merchantId);
+
+      if (configError) throw configError;
+
+      // Check if all product codes were found
+      const foundCodes = productConfigs?.map(config => config.product_code) || [];
+      const missingCodes = productCodes.filter(code => !foundCodes.includes(code));
+      
+      if (missingCodes.length > 0) {
+        throw new Error(`Product codes not found: ${missingCodes.join(', ')}`);
+      }
+
       // Create or find customer
       let customerId;
       const { data: existingCustomer } = await supabase
@@ -109,17 +126,24 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
 
       if (orderError) throw orderError;
 
-      // Create order items with proper typing
-      const orderItems = items.map((item, index) => ({
-        order_id: order.id,
-        product_config_id: item.productCode,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-        suborder_id: `SUB-${orderNumber}-${index + 1}`,
-        merchant_id: merchantId,
-        status: 'Created' as const
-      }));
+      // Create order items with proper UUIDs
+      const orderItems = items.map((item, index) => {
+        const productConfig = productConfigs?.find(config => config.product_code === item.productCode);
+        if (!productConfig) {
+          throw new Error(`Product config not found for code: ${item.productCode}`);
+        }
+        
+        return {
+          order_id: order.id,
+          product_config_id: productConfig.id,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity,
+          suborder_id: `SUB-${orderNumber}-${index + 1}`,
+          merchant_id: merchantId,
+          status: 'Created' as const
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -138,7 +162,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
       console.error('Error creating order:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create order',
+        description: error instanceof Error ? error.message : 'Failed to create order',
         variant: 'destructive',
       });
     } finally {
