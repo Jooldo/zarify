@@ -60,15 +60,26 @@ export const useRawMaterials = () => {
     }
   };
 
-  const createRawMaterial = async (materialData: CreateRawMaterialData) => {
+  const createRawMaterial = async (materialData: CreateRawMaterialData): Promise<void> => {
     try {
+      // Get the current user's merchant_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('merchant_id')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Unable to get user profile');
+      }
+
       const { data, error } = await supabase
         .from('raw_materials')
         .insert({
           ...materialData,
-          required: 0,
+          merchant_id: profile.merchant_id,
           in_procurement: 0,
-          request_status: 'None',
+          request_status: 'None' as const,
           last_updated: new Date().toISOString()
         })
         .select()
@@ -83,7 +94,6 @@ export const useRawMaterials = () => {
 
       // Refresh the data
       await fetchRawMaterials();
-      return data;
     } catch (error) {
       console.error('Error creating raw material:', error);
       toast({
