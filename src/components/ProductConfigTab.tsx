@@ -5,13 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, AlertCircle, Edit } from 'lucide-react';
+import { Search, Plus, AlertCircle, Edit, Eye } from 'lucide-react';
 import CreateProductConfigForm from '@/components/CreateProductConfigForm';
+import ViewProductConfigDialog from '@/components/inventory/ViewProductConfigDialog';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 const ProductConfigTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateConfigOpen, setIsCreateConfigOpen] = useState(false);
+  const [isViewConfigOpen, setIsViewConfigOpen] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState(null);
   const { productConfigs, loading, createProductConfig } = useProductConfigs();
 
   const filteredConfigs = productConfigs.filter(config => 
@@ -27,6 +30,11 @@ const ProductConfigTab = () => {
     } catch (error) {
       console.error('Failed to create product config:', error);
     }
+  };
+
+  const handleViewConfig = (config: any) => {
+    setSelectedConfig(config);
+    setIsViewConfigOpen(true);
   };
 
   if (loading) {
@@ -111,15 +119,37 @@ const ProductConfigTab = () => {
                   </Badge>
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <Edit className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleViewConfig(config)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* View Config Dialog */}
+      <Dialog open={isViewConfigOpen} onOpenChange={setIsViewConfigOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Product Configuration Details</DialogTitle>
+          </DialogHeader>
+          {selectedConfig && (
+            <ViewProductConfigDialog config={selectedConfig} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Empty state */}
       {filteredConfigs.length === 0 && !loading && (
