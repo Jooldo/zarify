@@ -22,16 +22,20 @@ interface InventoryTableRowProps {
   };
   getStockStatusVariant: (stock: number, threshold: number) => "destructive" | "secondary" | "default";
   getShortfallStyles: (shortfall: number) => string;
-  calculateShortfall: (currentStock: number, inManufacturing: number, requiredQuantity: number) => number;
+  calculateShortfall: (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => number;
+  getShortfallDisplay: (shortfall: number) => string;
+  getShortfallTextColor: (shortfall: number) => string;
 }
 
 const InventoryTableRow = ({ 
   item, 
   getStockStatusVariant, 
   getShortfallStyles, 
-  calculateShortfall 
+  calculateShortfall,
+  getShortfallDisplay,
+  getShortfallTextColor
 }: InventoryTableRowProps) => {
-  const shortfall = calculateShortfall(item.currentStock, item.inManufacturing, item.requiredQuantity);
+  const shortfall = calculateShortfall(item.currentStock, item.inManufacturing, item.requiredQuantity, item.threshold);
 
   return (
     <TableRow className="h-10">
@@ -48,9 +52,9 @@ const InventoryTableRow = ({
       <TableCell className="px-2 py-1 text-xs font-medium">{item.requiredQuantity}</TableCell>
       <TableCell className="px-2 py-1 text-xs font-medium">{item.inManufacturing}</TableCell>
       <TableCell className="px-2 py-1">
-        <Badge className={`text-xs px-2 py-1 font-bold ${getShortfallStyles(shortfall)}`}>
-          {shortfall > 0 ? `+${shortfall}` : shortfall}
-        </Badge>
+        <span className={`text-xs ${getShortfallTextColor(shortfall)}`}>
+          {getShortfallDisplay(shortfall)}
+        </span>
       </TableCell>
       <TableCell className="px-2 py-1 text-xs">{new Date(item.lastProduced).toLocaleDateString()}</TableCell>
       <TableCell className="px-2 py-1">

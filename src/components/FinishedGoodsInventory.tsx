@@ -106,8 +106,24 @@ const FinishedGoodsInventory = () => {
     return "bg-gray-500 text-white hover:bg-gray-500";
   };
 
-  const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number) => {
-    return currentStock + inManufacturing - requiredQuantity;
+  const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
+    return currentStock + inManufacturing - (requiredQuantity + threshold);
+  };
+
+  const getShortfallDisplay = (shortfall: number) => {
+    if (shortfall < 0) {
+      return `Deficit of ${Math.abs(shortfall)}`;
+    } else if (shortfall > 0) {
+      return `Surplus of ${shortfall}`;
+    } else {
+      return "Balanced";
+    }
+  };
+
+  const getShortfallTextColor = (shortfall: number) => {
+    if (shortfall < 0) return "text-red-800 font-bold";
+    if (shortfall > 0) return "text-green-800 font-bold";
+    return "text-gray-600 font-bold";
   };
 
   return (
@@ -133,7 +149,7 @@ const FinishedGoodsInventory = () => {
               <TableHead className="px-2 py-1 text-xs font-medium">Threshold</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Required Qty</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">In Manufacturing</TableHead>
-              <TableHead className="px-2 py-1 text-xs font-medium">Shortfall</TableHead>
+              <TableHead className="px-2 py-1 text-xs font-medium">Status</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Last Produced</TableHead>
               <TableHead className="px-2 py-1 text-xs font-medium">Actions</TableHead>
             </TableRow>
@@ -146,6 +162,8 @@ const FinishedGoodsInventory = () => {
                 getStockStatusVariant={getStockStatusVariant}
                 getShortfallStyles={getShortfallStyles}
                 calculateShortfall={calculateShortfall}
+                getShortfallDisplay={getShortfallDisplay}
+                getShortfallTextColor={getShortfallTextColor}
               />
             ))}
           </TableBody>
