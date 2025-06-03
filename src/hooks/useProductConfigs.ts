@@ -45,6 +45,23 @@ export const useProductConfigs = () => {
     }
   };
 
+  const getMerchantId = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_merchant_id');
+      
+      if (error) {
+        console.error('Error getting merchant ID:', error);
+        throw error;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting merchant ID:', error);
+      throw error;
+    }
+  };
+
   const createProductConfig = async (configData: {
     category: string;
     subcategory: string;
@@ -59,6 +76,9 @@ export const useProductConfigs = () => {
     }>;
   }) => {
     try {
+      // Get merchant ID first
+      const merchantId = await getMerchantId();
+      
       // Insert product config
       const { data: config, error: configError } = await supabase
         .from('product_configs')
@@ -68,7 +88,8 @@ export const useProductConfigs = () => {
           size: `${configData.size} (${configData.sizeValue}m)`,
           size_value: parseFloat(configData.sizeValue),
           product_code: configData.productCode,
-          is_active: configData.isActive
+          is_active: configData.isActive,
+          merchant_id: merchantId
         })
         .select()
         .single();
@@ -86,7 +107,8 @@ export const useProductConfigs = () => {
             product_config_id: config.id,
             raw_material_id: material.material, // This should be the raw material ID
             quantity_required: material.quantity,
-            unit: material.unit
+            unit: material.unit,
+            merchant_id: merchantId
           }));
 
         if (materialEntries.length > 0) {
