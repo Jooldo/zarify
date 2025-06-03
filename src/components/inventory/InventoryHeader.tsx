@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Plus } from 'lucide-react';
 import AddProductDialog from './AddProductDialog';
+import { useState } from 'react';
 
 interface InventoryHeaderProps {
   searchTerm: string;
@@ -13,6 +14,7 @@ interface InventoryHeaderProps {
   setCategoryFilter: (category: string) => void;
   sizeFilter: string;
   setSizeFilter: (size: string) => void;
+  onProductAdded: () => void;
 }
 
 const InventoryHeader = ({ 
@@ -21,10 +23,17 @@ const InventoryHeader = ({
   categoryFilter, 
   setCategoryFilter, 
   sizeFilter, 
-  setSizeFilter 
+  setSizeFilter,
+  onProductAdded
 }: InventoryHeaderProps) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const categories = ["all", "Traditional", "Modern", "Bridal"];
   const sizes = ["all", "0.20m", "0.25m", "0.30m", "0.35m", "0.40m"];
+
+  const handleProductAdded = () => {
+    onProductAdded();
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -63,7 +72,7 @@ const InventoryHeader = ({
           </SelectContent>
         </Select>
       </div>
-      <Dialog>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
           <Button className="flex items-center gap-2 h-8 px-3 text-xs">
             <Plus className="h-3 w-3" />
@@ -74,7 +83,7 @@ const InventoryHeader = ({
           <DialogHeader>
             <DialogTitle>Add Finished Goods</DialogTitle>
           </DialogHeader>
-          <AddProductDialog />
+          <AddProductDialog onProductAdded={handleProductAdded} />
         </DialogContent>
       </Dialog>
     </div>

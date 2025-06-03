@@ -9,9 +9,10 @@ import CreateOrderForm from '@/components/CreateOrderForm';
 interface OrdersHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  onOrderCreated: () => void;
 }
 
-const OrdersHeader = ({ searchTerm, setSearchTerm }: OrdersHeaderProps) => {
+const OrdersHeader = ({ searchTerm, setSearchTerm, onOrderCreated }: OrdersHeaderProps) => {
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
 
   return (
@@ -36,7 +37,10 @@ const OrdersHeader = ({ searchTerm, setSearchTerm }: OrdersHeaderProps) => {
           <DialogHeader>
             <DialogTitle>Create New Order</DialogTitle>
           </DialogHeader>
-          <CreateOrderForm onClose={() => setIsCreateOrderOpen(false)} />
+          <CreateOrderForm 
+            onClose={() => setIsCreateOrderOpen(false)} 
+            onOrderCreated={onOrderCreated}
+          />
         </DialogContent>
       </Dialog>
     </div>

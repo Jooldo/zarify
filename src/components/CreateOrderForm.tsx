@@ -102,23 +102,23 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
           total_amount: calculateTotal(),
           expected_delivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           merchant_id: merchantId,
-          status: 'Created'
+          status: 'Created' as const
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items with proper typing
       const orderItems = items.map((item, index) => ({
         order_id: order.id,
-        product_config_id: item.productCode, // Assuming productCode is the config ID
+        product_config_id: item.productCode,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,
         suborder_id: `SUB-${orderNumber}-${index + 1}`,
         merchant_id: merchantId,
-        status: 'Created'
+        status: 'Created' as const
       }));
 
       const { error: itemsError } = await supabase
