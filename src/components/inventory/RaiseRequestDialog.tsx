@@ -40,8 +40,6 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
       // Generate request number
       const requestNumber = `PR-${Date.now().toString().slice(-6)}`;
 
-      // For now, we'll not use supplier_id since we don't have a suppliers table with UUIDs
-      // Instead, we'll store the supplier name in notes or handle it differently
       const { error } = await supabase
         .from('procurement_requests')
         .insert({
@@ -49,7 +47,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           raw_material_id: material.id,
           quantity_requested: parseInt(requestQuantity),
           unit: material.unit,
-          supplier_id: null, // Set to null for now
+          supplier_id: null,
           eta: eta || null,
           notes: supplier ? `Supplier: ${supplier}${notes ? '\n' + notes : ''}` : notes || null,
           merchant_id: merchantId,

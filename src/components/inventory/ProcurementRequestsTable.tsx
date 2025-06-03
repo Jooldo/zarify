@@ -3,19 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye } from 'lucide-react';
-
-interface ProcurementRequest {
-  id: string;
-  materialName: string;
-  materialId: number;
-  quantityRequested: number;
-  unit: string;
-  dateRequested: string;
-  status: string;
-  supplier: string;
-  eta?: string;
-  notes?: string;
-}
+import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ProcurementRequestsTableProps {
   requests: ProcurementRequest[];
@@ -30,6 +18,12 @@ const ProcurementRequestsTable = ({ requests, onViewRequest }: ProcurementReques
       case 'Received': return "outline" as const;
       default: return "outline" as const;
     }
+  };
+
+  const extractSupplierFromNotes = (notes?: string) => {
+    if (!notes) return '-';
+    const supplierMatch = notes.match(/Supplier:\s*([^\n]+)/);
+    return supplierMatch ? supplierMatch[1].trim() : '-';
   };
 
   return (
@@ -49,10 +43,10 @@ const ProcurementRequestsTable = ({ requests, onViewRequest }: ProcurementReques
         <TableBody>
           {requests.map((request) => (
             <TableRow key={request.id} className="h-8">
-              <TableCell className="py-1 px-2 text-xs font-medium">{request.id}</TableCell>
-              <TableCell className="py-1 px-2 text-xs">{request.materialName}</TableCell>
-              <TableCell className="py-1 px-2 text-xs">{request.quantityRequested} {request.unit}</TableCell>
-              <TableCell className="py-1 px-2 text-xs">{request.supplier}</TableCell>
+              <TableCell className="py-1 px-2 text-xs font-medium">{request.request_number}</TableCell>
+              <TableCell className="py-1 px-2 text-xs">{request.raw_material?.name || 'Unknown'}</TableCell>
+              <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
+              <TableCell className="py-1 px-2 text-xs">{extractSupplierFromNotes(request.notes)}</TableCell>
               <TableCell className="py-1 px-2">
                 <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
                   {request.status}

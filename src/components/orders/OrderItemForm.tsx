@@ -1,9 +1,21 @@
+
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Minus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ProductConfig {
+  id: string;
+  category: string;
+  subcategory: string;
+  size: string;
+  product_code: string;
+  is_active: boolean;
+}
 
 interface OrderItemFormProps {
   item: {
@@ -19,50 +31,37 @@ interface OrderItemFormProps {
 }
 
 const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSuborderId }: OrderItemFormProps) => {
-  const productConfigs = [
-    {
-      id: "PC-001",
-      category: "Traditional",
-      subcategory: "Meena Work",
-      size: "Small (0.20m)",
-      productCode: "TRD-MEE-SM",
-      isActive: true,
-    },
-    {
-      id: "PC-002", 
-      category: "Traditional",
-      subcategory: "Meena Work",
-      size: "Medium (0.25m)",
-      productCode: "TRD-MEE-MD",
-      isActive: true,
-    },
-    {
-      id: "PC-003",
-      category: "Traditional",
-      subcategory: "Kundan Work", 
-      size: "Large (0.30m)",
-      productCode: "TRD-KUN-LG",
-      isActive: true,
-    },
-    {
-      id: "PC-004",
-      category: "Modern",
-      subcategory: "Silver Chain",
-      size: "Small (0.20m)",
-      productCode: "MOD-SIL-SM",
-      isActive: true,
-    },
-    {
-      id: "PC-005",
-      category: "Bridal",
-      subcategory: "Heavy Traditional",
-      size: "Extra Large (0.35m)",
-      productCode: "BRD-HEA-XL",
-      isActive: false,
-    }
-  ];
+  const [productConfigs, setProductConfigs] = useState<ProductConfig[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const selectedConfig = productConfigs.find(config => config.productCode === item.productCode);
+  useEffect(() => {
+    fetchProductConfigs();
+  }, []);
+
+  const fetchProductConfigs = async () => {
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { data, error } = await supabase
+        .from('product_configs')
+        .select('id, category, subcategory, size, product_code, is_active')
+        .eq('merchant_id', merchantId)
+        .eq('is_active', true)
+        .order('product_code');
+
+      if (error) throw error;
+      setProductConfigs(data || []);
+    } catch (error) {
+      console.error('Error fetching product configs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedConfig = productConfigs.find(config => config.product_code === item.productCode);
 
   return (
     <div className="border rounded p-2 space-y-2 bg-gray-50">
@@ -88,14 +87,18 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
       <div className="grid grid-cols-3 gap-2">
         <div>
           <Label className="text-xs">Product Code *</Label>
-          <Select value={item.productCode} onValueChange={(value) => updateItem(index, 'productCode', value)}>
+          <Select 
+            value={item.productCode} 
+            onValueChange={(value) => updateItem(index, 'productCode', value)}
+            disabled={loading}
+          >
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Select product" />
+              <SelectValue placeholder={loading ? "Loading..." : "Select product"} />
             </SelectTrigger>
             <SelectContent>
               {productConfigs.map((config) => (
-                <SelectItem key={config.productCode} value={config.productCode} className="text-xs">
-                  {config.productCode}
+                <SelectItem key={config.id} value={config.product_code} className="text-xs">
+                  {config.product_code}
                 </SelectItem>
               ))}
             </SelectContent>
