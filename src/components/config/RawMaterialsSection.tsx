@@ -88,14 +88,13 @@ const RawMaterialsSection = ({
                     <div className="p-4 text-xs text-center text-gray-500">
                       Loading materials...
                     </div>
-                  ) : safeAvailableRawMaterials.length > 0 ? (
+                  ) : (
                     <Command>
                       <CommandInput placeholder="Search materials..." className="text-xs" />
                       <CommandEmpty className="text-xs">No material found.</CommandEmpty>
                       <CommandGroup>
-                        {safeAvailableRawMaterials
-                          .filter(rawMat => rawMat && rawMat.id && rawMat.name)
-                          .map((rawMat) => (
+                        {safeAvailableRawMaterials.length > 0 ? (
+                          safeAvailableRawMaterials.map((rawMat) => (
                             <CommandItem
                               key={rawMat.id}
                               value={`${rawMat.name || ''} ${rawMat.type || ''}`}
@@ -113,13 +112,14 @@ const RawMaterialsSection = ({
                               />
                               {rawMat.name} ({rawMat.type})
                             </CommandItem>
-                          ))}
+                          ))
+                        ) : (
+                          <CommandItem disabled className="text-xs text-gray-500">
+                            No materials available
+                          </CommandItem>
+                        )}
                       </CommandGroup>
                     </Command>
-                  ) : (
-                    <div className="p-4 text-xs text-center text-gray-500">
-                      No materials available
-                    </div>
                   )}
                 </PopoverContent>
               </Popover>
