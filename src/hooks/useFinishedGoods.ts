@@ -42,18 +42,18 @@ export const useFinishedGoods = () => {
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
-      // Then, fetch all in-progress order items to calculate required quantities
+      // Fetch all order items with status 'Created' or 'In Progress' to calculate required quantities
       const { data: orderItemsData, error: orderItemsError } = await supabase
         .from('order_items')
         .select(`
           product_config_id,
           quantity
         `)
-        .eq('status', 'In Progress');
+        .in('status', ['Created', 'In Progress']);
 
       if (orderItemsError) throw orderItemsError;
 
-      console.log('In-progress order items fetched:', orderItemsData?.length || 0, 'items');
+      console.log('Pending order items fetched:', orderItemsData?.length || 0, 'items');
 
       // Calculate required quantities for each product config
       const requiredQuantities = orderItemsData?.reduce((acc, item) => {
@@ -61,13 +61,19 @@ export const useFinishedGoods = () => {
         return acc;
       }, {} as Record<string, number>) || {};
 
-      console.log('Calculated required quantities:', requiredQuantities);
+      console.log('Calculated required quantities from orders:', requiredQuantities);
 
       // Map the finished goods with calculated required quantities
-      const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => ({
-        ...item,
-        required_quantity: requiredQuantities[item.product_config_id] || 0
-      })) || [];
+      const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
+        const orderDemand = requiredQuantities[item.product_config_id] || 0;
+        
+        console.log(`Product ${item.product_code}: order_demand=${orderDemand}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
+        
+        return {
+          ...item,
+          required_quantity: orderDemand
+        };
+      }) || [];
 
       console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
 

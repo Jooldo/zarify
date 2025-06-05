@@ -66,6 +66,24 @@ export const useRawMaterials = () => {
       if (finishedGoodsError) throw finishedGoodsError;
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
+      // Fetch pending order items to calculate actual required quantities
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          product_config_id,
+          quantity
+        `)
+        .in('status', ['Created', 'In Progress']);
+
+      if (orderItemsError) throw orderItemsError;
+      console.log('Pending order items fetched:', orderItemsData?.length || 0, 'items');
+
+      // Calculate required quantities for each product config
+      const requiredQuantities = orderItemsData?.reduce((acc, item) => {
+        acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
       // Fetch product config materials relationships
       const { data: productConfigMaterialsData, error: productConfigMaterialsError } = await supabase
         .from('product_config_materials')
@@ -81,7 +99,7 @@ export const useRawMaterials = () => {
 
       // Calculate required quantities and shortfalls for each raw material
       const rawMaterialsWithCalculations = rawMaterialsData?.map(material => {
-        console.log(`Calculating requirements for material: ${material.name}`);
+        console.log(`\nCalculating requirements for material: ${material.name}`);
         
         let production_requirements = 0;
 
@@ -99,16 +117,19 @@ export const useRawMaterials = () => {
           );
 
           if (finishedGood) {
-            // Calculate finished good shortfall: (required + threshold) - current_stock
-            const finishedGoodShortfall = Math.max(
+            // Get the order demand for this product config
+            const orderDemand = requiredQuantities[usage.product_config_id] || 0;
+            
+            // Calculate production shortfall: max(0, order_demand + threshold - current_stock - in_manufacturing)
+            const productionNeeded = Math.max(
               0, 
-              (finishedGood.required_quantity + finishedGood.threshold) - finishedGood.current_stock
+              orderDemand + finishedGood.threshold - finishedGood.current_stock - finishedGood.in_manufacturing
             );
 
-            console.log(`Finished good ${finishedGood.product_code}: required=${finishedGood.required_quantity}, threshold=${finishedGood.threshold}, current=${finishedGood.current_stock}, shortfall=${finishedGoodShortfall}, material qty per unit=${usage.quantity_required}`);
+            console.log(`Finished good ${finishedGood.product_code}: order_demand=${orderDemand}, threshold=${finishedGood.threshold}, current=${finishedGood.current_stock}, in_manufacturing=${finishedGood.in_manufacturing}, production_needed=${productionNeeded}, material_qty_per_unit=${usage.quantity_required}`);
 
-            // Add to production requirements: shortfall × material quantity per unit
-            production_requirements += finishedGoodShortfall * usage.quantity_required;
+            // Add to production requirements: production_needed × material quantity per unit
+            production_requirements += productionNeeded * usage.quantity_required;
           }
         });
 
