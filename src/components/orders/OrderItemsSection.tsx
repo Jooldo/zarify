@@ -15,7 +15,7 @@ interface OrderItemsSectionProps {
   onAddItem: () => void;
   updateItem: (index: number, field: string, value: any) => void;
   removeItem: (index: number) => void;
-  generateSuborderId: (orderIndex: number, itemIndex: number) => string;
+  generateSuborderId: (itemIndex: number) => string;
 }
 
 const OrderItemsSection = ({
