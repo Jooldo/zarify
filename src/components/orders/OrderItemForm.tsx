@@ -12,7 +12,8 @@ interface ProductConfig {
   id: string;
   category: string;
   subcategory: string;
-  size: string;
+  size_value: number;
+  weight_range: string | null;
   product_code: string;
   is_active: boolean;
 }
@@ -47,7 +48,7 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
 
       const { data, error } = await supabase
         .from('product_configs')
-        .select('id, category, subcategory, size, product_code, is_active')
+        .select('id, category, subcategory, size_value, weight_range, product_code, is_active')
         .eq('merchant_id', merchantId)
         .eq('is_active', true)
         .order('product_code');
@@ -62,6 +63,16 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
   };
 
   const selectedConfig = productConfigs.find(config => config.product_code === item.productCode);
+
+  const getConfigDisplayInfo = (config: ProductConfig) => {
+    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : 'N/A';
+    return {
+      category: config.category,
+      subcategory: config.subcategory,
+      size: `${sizeInInches}"`,
+      weightRange: config.weight_range || 'N/A'
+    };
+  };
 
   return (
     <div className="border rounded p-2 space-y-2 bg-gray-50">
@@ -132,15 +143,18 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
       </div>
 
       {selectedConfig && (
-        <div className="grid grid-cols-3 gap-2 p-2 bg-white rounded border text-xs">
+        <div className="grid grid-cols-4 gap-2 p-2 bg-white rounded border text-xs">
           <div>
-            <span className="font-medium">Category:</span> {selectedConfig.category}
+            <span className="font-medium">Category:</span> {getConfigDisplayInfo(selectedConfig).category}
           </div>
           <div>
-            <span className="font-medium">Type:</span> {selectedConfig.subcategory}
+            <span className="font-medium">Type:</span> {getConfigDisplayInfo(selectedConfig).subcategory}
           </div>
           <div>
-            <span className="font-medium">Size:</span> {selectedConfig.size}
+            <span className="font-medium">Size:</span> {getConfigDisplayInfo(selectedConfig).size}
+          </div>
+          <div>
+            <span className="font-medium">Weight:</span> {getConfigDisplayInfo(selectedConfig).weightRange}
           </div>
         </div>
       )}

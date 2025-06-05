@@ -78,6 +78,12 @@ const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
     }
   };
 
+  const getConfigDisplayText = (config: any) => {
+    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : 'N/A';
+    const weightRange = config.weight_range || 'No weight range';
+    return `${config.product_code} - ${config.category} ${config.subcategory} (${sizeInInches}" / ${weightRange})`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -104,7 +110,7 @@ const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
               <SelectContent>
                 {productConfigs.map((config) => (
                   <SelectItem key={config.id} value={config.id}>
-                    {config.product_code} - {config.category} {config.subcategory} ({config.size})
+                    {getConfigDisplayText(config)}
                   </SelectItem>
                 ))}
               </SelectContent>

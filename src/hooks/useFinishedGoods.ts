@@ -14,7 +14,8 @@ export interface FinishedGood {
   product_config: {
     category: string;
     subcategory: string;
-    size: string;
+    size_value: number;
+    weight_range: string | null;
   };
 }
 
@@ -29,7 +30,7 @@ export const useFinishedGoods = () => {
         .from('finished_goods')
         .select(`
           *,
-          product_config:product_configs(category, subcategory, size)
+          product_config:product_configs(category, subcategory, size_value, weight_range)
         `)
         .order('product_code');
 

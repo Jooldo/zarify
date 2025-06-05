@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,14 @@ const FinishedGoodsInventory = () => {
     if (currentStock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
     if (currentStock <= threshold) return { label: 'Low Stock', variant: 'secondary' as const };
     return { label: 'In Stock', variant: 'default' as const };
+  };
+
+  const getDisplaySize = (product: any) => {
+    const sizeInInches = product.product_config?.size_value 
+      ? (product.product_config.size_value * 39.3701).toFixed(2) 
+      : 'N/A';
+    const weightRange = product.product_config?.weight_range || 'N/A';
+    return `${sizeInInches}" / ${weightRange}`;
   };
 
   if (loading) {
@@ -69,7 +78,7 @@ const FinishedGoodsInventory = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Size</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Size & Weight</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
@@ -86,7 +95,7 @@ const FinishedGoodsInventory = () => {
                   <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{product.product_code}</TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">{product.product_config?.category || 'N/A'}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.product_config?.subcategory || 'N/A'}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{product.product_config?.size || 'N/A'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{getDisplaySize(product)}</TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">{product.current_stock}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.threshold}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.required_quantity}</TableCell>

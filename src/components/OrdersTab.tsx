@@ -18,21 +18,28 @@ const OrdersTab = () => {
   ];
 
   const flattenedOrders = orders.flatMap(order => 
-    order.order_items.map(suborder => ({
-      ...suborder,
-      orderId: order.order_number,
-      customer: order.customer.name,
-      phone: order.customer.phone || '',
-      createdDate: order.created_date,
-      updatedDate: order.updated_date,
-      expectedDelivery: order.expected_delivery || '',
-      totalOrderAmount: order.total_amount,
-      productCode: suborder.product_config.product_code,
-      category: suborder.product_config.category,
-      subcategory: suborder.product_config.subcategory,
-      size: suborder.product_config.size,
-      price: suborder.total_price
-    }))
+    order.order_items.map(suborder => {
+      const sizeInInches = suborder.product_config.size_value 
+        ? (suborder.product_config.size_value * 39.3701).toFixed(2) 
+        : 'N/A';
+      const weightRange = suborder.product_config.weight_range || 'N/A';
+      
+      return {
+        ...suborder,
+        orderId: order.order_number,
+        customer: order.customer.name,
+        phone: order.customer.phone || '',
+        createdDate: order.created_date,
+        updatedDate: order.updated_date,
+        expectedDelivery: order.expected_delivery || '',
+        totalOrderAmount: order.total_amount,
+        productCode: suborder.product_config.product_code,
+        category: suborder.product_config.category,
+        subcategory: suborder.product_config.subcategory,
+        size: `${sizeInInches}" / ${weightRange}`,
+        price: suborder.total_price
+      };
+    })
   );
 
   const filteredOrders = flattenedOrders.filter(item => 

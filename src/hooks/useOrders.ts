@@ -14,7 +14,8 @@ export interface OrderItem {
     product_code: string;
     category: string;
     subcategory: string;
-    size: string;
+    size_value: number;
+    weight_range: string | null;
   };
 }
 
@@ -47,7 +48,7 @@ export const useOrders = () => {
           customer:customers(name, phone),
           order_items(
             *,
-            product_config:product_configs(product_code, category, subcategory, size)
+            product_config:product_configs(product_code, category, subcategory, size_value, weight_range)
           )
         `)
         .order('created_date', { ascending: false });
