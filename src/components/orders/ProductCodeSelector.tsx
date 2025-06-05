@@ -110,8 +110,8 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
       </Button>
 
       {isOpen && (
-        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-hidden shadow-lg border">
-          <CardContent className="p-3">
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-hidden shadow-lg border bg-white">
+          <CardContent className="p-3 bg-white">
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -121,7 +121,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                   setVisibleCount(15);
                 }}
                 placeholder="Search by code, category, or type..."
-                className="h-9 text-sm pl-10"
+                className="h-9 text-sm pl-10 bg-white"
                 autoFocus
               />
             </div>
@@ -137,10 +137,10 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                     <div
                       key={config.id}
                       onClick={() => handleSelect(config.product_code)}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-2 transition-colors"
+                      className="p-4 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-3 transition-colors bg-white"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge variant="outline" className="text-sm h-6 px-2 font-mono font-semibold">
+                      <div className="flex items-start justify-between mb-3">
+                        <Badge variant="outline" className="text-sm h-6 px-2 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
                           {config.product_code}
                         </Badge>
                         <div className="text-right">
@@ -155,16 +155,16 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <span className="text-gray-500 text-xs">Category:</span>
-                          <div className="font-medium text-gray-800 truncate">
+                          <span className="text-gray-500 text-xs font-medium">Category:</span>
+                          <div className="font-medium text-gray-800 truncate mt-1">
                             {config.category}
                           </div>
                         </div>
                         <div>
-                          <span className="text-gray-500 text-xs">Type:</span>
-                          <div className="font-medium text-gray-800 truncate">
+                          <span className="text-gray-500 text-xs font-medium">Type:</span>
+                          <div className="font-medium text-gray-800 truncate mt-1">
                             {config.subcategory}
                           </div>
                         </div>
@@ -177,7 +177,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                       type="button"
                       variant="ghost"
                       onClick={loadMore}
-                      className="w-full h-9 text-sm mt-2"
+                      className="w-full h-9 text-sm mt-2 bg-white hover:bg-gray-50"
                     >
                       Load More ({filteredConfigs.length - visibleCount} remaining)
                     </Button>
@@ -190,7 +190,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
       )}
 
       {selectedConfig && (
-        <div className="mt-2 p-3 bg-blue-50 rounded-lg border text-sm">
+        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <span className="font-medium text-gray-700">Category:</span>

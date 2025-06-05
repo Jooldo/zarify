@@ -22,7 +22,7 @@ interface OrderItemFormProps {
 
 const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSuborderId }: OrderItemFormProps) => {
   return (
-    <div className="border rounded p-2 space-y-2 bg-gray-50">
+    <div className="border rounded p-3 space-y-3 bg-gray-50">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium">Item {index + 1}</span>
         <div className="flex items-center gap-2">
@@ -42,35 +42,41 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <ProductCodeSelector
-          value={item.productCode}
-          onChange={(value) => updateItem(index, 'productCode', value)}
-        />
-
-        <div>
-          <Label className="text-xs">Quantity *</Label>
-          <Input
-            type="number"
-            value={item.quantity}
-            onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-            min="1"
-            className="h-8 text-xs"
-            required
+      <div className="space-y-3">
+        {/* First row - Product Code (full width) */}
+        <div className="w-full">
+          <ProductCodeSelector
+            value={item.productCode}
+            onChange={(value) => updateItem(index, 'productCode', value)}
           />
         </div>
 
-        <div>
-          <Label className="text-xs">Price per Unit *</Label>
-          <Input
-            type="number"
-            value={item.price}
-            onChange={(e) => updateItem(index, 'price', Number(e.target.value))}
-            min="0"
-            className="h-8 text-xs"
-            placeholder="₹0"
-            required
-          />
+        {/* Second row - Quantity and Price */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Quantity *</Label>
+            <Input
+              type="number"
+              value={item.quantity}
+              onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+              min="1"
+              className="h-8 text-xs"
+              required
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Price per Unit *</Label>
+            <Input
+              type="number"
+              value={item.price}
+              onChange={(e) => updateItem(index, 'price', Number(e.target.value))}
+              min="0"
+              className="h-8 text-xs"
+              placeholder="₹0"
+              required
+            />
+          </div>
         </div>
       </div>
 
