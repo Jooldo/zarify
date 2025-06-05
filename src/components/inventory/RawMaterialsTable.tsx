@@ -37,9 +37,43 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfallStatus = (shortfall: number) => {
-    if (shortfall === 0) return { variant: 'default' as const, color: 'text-green-600' };
-    if (shortfall <= 10) return { variant: 'secondary' as const, color: 'text-yellow-600' };
-    return { variant: 'destructive' as const, color: 'text-red-600' };
+    if (shortfall === 0) return { 
+      label: 'Good', 
+      variant: 'default' as const, 
+      color: 'text-green-600' 
+    };
+    
+    if (shortfall >= 1000) {
+      return { 
+        label: 'Highly Critical', 
+        variant: 'destructive' as const, 
+        color: 'text-red-600' 
+      };
+    } else if (shortfall >= 500) {
+      return { 
+        label: 'Critical', 
+        variant: 'destructive' as const, 
+        color: 'text-red-600' 
+      };
+    } else if (shortfall >= 100) {
+      return { 
+        label: 'Warning', 
+        variant: 'secondary' as const, 
+        color: 'text-yellow-600' 
+      };
+    } else if (shortfall > 0) {
+      return { 
+        label: 'Low Priority', 
+        variant: 'secondary' as const, 
+        color: 'text-yellow-600' 
+      };
+    }
+    
+    return { 
+      label: 'Good', 
+      variant: 'default' as const, 
+      color: 'text-green-600' 
+    };
   };
 
   const handleUpdateStock = (material: RawMaterial) => {
@@ -90,8 +124,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Stock Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -125,6 +160,11 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                     <span className={`font-medium ${shortfallInfo.color}`}>
                       {material.shortfall} {material.unit}
                     </span>
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Badge variant={shortfallInfo.variant} className="text-xs px-1 py-0">
+                      {shortfallInfo.label}
+                    </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     {material.cost_per_unit ? `₹${material.cost_per_unit}` : '-'}

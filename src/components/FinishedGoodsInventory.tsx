@@ -45,6 +45,24 @@ const FinishedGoodsInventory = () => {
     return `${shortfall} Surplus`;
   };
 
+  const getShortfallStatus = (shortfall: number) => {
+    const absShortfall = Math.abs(shortfall);
+    
+    if (shortfall >= 0) {
+      return { label: 'Good', variant: 'default' as const };
+    }
+    
+    if (absShortfall >= 100) {
+      return { label: 'Highly Critical', variant: 'destructive' as const };
+    } else if (absShortfall >= 50) {
+      return { label: 'Critical', variant: 'destructive' as const };
+    } else if (absShortfall >= 20) {
+      return { label: 'Warning', variant: 'secondary' as const };
+    } else {
+      return { label: 'Low Priority', variant: 'secondary' as const };
+    }
+  };
+
   const getDisplaySize = (product: any) => {
     const sizeInInches = product.product_config?.size_value 
       ? (product.product_config.size_value * 39.3701).toFixed(2) 
@@ -124,19 +142,22 @@ const FinishedGoodsInventory = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Stock Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredProducts.map((product) => {
-              const status = getStockStatus(product.current_stock, product.threshold);
+              const stockStatus = getStockStatus(product.current_stock, product.threshold);
               const shortfall = calculateShortfall(
                 product.current_stock, 
                 product.in_manufacturing, 
                 product.threshold, 
                 product.required_quantity
               );
+              const shortfallStatus = getShortfallStatus(shortfall);
+              
               return (
                 <TableRow key={product.id} className="h-10">
                   <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{product.product_code}</TableCell>
@@ -153,8 +174,13 @@ const FinishedGoodsInventory = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <Badge variant={status.variant} className="text-xs px-1 py-0">
-                      {status.label}
+                    <Badge variant={shortfallStatus.variant} className="text-xs px-1 py-0">
+                      {shortfallStatus.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={stockStatus.variant} className="text-xs px-1 py-0">
+                      {stockStatus.label}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
