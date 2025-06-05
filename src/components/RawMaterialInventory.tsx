@@ -60,8 +60,6 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
         onFilterStatusChange={setFilterStatus}
         materialTypes={materialTypes}
         onMaterialAdded={handleMaterialAdded}
-        materials={rawMaterials}
-        onRequestCreated={handleRequestCreated}
       />
       
       <RawMaterialsTable 

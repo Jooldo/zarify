@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Package } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Plus } from 'lucide-react';
 import AddMaterialDialog from './AddMaterialDialog';
-import BulkRequestDialog from './BulkRequestDialog';
-import type { RawMaterial } from '@/hooks/useRawMaterials';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface RawMaterialsHeaderProps {
   searchTerm: string;
@@ -17,108 +17,85 @@ interface RawMaterialsHeaderProps {
   onFilterStatusChange: (value: string) => void;
   materialTypes: string[];
   onMaterialAdded: () => void;
-  materials: RawMaterial[];
-  onRequestCreated: () => void;
 }
 
-const RawMaterialsHeader = ({
-  searchTerm,
-  onSearchChange,
-  filterType,
+const RawMaterialsHeader = ({ 
+  searchTerm, 
+  onSearchChange, 
+  filterType, 
   onFilterChange,
   filterStatus,
   onFilterStatusChange,
   materialTypes,
-  onMaterialAdded,
-  materials,
-  onRequestCreated
+  onMaterialAdded
 }: RawMaterialsHeaderProps) => {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isBulkRequestDialogOpen, setIsBulkRequestDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { createRawMaterial } = useRawMaterials();
 
-  // Get materials that need procurement (have shortfall)
-  const criticalMaterials = materials.filter(material => 
-    Math.max(0, material.minimum_stock - material.current_stock) > 0
-  );
+  const statusOptions = ['All', 'Low Stock', 'In Stock'];
+
+  const handleMaterialAdded = async (materialData: any) => {
+    try {
+      await createRawMaterial(materialData);
+      onMaterialAdded();
+      setIsDialogOpen(false);
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  };
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Raw Materials</h3>
-          <p className="text-sm text-gray-600">Manage your raw material inventory and procurement</p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setIsBulkRequestDialogOpen(true)}
-            variant="outline"
-            size="sm"
-            disabled={criticalMaterials.length === 0}
-          >
-            <Package className="h-4 w-4 mr-2" />
-            Bulk Request ({criticalMaterials.length})
-          </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Material
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <div className="flex-1">
+    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 flex-1">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search materials..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="max-w-sm"
+            className="pl-10 h-8"
           />
         </div>
-        
-        <div className="flex gap-2">
-          <Select value={filterType} onValueChange={onFilterChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {materialTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type === 'all' ? 'All Types' : type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={filterStatus} onValueChange={onFilterStatusChange}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All Status</SelectItem>
-              <SelectItem value="Low Stock">Low Stock</SelectItem>
-              <SelectItem value="In Stock">In Stock</SelectItem>
-              <SelectItem value="High Shortfall">High Shortfall</SelectItem>
-              <SelectItem value="Procurement Needed">Procurement Needed</SelectItem>
-              <SelectItem value="High Requirement">High Requirement</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={filterType} onValueChange={onFilterChange}>
+          <SelectTrigger className="w-40 h-8">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            {materialTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type === 'all' ? 'All Types' : type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={onFilterStatusChange}>
+          <SelectTrigger className="w-40 h-8">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-
-      <AddMaterialDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        onMaterialAdded={onMaterialAdded}
-      />
-
-      <BulkRequestDialog
-        isOpen={isBulkRequestDialogOpen}
-        onOpenChange={setIsBulkRequestDialogOpen}
-        materials={criticalMaterials}
-        onRequestsCreated={onRequestCreated}
-      />
-    </>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+            <Plus className="h-3 w-3" />
+            Add Material
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Raw Material</DialogTitle>
+          </DialogHeader>
+          <AddMaterialDialog onAddMaterial={handleMaterialAdded} />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
