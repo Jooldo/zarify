@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,25 +30,28 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     return { variant: 'destructive' as const, color: 'text-red-600' };
   };
 
-  const getShortfallBasedStatus = (shortfall: number, minimumStock: number) => {
+  const getShortfallStatus = (shortfall: number, minimumStock: number) => {
+    // If there is a shortfall (positive value means we need more)
     if (shortfall > 0) {
+      // If shortfall is not greater than minimum stock, it's low critical
+      if (shortfall <= minimumStock) {
+        return { 
+          label: 'Low Critical', 
+          variant: 'secondary' as const, 
+          icon: TriangleAlert,
+          color: 'text-yellow-600'
+        };
+      }
+      // If shortfall is greater than minimum stock, it's highly critical
       return { 
-        label: 'Critical', 
+        label: 'Highly Critical', 
         variant: 'destructive' as const, 
         icon: CircleAlert,
         color: 'text-red-600'
       };
     }
     
-    if (shortfall >= 0 && shortfall < minimumStock) {
-      return { 
-        label: 'Low', 
-        variant: 'secondary' as const, 
-        icon: TriangleAlert,
-        color: 'text-yellow-600'
-      };
-    }
-    
+    // If there is a surplus (no shortfall), it's good
     return { 
       label: 'Good', 
       variant: 'default' as const, 
@@ -112,7 +116,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           <TableBody>
             {materials.map((material) => {
               const requiredInfo = getRequiredStatus(material.required_quantity, material.current_stock);
-              const shortfallStatus = getShortfallBasedStatus(material.shortfall, material.minimum_stock);
+              const shortfallStatus = getShortfallStatus(material.shortfall, material.minimum_stock);
               const Icon = shortfallStatus.icon;
               
               return (
