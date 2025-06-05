@@ -135,44 +135,51 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {order.order_items.map((orderItem) => (
-                <TableRow key={orderItem.id}>
-                  <TableCell className="font-medium text-blue-600">{orderItem.suborder_id}</TableCell>
-                  <TableCell className="font-mono text-sm bg-gray-50">{orderItem.product_config.product_code}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">{orderItem.product_config.subcategory}</div>
-                      <div className="text-gray-500">{orderItem.product_config.category} - {orderItem.product_config.size}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{orderItem.quantity} pieces</TableCell>
-                  <TableCell className="font-medium">₹{orderItem.total_price.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(suborderStatuses[orderItem.id])}>
-                      {suborderStatuses[orderItem.id]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 items-center">
-                      <Select
-                        value={suborderStatuses[orderItem.id]}
-                        onValueChange={(value) => handleSuborderStatusUpdate(orderItem.id, value)}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {order.order_items.map((orderItem) => {
+                const sizeInInches = orderItem.product_config.size_value 
+                  ? (orderItem.product_config.size_value * 39.3701).toFixed(2) 
+                  : 'N/A';
+                const weightRange = orderItem.product_config.weight_range || 'N/A';
+                
+                return (
+                  <TableRow key={orderItem.id}>
+                    <TableCell className="font-medium text-blue-600">{orderItem.suborder_id}</TableCell>
+                    <TableCell className="font-mono text-sm bg-gray-50">{orderItem.product_config.product_code}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{orderItem.product_config.subcategory}</div>
+                        <div className="text-gray-500">{orderItem.product_config.category} - {sizeInInches}" / {weightRange}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{orderItem.quantity} pieces</TableCell>
+                    <TableCell className="font-medium">₹{orderItem.total_price.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(suborderStatuses[orderItem.id])}>
+                        {suborderStatuses[orderItem.id]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 items-center">
+                        <Select
+                          value={suborderStatuses[orderItem.id]}
+                          onValueChange={(value) => handleSuborderStatusUpdate(orderItem.id, value)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           
