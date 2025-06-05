@@ -37,10 +37,19 @@ const RawMaterialsSection = ({
     setOpenComboboxes(prev => ({ ...prev, [index]: open }));
   };
 
-  // Ensure availableRawMaterials is always an array and filter out any invalid entries
-  const safeAvailableRawMaterials = (availableRawMaterials || []).filter(
-    rawMat => rawMat && rawMat.id && rawMat.name && rawMat.type
-  );
+  // Safely handle availableRawMaterials - ensure it's always an array and properly filtered
+  const safeAvailableRawMaterials = Array.isArray(availableRawMaterials) 
+    ? availableRawMaterials.filter(rawMat => 
+        rawMat && 
+        typeof rawMat === 'object' && 
+        rawMat.id && 
+        rawMat.name && 
+        rawMat.type
+      )
+    : [];
+
+  console.log('Available raw materials:', safeAvailableRawMaterials);
+  console.log('Loading state:', loading);
 
   return (
     <Card>
@@ -75,7 +84,11 @@ const RawMaterialsSection = ({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0">
-                  {!loading && safeAvailableRawMaterials.length > 0 ? (
+                  {loading ? (
+                    <div className="p-4 text-xs text-center text-gray-500">
+                      Loading materials...
+                    </div>
+                  ) : safeAvailableRawMaterials.length > 0 ? (
                     <Command>
                       <CommandInput placeholder="Search materials..." className="text-xs" />
                       <CommandEmpty className="text-xs">No material found.</CommandEmpty>
@@ -103,7 +116,7 @@ const RawMaterialsSection = ({
                     </Command>
                   ) : (
                     <div className="p-4 text-xs text-center text-gray-500">
-                      {loading ? "Loading materials..." : "No materials available"}
+                      No materials available
                     </div>
                   )}
                 </PopoverContent>
