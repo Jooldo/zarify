@@ -60,7 +60,7 @@ const RawMaterialsSection = ({
               <div className="col-span-5">
                 <Label className="text-xs">Raw Material</Label>
                 <Select 
-                  value={material.material} 
+                  value={material.material || ""} 
                   onValueChange={(value) => handleMaterialChange(index, value)}
                   disabled={loading}
                 >
@@ -82,7 +82,7 @@ const RawMaterialsSection = ({
                 <Input
                   type="number"
                   step="0.01"
-                  value={material.quantity}
+                  value={material.quantity || ""}
                   onChange={(e) => updateRawMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
                   placeholder="0"
                   className="h-7 text-xs"
@@ -93,7 +93,7 @@ const RawMaterialsSection = ({
               <div className="col-span-3">
                 <Label className="text-xs">Unit</Label>
                 <Input
-                  value={selectedMaterial?.unit || material.unit}
+                  value={selectedMaterial?.unit || material.unit || ""}
                   className="h-7 text-xs bg-gray-50"
                   readOnly
                   placeholder="Unit"

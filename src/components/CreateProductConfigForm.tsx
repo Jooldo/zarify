@@ -23,7 +23,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
-    { material: '', quantity: 0, unit: 'grams' }
+    { material: '', quantity: 0, unit: '' }
   ]);
 
   // Populate form with initial data if updating
@@ -44,7 +44,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       
       setWeightRange(initialData.weightRange || '');
       setIsActive(initialData.isActive ?? true);
-      setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
+      setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: '' }]);
     }
   }, [initialData, isUpdate]);
 
@@ -59,7 +59,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   };
 
   const addRawMaterial = () => {
-    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
+    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: '' }]);
   };
 
   const removeRawMaterial = (index: number) => {
