@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,7 +154,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     <form onSubmit={handleSubmit} className="space-y-2">
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardHeader>
+          <CardTitle className="text-sm">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 pt-0">
           <div className="grid grid-cols-2 gap-2">
