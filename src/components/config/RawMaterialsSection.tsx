@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface RawMaterialsSectionProps {
@@ -19,6 +19,134 @@ interface RawMaterialsSectionProps {
   updateRawMaterial: (index: number, field: string, value: any) => void;
   updateRawMaterialBatch: (index: number, updates: { material?: string; unit?: string; quantity?: number }) => void;
 }
+
+interface RawMaterialSelectorProps {
+  value: string;
+  onChange: (materialId: string) => void;
+  disabled?: boolean;
+  availableRawMaterials: any[];
+  loading: boolean;
+}
+
+const RawMaterialSelector = ({ value, onChange, disabled = false, availableRawMaterials, loading }: RawMaterialSelectorProps) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const filteredMaterials = useMemo(() => {
+    if (!searchTerm) return availableRawMaterials;
+    
+    const search = searchTerm.toLowerCase();
+    return availableRawMaterials.filter(material => 
+      material.name.toLowerCase().includes(search) ||
+      material.type.toLowerCase().includes(search)
+    );
+  }, [availableRawMaterials, searchTerm]);
+
+  const visibleMaterials = useMemo(() => 
+    filteredMaterials.slice(0, visibleCount), 
+    [filteredMaterials, visibleCount]
+  );
+
+  const selectedMaterial = availableRawMaterials.find(m => m.id === value);
+
+  const handleSelect = (materialId: string) => {
+    onChange(materialId);
+    setIsOpen(false);
+    setSearchTerm('');
+    setVisibleCount(20);
+  };
+
+  const loadMore = () => {
+    setVisibleCount(prev => Math.min(prev + 20, filteredMaterials.length));
+  };
+
+  return (
+    <div className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled || loading}
+        className="w-full h-7 text-xs justify-between font-normal"
+      >
+        <span className="truncate text-left">
+          {loading ? "Loading..." : (selectedMaterial ? `${selectedMaterial.name} (${selectedMaterial.type})` : "Select material")}
+        </span>
+        {isOpen ? <ChevronUp className="h-3 w-3 flex-shrink-0" /> : <ChevronDown className="h-3 w-3 flex-shrink-0" />}
+      </Button>
+
+      {isOpen && (
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-hidden shadow-lg border bg-white">
+          <CardContent className="p-2">
+            <div className="relative mb-2">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setVisibleCount(20);
+                }}
+                placeholder="Search materials..."
+                className="h-6 text-xs pl-7"
+                autoFocus
+              />
+            </div>
+
+            <div className="max-h-40 overflow-y-auto">
+              {visibleMaterials.length === 0 ? (
+                <div className="text-center py-3 text-xs text-gray-500">
+                  {loading ? 'Loading...' : 'No materials found'}
+                </div>
+              ) : (
+                <>
+                  {visibleMaterials.map((material) => (
+                    <div
+                      key={material.id}
+                      onClick={() => handleSelect(material.id)}
+                      className="p-1.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium truncate flex-1">
+                          {material.name}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {material.type}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Unit: {material.unit} | Stock: {material.current_stock}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {visibleCount < filteredMaterials.length && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={loadMore}
+                      className="w-full h-6 text-xs mt-1"
+                    >
+                      Load More ({filteredMaterials.length - visibleCount} remaining)
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Click outside to close */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
 
 const RawMaterialsSection = ({ 
   rawMaterials, 
@@ -79,22 +207,13 @@ const RawMaterialsSection = ({
             <div key={index} className="grid grid-cols-12 gap-1 items-end">
               <div className="col-span-5">
                 <Label className="text-xs">Raw Material</Label>
-                <Select 
-                  value={material.material || ""} 
-                  onValueChange={(value) => handleMaterialChange(index, value)}
+                <RawMaterialSelector
+                  value={material.material || ""}
+                  onChange={(value) => handleMaterialChange(index, value)}
                   disabled={loading}
-                >
-                  <SelectTrigger className="h-7 text-xs">
-                    <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableRawMaterials.map((rawMat) => (
-                      <SelectItem key={rawMat.id} value={rawMat.id} className="text-xs">
-                        {rawMat.name} ({rawMat.type})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  availableRawMaterials={availableRawMaterials}
+                  loading={loading}
+                />
               </div>
               
               <div className="col-span-3">
