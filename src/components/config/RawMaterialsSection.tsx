@@ -1,21 +1,19 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 
-interface RawMaterial {
-  material: string;
-  quantity: number;
-  unit: string;
-}
-
 interface RawMaterialsSectionProps {
-  rawMaterials: RawMaterial[];
+  rawMaterials: Array<{
+    material: string;
+    quantity: number;
+    unit: string;
+  }>;
   addRawMaterial: () => void;
   removeRawMaterial: (index: number) => void;
   updateRawMaterial: (index: number, field: string, value: any) => void;
@@ -29,90 +27,95 @@ const RawMaterialsSection = ({
 }: RawMaterialsSectionProps) => {
   const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
 
-  // Safely handle available materials
-  const materialOptions = Array.isArray(availableRawMaterials) 
-    ? availableRawMaterials.filter(material => material?.id && material?.name)
-    : [];
+  const handleMaterialChange = (index: number, materialId: string) => {
+    const selectedMaterial = availableRawMaterials.find(m => m.id === materialId);
+    updateRawMaterial(index, 'material', materialId);
+    if (selectedMaterial) {
+      updateRawMaterial(index, 'unit', selectedMaterial.unit);
+    }
+  };
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Raw Materials Required</CardTitle>
-          <Button type="button" onClick={addRawMaterial} variant="outline" size="sm" className="h-7 text-xs">
-            <Plus className="h-3 w-3 mr-1" />
-            Add Material
+      <CardHeader className="pb-1">
+        <CardTitle className="text-sm flex items-center justify-between">
+          Raw Materials Required
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addRawMaterial}
+            className="h-6 w-6 p-0"
+          >
+            <Plus className="h-3 w-3" />
           </Button>
-        </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 pt-0">
-        {rawMaterials.map((material, index) => (
-          <div key={index} className="grid grid-cols-4 gap-2 items-end">
-            <div>
-              <Label className="text-xs">Material</Label>
-              <Select 
-                value={material.material} 
-                onValueChange={(value) => updateRawMaterial(index, 'material', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {materialOptions.length > 0 ? (
-                    materialOptions.map((rawMat) => (
+        {rawMaterials.map((material, index) => {
+          const selectedMaterial = availableRawMaterials.find(m => m.id === material.material);
+          
+          return (
+            <div key={index} className="grid grid-cols-12 gap-1 items-end">
+              <div className="col-span-5">
+                <Label className="text-xs">Raw Material</Label>
+                <Select 
+                  value={material.material} 
+                  onValueChange={(value) => handleMaterialChange(index, value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRawMaterials.map((rawMat) => (
                       <SelectItem key={rawMat.id} value={rawMat.id} className="text-xs">
                         {rawMat.name} ({rawMat.type})
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-materials" disabled className="text-xs text-gray-500">
-                      {loading ? "Loading materials..." : "No materials available"}
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="col-span-3">
+                <Label className="text-xs">Quantity</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={material.quantity}
+                  onChange={(e) => updateRawMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="h-7 text-xs"
+                  min="0"
+                />
+              </div>
+              
+              <div className="col-span-3">
+                <Label className="text-xs">Unit</Label>
+                <Input
+                  value={selectedMaterial?.unit || material.unit}
+                  className="h-7 text-xs bg-gray-50"
+                  readOnly
+                  placeholder="Unit"
+                />
+              </div>
+              
+              <div className="col-span-1">
+                {rawMaterials.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeRawMaterial(index)}
+                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Quantity</Label>
-              <Input
-                type="number"
-                value={material.quantity}
-                onChange={(e) => updateRawMaterial(index, 'quantity', Number(e.target.value))}
-                placeholder="0"
-                className="h-8 text-xs"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Unit</Label>
-              <Select 
-                value={material.unit} 
-                onValueChange={(value) => updateRawMaterial(index, 'unit', value)}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grams" className="text-xs">Grams</SelectItem>
-                  <SelectItem value="pieces" className="text-xs">Pieces</SelectItem>
-                  <SelectItem value="meters" className="text-xs">Meters</SelectItem>
-                  <SelectItem value="rolls" className="text-xs">Rolls</SelectItem>
-                  <SelectItem value="kg" className="text-xs">Kilograms</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => removeRawMaterial(index)}
-              disabled={rawMaterials.length === 1}
-              className="h-8 w-8 p-0"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
