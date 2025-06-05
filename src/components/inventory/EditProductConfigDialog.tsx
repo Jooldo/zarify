@@ -55,6 +55,16 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
     }
   }, [config]);
 
+  const generateProductCode = () => {
+    if (!formData.category || !formData.subcategory) return '';
+    
+    const categoryCode = formData.category.slice(0, 3).toUpperCase();
+    const subcategoryCode = formData.subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
+    const weightCode = formData.weightRange ? formData.weightRange.split('-')[0] + 'G' : '';
+    
+    return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!config) return;
