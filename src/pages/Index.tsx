@@ -19,6 +19,10 @@ const Index = () => {
     await signOut();
   };
 
+  const handleNavigateToTab = (tab: string) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -71,7 +75,7 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <VisualDashboard />
+            <VisualDashboard onNavigateToTab={handleNavigateToTab} />
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-6">

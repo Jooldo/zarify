@@ -1,39 +1,33 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import CriticalStockAlerts from './CriticalStockAlerts';
-import LiveOrderFunnel from './LiveOrderFunnel';
-import ProcurementStatusOverview from './ProcurementStatusOverview';
-import ManufacturingLoad from './ManufacturingLoad';
-import TodaysActivities from './TodaysActivities';
+import OrderFunnelChart from './OrderFunnelChart';
+import CriticalRawMaterials from './CriticalRawMaterials';
+import CriticalFinishedGoods from './CriticalFinishedGoods';
 
-const VisualDashboard = () => {
+interface VisualDashboardProps {
+  onNavigateToTab?: (tab: string) => void;
+}
+
+const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Business Dashboard</h1>
-        <p className="text-gray-600">Critical insights and actionable alerts at a glance</p>
+    <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="border-b border-gray-200 pb-4">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Admin Dashboard</h1>
+        <p className="text-gray-600 text-sm">Overview of critical operations and actionable insights</p>
       </div>
 
-      {/* Top Row - Critical Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="md:col-span-2">
-          <CriticalStockAlerts />
-        </div>
-        <div className="md:col-span-2">
-          <LiveOrderFunnel />
-        </div>
-      </div>
-
-      {/* Middle Row - Status and Manufacturing */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div>
-          <ProcurementStatusOverview />
+        {/* Order Funnel - Takes 2 columns on large screens */}
+        <div className="lg:col-span-2">
+          <OrderFunnelChart onNavigateToOrders={() => onNavigateToTab?.('orders')} />
         </div>
-        <div>
-          <ManufacturingLoad />
-        </div>
-        <div>
-          <TodaysActivities />
+
+        {/* Critical Materials - Takes 1 column */}
+        <div className="space-y-6">
+          <CriticalRawMaterials onNavigateToProcurement={() => onNavigateToTab?.('inventory')} />
+          <CriticalFinishedGoods onNavigateToInventory={() => onNavigateToTab?.('inventory')} />
         </div>
       </div>
     </div>
