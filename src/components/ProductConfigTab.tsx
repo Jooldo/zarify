@@ -17,7 +17,7 @@ const ProductConfigTab = () => {
   const [isViewConfigOpen, setIsViewConfigOpen] = useState(false);
   const [isEditConfigOpen, setIsEditConfigOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState(null);
-  const { productConfigs, loading, createProductConfig, refetch } = useProductConfigs();
+  const { productConfigs, loading, createProductConfig, deleteProductConfig, refetch } = useProductConfigs();
 
   const filteredConfigs = productConfigs.filter(config => 
     config.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -183,6 +183,7 @@ const ProductConfigTab = () => {
         isOpen={isEditConfigOpen}
         onClose={() => setIsEditConfigOpen(false)}
         onUpdate={handleConfigUpdate}
+        onDelete={deleteProductConfig}
       />
 
       {/* Empty state */}

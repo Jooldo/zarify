@@ -1,12 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,9 +27,10 @@ interface EditProductConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  onDelete: (configId: string) => Promise<void>;
 }
 
-const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate }: EditProductConfigDialogProps) => {
+const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }: EditProductConfigDialogProps) => {
   const [formData, setFormData] = useState({
     category: '',
     subcategory: '',
@@ -36,6 +39,7 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate }: EditProd
     isActive: true,
   });
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,14 +96,27 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate }: EditProd
     }
   };
 
-  const generateProductCode = () => {
-    if (!formData.category || !formData.subcategory || !formData.sizeValue) return '';
-    
-    const categoryCode = formData.category.substring(0, 2).toUpperCase();
-    const subcategoryCode = formData.subcategory.substring(0, 2).toUpperCase();
-    const sizeCode = Math.round(parseFloat(formData.sizeValue)).toString().padStart(2, '0');
-    
-    return `${categoryCode}${subcategoryCode}${sizeCode}`;
+  const handleDelete = async () => {
+    if (!config) return;
+
+    setDeleteLoading(true);
+    try {
+      await onDelete(config.id);
+      toast({
+        title: 'Success',
+        description: 'Product configuration deleted successfully',
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error deleting product config:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete product configuration',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   if (!config) return null;
@@ -185,6 +202,32 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate }: EditProd
             <Button type="submit" className="flex-1 h-7 text-xs" disabled={loading}>
               {loading ? 'Updating...' : 'Update'}
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  className="h-7 w-7 p-0" 
+                  disabled={deleteLoading}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Product Configuration</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this product configuration? This action cannot be undone and will also delete all associated raw material requirements.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={deleteLoading}>
+                    {deleteLoading ? 'Deleting...' : 'Delete'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button type="button" variant="outline" onClick={onClose} className="h-7 text-xs">
               Cancel
             </Button>

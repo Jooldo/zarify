@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -37,7 +36,6 @@ export const useProductConfigs = () => {
             )
           )
         `)
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -142,6 +140,38 @@ export const useProductConfigs = () => {
     }
   };
 
+  const deleteProductConfig = async (configId: string) => {
+    try {
+      // First delete related materials
+      const { error: materialsError } = await supabase
+        .from('product_config_materials')
+        .delete()
+        .eq('product_config_id', configId);
+
+      if (materialsError) {
+        console.error('Error deleting product config materials:', materialsError);
+        throw materialsError;
+      }
+
+      // Then delete the config
+      const { error } = await supabase
+        .from('product_configs')
+        .delete()
+        .eq('id', configId);
+
+      if (error) {
+        console.error('Error deleting product config:', error);
+        throw error;
+      }
+
+      // Refresh the list
+      await fetchProductConfigs();
+    } catch (error) {
+      console.error('Error deleting product config:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchProductConfigs();
   }, []);
@@ -150,6 +180,7 @@ export const useProductConfigs = () => {
     productConfigs,
     loading,
     createProductConfig,
+    deleteProductConfig,
     refetch: fetchProductConfigs
   };
 };
