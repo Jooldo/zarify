@@ -6,8 +6,8 @@ import { Switch } from '@/components/ui/switch';
 interface ProductConfigDetailsProps {
   category: string;
   subcategory: string;
-  size: string;
   sizeValue: string;
+  weightRange: string;
   isActive: boolean;
   generateProductCode: () => string;
   setIsActive: (active: boolean) => void;
@@ -16,8 +16,8 @@ interface ProductConfigDetailsProps {
 const ProductConfigDetails = ({ 
   category, 
   subcategory, 
-  size, 
   sizeValue, 
+  weightRange,
   isActive, 
   generateProductCode, 
   setIsActive 
@@ -37,7 +37,7 @@ const ProductConfigDetails = ({
         <div>
           <Label className="text-xs font-medium">Full Description:</Label>
           <div className="text-xs text-gray-600">
-            {category} - {subcategory} ({size}: {sizeValue}m)
+            {category} - {subcategory} ({sizeValue}" / {weightRange})
           </div>
         </div>
         <div>

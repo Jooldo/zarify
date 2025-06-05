@@ -1,11 +1,15 @@
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Minus, Check, ChevronsUpDown } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { cn } from '@/lib/utils';
 
 interface RawMaterial {
   material: string;
@@ -27,6 +31,11 @@ const RawMaterialsSection = ({
   updateRawMaterial 
 }: RawMaterialsSectionProps) => {
   const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
+  const [openComboboxes, setOpenComboboxes] = useState<{ [key: number]: boolean }>({});
+
+  const setComboboxOpen = (index: number, open: boolean) => {
+    setOpenComboboxes(prev => ({ ...prev, [index]: open }));
+  };
 
   return (
     <Card>
@@ -44,22 +53,50 @@ const RawMaterialsSection = ({
           <div key={index} className="grid grid-cols-4 gap-2 items-end">
             <div>
               <Label className="text-xs">Material</Label>
-              <Select 
-                value={material.material} 
-                onValueChange={(value) => updateRawMaterial(index, 'material', value)}
-                disabled={loading}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRawMaterials.map((rawMat) => (
-                    <SelectItem key={rawMat.id} value={rawMat.id} className="text-xs">
-                      {rawMat.name} ({rawMat.type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openComboboxes[index]} onOpenChange={(open) => setComboboxOpen(index, open)}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openComboboxes[index]}
+                    className="h-8 w-full justify-between text-xs"
+                    disabled={loading}
+                  >
+                    {material.material ? 
+                      availableRawMaterials.find((rawMat) => rawMat.id === material.material)?.name || "Select material..."
+                      : "Select material..."
+                    }
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search materials..." className="text-xs" />
+                    <CommandEmpty className="text-xs">No material found.</CommandEmpty>
+                    <CommandGroup>
+                      {availableRawMaterials.map((rawMat) => (
+                        <CommandItem
+                          key={rawMat.id}
+                          value={`${rawMat.name} ${rawMat.type}`}
+                          onSelect={() => {
+                            updateRawMaterial(index, 'material', rawMat.id);
+                            setComboboxOpen(index, false);
+                          }}
+                          className="text-xs"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3 w-3",
+                              material.material === rawMat.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {rawMat.name} ({rawMat.type})
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">Quantity</Label>

@@ -37,6 +37,15 @@ const ProductConfigTab = () => {
     setIsViewConfigOpen(true);
   };
 
+  const getDisplaySize = (config: any) => {
+    // Extract weight range from size if it contains weight info
+    const weightMatch = config.size?.match(/(\d+(?:\.\d+)?-\d+(?:\.\d+)?\s*gms?)/i);
+    if (weightMatch) {
+      return `${config.size_value}" / ${weightMatch[1]}`;
+    }
+    return config.size;
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -90,7 +99,7 @@ const ProductConfigTab = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Size</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Size & Weight</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
@@ -108,7 +117,7 @@ const ProductConfigTab = () => {
                   {config.subcategory}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
-                  {config.size}
+                  {getDisplaySize(config)}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   <Badge 

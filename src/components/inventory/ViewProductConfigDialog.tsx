@@ -28,6 +28,24 @@ interface ViewProductConfigDialogProps {
 }
 
 const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
+  // Extract weight range from size if it contains weight info, otherwise show size value in inches
+  const getSizeDisplay = () => {
+    // Check if size contains weight range pattern
+    const weightMatch = config.size?.match(/(\d+(?:\.\d+)?-\d+(?:\.\d+)?\s*gms?)/i);
+    if (weightMatch) {
+      return {
+        sizeValue: `${config.size_value}"`,
+        weightRange: weightMatch[1]
+      };
+    }
+    return {
+      sizeValue: config.size_value ? `${config.size_value}"` : `${config.size_value}m`,
+      weightRange: null
+    };
+  };
+
+  const { sizeValue, weightRange } = getSizeDisplay();
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -52,13 +70,15 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
           <div className="text-lg">{config.subcategory}</div>
         </div>
         <div>
-          <Label className="font-medium">Size:</Label>
-          <div className="text-lg">{config.size}</div>
-        </div>
-        <div>
           <Label className="font-medium">Size Value:</Label>
-          <div className="text-lg">{config.size_value}m</div>
+          <div className="text-lg">{sizeValue}</div>
         </div>
+        {weightRange && (
+          <div>
+            <Label className="font-medium">Weight Range:</Label>
+            <div className="text-lg">{weightRange}</div>
+          </div>
+        )}
         <div>
           <Label className="font-medium">Created:</Label>
           <div className="text-sm text-gray-600">

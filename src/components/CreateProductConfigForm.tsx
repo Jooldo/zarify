@@ -18,8 +18,8 @@ interface CreateProductConfigFormProps {
 const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = false }: CreateProductConfigFormProps) => {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
-  const [size, setSize] = useState('');
   const [sizeValue, setSizeValue] = useState('');
+  const [weightRange, setWeightRange] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
@@ -32,27 +32,30 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setCategory(initialData.category || '');
       setSubcategory(initialData.subcategory || '');
       
-      // Extract size from the size string (e.g., "Small (0.20m)" -> "Small")
-      const sizeMatch = initialData.size?.match(/^(\w+)/);
-      setSize(sizeMatch ? sizeMatch[1] : '');
-      
-      // Extract size value from the size string (e.g., "Small (0.20m)" -> "0.20")
+      // Extract size value from the size string and convert from meters to inches
       const sizeValueMatch = initialData.size?.match(/\(([0-9.]+)m\)/);
-      setSizeValue(sizeValueMatch ? sizeValueMatch[1] : '');
+      if (sizeValueMatch) {
+        const metersValue = parseFloat(sizeValueMatch[1]);
+        const inchesValue = (metersValue * 39.3701).toFixed(2); // Convert meters to inches
+        setSizeValue(inchesValue);
+      } else {
+        setSizeValue(initialData.sizeValue || '');
+      }
       
+      setWeightRange(initialData.weightRange || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
     }
   }, [initialData, isUpdate]);
 
   const generateProductCode = () => {
-    if (!category || !subcategory || !size) return '';
+    if (!category || !subcategory) return '';
     
     const categoryCode = category.slice(0, 3).toUpperCase();
     const subcategoryCode = subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
-    const sizeCode = size.slice(0, 2).toUpperCase();
+    const weightCode = weightRange ? weightRange.split('-')[0] + 'G' : '';
     
-    return `${categoryCode}-${subcategoryCode}-${sizeCode}`;
+    return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
   };
 
   const addRawMaterial = () => {
@@ -80,8 +83,15 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!category || !subcategory || !size || !sizeValue) {
+    if (!category || !subcategory || !sizeValue || !weightRange) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    // Validate weight range format
+    const weightRegex = /^\d+(\.\d+)?-\d+(\.\d+)?\s*(gms?|g)$/i;
+    if (!weightRegex.test(weightRange.trim())) {
+      alert('Please enter weight range in format: 35-45 gms');
       return;
     }
 
@@ -100,8 +110,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       const productConfigData = {
         category,
         subcategory,
-        size,
         sizeValue,
+        weightRange,
         isActive,
         productCode,
         rawMaterials
@@ -158,27 +168,24 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label htmlFor="size" className="text-xs">Size *</Label>
-              <Select value={size} onValueChange={setSize}>
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Small" className="text-xs">Small</SelectItem>
-                  <SelectItem value="Medium" className="text-xs">Medium</SelectItem>
-                  <SelectItem value="Large" className="text-xs">Large</SelectItem>
-                  <SelectItem value="Extra Large" className="text-xs">Extra Large</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="sizeValue" className="text-xs">Size Value (m) *</Label>
+              <Label htmlFor="sizeValue" className="text-xs">Size Value (inches) *</Label>
               <Input
                 id="sizeValue"
                 value={sizeValue}
                 onChange={(e) => setSizeValue(e.target.value)}
-                placeholder="0.25"
+                placeholder="10"
+                className="h-7 text-xs"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="weightRange" className="text-xs">Weight Range *</Label>
+              <Input
+                id="weightRange"
+                value={weightRange}
+                onChange={(e) => setWeightRange(e.target.value)}
+                placeholder="35-45 gms"
                 className="h-7 text-xs"
                 required
               />
@@ -188,8 +195,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
           <ProductConfigDetails 
             category={category}
             subcategory={subcategory}
-            size={size}
             sizeValue={sizeValue}
+            weightRange={weightRange}
             isActive={isActive}
             generateProductCode={generateProductCode}
             setIsActive={setIsActive}

@@ -73,8 +73,8 @@ export const useProductConfigs = () => {
   const createProductConfig = async (configData: {
     category: string;
     subcategory: string;
-    size: string;
     sizeValue: string;
+    weightRange: string;
     productCode: string;
     isActive: boolean;
     rawMaterials: Array<{
@@ -87,14 +87,17 @@ export const useProductConfigs = () => {
       // Get merchant ID first
       const merchantId = await getMerchantId();
       
+      // Convert inches to meters for storage (for backward compatibility)
+      const sizeValueInMeters = parseFloat(configData.sizeValue) / 39.3701;
+      
       // Insert product config
       const { data: config, error: configError } = await supabase
         .from('product_configs')
         .insert({
           category: configData.category,
           subcategory: configData.subcategory,
-          size: `${configData.size} (${configData.sizeValue}m)`,
-          size_value: parseFloat(configData.sizeValue),
+          size: `${configData.sizeValue}" / ${configData.weightRange}`,
+          size_value: sizeValueInMeters,
           product_code: configData.productCode,
           is_active: configData.isActive,
           merchant_id: merchantId
@@ -113,7 +116,7 @@ export const useProductConfigs = () => {
           .filter(material => material.material && material.quantity > 0)
           .map(material => ({
             product_config_id: config.id,
-            raw_material_id: material.material, // This is now the raw material ID from the dropdown
+            raw_material_id: material.material,
             quantity_required: material.quantity,
             unit: material.unit,
             merchant_id: merchantId
