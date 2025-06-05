@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Minimum Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
@@ -107,7 +109,15 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs">{material.current_stock} {material.unit}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.minimum_stock} {material.unit}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <span className={`font-medium ${requiredInfo.color}`} title={`Production: ${material.production_requirements} + Safety: ${material.minimum_stock}`}>
+                    <span className={material.in_procurement > 0 ? 'text-blue-600 font-medium' : ''}>
+                      {material.in_procurement} {material.unit}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <span 
+                      className={`font-medium ${requiredInfo.color} cursor-help`} 
+                      title={`Production Requirements: ${material.production_requirements} + Minimum Stock: ${material.minimum_stock} = Total Required: ${material.required_quantity}`}
+                    >
                       {material.required_quantity} {material.unit}
                     </span>
                   </TableCell>

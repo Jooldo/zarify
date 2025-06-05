@@ -52,7 +52,6 @@ export const useRawMaterials = () => {
         .order('name');
 
       if (rawMaterialsError) throw rawMaterialsError;
-
       console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
       // Fetch finished goods with their product configs
@@ -65,7 +64,6 @@ export const useRawMaterials = () => {
         .order('product_code');
 
       if (finishedGoodsError) throw finishedGoodsError;
-
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
       // Fetch product config materials relationships
@@ -79,7 +77,6 @@ export const useRawMaterials = () => {
         `);
 
       if (productConfigMaterialsError) throw productConfigMaterialsError;
-
       console.log('Product config materials fetched:', productConfigMaterialsData?.length || 0, 'relationships');
 
       // Calculate required quantities and shortfalls for each raw material
@@ -102,27 +99,27 @@ export const useRawMaterials = () => {
           );
 
           if (finishedGood) {
-            // Calculate finished good shortfall
+            // Calculate finished good shortfall: (required + threshold) - current_stock
             const finishedGoodShortfall = Math.max(
               0, 
               (finishedGood.required_quantity + finishedGood.threshold) - finishedGood.current_stock
             );
 
-            console.log(`Finished good ${finishedGood.product_code}: shortfall = ${finishedGoodShortfall}, material qty per unit = ${usage.quantity_required}`);
+            console.log(`Finished good ${finishedGood.product_code}: required=${finishedGood.required_quantity}, threshold=${finishedGood.threshold}, current=${finishedGood.current_stock}, shortfall=${finishedGoodShortfall}, material qty per unit=${usage.quantity_required}`);
 
-            // Add to production requirements
+            // Add to production requirements: shortfall × material quantity per unit
             production_requirements += finishedGoodShortfall * usage.quantity_required;
           }
         });
 
-        // Calculate total required quantity (production + minimum stock)
+        // Calculate total required quantity: production requirements + minimum stock
         const required_quantity = production_requirements + material.minimum_stock;
 
-        // Calculate shortfall (required - available)
+        // Calculate shortfall: required - (current stock + in procurement)
         const available = material.current_stock + material.in_procurement;
         const shortfall = Math.max(0, required_quantity - available);
 
-        console.log(`Material ${material.name}: production_req=${production_requirements}, min_stock=${material.minimum_stock}, required=${required_quantity}, available=${available}, shortfall=${shortfall}`);
+        console.log(`Material ${material.name}: production_req=${production_requirements}, min_stock=${material.minimum_stock}, required=${required_quantity}, current=${material.current_stock}, in_procurement=${material.in_procurement}, available=${available}, shortfall=${shortfall}`);
 
         return {
           ...material,
