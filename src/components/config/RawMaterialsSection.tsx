@@ -31,12 +31,16 @@ const RawMaterialsSection = ({
   console.log('Current raw materials state:', rawMaterials);
 
   const handleMaterialChange = (index: number, materialId: string) => {
-    console.log('Material changed:', { index, materialId });
+    console.log('Material selection changed:', { index, materialId });
     const selectedMaterial = availableRawMaterials.find(m => m.id === materialId);
-    console.log('Selected material:', selectedMaterial);
+    console.log('Found selected material:', selectedMaterial);
     
+    // Update the material ID first
     updateRawMaterial(index, 'material', materialId);
+    
+    // Then update the unit if we found the material
     if (selectedMaterial) {
+      console.log('Updating unit to:', selectedMaterial.unit);
       updateRawMaterial(index, 'unit', selectedMaterial.unit);
     }
   };
@@ -60,7 +64,12 @@ const RawMaterialsSection = ({
       <CardContent className="space-y-2 pt-0">
         {rawMaterials.map((material, index) => {
           const selectedMaterial = availableRawMaterials.find(m => m.id === material.material);
-          console.log(`Material ${index}:`, { material, selectedMaterial });
+          console.log(`Material ${index} state:`, { 
+            materialId: material.material, 
+            quantity: material.quantity, 
+            unit: material.unit,
+            selectedMaterial 
+          });
           
           return (
             <div key={index} className="grid grid-cols-12 gap-1 items-end">
@@ -90,7 +99,11 @@ const RawMaterialsSection = ({
                   type="number"
                   step="0.01"
                   value={material.quantity || ""}
-                  onChange={(e) => updateRawMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const newQuantity = parseFloat(e.target.value) || 0;
+                    console.log('Quantity changed:', { index, newQuantity });
+                    updateRawMaterial(index, 'quantity', newQuantity);
+                  }}
                   placeholder="0"
                   className="h-7 text-xs"
                   min="0"
