@@ -1,34 +1,9 @@
 
-import { useState } from 'react';
-import { Users, Building, Hammer, AlertCircle } from 'lucide-react';
+import { Users, Building, Hammer } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-const CustomersSection = () => {
-  return (
-    <div className="text-center py-8">
-      <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <p className="text-gray-500 text-sm">No customers found. Add some customers to get started.</p>
-    </div>
-  );
-};
-
-const SuppliersSection = () => {
-  return (
-    <div className="text-center py-8">
-      <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <p className="text-gray-500 text-sm">No suppliers found. Add some suppliers to get started.</p>
-    </div>
-  );
-};
-
-const WorkersSection = () => {
-  return (
-    <div className="text-center py-8">
-      <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <p className="text-gray-500 text-sm">No workers found. Add some workers to get started.</p>
-    </div>
-  );
-};
+import CustomersSection from '@/components/users/CustomersSection';
+import SuppliersSection from '@/components/users/SuppliersSection';
+import WorkersSection from '@/components/users/WorkersSection';
 
 const UsersTab = () => {
   return (
@@ -49,15 +24,15 @@ const UsersTab = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="customers">
+        <TabsContent value="customers" className="mt-6">
           <CustomersSection />
         </TabsContent>
 
-        <TabsContent value="suppliers">
+        <TabsContent value="suppliers" className="mt-6">
           <SuppliersSection />
         </TabsContent>
 
-        <TabsContent value="workers">
+        <TabsContent value="workers" className="mt-6">
           <WorkersSection />
         </TabsContent>
       </Tabs>
