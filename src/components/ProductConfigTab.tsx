@@ -50,8 +50,8 @@ const ProductConfigTab = () => {
   };
 
   const getDisplaySize = (config: any) => {
-    // Convert size_value from meters to inches and show with weight range
-    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : config.size_value;
+    // Display size_value directly as inches (no conversion needed)
+    const sizeInInches = config.size_value?.toFixed(2) || 'N/A';
     if (config.weight_range) {
       return `${sizeInInches}" / ${config.weight_range}`;
     }

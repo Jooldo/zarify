@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -81,9 +80,8 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
   };
 
   const getDisplaySize = (product: any) => {
-    const sizeInInches = product.product_config?.size_value 
-      ? (product.product_config.size_value * 39.3701).toFixed(2) 
-      : 'N/A';
+    // Display size_value directly as inches (no conversion needed)
+    const sizeInInches = product.product_config?.size_value?.toFixed(2) || 'N/A';
     const weightRange = product.product_config?.weight_range || 'N/A';
     return `${sizeInInches}" / ${weightRange}`;
   };
