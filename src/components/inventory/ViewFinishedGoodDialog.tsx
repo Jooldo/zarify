@@ -74,8 +74,8 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
     }
   };
 
-  const getStockStatus = (available: number, required: number) => {
-    if (available >= required) return { label: 'Available', variant: 'default' as const };
+  const getStockStatus = (available: number, totalRequired: number) => {
+    if (available >= totalRequired) return { label: 'Available', variant: 'default' as const };
     if (available > 0) return { label: 'Insufficient', variant: 'secondary' as const };
     return { label: 'Out of Stock', variant: 'destructive' as const };
   };
@@ -92,7 +92,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Product Details - {product.product_code}</DialogTitle>
         </DialogHeader>
@@ -139,6 +139,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                       <TableHead className="text-xs py-1 px-2">Material Name</TableHead>
                       <TableHead className="text-xs py-1 px-2">Type</TableHead>
                       <TableHead className="text-xs py-1 px-2">Required per Unit</TableHead>
+                      <TableHead className="text-xs py-1 px-2">Total Required</TableHead>
                       <TableHead className="text-xs py-1 px-2">Available Stock</TableHead>
                       <TableHead className="text-xs py-1 px-2">Minimum Stock</TableHead>
                       <TableHead className="text-xs py-1 px-2">Status</TableHead>
@@ -146,9 +147,10 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
+                      const totalRequired = material.quantity_required * product.required_quantity;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
-                        material.quantity_required
+                        totalRequired
                       );
                       return (
                         <TableRow key={material.id} className="h-8">
@@ -160,6 +162,9 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
                             {material.quantity_required} {material.unit}
+                          </TableCell>
+                          <TableCell className="text-xs py-1 px-2 font-bold text-purple-600">
+                            {totalRequired} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2 font-medium">
                             {material.raw_material.current_stock} {material.raw_material.unit}
