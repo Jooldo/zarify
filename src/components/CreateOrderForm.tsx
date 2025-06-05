@@ -45,6 +45,10 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
     setItems(updatedItems);
   };
 
+  const generatePreviewSuborderId = (itemIndex: number) => {
+    return `S-OD000001-${String(itemIndex).padStart(2, '0')}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await submitOrder(customerName, customerPhone, items);
@@ -64,7 +68,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
         onAddItem={addItem}
         updateItem={updateItem}
         removeItem={removeItem}
-        generateSuborderId={(orderIndex: number, itemIndex: number) => `Preview: S-OD${String(orderIndex).padStart(6, '0')}-${String(itemIndex).padStart(2, '0')}`}
+        generateSuborderId={generatePreviewSuborderId}
       />
 
       <div className="flex gap-2 justify-end pt-2">
