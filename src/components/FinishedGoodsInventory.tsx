@@ -40,7 +40,7 @@ const FinishedGoodsInventory = () => {
   };
 
   const getShortfallBasedStatus = (shortfall: number, threshold: number) => {
-    if (shortfall < 0) {
+    if (shortfall > 0) {
       return { 
         label: 'Critical', 
         variant: 'destructive' as const, 
@@ -157,7 +157,7 @@ const FinishedGoodsInventory = () => {
                 product.threshold, 
                 product.required_quantity
               );
-              const shortfallStatus = getShortfallBasedStatus(shortfall, product.threshold);
+              const shortfallStatus = getShortfallBasedStatus(Math.abs(shortfall), product.threshold);
               const Icon = shortfallStatus.icon;
               
               return (

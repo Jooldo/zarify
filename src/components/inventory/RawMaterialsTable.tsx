@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +30,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfallBasedStatus = (shortfall: number, minimumStock: number) => {
-    if (shortfall < 0) {
+    if (shortfall > 0) {
       return { 
         label: 'Critical', 
         variant: 'destructive' as const, 
