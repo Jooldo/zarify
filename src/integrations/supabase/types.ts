@@ -587,6 +587,45 @@ export type Database = {
           },
         ]
       }
+      user_activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          merchant_id: string
+          timestamp: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          merchant_id: string
+          timestamp?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          merchant_id?: string
+          timestamp?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           contact_number: string | null
@@ -641,6 +680,15 @@ export type Database = {
     Functions: {
       get_user_merchant_id: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      log_user_activity: {
+        Args: {
+          p_action: string
+          p_entity_type: string
+          p_entity_id?: string
+          p_description?: string
+        }
         Returns: string
       }
     }

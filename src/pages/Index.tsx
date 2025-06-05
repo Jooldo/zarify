@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Users, Settings, LogOut } from "lucide-react";
+import { Package, ShoppingCart, Users, Settings, LogOut, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import InventoryTab from "@/components/InventoryTab";
 import OrdersTab from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
 import ProductConfigTab from "@/components/ProductConfigTab";
+import ActivityLogsTab from "@/components/ActivityLogsTab";
 
 const Index = () => {
   const { signOut } = useAuth();
@@ -41,7 +42,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 mb-8">
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Orders
@@ -57,6 +58,10 @@ const Index = () => {
             <TabsTrigger value="config" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Product Config
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Activity Logs
             </TabsTrigger>
           </TabsList>
 
@@ -74,6 +79,10 @@ const Index = () => {
 
           <TabsContent value="config" className="space-y-6">
             <ProductConfigTab />
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-6">
+            <ActivityLogsTab />
           </TabsContent>
         </Tabs>
       </main>

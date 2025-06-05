@@ -1,164 +1,100 @@
-
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Package, Calendar, Phone, User } from 'lucide-react';
-import { Order } from '@/hooks/useOrders';
-import { supabase } from '@/integrations/supabase/client';
+import { CheckCheck, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useActivityLog } from '@/hooks/useActivityLog';
 
 interface OrderDetailsProps {
-  order: Order;
-  onOrderUpdate?: () => void;
+  order: any;
+  onOrderUpdate: () => void;
 }
 
+type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('Created');
   const { toast } = useToast();
-  
-  // Add null check for order and order_items
-  if (!order || !order.order_items) {
-    return <div>Order not found or invalid order data.</div>;
-  }
+  const { logActivity } = useActivityLog();
 
-  const [suborderStatuses, setSuborderStatuses] = useState(
-    order.order_items.reduce((acc, item) => ({
-      ...acc,
-      [item.id]: item.status
-    }), {})
-  );
-
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const statusOptions = [
-    "Created",
-    "In Progress", 
-    "Ready",
-    "Delivered"
-  ];
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Created":
-        return "secondary";
-      case "In Progress":
-        return "default";
-      case "Ready":
-        return "default";
-      case "Delivered":
-        return "outline";
-      default:
-        return "secondary";
-    }
-  };
-
-  const handleSuborderStatusUpdate = async (suborderId, newStatus) => {
-    setIsUpdating(true);
+  const updateOrderItemStatus = async (itemId: string, newStatus: OrderStatus) => {
     try {
-      // Update the status in the database
       const { error } = await supabase
         .from('order_items')
         .update({ status: newStatus })
-        .eq('id', suborderId);
+        .eq('id', itemId);
 
       if (error) throw error;
 
-      // Update local state
-      setSuborderStatuses(prev => ({
-        ...prev,
-        [suborderId]: newStatus
-      }));
+      // Find the order item to get details for logging
+      const orderItem = order.order_items.find(item => item.id === itemId);
+      if (orderItem) {
+        await logActivity(
+          'updated',
+          'order',
+          order.order_number,
+          `changed status of suborder ${orderItem.suborder_id} from "${orderItem.status}" to "${newStatus}"`
+        );
+      }
 
-      console.log(`Updated suborder ${suborderId} status to: ${newStatus}`);
-      
       toast({
-        title: 'Status Updated',
-        description: `Suborder status updated to ${newStatus}`,
+        title: 'Success',
+        description: 'Order item status updated successfully',
       });
 
-      // Call the callback to refresh the parent data
-      if (onOrderUpdate) {
-        onOrderUpdate();
-      }
+      onOrderUpdate();
     } catch (error) {
-      console.error('Error updating suborder status:', error);
+      console.error('Error updating order item status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update suborder status',
+        description: 'Failed to update order item status',
         variant: 'destructive',
       });
-    } finally {
-      setIsUpdating(false);
     }
   };
 
-  const getOverallStatus = () => {
-    const statuses = Object.values(suborderStatuses);
-    
-    // If all suborders are "Delivered", order is "Delivered"
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
-    
-    // If all suborders are "Ready", order is "Ready"
-    if (statuses.every(s => s === "Ready")) return "Ready";
-    
-    // If any suborder is "In Progress", order is "In Progress"
-    if (statuses.some(s => s === "In Progress")) return "In Progress";
-    
-    // Otherwise, order is "Created"
-    return "Created";
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{order.order_number}</h2>
-          <p className="text-gray-600">Order Details</p>
-        </div>
-        <Badge variant={getStatusColor(getOverallStatus())} className="text-sm px-3 py-1">
-          Overall: {getOverallStatus()}
-        </Badge>
-      </div>
-
-      {/* Customer Information */}
+    <div className="space-y-4">
+      {/* Order Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Customer Information
-          </CardTitle>
+          <CardTitle>Order Summary</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-gray-500" />
-            <span>{order.customer.name}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-gray-500" />
-            <span>{order.customer.phone || 'N/A'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span>Order Date: {new Date(order.created_date).toLocaleDateString()}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span>Expected: {order.expected_delivery ? new Date(order.expected_delivery).toLocaleDateString() : 'N/A'}</span>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Order Number</Label>
+              <div className="font-bold">{order.order_number}</div>
+            </div>
+            <div>
+              <Label>Customer Name</Label>
+              <div className="font-bold">{order.customer.name}</div>
+            </div>
+            <div>
+              <Label>Order Date</Label>
+              <div>{new Date(order.created_date).toLocaleDateString()}</div>
+            </div>
+            <div>
+              <Label>Total Amount</Label>
+              <div className="font-bold">₹{order.total_amount.toLocaleString()}</div>
+            </div>
+            <div>
+              <Label>Expected Delivery</Label>
+              <div>{new Date(order.expected_delivery).toLocaleDateString()}</div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Suborders Table */}
+      {/* Order Items Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Order Items
-          </CardTitle>
+          <CardTitle>Order Items</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -166,85 +102,41 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
               <TableRow>
                 <TableHead>Suborder ID</TableHead>
                 <TableHead>Product Code</TableHead>
-                <TableHead>Product Details</TableHead>
                 <TableHead>Quantity</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>Unit Price</TableHead>
+                <TableHead>Total Price</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Update Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {order.order_items.map((orderItem) => {
-                const sizeInInches = orderItem.product_config.size_value?.toFixed(2) || 'N/A';
-                const weightRange = orderItem.product_config.weight_range || 'N/A';
-                
-                return (
-                  <TableRow key={orderItem.id}>
-                    <TableCell className="font-medium text-blue-600">{orderItem.suborder_id}</TableCell>
-                    <TableCell className="font-mono text-sm bg-gray-50">{orderItem.product_config.product_code}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{orderItem.product_config.subcategory}</div>
-                        <div className="text-gray-500">{orderItem.product_config.category} - {sizeInInches}" / {weightRange}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{orderItem.quantity} pieces</TableCell>
-                    <TableCell className="font-medium">₹{orderItem.total_price.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(suborderStatuses[orderItem.id])}>
-                        {suborderStatuses[orderItem.id]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2 items-center">
-                        <Select
-                          value={suborderStatuses[orderItem.id]}
-                          onValueChange={(value) => handleSuborderStatusUpdate(orderItem.id, value)}
-                          disabled={isUpdating}
-                        >
-                          <SelectTrigger className="w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {statusOptions.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {order.order_items.map((item: any) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.suborder_id}</TableCell>
+                  <TableCell>{item.product_config.product_code}</TableCell>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
+                  <TableCell>₹{item.total_price.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{item.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Select onValueChange={(value) => updateOrderItemStatus(item.id, value as OrderStatus)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder={item.status} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Created">Created</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Ready">Ready</SelectItem>
+                        <SelectItem value="Delivered">Delivered</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-          
-          <Separator className="my-4" />
-          
-          <div className="flex justify-between items-center text-lg font-bold">
-            <span>Total Order Amount:</span>
-            <span>₹{order.total_amount.toLocaleString()}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bulk Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bulk Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 items-center">
-            <Button disabled={isUpdating}>
-              <Edit className="h-4 w-4 mr-2" />
-              Update All Suborders
-            </Button>
-            <Button variant="outline">
-              Print Order Details
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

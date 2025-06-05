@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
 import OrderItemForm from './orders/OrderItemForm';
 
@@ -23,6 +24,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   }]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
 
   const addItem = () => {
     setItems([...items, {
@@ -105,6 +107,14 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
 
         if (customerError) throw customerError;
         customerId = newCustomer.id;
+
+        // Log customer creation activity
+        await logActivity(
+          'created',
+          'customer',
+          customerId,
+          `created a new customer "${customerName}" with phone ${customerPhone}`
+        );
       }
 
       // Generate order number
@@ -150,6 +160,14 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Log order creation activity
+      await logActivity(
+        'created',
+        'order',
+        orderNumber,
+        `created Order ${orderNumber} for customer "${customerName}" with ${items.length} items totaling ₹${calculateTotal().toLocaleString()}`
+      );
 
       toast({
         title: 'Success',
