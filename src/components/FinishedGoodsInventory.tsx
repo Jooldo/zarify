@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Package, AlertCircle } from 'lucide-react';
+import { Search, Package, AlertCircle, Eye } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import AddProductDialog from '@/components/inventory/AddProductDialog';
+import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialog';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   const filteredProducts = finishedGoods.filter(product =>
@@ -24,12 +27,33 @@ const FinishedGoodsInventory = () => {
     return { label: 'In Stock', variant: 'default' as const };
   };
 
+  const calculateShortfall = (currentStock: number, inManufacturing: number, threshold: number, requiredQuantity: number) => {
+    return (currentStock + inManufacturing) - (threshold + requiredQuantity);
+  };
+
+  const getShortfallVariant = (shortfall: number) => {
+    if (shortfall < 0) return 'destructive' as const;
+    if (shortfall === 0) return 'secondary' as const;
+    return 'default' as const;
+  };
+
+  const getShortfallLabel = (shortfall: number) => {
+    if (shortfall < 0) return `${Math.abs(shortfall)} Short`;
+    if (shortfall === 0) return 'Exact';
+    return `${shortfall} Surplus`;
+  };
+
   const getDisplaySize = (product: any) => {
     const sizeInInches = product.product_config?.size_value 
       ? (product.product_config.size_value * 39.3701).toFixed(2) 
       : 'N/A';
     const weightRange = product.product_config?.weight_range || 'N/A';
     return `${sizeInInches}" / ${weightRange}`;
+  };
+
+  const handleViewProduct = (product: any) => {
+    setSelectedProduct(product);
+    setIsViewDialogOpen(true);
   };
 
   if (loading) {
@@ -83,13 +107,21 @@ const FinishedGoodsInventory = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredProducts.map((product) => {
               const status = getStockStatus(product.current_stock, product.threshold);
+              const shortfall = calculateShortfall(
+                product.current_stock, 
+                product.in_manufacturing, 
+                product.threshold, 
+                product.required_quantity
+              );
               return (
                 <TableRow key={product.id} className="h-10">
                   <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{product.product_code}</TableCell>
@@ -101,12 +133,27 @@ const FinishedGoodsInventory = () => {
                   <TableCell className="py-1 px-2 text-xs">{product.required_quantity}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.in_manufacturing}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">
+                    <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-1 py-0">
+                      {getShortfallLabel(shortfall)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
                     <Badge variant={status.variant} className="text-xs px-1 py-0">
                       {status.label}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     {product.last_produced ? new Date(product.last_produced).toLocaleDateString() : 'Never'}
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleViewProduct(product)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               );
@@ -123,6 +170,12 @@ const FinishedGoodsInventory = () => {
           </p>
         </div>
       )}
+
+      <ViewFinishedGoodDialog
+        product={selectedProduct}
+        isOpen={isViewDialogOpen}
+        onClose={() => setIsViewDialogOpen(false)}
+      />
     </div>
   );
 };

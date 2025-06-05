@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 export interface FinishedGood {
   id: string;
   product_code: string;
+  product_config_id: string;
   current_stock: number;
   threshold: number;
   required_quantity: number;
