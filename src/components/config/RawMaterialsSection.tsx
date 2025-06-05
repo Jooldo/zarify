@@ -5,11 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Minus, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import { cn } from '@/lib/utils';
 
 interface RawMaterial {
   material: string;
@@ -31,25 +28,11 @@ const RawMaterialsSection = ({
   updateRawMaterial 
 }: RawMaterialsSectionProps) => {
   const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
-  const [openComboboxes, setOpenComboboxes] = useState<{ [key: number]: boolean }>({});
 
-  const setComboboxOpen = (index: number, open: boolean) => {
-    setOpenComboboxes(prev => ({ ...prev, [index]: open }));
-  };
-
-  // Safely handle availableRawMaterials - ensure it's always an array and properly filtered
-  const safeAvailableRawMaterials = Array.isArray(availableRawMaterials) 
-    ? availableRawMaterials.filter(rawMat => 
-        rawMat && 
-        typeof rawMat === 'object' && 
-        rawMat.id && 
-        rawMat.name && 
-        rawMat.type
-      )
+  // Safely handle available materials
+  const materialOptions = Array.isArray(availableRawMaterials) 
+    ? availableRawMaterials.filter(material => material?.id && material?.name)
     : [];
-
-  console.log('Available raw materials:', safeAvailableRawMaterials);
-  console.log('Loading state:', loading);
 
   return (
     <Card>
@@ -67,62 +50,28 @@ const RawMaterialsSection = ({
           <div key={index} className="grid grid-cols-4 gap-2 items-end">
             <div>
               <Label className="text-xs">Material</Label>
-              <Popover open={openComboboxes[index]} onOpenChange={(open) => setComboboxOpen(index, open)}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openComboboxes[index]}
-                    className="h-8 w-full justify-between text-xs"
-                    disabled={loading}
-                  >
-                    {material.material ? 
-                      safeAvailableRawMaterials.find((rawMat) => rawMat.id === material.material)?.name || "Select material..."
-                      : "Select material..."
-                    }
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  {loading ? (
-                    <div className="p-4 text-xs text-center text-gray-500">
-                      Loading materials...
-                    </div>
+              <Select 
+                value={material.material} 
+                onValueChange={(value) => updateRawMaterial(index, 'material', value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder={loading ? "Loading..." : "Select material"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {materialOptions.length > 0 ? (
+                    materialOptions.map((rawMat) => (
+                      <SelectItem key={rawMat.id} value={rawMat.id} className="text-xs">
+                        {rawMat.name} ({rawMat.type})
+                      </SelectItem>
+                    ))
                   ) : (
-                    <Command>
-                      <CommandInput placeholder="Search materials..." className="text-xs" />
-                      <CommandEmpty className="text-xs">No material found.</CommandEmpty>
-                      <CommandGroup>
-                        {safeAvailableRawMaterials.length > 0 ? (
-                          safeAvailableRawMaterials.map((rawMat) => (
-                            <CommandItem
-                              key={rawMat.id}
-                              value={`${rawMat.name || ''} ${rawMat.type || ''}`}
-                              onSelect={() => {
-                                updateRawMaterial(index, 'material', rawMat.id);
-                                setComboboxOpen(index, false);
-                              }}
-                              className="text-xs"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-3 w-3",
-                                  material.material === rawMat.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {rawMat.name} ({rawMat.type})
-                            </CommandItem>
-                          ))
-                        ) : (
-                          <CommandItem disabled className="text-xs text-gray-500">
-                            No materials available
-                          </CommandItem>
-                        )}
-                      </CommandGroup>
-                    </Command>
+                    <SelectItem value="no-materials" disabled className="text-xs text-gray-500">
+                      {loading ? "Loading materials..." : "No materials available"}
+                    </SelectItem>
                   )}
-                </PopoverContent>
-              </Popover>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">Quantity</Label>
