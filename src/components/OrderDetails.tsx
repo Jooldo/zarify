@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,12 +8,17 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Package, Calendar, Phone, User } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderDetailsProps {
   order: Order;
+  onOrderUpdate?: () => void;
 }
 
-const OrderDetails = ({ order }: OrderDetailsProps) => {
+const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
+  const { toast } = useToast();
+  
   // Add null check for order and order_items
   if (!order || !order.order_items) {
     return <div>Order not found or invalid order data.</div>;
@@ -24,6 +30,8 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
       [item.id]: item.status
     }), {})
   );
+
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const statusOptions = [
     "Created",
@@ -47,12 +55,44 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
     }
   };
 
-  const handleSuborderStatusUpdate = (suborderId, newStatus) => {
-    setSuborderStatuses(prev => ({
-      ...prev,
-      [suborderId]: newStatus
-    }));
-    console.log(`Updating suborder ${suborderId} status to: ${newStatus}`);
+  const handleSuborderStatusUpdate = async (suborderId, newStatus) => {
+    setIsUpdating(true);
+    try {
+      // Update the status in the database
+      const { error } = await supabase
+        .from('order_items')
+        .update({ status: newStatus })
+        .eq('id', suborderId);
+
+      if (error) throw error;
+
+      // Update local state
+      setSuborderStatuses(prev => ({
+        ...prev,
+        [suborderId]: newStatus
+      }));
+
+      console.log(`Updated suborder ${suborderId} status to: ${newStatus}`);
+      
+      toast({
+        title: 'Status Updated',
+        description: `Suborder status updated to ${newStatus}`,
+      });
+
+      // Call the callback to refresh the parent data
+      if (onOrderUpdate) {
+        onOrderUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating suborder status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update suborder status',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const getOverallStatus = () => {
@@ -160,6 +200,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
                         <Select
                           value={suborderStatuses[orderItem.id]}
                           onValueChange={(value) => handleSuborderStatusUpdate(orderItem.id, value)}
+                          disabled={isUpdating}
                         >
                           <SelectTrigger className="w-40">
                             <SelectValue />
@@ -196,7 +237,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-center">
-            <Button>
+            <Button disabled={isUpdating}>
               <Edit className="h-4 w-4 mr-2" />
               Update All Suborders
             </Button>

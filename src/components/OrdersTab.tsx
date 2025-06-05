@@ -91,6 +91,7 @@ const OrdersTab = () => {
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}
+        onOrderUpdate={refetch}
       />
 
       {filteredOrders.length === 0 && (
