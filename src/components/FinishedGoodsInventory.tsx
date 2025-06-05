@@ -40,11 +40,10 @@ const FinishedGoodsInventory = () => {
   };
 
   const getShortfallStatus = (shortfall: number, threshold: number) => {
-    // If there is a shortfall (negative value means we need more)
-    if (shortfall < 0) {
-      const shortfallAmount = Math.abs(shortfall);
+    // If there is a shortfall (positive value means we need more)
+    if (shortfall > 0) {
       // If shortfall is not greater than minimum stock, it's low critical
-      if (shortfallAmount <= threshold) {
+      if (shortfall <= threshold) {
         return { 
           label: 'Low Critical', 
           variant: 'secondary' as const, 
@@ -61,7 +60,7 @@ const FinishedGoodsInventory = () => {
       };
     }
     
-    // If there is a surplus (positive value), it's good
+    // If there is a surplus (no shortfall), it's good
     return { 
       label: 'Good', 
       variant: 'default' as const, 
