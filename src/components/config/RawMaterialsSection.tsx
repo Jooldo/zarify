@@ -93,25 +93,32 @@ const RawMaterialsSection = ({
                       <CommandInput placeholder="Search materials..." className="text-xs" />
                       <CommandEmpty className="text-xs">No material found.</CommandEmpty>
                       <CommandGroup>
-                        {safeAvailableRawMaterials.map((rawMat) => (
-                          <CommandItem
-                            key={rawMat.id}
-                            value={`${rawMat.name || ''} ${rawMat.type || ''}`}
-                            onSelect={() => {
-                              updateRawMaterial(index, 'material', rawMat.id);
-                              setComboboxOpen(index, false);
-                            }}
-                            className="text-xs"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-3 w-3",
-                                material.material === rawMat.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {rawMat.name} ({rawMat.type})
-                          </CommandItem>
-                        ))}
+                        {safeAvailableRawMaterials.map((rawMat) => {
+                          // Additional safety check for each item
+                          if (!rawMat || !rawMat.id || !rawMat.name) {
+                            return null;
+                          }
+                          
+                          return (
+                            <CommandItem
+                              key={rawMat.id}
+                              value={`${rawMat.name || ''} ${rawMat.type || ''}`}
+                              onSelect={() => {
+                                updateRawMaterial(index, 'material', rawMat.id);
+                                setComboboxOpen(index, false);
+                              }}
+                              className="text-xs"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-3 w-3",
+                                  material.material === rawMat.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {rawMat.name} ({rawMat.type})
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </Command>
                   ) : (
