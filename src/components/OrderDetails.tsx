@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,17 +55,24 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
         description: 'Order item status updated successfully',
       });
 
-      // Refresh both orders and finished goods data with a small delay
-      console.log('Refreshing data after status update...');
+      // For status changes that affect stock (Ready/Delivered), refresh finished goods first
+      if ((newStatus === 'Ready' || newStatus === 'Delivered') && 
+          (orderItem?.status !== 'Ready' && orderItem?.status !== 'Delivered')) {
+        console.log('Stock-affecting status change detected, refreshing finished goods...');
+        
+        // Wait a bit for the database trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (onFinishedGoodsUpdate) {
+          console.log('Calling onFinishedGoodsUpdate...');
+          await onFinishedGoodsUpdate();
+        }
+      }
+
+      // Always refresh orders data
+      console.log('Refreshing orders data...');
       await onOrderUpdate();
       
-      if (onFinishedGoodsUpdate) {
-        // Add a small delay to ensure the trigger has processed
-        setTimeout(async () => {
-          console.log('Refreshing finished goods data...');
-          await onFinishedGoodsUpdate();
-        }, 500);
-      }
     } catch (error) {
       console.error('Error updating order item status:', error);
       toast({

@@ -27,6 +27,8 @@ export const useFinishedGoods = () => {
 
   const fetchFinishedGoods = async () => {
     try {
+      console.log('Fetching finished goods data...');
+      
       // First, fetch all finished goods with their product configs
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
@@ -37,6 +39,8 @@ export const useFinishedGoods = () => {
         .order('product_code');
 
       if (finishedGoodsError) throw finishedGoodsError;
+
+      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
       // Then, fetch all in-progress order items to calculate required quantities
       const { data: orderItemsData, error: orderItemsError } = await supabase
@@ -49,17 +53,23 @@ export const useFinishedGoods = () => {
 
       if (orderItemsError) throw orderItemsError;
 
+      console.log('In-progress order items fetched:', orderItemsData?.length || 0, 'items');
+
       // Calculate required quantities for each product config
       const requiredQuantities = orderItemsData?.reduce((acc, item) => {
         acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
         return acc;
       }, {} as Record<string, number>) || {};
 
+      console.log('Calculated required quantities:', requiredQuantities);
+
       // Map the finished goods with calculated required quantities
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => ({
         ...item,
         required_quantity: requiredQuantities[item.product_config_id] || 0
       })) || [];
+
+      console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
 
       setFinishedGoods(finishedGoodsWithRequiredQty);
     } catch (error) {
