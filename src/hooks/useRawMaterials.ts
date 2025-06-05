@@ -42,6 +42,12 @@ export const useRawMaterials = () => {
     try {
       console.log('Fetching raw materials data...');
       
+      // Get the current merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
       // Fetch raw materials with suppliers
       const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
         .from('raw_materials')
@@ -49,10 +55,27 @@ export const useRawMaterials = () => {
           *,
           supplier:suppliers(company_name)
         `)
+        .eq('merchant_id', merchantId)
         .order('name');
 
       if (rawMaterialsError) throw rawMaterialsError;
       console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
+
+      // Fetch procurement requests with Pending or Approved status to calculate in_procurement
+      const { data: procurementData, error: procurementError } = await supabase
+        .from('procurement_requests')
+        .select('raw_material_id, quantity_requested')
+        .eq('merchant_id', merchantId)
+        .in('status', ['Pending', 'Approved']);
+
+      if (procurementError) throw procurementError;
+      console.log('Procurement requests fetched:', procurementData?.length || 0, 'items');
+
+      // Calculate in_procurement quantities by raw material
+      const procurementQuantities = procurementData?.reduce((acc, item) => {
+        acc[item.raw_material_id] = (acc[item.raw_material_id] || 0) + item.quantity_requested;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
       // Fetch finished goods with their product configs
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
@@ -61,6 +84,7 @@ export const useRawMaterials = () => {
           *,
           product_config:product_configs(id, product_code)
         `)
+        .eq('merchant_id', merchantId)
         .order('product_code');
 
       if (finishedGoodsError) throw finishedGoodsError;
@@ -73,6 +97,7 @@ export const useRawMaterials = () => {
           product_config_id,
           quantity
         `)
+        .eq('merchant_id', merchantId)
         .in('status', ['Created', 'In Progress']);
 
       if (orderItemsError) throw orderItemsError;
@@ -92,7 +117,8 @@ export const useRawMaterials = () => {
           raw_material_id,
           quantity_required,
           unit
-        `);
+        `)
+        .eq('merchant_id', merchantId);
 
       if (productConfigMaterialsError) throw productConfigMaterialsError;
       console.log('Product config materials fetched:', productConfigMaterialsData?.length || 0, 'relationships');
@@ -102,6 +128,9 @@ export const useRawMaterials = () => {
         console.log(`\nCalculating requirements for material: ${material.name}`);
         
         let production_requirements = 0;
+
+        // Get the actual in_procurement quantity from procurement requests
+        const in_procurement = procurementQuantities[material.id] || 0;
 
         // Find all product configs that use this raw material
         const materialUsages = productConfigMaterialsData?.filter(
@@ -137,13 +166,14 @@ export const useRawMaterials = () => {
         const required_quantity = production_requirements + material.minimum_stock;
 
         // Calculate shortfall: required - (current stock + in procurement)
-        const available = material.current_stock + material.in_procurement;
+        const available = material.current_stock + in_procurement;
         const shortfall = Math.max(0, required_quantity - available);
 
-        console.log(`Material ${material.name}: production_req=${production_requirements}, min_stock=${material.minimum_stock}, required=${required_quantity}, current=${material.current_stock}, in_procurement=${material.in_procurement}, available=${available}, shortfall=${shortfall}`);
+        console.log(`Material ${material.name}: production_req=${production_requirements}, min_stock=${material.minimum_stock}, required=${required_quantity}, current=${material.current_stock}, in_procurement=${in_procurement}, available=${available}, shortfall=${shortfall}`);
 
         return {
           ...material,
+          in_procurement,
           required_quantity,
           shortfall,
           production_requirements

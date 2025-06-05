@@ -5,19 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-
-interface ProcurementRequest {
-  id: string;
-  materialName: string;
-  materialId: number;
-  quantityRequested: number;
-  unit: string;
-  dateRequested: string;
-  status: string;
-  supplier: string;
-  eta?: string;
-  notes?: string;
-}
+import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ViewRequestDialogProps {
   isOpen: boolean;
@@ -27,27 +15,33 @@ interface ViewRequestDialogProps {
 }
 
 const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus }: ViewRequestDialogProps) => {
+  const extractSupplierFromNotes = (notes?: string) => {
+    if (!notes) return '-';
+    const supplierMatch = notes.match(/Supplier:\s*([^\n]+)/);
+    return supplierMatch ? supplierMatch[1].trim() : '-';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Procurement Request Details - {selectedRequest?.id}</DialogTitle>
+          <DialogTitle>Procurement Request Details - {selectedRequest?.request_number}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Material</Label>
-              <Input value={selectedRequest?.materialName || ''} disabled />
+              <Input value={selectedRequest?.raw_material?.name || ''} disabled />
             </div>
             <div>
               <Label>Quantity</Label>
-              <Input value={`${selectedRequest?.quantityRequested || 0} ${selectedRequest?.unit || ''}`} disabled />
+              <Input value={`${selectedRequest?.quantity_requested || 0} ${selectedRequest?.unit || ''}`} disabled />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Date Requested</Label>
-              <Input value={selectedRequest?.dateRequested ? new Date(selectedRequest.dateRequested).toLocaleDateString() : ''} disabled />
+              <Input value={selectedRequest?.date_requested ? new Date(selectedRequest.date_requested).toLocaleDateString() : ''} disabled />
             </div>
             <div>
               <Label>Expected Delivery</Label>
@@ -56,7 +50,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
           </div>
           <div>
             <Label>Supplier</Label>
-            <Input value={selectedRequest?.supplier || ''} disabled />
+            <Input value={extractSupplierFromNotes(selectedRequest?.notes)} disabled />
           </div>
           <div>
             <Label htmlFor="status">Status</Label>
