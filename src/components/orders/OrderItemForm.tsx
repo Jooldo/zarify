@@ -22,7 +22,7 @@ interface OrderItemFormProps {
 
 const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSuborderId }: OrderItemFormProps) => {
   return (
-    <div className="border rounded p-3 space-y-3 bg-gray-50">
+    <div className="border rounded p-2 space-y-2 bg-gray-50">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium">Item {index + 1}</span>
         <div className="flex items-center gap-2">
@@ -35,14 +35,14 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
             size="sm"
             onClick={() => removeItem(index)}
             disabled={items.length === 1}
-            className="h-6 w-6 p-0"
+            className="h-5 w-5 p-0"
           >
             <Minus className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {/* First row - Product Code (full width) */}
         <div className="w-full">
           <ProductCodeSelector
@@ -52,7 +52,7 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
         </div>
 
         {/* Second row - Quantity and Price */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Quantity *</Label>
             <Input
@@ -60,7 +60,7 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
               value={item.quantity}
               onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
               min="1"
-              className="h-8 text-xs"
+              className="h-7 text-xs"
               required
             />
           </div>
@@ -72,7 +72,7 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
               value={item.price}
               onChange={(e) => updateItem(index, 'price', Number(e.target.value))}
               min="0"
-              className="h-8 text-xs"
+              className="h-7 text-xs"
               placeholder="₹0"
               required
             />

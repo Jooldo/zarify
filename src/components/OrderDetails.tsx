@@ -84,70 +84,70 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
   };
 
   return (
-    <div className="space-y-4">
-      {/* Order Summary */}
+    <div className="space-y-3">
+      {/* Order Summary - More compact */}
       <Card>
-        <CardHeader>
-          <CardTitle>Order Summary</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Order Summary</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
             <div>
-              <Label>Order Number</Label>
-              <div className="font-bold">{order.order_number}</div>
+              <Label className="text-xs text-gray-500">Order Number</Label>
+              <div className="font-semibold text-sm">{order.order_number}</div>
             </div>
             <div>
-              <Label>Customer Name</Label>
-              <div className="font-bold">{order.customer.name}</div>
+              <Label className="text-xs text-gray-500">Customer</Label>
+              <div className="font-semibold text-sm">{order.customer.name}</div>
             </div>
             <div>
-              <Label>Order Date</Label>
-              <div>{new Date(order.created_date).toLocaleDateString()}</div>
+              <Label className="text-xs text-gray-500">Total</Label>
+              <div className="font-semibold text-sm">₹{order.total_amount.toLocaleString()}</div>
             </div>
             <div>
-              <Label>Total Amount</Label>
-              <div className="font-bold">₹{order.total_amount.toLocaleString()}</div>
+              <Label className="text-xs text-gray-500">Order Date</Label>
+              <div className="text-sm">{new Date(order.created_date).toLocaleDateString()}</div>
             </div>
             <div>
-              <Label>Expected Delivery</Label>
-              <div>{new Date(order.expected_delivery).toLocaleDateString()}</div>
+              <Label className="text-xs text-gray-500">Expected Delivery</Label>
+              <div className="text-sm">{new Date(order.expected_delivery).toLocaleDateString()}</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Order Items Table */}
+      {/* Order Items Table - More compact */}
       <Card>
-        <CardHeader>
-          <CardTitle>Order Items</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Order Items</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Suborder ID</TableHead>
-                <TableHead>Product Code</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Unit Price</TableHead>
-                <TableHead>Total Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="h-8">
+                <TableHead className="py-1 text-xs">Suborder ID</TableHead>
+                <TableHead className="py-1 text-xs">Product Code</TableHead>
+                <TableHead className="py-1 text-xs">Qty</TableHead>
+                <TableHead className="py-1 text-xs">Unit Price</TableHead>
+                <TableHead className="py-1 text-xs">Total</TableHead>
+                <TableHead className="py-1 text-xs">Status</TableHead>
+                <TableHead className="py-1 text-xs text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {order.order_items.map((item: any) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.suborder_id}</TableCell>
-                  <TableCell>{item.product_config.product_code}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
-                  <TableCell>₹{item.total_price.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{item.status}</Badge>
+                <TableRow key={item.id} className="h-10">
+                  <TableCell className="py-1 text-xs font-medium">{item.suborder_id}</TableCell>
+                  <TableCell className="py-1 text-xs font-mono">{item.product_config.product_code}</TableCell>
+                  <TableCell className="py-1 text-xs">{item.quantity}</TableCell>
+                  <TableCell className="py-1 text-xs">₹{item.unit_price.toLocaleString()}</TableCell>
+                  <TableCell className="py-1 text-xs">₹{item.total_price.toLocaleString()}</TableCell>
+                  <TableCell className="py-1">
+                    <Badge variant="secondary" className="text-xs h-5">{item.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="py-1 text-right">
                     <Select onValueChange={(value) => updateOrderItemStatus(item.id, value as OrderStatus)}>
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-[120px] h-7 text-xs">
                         <SelectValue placeholder={item.status} />
                       </SelectTrigger>
                       <SelectContent>

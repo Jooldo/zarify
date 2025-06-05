@@ -55,31 +55,33 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <CustomerInfoSection
-        customerName={customerName}
-        customerPhone={customerPhone}
-        onCustomerNameChange={setCustomerName}
-        onCustomerPhoneChange={setCustomerPhone}
-      />
+    <div className="max-h-[80vh] overflow-y-auto">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <CustomerInfoSection
+          customerName={customerName}
+          customerPhone={customerPhone}
+          onCustomerNameChange={setCustomerName}
+          onCustomerPhoneChange={setCustomerPhone}
+        />
 
-      <OrderItemsSection
-        items={items}
-        onAddItem={addItem}
-        updateItem={updateItem}
-        removeItem={removeItem}
-        generateSuborderId={generatePreviewSuborderId}
-      />
+        <OrderItemsSection
+          items={items}
+          onAddItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
+          generateSuborderId={generatePreviewSuborderId}
+        />
 
-      <div className="flex gap-2 justify-end pt-2">
-        <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-8 text-xs">
-          Cancel
-        </Button>
-        <Button type="submit" size="sm" className="h-8 text-xs" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Order'}
-        </Button>
-      </div>
-    </form>
+        <div className="flex gap-2 justify-end pt-2 border-t">
+          <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-8 text-xs">
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" className="h-8 text-xs" disabled={loading}>
+            {loading ? 'Creating...' : 'Create Order'}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

@@ -32,15 +32,9 @@ const OrderItemsSection = ({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Order Items</CardTitle>
-          <Button type="button" onClick={onAddItem} variant="outline" size="sm" className="h-7 text-xs">
-            <Plus className="h-3 w-3 mr-1" />
-            Add Item
-          </Button>
-        </div>
+        <CardTitle className="text-sm">Order Items</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-2 pt-0">
         {items.map((item, index) => (
           <OrderItemForm
             key={index}
@@ -53,7 +47,15 @@ const OrderItemsSection = ({
           />
         ))}
 
-        <div className="border-t pt-3">
+        {/* Add Item Button - Now below the items */}
+        <div className="flex justify-center pt-2">
+          <Button type="button" onClick={onAddItem} variant="outline" size="sm" className="h-7 text-xs">
+            <Plus className="h-3 w-3 mr-1" />
+            Add Item
+          </Button>
+        </div>
+
+        <div className="border-t pt-2 mt-3">
           <div className="flex justify-between items-center text-sm font-bold">
             <span>Total Order Amount:</span>
             <span>₹{calculateTotal().toLocaleString()}</span>

@@ -33,9 +33,9 @@ const OrdersHeader = ({ searchTerm, setSearchTerm, onOrderCreated }: OrdersHeade
             Create Order
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Order</DialogTitle>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-lg">Create New Order</DialogTitle>
           </DialogHeader>
           <CreateOrderForm 
             onClose={() => setIsCreateOrderOpen(false)} 

@@ -94,26 +94,26 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
 
   return (
     <div className="relative">
-      <Label className="text-sm font-medium">Product Code *</Label>
+      <Label className="text-xs font-medium">Product Code *</Label>
       
       <Button
         type="button"
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled || loading}
-        className="w-full h-10 text-sm justify-between font-normal mt-1"
+        className="w-full h-8 text-xs justify-between font-normal mt-1"
       >
         <span className="truncate text-left">
           {loading ? "Loading..." : (value || "Select product")}
         </span>
-        {isOpen ? <ChevronUp className="h-4 w-4 flex-shrink-0" /> : <ChevronDown className="h-4 w-4 flex-shrink-0" />}
+        {isOpen ? <ChevronUp className="h-3 w-3 flex-shrink-0" /> : <ChevronDown className="h-3 w-3 flex-shrink-0" />}
       </Button>
 
       {isOpen && (
-        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-hidden shadow-lg border bg-white">
-          <CardContent className="p-3 bg-white">
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-hidden shadow-lg border bg-white">
+          <CardContent className="p-2 bg-white">
+            <div className="relative mb-2">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
               <Input
                 value={searchTerm}
                 onChange={(e) => {
@@ -121,14 +121,14 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                   setVisibleCount(15);
                 }}
                 placeholder="Search by code, category, or type..."
-                className="h-9 text-sm pl-10 bg-white"
+                className="h-7 text-xs pl-7 bg-white"
                 autoFocus
               />
             </div>
 
-            <div className="max-h-72 overflow-y-auto">
+            <div className="max-h-60 overflow-y-auto">
               {visibleConfigs.length === 0 ? (
-                <div className="text-center py-6 text-sm text-gray-500">
+                <div className="text-center py-4 text-xs text-gray-500">
                   {loading ? 'Loading products...' : 'No products found'}
                 </div>
               ) : (
@@ -137,14 +137,14 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                     <div
                       key={config.id}
                       onClick={() => handleSelect(config.product_code)}
-                      className="p-4 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-3 transition-colors bg-white"
+                      className="p-2 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-2 transition-colors bg-white"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <Badge variant="outline" className="text-sm h-6 px-2 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                      <div className="flex items-start justify-between mb-1">
+                        <Badge variant="outline" className="text-xs h-5 px-1 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
                           {config.product_code}
                         </Badge>
                         <div className="text-right">
-                          <div className="text-sm font-medium text-gray-700">
+                          <div className="text-xs font-medium text-gray-700">
                             {formatSize(config.size_value)}
                           </div>
                           {config.weight_range && (
@@ -155,16 +155,16 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-gray-500 text-xs font-medium">Category:</span>
-                          <div className="font-medium text-gray-800 truncate mt-1">
+                          <span className="text-gray-500 text-xs">Category:</span>
+                          <div className="font-medium text-gray-800 truncate">
                             {config.category}
                           </div>
                         </div>
                         <div>
-                          <span className="text-gray-500 text-xs font-medium">Type:</span>
-                          <div className="font-medium text-gray-800 truncate mt-1">
+                          <span className="text-gray-500 text-xs">Type:</span>
+                          <div className="font-medium text-gray-800 truncate">
                             {config.subcategory}
                           </div>
                         </div>
@@ -177,7 +177,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                       type="button"
                       variant="ghost"
                       onClick={loadMore}
-                      className="w-full h-9 text-sm mt-2 bg-white hover:bg-gray-50"
+                      className="w-full h-7 text-xs mt-1 bg-white hover:bg-gray-50"
                     >
                       Load More ({filteredConfigs.length - visibleCount} remaining)
                     </Button>
@@ -190,8 +190,8 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
       )}
 
       {selectedConfig && (
-        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <span className="font-medium text-gray-700">Category:</span>
               <div className="text-gray-900">{selectedConfig.category}</div>
