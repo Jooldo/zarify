@@ -25,9 +25,10 @@ interface OrdersTableRowProps {
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
   getStockAvailable: (productCode: string) => number;
   onOrderUpdate: () => void;
+  onFinishedGoodsUpdate?: () => void;
 }
 
-const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate }: OrdersTableRowProps) => {
+const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate, onFinishedGoodsUpdate }: OrdersTableRowProps) => {
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
 
@@ -74,7 +75,11 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
                 <DialogHeader>
                   <DialogTitle>Order Details</DialogTitle>
                 </DialogHeader>
-                <OrderDetails order={order} onOrderUpdate={onOrderUpdate} />
+                <OrderDetails 
+                  order={order} 
+                  onOrderUpdate={onOrderUpdate}
+                  onFinishedGoodsUpdate={onFinishedGoodsUpdate}
+                />
               </DialogContent>
             </Dialog>
           )}

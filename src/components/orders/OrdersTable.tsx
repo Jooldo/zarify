@@ -9,9 +9,10 @@ interface OrdersTableProps {
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
   getStockAvailable: (productCode: string) => number;
   onOrderUpdate: () => void;
+  onFinishedGoodsUpdate?: () => void;
 }
 
-const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate }: OrdersTableProps) => {
+const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate, onFinishedGoodsUpdate }: OrdersTableProps) => {
   return (
     <div className="bg-white rounded-lg border">
       <Table>
@@ -43,6 +44,7 @@ const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusV
               getStatusVariant={getStatusVariant}
               getStockAvailable={getStockAvailable}
               onOrderUpdate={onOrderUpdate}
+              onFinishedGoodsUpdate={onFinishedGoodsUpdate}
             />
           ))}
         </TableBody>

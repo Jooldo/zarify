@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,11 +14,12 @@ import { useActivityLog } from '@/hooks/useActivityLog';
 interface OrderDetailsProps {
   order: any;
   onOrderUpdate: () => void;
+  onFinishedGoodsUpdate?: () => void;
 }
 
 type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
 
-const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
+const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDetailsProps) => {
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('Created');
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
@@ -47,7 +49,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         description: 'Order item status updated successfully',
       });
 
+      // Refresh both orders and finished goods data
       onOrderUpdate();
+      if (onFinishedGoodsUpdate) {
+        onFinishedGoodsUpdate();
+      }
     } catch (error) {
       console.error('Error updating order item status:', error);
       toast({

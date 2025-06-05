@@ -7,7 +7,7 @@ import OrdersTable from './orders/OrdersTable';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
-  const { finishedGoods } = useFinishedGoods();
+  const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const [searchTerm, setSearchTerm] = useState('');
 
   const flattenedOrders = orders.flatMap(order => 
@@ -92,6 +92,7 @@ const OrdersTab = () => {
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}
         onOrderUpdate={refetch}
+        onFinishedGoodsUpdate={refetchFinishedGoods}
       />
 
       {filteredOrders.length === 0 && (
