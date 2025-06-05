@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,9 +112,6 @@ const RawMaterialSelector = ({ value, onChange, disabled = false, availableRawMa
                         <span className="text-xs text-gray-500 ml-2">
                           {material.type}
                         </span>
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        Unit: {material.unit} | Stock: {material.current_stock}
                       </div>
                     </div>
                   ))}
