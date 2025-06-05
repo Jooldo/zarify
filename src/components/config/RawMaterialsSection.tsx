@@ -37,8 +37,10 @@ const RawMaterialsSection = ({
     setOpenComboboxes(prev => ({ ...prev, [index]: open }));
   };
 
-  // Ensure availableRawMaterials is always an array
-  const safeAvailableRawMaterials = availableRawMaterials || [];
+  // Ensure availableRawMaterials is always an array and filter out any invalid entries
+  const safeAvailableRawMaterials = (availableRawMaterials || []).filter(
+    rawMat => rawMat && rawMat.id && rawMat.name && rawMat.type
+  );
 
   return (
     <Card>
@@ -80,7 +82,7 @@ const RawMaterialsSection = ({
                       {safeAvailableRawMaterials.map((rawMat) => (
                         <CommandItem
                           key={rawMat.id}
-                          value={`${rawMat.name} ${rawMat.type}`}
+                          value={`${rawMat.name || ''} ${rawMat.type || ''}`}
                           onSelect={() => {
                             updateRawMaterial(index, 'material', rawMat.id);
                             setComboboxOpen(index, false);
