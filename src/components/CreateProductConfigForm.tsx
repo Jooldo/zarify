@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +24,15 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [rawMaterials, setRawMaterials] = useState([
     { material: '', quantity: 0, unit: '' }
   ]);
+
+  // Categories list
+  const categories = [
+    'Khusboo',
+    'Agra Fancy',
+    'Salem',
+    'Bombay Fancy',
+    'Karap'
+  ];
 
   // Populate form with initial data if updating
   useEffect(() => {
@@ -145,7 +153,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     <form onSubmit={handleSubmit} className="space-y-2">
       <Card>
         <CardHeader className="pb-1">
-          <CardTitle className="text-sm">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardTitle>
+          <CardTitle className="text-sm">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardHeader>
         </CardHeader>
         <CardContent className="space-y-2 pt-0">
           <div className="grid grid-cols-2 gap-2">
@@ -156,9 +164,11 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Traditional" className="text-xs">Traditional</SelectItem>
-                  <SelectItem value="Modern" className="text-xs">Modern</SelectItem>
-                  <SelectItem value="Bridal" className="text-xs">Bridal</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-xs">
+                      {cat}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
