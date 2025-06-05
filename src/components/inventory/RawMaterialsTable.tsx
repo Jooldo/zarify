@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, Package, Edit, Eye } from 'lucide-react';
+import { Edit, Eye, CircleAlert, CircleCheck, TriangleAlert } from 'lucide-react';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 import UpdateStockDialog from './UpdateStockDialog';
 import UpdateRawMaterialDialog from './UpdateRawMaterialDialog';
@@ -24,55 +24,36 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const [viewMaterialOpen, setViewMaterialOpen] = useState(false);
   const [raiseRequestOpen, setRaiseRequestOpen] = useState(false);
 
-  const getStockStatus = (current: number, minimum: number) => {
-    if (current === 0) return { status: 'Out of Stock', variant: 'destructive' as const, icon: AlertTriangle };
-    if (current <= minimum) return { status: 'Low Stock', variant: 'secondary' as const, icon: AlertTriangle };
-    return { status: 'In Stock', variant: 'default' as const, icon: Package };
-  };
-
   const getRequiredStatus = (required: number, current: number) => {
     if (required <= current) return { variant: 'default' as const, color: 'text-green-600' };
     if (required <= current * 1.5) return { variant: 'secondary' as const, color: 'text-yellow-600' };
     return { variant: 'destructive' as const, color: 'text-red-600' };
   };
 
-  const getShortfallStatus = (shortfall: number) => {
-    if (shortfall === 0) return { 
-      label: 'Good', 
-      variant: 'default' as const, 
-      color: 'text-green-600' 
-    };
-    
-    if (shortfall >= 1000) {
-      return { 
-        label: 'Highly Critical', 
-        variant: 'destructive' as const, 
-        color: 'text-red-600' 
-      };
-    } else if (shortfall >= 500) {
+  const getShortfallBasedStatus = (shortfall: number, minimumStock: number) => {
+    if (shortfall < 0) {
       return { 
         label: 'Critical', 
         variant: 'destructive' as const, 
-        color: 'text-red-600' 
+        icon: CircleAlert,
+        color: 'text-red-600'
       };
-    } else if (shortfall >= 100) {
+    }
+    
+    if (shortfall >= 0 && shortfall < minimumStock) {
       return { 
-        label: 'Warning', 
+        label: 'Low', 
         variant: 'secondary' as const, 
-        color: 'text-yellow-600' 
-      };
-    } else if (shortfall > 0) {
-      return { 
-        label: 'Low Priority', 
-        variant: 'secondary' as const, 
-        color: 'text-yellow-600' 
+        icon: TriangleAlert,
+        color: 'text-yellow-600'
       };
     }
     
     return { 
       label: 'Good', 
       variant: 'default' as const, 
-      color: 'text-green-600' 
+      icon: CircleCheck,
+      color: 'text-green-600'
     };
   };
 
@@ -126,16 +107,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Stock Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {materials.map((material) => {
-              const stockInfo = getStockStatus(material.current_stock, material.minimum_stock);
               const requiredInfo = getRequiredStatus(material.required_quantity, material.current_stock);
-              const shortfallInfo = getShortfallStatus(material.shortfall);
-              const Icon = stockInfo.icon;
+              const shortfallStatus = getShortfallBasedStatus(material.shortfall, material.minimum_stock);
+              const Icon = shortfallStatus.icon;
               
               return (
                 <TableRow key={material.id} className="h-8">
@@ -157,23 +136,18 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <span className={`font-medium ${shortfallInfo.color}`}>
+                    <span className={`font-medium ${shortfallStatus.color}`}>
                       {material.shortfall} {material.unit}
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-2">
-                    <Badge variant={shortfallInfo.variant} className="text-xs px-1 py-0">
-                      {shortfallInfo.label}
+                    <Badge variant={shortfallStatus.variant} className="text-xs px-1 py-0 flex items-center gap-1 w-fit">
+                      <Icon className="h-2 w-2" />
+                      {shortfallStatus.label}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     {material.cost_per_unit ? `₹${material.cost_per_unit}` : '-'}
-                  </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <Badge variant={stockInfo.variant} className="text-xs px-1 py-0 flex items-center gap-1 w-fit">
-                      <Icon className="h-2 w-2" />
-                      {stockInfo.status}
-                    </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2">
                     <div className="flex gap-1">
