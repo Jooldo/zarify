@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Eye, Pen, Trash } from 'lucide-react';
+import { Plus, Users, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -79,86 +79,88 @@ const CustomersSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading customers...</div>;
+    return <div className="text-center py-4 text-sm">Loading customers...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="Search customers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="h-8 text-sm"
           />
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+            <Button size="sm" className="h-8 text-xs">
+              <Plus className="h-3 w-3 mr-1" />
               Add Customer
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
+              <DialogTitle className="text-base">Add New Customer</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-gray-500">Customer form will be implemented here</p>
+            <p className="text-xs text-gray-500">Customer form will be implemented here</p>
           </DialogContent>
         </Dialog>
       </div>
 
       {filteredCustomers.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-gray-500">No customers found</div>
+        <div className="text-center py-6">
+          <div className="text-sm text-gray-500">No customers found</div>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+              <TableRow className="h-8">
+                <TableHead className="h-8 px-2 text-xs font-medium">Name</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Phone</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Email</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Address</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Created</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
-                  <TableCell>{customer.phone || '-'}</TableCell>
-                  <TableCell>{customer.email || '-'}</TableCell>
-                  <TableCell>{customer.address || '-'}</TableCell>
-                  <TableCell>{new Date(customer.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
+                <TableRow key={customer.id} className="h-8 hover:bg-gray-50">
+                  <TableCell className="px-2 py-1 text-xs font-medium truncate max-w-24">{customer.name}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{customer.phone || '-'}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-32">{customer.email || '-'}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-32">{customer.address || '-'}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs">{new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</TableCell>
+                  <TableCell className="px-2 py-1">
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Eye className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <Pen className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Pen className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Trash className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
+                            <Trash className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-base">Delete Customer</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
                               Are you sure you want to delete {customer.name}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteCustomer(customer.id)}>
+                            <AlertDialogCancel className="h-8 text-xs">Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => deleteCustomer(customer.id)}
+                              className="h-8 text-xs"
+                            >
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Eye, Pen, Trash } from 'lucide-react';
+import { Plus, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -80,94 +80,96 @@ const WorkersSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading workers...</div>;
+    return <div className="text-center py-4 text-sm">Loading workers...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="Search workers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="h-8 text-sm"
           />
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+            <Button size="sm" className="h-8 text-xs">
+              <Plus className="h-3 w-3 mr-1" />
               Add Worker
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Add New Worker</DialogTitle>
+              <DialogTitle className="text-base">Add New Worker</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-gray-500">Worker form will be implemented here</p>
+            <p className="text-xs text-gray-500">Worker form will be implemented here</p>
           </DialogContent>
         </Dialog>
       </div>
 
       {filteredWorkers.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-gray-500">No workers found</div>
+        <div className="text-center py-6">
+          <div className="text-sm text-gray-500">No workers found</div>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Join Date</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+              <TableRow className="h-8">
+                <TableHead className="h-8 px-2 text-xs font-medium">Name</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Phone</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Role</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Status</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Joined</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredWorkers.map((worker) => (
-                <TableRow key={worker.id}>
-                  <TableCell className="font-medium">{worker.name}</TableCell>
-                  <TableCell>{worker.contact_number || '-'}</TableCell>
-                  <TableCell>{worker.role || '-'}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      worker.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                <TableRow key={worker.id} className="h-8 hover:bg-gray-50">
+                  <TableCell className="px-2 py-1 text-xs font-medium truncate max-w-24">{worker.name}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{worker.contact_number || '-'}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{worker.role || '-'}</TableCell>
+                  <TableCell className="px-2 py-1">
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                      worker.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {worker.status}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    {worker.joined_date ? new Date(worker.joined_date).toLocaleDateString() : '-'}
+                  <TableCell className="px-2 py-1 text-xs">
+                    {worker.joined_date ? new Date(worker.joined_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
+                  <TableCell className="px-2 py-1">
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Eye className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <Pen className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Pen className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Trash className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
+                            <Trash className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Worker</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-base">Delete Worker</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
                               Are you sure you want to delete {worker.name}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteWorker(worker.id)}>
+                            <AlertDialogCancel className="h-8 text-xs">Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => deleteWorker(worker.id)}
+                              className="h-8 text-xs"
+                            >
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
