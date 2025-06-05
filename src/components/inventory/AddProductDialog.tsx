@@ -79,7 +79,8 @@ const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
   };
 
   const getConfigDisplayText = (config: any) => {
-    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : 'N/A';
+    // Display size_value directly as inches (no conversion needed)
+    const sizeInInches = config.size_value?.toFixed(2) || 'N/A';
     const weightRange = config.weight_range || 'No weight range';
     return `${config.product_code} - ${config.category} ${config.subcategory} (${sizeInInches}" / ${weightRange})`;
   };

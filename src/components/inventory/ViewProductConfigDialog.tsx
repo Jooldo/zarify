@@ -28,8 +28,8 @@ interface ViewProductConfigDialogProps {
 }
 
 const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
-  // Convert size_value from meters to inches for display
-  const sizeValueInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : config.size_value;
+  // Display size_value directly as inches (no conversion needed)
+  const sizeValueInInches = config.size_value?.toFixed(2) || config.size_value;
 
   return (
     <div className="space-y-3">

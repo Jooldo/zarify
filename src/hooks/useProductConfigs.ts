@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -85,8 +86,8 @@ export const useProductConfigs = () => {
       // Get merchant ID first
       const merchantId = await getMerchantId();
       
-      // Convert inches to meters for storage (for backward compatibility)
-      const sizeValueInMeters = parseFloat(configData.sizeValue) / 39.3701;
+      // Store size value directly as inches (no conversion needed)
+      const sizeValueInInches = parseFloat(configData.sizeValue);
       
       // Insert product config
       const { data: config, error: configError } = await supabase
@@ -94,7 +95,7 @@ export const useProductConfigs = () => {
         .insert({
           category: configData.category,
           subcategory: configData.subcategory,
-          size_value: sizeValueInMeters,
+          size_value: sizeValueInInches,
           weight_range: configData.weightRange,
           product_code: configData.productCode,
           is_active: configData.isActive,

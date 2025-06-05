@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,17 +31,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     if (initialData && isUpdate) {
       setCategory(initialData.category || '');
       setSubcategory(initialData.subcategory || '');
-      
-      // Extract size value from the size string and convert from meters to inches
-      const sizeValueMatch = initialData.size?.match(/\(([0-9.]+)m\)/);
-      if (sizeValueMatch) {
-        const metersValue = parseFloat(sizeValueMatch[1]);
-        const inchesValue = (metersValue * 39.3701).toFixed(2); // Convert meters to inches
-        setSizeValue(inchesValue);
-      } else {
-        setSizeValue(initialData.sizeValue || '');
-      }
-      
+      setSizeValue(initialData.sizeValue || '');
       setWeightRange(initialData.weightRange || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: '' }]);
