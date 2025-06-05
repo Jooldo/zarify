@@ -96,8 +96,8 @@ export const useProductConfigs = () => {
         .insert({
           category: configData.category,
           subcategory: configData.subcategory,
-          size: `${configData.sizeValue}" / ${configData.weightRange}`,
           size_value: sizeValueInMeters,
+          weight_range: configData.weightRange,
           product_code: configData.productCode,
           is_active: configData.isActive,
           merchant_id: merchantId

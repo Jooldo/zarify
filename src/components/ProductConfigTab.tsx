@@ -38,12 +38,12 @@ const ProductConfigTab = () => {
   };
 
   const getDisplaySize = (config: any) => {
-    // Extract weight range from size if it contains weight info
-    const weightMatch = config.size?.match(/(\d+(?:\.\d+)?-\d+(?:\.\d+)?\s*gms?)/i);
-    if (weightMatch) {
-      return `${config.size_value}" / ${weightMatch[1]}`;
+    // Convert size_value from meters to inches and show with weight range
+    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : config.size_value;
+    if (config.weight_range) {
+      return `${sizeInInches}" / ${config.weight_range}`;
     }
-    return config.size;
+    return `${sizeInInches}"`;
   };
 
   if (loading) {

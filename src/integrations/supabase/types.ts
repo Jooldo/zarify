@@ -391,10 +391,10 @@ export type Database = {
           is_active: boolean | null
           merchant_id: string
           product_code: string
-          size: string
           size_value: number
           subcategory: string
           updated_at: string | null
+          weight_range: string | null
         }
         Insert: {
           category: string
@@ -403,10 +403,10 @@ export type Database = {
           is_active?: boolean | null
           merchant_id: string
           product_code: string
-          size: string
           size_value: number
           subcategory: string
           updated_at?: string | null
+          weight_range?: string | null
         }
         Update: {
           category?: string
@@ -415,10 +415,10 @@ export type Database = {
           is_active?: boolean | null
           merchant_id?: string
           product_code?: string
-          size?: string
           size_value?: number
           subcategory?: string
           updated_at?: string | null
+          weight_range?: string | null
         }
         Relationships: [
           {

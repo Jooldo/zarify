@@ -6,8 +6,8 @@ interface ProductConfig {
   id: string;
   category: string;
   subcategory: string;
-  size: string;
   size_value: number;
+  weight_range: string | null;
   product_code: string;
   is_active: boolean;
   created_at: string;
@@ -28,23 +28,8 @@ interface ViewProductConfigDialogProps {
 }
 
 const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
-  // Extract weight range from size if it contains weight info, otherwise show size value in inches
-  const getSizeDisplay = () => {
-    // Check if size contains weight range pattern
-    const weightMatch = config.size?.match(/(\d+(?:\.\d+)?-\d+(?:\.\d+)?\s*gms?)/i);
-    if (weightMatch) {
-      return {
-        sizeValue: `${config.size_value}"`,
-        weightRange: weightMatch[1]
-      };
-    }
-    return {
-      sizeValue: config.size_value ? `${config.size_value}"` : `${config.size_value}m`,
-      weightRange: null
-    };
-  };
-
-  const { sizeValue, weightRange } = getSizeDisplay();
+  // Convert size_value from meters to inches for display
+  const sizeValueInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : config.size_value;
 
   return (
     <div className="space-y-4">
@@ -71,12 +56,12 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
         </div>
         <div>
           <Label className="font-medium">Size Value:</Label>
-          <div className="text-lg">{sizeValue}</div>
+          <div className="text-lg">{sizeValueInInches}"</div>
         </div>
-        {weightRange && (
+        {config.weight_range && (
           <div>
             <Label className="font-medium">Weight Range:</Label>
-            <div className="text-lg">{weightRange}</div>
+            <div className="text-lg">{config.weight_range}</div>
           </div>
         )}
         <div>
