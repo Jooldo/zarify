@@ -24,6 +24,12 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
       matchesStatus = material.current_stock <= material.minimum_stock;
     } else if (filterStatus === 'In Stock') {
       matchesStatus = material.current_stock > material.minimum_stock;
+    } else if (filterStatus === 'High Shortfall') {
+      matchesStatus = material.shortfall > 10;
+    } else if (filterStatus === 'Procurement Needed') {
+      matchesStatus = material.shortfall > 0;
+    } else if (filterStatus === 'High Requirement') {
+      matchesStatus = material.required_quantity > material.current_stock * 1.5;
     }
     
     return matchesSearch && matchesType && matchesStatus;

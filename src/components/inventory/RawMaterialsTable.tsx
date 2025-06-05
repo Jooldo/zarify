@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +27,18 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     if (current === 0) return { status: 'Out of Stock', variant: 'destructive' as const, icon: AlertTriangle };
     if (current <= minimum) return { status: 'Low Stock', variant: 'secondary' as const, icon: AlertTriangle };
     return { status: 'In Stock', variant: 'default' as const, icon: Package };
+  };
+
+  const getRequiredStatus = (required: number, current: number) => {
+    if (required <= current) return { variant: 'default' as const, color: 'text-green-600' };
+    if (required <= current * 1.5) return { variant: 'secondary' as const, color: 'text-yellow-600' };
+    return { variant: 'destructive' as const, color: 'text-red-600' };
+  };
+
+  const getShortfallStatus = (shortfall: number) => {
+    if (shortfall === 0) return { variant: 'default' as const, color: 'text-green-600' };
+    if (shortfall <= 10) return { variant: 'secondary' as const, color: 'text-yellow-600' };
+    return { variant: 'destructive' as const, color: 'text-red-600' };
   };
 
   const handleUpdateStock = (material: RawMaterial) => {
@@ -75,6 +86,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Minimum Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
@@ -83,6 +96,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           <TableBody>
             {materials.map((material) => {
               const stockInfo = getStockStatus(material.current_stock, material.minimum_stock);
+              const requiredInfo = getRequiredStatus(material.required_quantity, material.current_stock);
+              const shortfallInfo = getShortfallStatus(material.shortfall);
               const Icon = stockInfo.icon;
               
               return (
@@ -91,6 +106,16 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs">{material.type}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.current_stock} {material.unit}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{material.minimum_stock} {material.unit}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <span className={`font-medium ${requiredInfo.color}`} title={`Production: ${material.production_requirements} + Safety: ${material.minimum_stock}`}>
+                      {material.required_quantity} {material.unit}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <span className={`font-medium ${shortfallInfo.color}`}>
+                      {material.shortfall} {material.unit}
+                    </span>
+                  </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     {material.cost_per_unit ? `₹${material.cost_per_unit}` : '-'}
                   </TableCell>
@@ -126,7 +151,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       >
                         Update Stock
                       </Button>
-                      {material.current_stock <= material.minimum_stock && (
+                      {(material.current_stock <= material.minimum_stock || material.shortfall > 0) && (
                         <Button 
                           variant="outline" 
                           size="sm" 
