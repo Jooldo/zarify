@@ -1,27 +1,18 @@
 
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
+import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
+  const { finishedGoods } = useFinishedGoods();
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Sample finished goods inventory data for stock availability
-  const finishedGoodsInventory = [
-    { productCode: "TRD-MNA-MD", currentStock: 15 },
-    { productCode: "TRD-KND-LG", currentStock: 3 },
-    { productCode: "MOD-SLV-SM", currentStock: 25 },
-    { productCode: "TRD-TMP-XL", currentStock: 8 },
-    { productCode: "BRD-HEA-XL", currentStock: 2 }
-  ];
 
   const flattenedOrders = orders.flatMap(order => 
     order.order_items.map(suborder => {
-      const sizeInInches = suborder.product_config.size_value 
-        ? (suborder.product_config.size_value * 39.3701).toFixed(2) 
-        : 'N/A';
+      const sizeInInches = suborder.product_config.size_value?.toFixed(2) || 'N/A';
       const weightRange = suborder.product_config.weight_range || 'N/A';
       
       return {
@@ -78,8 +69,8 @@ const OrdersTab = () => {
   };
 
   const getStockAvailable = (productCode: string) => {
-    const stock = finishedGoodsInventory.find(item => item.productCode === productCode);
-    return stock ? stock.currentStock : 0;
+    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
+    return finishedGood ? finishedGood.current_stock : 0;
   };
 
   if (loading) {

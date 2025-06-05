@@ -27,7 +27,8 @@ export const useFinishedGoods = () => {
 
   const fetchFinishedGoods = async () => {
     try {
-      const { data, error } = await supabase
+      // First, fetch all finished goods with their product configs
+      const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
           *,
@@ -35,8 +36,32 @@ export const useFinishedGoods = () => {
         `)
         .order('product_code');
 
-      if (error) throw error;
-      setFinishedGoods(data || []);
+      if (finishedGoodsError) throw finishedGoodsError;
+
+      // Then, fetch all in-progress order items to calculate required quantities
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          product_config_id,
+          quantity
+        `)
+        .eq('status', 'In Progress');
+
+      if (orderItemsError) throw orderItemsError;
+
+      // Calculate required quantities for each product config
+      const requiredQuantities = orderItemsData?.reduce((acc, item) => {
+        acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Map the finished goods with calculated required quantities
+      const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => ({
+        ...item,
+        required_quantity: requiredQuantities[item.product_config_id] || 0
+      })) || [];
+
+      setFinishedGoods(finishedGoodsWithRequiredQty);
     } catch (error) {
       console.error('Error fetching finished goods:', error);
       toast({

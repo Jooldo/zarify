@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -136,9 +135,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
             </TableHeader>
             <TableBody>
               {order.order_items.map((orderItem) => {
-                const sizeInInches = orderItem.product_config.size_value 
-                  ? (orderItem.product_config.size_value * 39.3701).toFixed(2) 
-                  : 'N/A';
+                const sizeInInches = orderItem.product_config.size_value?.toFixed(2) || 'N/A';
                 const weightRange = orderItem.product_config.weight_range || 'N/A';
                 
                 return (
