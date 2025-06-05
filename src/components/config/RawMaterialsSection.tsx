@@ -93,13 +93,9 @@ const RawMaterialsSection = ({
                       <CommandInput placeholder="Search materials..." className="text-xs" />
                       <CommandEmpty className="text-xs">No material found.</CommandEmpty>
                       <CommandGroup>
-                        {safeAvailableRawMaterials.map((rawMat) => {
-                          // Additional safety check for each item
-                          if (!rawMat || !rawMat.id || !rawMat.name) {
-                            return null;
-                          }
-                          
-                          return (
+                        {safeAvailableRawMaterials
+                          .filter(rawMat => rawMat && rawMat.id && rawMat.name)
+                          .map((rawMat) => (
                             <CommandItem
                               key={rawMat.id}
                               value={`${rawMat.name || ''} ${rawMat.type || ''}`}
@@ -117,8 +113,7 @@ const RawMaterialsSection = ({
                               />
                               {rawMat.name} ({rawMat.type})
                             </CommandItem>
-                          );
-                        })}
+                          ))}
                       </CommandGroup>
                     </Command>
                   ) : (
