@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Users, Settings, LogOut, Activity, BarChart3 } from "lucide-react";
+import { Package, ShoppingCart, Users, Settings, LogOut, Activity, BarChart3, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import InventoryTab from "@/components/InventoryTab";
 import OrdersTab from "@/components/OrdersTab";
@@ -10,6 +10,7 @@ import UsersTab from "@/components/UsersTab";
 import ProductConfigTab from "@/components/ProductConfigTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
+import ConversationalQuery from "@/components/dashboard/ConversationalQuery";
 
 const Index = () => {
   const { signOut } = useAuth();
@@ -47,10 +48,14 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-8">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 mb-8">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="query" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Ask Data
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
@@ -76,6 +81,10 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             <VisualDashboard onNavigateToTab={handleNavigateToTab} />
+          </TabsContent>
+
+          <TabsContent value="query" className="space-y-6">
+            <ConversationalQuery onNavigateToTab={handleNavigateToTab} />
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-6">
