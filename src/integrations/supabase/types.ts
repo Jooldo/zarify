@@ -678,6 +678,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_next_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_suborder_id: {
+        Args: { order_number: string; item_index: number }
+        Returns: string
+      }
       get_user_merchant_id: {
         Args: Record<PropertyKey, never>
         Returns: string

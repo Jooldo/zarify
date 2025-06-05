@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,8 +118,11 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
         );
       }
 
-      // Generate order number
-      const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+      // Generate order number using database function
+      const { data: orderNumber, error: orderNumberError } = await supabase
+        .rpc('get_next_order_number');
+
+      if (orderNumberError) throw orderNumberError;
 
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -136,24 +140,35 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
 
       if (orderError) throw orderError;
 
-      // Create order items with proper UUIDs
-      const orderItems = items.map((item, index) => {
+      // Generate suborder IDs and create order items
+      const orderItems = [];
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
         const productConfig = productConfigs?.find(config => config.product_code === item.productCode);
         if (!productConfig) {
           throw new Error(`Product config not found for code: ${item.productCode}`);
         }
         
-        return {
+        // Generate suborder ID using database function
+        const { data: suborderId, error: suborderError } = await supabase
+          .rpc('get_next_suborder_id', {
+            order_number: orderNumber,
+            item_index: index + 1
+          });
+
+        if (suborderError) throw suborderError;
+        
+        orderItems.push({
           order_id: order.id,
           product_config_id: productConfig.id,
           quantity: item.quantity,
           unit_price: item.price,
           total_price: item.price * item.quantity,
-          suborder_id: `SUB-${orderNumber}-${index + 1}`,
+          suborder_id: suborderId,
           merchant_id: merchantId,
           status: 'Created' as const
-        };
-      });
+        });
+      }
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -239,7 +254,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
               items={items}
               updateItem={updateItem}
               removeItem={removeItem}
-              generateSuborderId={(orderIndex: number, itemIndex: number) => `SUB-${orderIndex}-${itemIndex + 1}`}
+              generateSuborderId={(orderIndex: number, itemIndex: number) => `Preview: S-OD${String(orderIndex).padStart(6, '0')}-${String(itemIndex).padStart(2, '0')}`}
             />
           ))}
 

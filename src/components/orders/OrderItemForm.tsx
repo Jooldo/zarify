@@ -27,7 +27,7 @@ const OrderItemForm = ({ item, index, items, updateItem, removeItem, generateSub
         <span className="text-xs font-medium">Item {index + 1}</span>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs h-4 px-1">
-            {generateSuborderId(1, index)}
+            {generateSuborderId(1, index + 1)}
           </Badge>
           <Button
             type="button"
