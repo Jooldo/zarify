@@ -19,6 +19,7 @@ interface OrdersTableRowProps {
     createdDate: string;
     updatedDate: string;
     expectedDelivery: string;
+    suborder_id: string;
   };
   orders: any[];
   getOverallOrderStatus: (orderId: string) => string;
@@ -38,7 +39,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
   return (
     <TableRow className="h-10 hover:bg-gray-50">
       <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
-      <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.id}</TableCell>
+      <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.suborder_id}</TableCell>
       <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
       <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{item.productCode}</TableCell>
       <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>

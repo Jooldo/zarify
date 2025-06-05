@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -17,6 +16,7 @@ const OrdersTab = () => {
       
       return {
         ...suborder,
+        suborder_id: suborder.suborder_id,
         orderId: order.order_number,
         customer: order.customer.name,
         phone: order.customer.phone || '',
@@ -36,7 +36,7 @@ const OrdersTab = () => {
   const filteredOrders = flattenedOrders.filter(item => 
     item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.productCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
