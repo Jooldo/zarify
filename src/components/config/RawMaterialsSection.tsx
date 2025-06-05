@@ -37,6 +37,9 @@ const RawMaterialsSection = ({
     setOpenComboboxes(prev => ({ ...prev, [index]: open }));
   };
 
+  // Ensure availableRawMaterials is always an array
+  const safeAvailableRawMaterials = availableRawMaterials || [];
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -63,7 +66,7 @@ const RawMaterialsSection = ({
                     disabled={loading}
                   >
                     {material.material ? 
-                      availableRawMaterials.find((rawMat) => rawMat.id === material.material)?.name || "Select material..."
+                      safeAvailableRawMaterials.find((rawMat) => rawMat.id === material.material)?.name || "Select material..."
                       : "Select material..."
                     }
                     <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
@@ -74,7 +77,7 @@ const RawMaterialsSection = ({
                     <CommandInput placeholder="Search materials..." className="text-xs" />
                     <CommandEmpty className="text-xs">No material found.</CommandEmpty>
                     <CommandGroup>
-                      {availableRawMaterials.map((rawMat) => (
+                      {safeAvailableRawMaterials.map((rawMat) => (
                         <CommandItem
                           key={rawMat.id}
                           value={`${rawMat.name} ${rawMat.type}`}
