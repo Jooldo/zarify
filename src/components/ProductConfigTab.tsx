@@ -8,14 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, AlertCircle, Edit, Eye } from 'lucide-react';
 import CreateProductConfigForm from '@/components/CreateProductConfigForm';
 import ViewProductConfigDialog from '@/components/inventory/ViewProductConfigDialog';
+import EditProductConfigDialog from '@/components/inventory/EditProductConfigDialog';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 const ProductConfigTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateConfigOpen, setIsCreateConfigOpen] = useState(false);
   const [isViewConfigOpen, setIsViewConfigOpen] = useState(false);
+  const [isEditConfigOpen, setIsEditConfigOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState(null);
-  const { productConfigs, loading, createProductConfig } = useProductConfigs();
+  const { productConfigs, loading, createProductConfig, refetch } = useProductConfigs();
 
   const filteredConfigs = productConfigs.filter(config => 
     config.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,6 +37,16 @@ const ProductConfigTab = () => {
   const handleViewConfig = (config: any) => {
     setSelectedConfig(config);
     setIsViewConfigOpen(true);
+  };
+
+  const handleEditConfig = (config: any) => {
+    setSelectedConfig(config);
+    setIsEditConfigOpen(true);
+  };
+
+  const handleConfigUpdate = () => {
+    refetch();
+    setIsEditConfigOpen(false);
   };
 
   const getDisplaySize = (config: any) => {
@@ -79,9 +91,9 @@ const ProductConfigTab = () => {
               Add Product Config
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Product Configuration</DialogTitle>
+              <DialogTitle className="text-sm">Create Product Configuration</DialogTitle>
             </DialogHeader>
             <CreateProductConfigForm 
               onClose={() => setIsCreateConfigOpen(false)}
@@ -137,7 +149,12 @@ const ProductConfigTab = () => {
                     >
                       <Eye className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleEditConfig(config)}
+                    >
                       <Edit className="h-3 w-3" />
                     </Button>
                   </div>
@@ -150,15 +167,23 @@ const ProductConfigTab = () => {
 
       {/* View Config Dialog */}
       <Dialog open={isViewConfigOpen} onOpenChange={setIsViewConfigOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Product Configuration Details</DialogTitle>
+            <DialogTitle className="text-sm">Product Configuration Details</DialogTitle>
           </DialogHeader>
           {selectedConfig && (
             <ViewProductConfigDialog config={selectedConfig} />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Config Dialog */}
+      <EditProductConfigDialog 
+        config={selectedConfig}
+        isOpen={isEditConfigOpen}
+        onClose={() => setIsEditConfigOpen(false)}
+        onUpdate={handleConfigUpdate}
+      />
 
       {/* Empty state */}
       {filteredConfigs.length === 0 && !loading && (

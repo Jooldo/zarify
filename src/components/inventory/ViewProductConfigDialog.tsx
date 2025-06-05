@@ -32,77 +32,77 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
   const sizeValueInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : config.size_value;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 text-sm">
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 text-xs">
         <div>
-          <Label className="font-medium">Product Code:</Label>
-          <div className="text-lg font-bold font-mono bg-gray-50 p-2 rounded">
+          <Label className="text-xs font-medium">Product Code:</Label>
+          <div className="text-sm font-bold font-mono bg-gray-50 p-1 rounded">
             {config.product_code}
           </div>
         </div>
         <div>
-          <Label className="font-medium">Status:</Label>
-          <Badge variant={config.is_active ? "default" : "secondary"} className="text-sm">
+          <Label className="text-xs font-medium">Status:</Label>
+          <Badge variant={config.is_active ? "default" : "secondary"} className="text-xs h-4 px-1">
             {config.is_active ? 'Active' : 'Inactive'}
           </Badge>
         </div>
         <div>
-          <Label className="font-medium">Category:</Label>
-          <div className="text-lg font-medium">{config.category}</div>
+          <Label className="text-xs font-medium">Category:</Label>
+          <div className="text-sm font-medium">{config.category}</div>
         </div>
         <div>
-          <Label className="font-medium">Subcategory:</Label>
-          <div className="text-lg">{config.subcategory}</div>
+          <Label className="text-xs font-medium">Subcategory:</Label>
+          <div className="text-sm">{config.subcategory}</div>
         </div>
         <div>
-          <Label className="font-medium">Size Value:</Label>
-          <div className="text-lg">{sizeValueInInches}"</div>
+          <Label className="text-xs font-medium">Size Value:</Label>
+          <div className="text-sm">{sizeValueInInches}"</div>
         </div>
         {config.weight_range && (
           <div>
-            <Label className="font-medium">Weight Range:</Label>
-            <div className="text-lg">{config.weight_range}</div>
+            <Label className="text-xs font-medium">Weight Range:</Label>
+            <div className="text-sm">{config.weight_range}</div>
           </div>
         )}
         <div>
-          <Label className="font-medium">Created:</Label>
-          <div className="text-sm text-gray-600">
+          <Label className="text-xs font-medium">Created:</Label>
+          <div className="text-xs text-gray-600">
             {new Date(config.created_at).toLocaleDateString()}
           </div>
         </div>
         <div>
-          <Label className="font-medium">Last Updated:</Label>
-          <div className="text-sm text-gray-600">
+          <Label className="text-xs font-medium">Last Updated:</Label>
+          <div className="text-xs text-gray-600">
             {new Date(config.updated_at).toLocaleDateString()}
           </div>
         </div>
       </div>
       
       {config.product_config_materials && config.product_config_materials.length > 0 && (
-        <div className="mt-6">
-          <Label className="font-medium text-base">Raw Materials Required:</Label>
-          <div className="mt-2 space-y-2">
+        <div className="mt-4">
+          <Label className="text-xs font-medium">Raw Materials Required:</Label>
+          <div className="mt-1 space-y-1">
             {config.product_config_materials.map((material, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded text-sm">
-                <div className="grid grid-cols-3 gap-3">
+              <div key={index} className="p-2 bg-gray-50 rounded text-xs">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <span className="font-medium">Material:</span>{' '}
-                    <div className="text-base font-medium text-blue-700">
+                    <div className="text-xs font-medium text-blue-700">
                       {material.raw_material?.name || 'Unknown Material'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Type: {material.raw_material?.type || 'N/A'}
+                      {material.raw_material?.type || 'N/A'}
                     </div>
                   </div>
                   <div>
-                    <span className="font-medium">Quantity Required:</span>{' '}
-                    <div className="text-base font-medium">
+                    <span className="font-medium">Quantity:</span>{' '}
+                    <div className="text-xs font-medium">
                       {material.quantity_required} {material.unit}
                     </div>
                   </div>
                   <div>
                     <span className="font-medium">Unit:</span>{' '}
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs h-3 px-1">
                       {material.unit}
                     </Badge>
                   </div>
