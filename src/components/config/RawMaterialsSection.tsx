@@ -17,13 +17,15 @@ interface RawMaterialsSectionProps {
   addRawMaterial: () => void;
   removeRawMaterial: (index: number) => void;
   updateRawMaterial: (index: number, field: string, value: any) => void;
+  updateRawMaterialBatch: (index: number, updates: { material?: string; unit?: string; quantity?: number }) => void;
 }
 
 const RawMaterialsSection = ({ 
   rawMaterials, 
   addRawMaterial, 
   removeRawMaterial, 
-  updateRawMaterial 
+  updateRawMaterial,
+  updateRawMaterialBatch
 }: RawMaterialsSectionProps) => {
   const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
 
@@ -35,13 +37,15 @@ const RawMaterialsSection = ({
     const selectedMaterial = availableRawMaterials.find(m => m.id === materialId);
     console.log('Found selected material:', selectedMaterial);
     
-    // Update the material ID first
-    updateRawMaterial(index, 'material', materialId);
-    
-    // Then update the unit if we found the material
+    // Update both material and unit in a single batch update to avoid state conflicts
     if (selectedMaterial) {
-      console.log('Updating unit to:', selectedMaterial.unit);
-      updateRawMaterial(index, 'unit', selectedMaterial.unit);
+      console.log('Updating material and unit together:', { materialId, unit: selectedMaterial.unit });
+      updateRawMaterialBatch(index, {
+        material: materialId,
+        unit: selectedMaterial.unit
+      });
+    } else {
+      updateRawMaterial(index, 'material', materialId);
     }
   };
 

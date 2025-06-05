@@ -85,6 +85,20 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     setRawMaterials(updatedMaterials);
   };
 
+  const updateRawMaterialBatch = (index: number, updates: { material?: string; unit?: string; quantity?: number }) => {
+    console.log('Batch updating raw material:', { index, updates });
+    const updatedMaterials = rawMaterials.map((material, i) => {
+      if (i === index) {
+        const updated = { ...material, ...updates };
+        console.log('Batch updated material:', updated);
+        return updated;
+      }
+      return material;
+    });
+    console.log('New raw materials array after batch update:', updatedMaterials);
+    setRawMaterials(updatedMaterials);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -214,6 +228,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         addRawMaterial={addRawMaterial}
         removeRawMaterial={removeRawMaterial}
         updateRawMaterial={updateRawMaterial}
+        updateRawMaterialBatch={updateRawMaterialBatch}
       />
 
       <div className="flex gap-2 justify-end pt-1">
