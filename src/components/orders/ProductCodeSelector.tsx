@@ -29,7 +29,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(50);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
     fetchProductConfigs();
@@ -80,21 +80,16 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
     onChange(productCode);
     setIsOpen(false);
     setSearchTerm('');
-    setVisibleCount(50);
+    setVisibleCount(20);
   };
 
   const loadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 50, filteredConfigs.length));
+    setVisibleCount(prev => Math.min(prev + 20, filteredConfigs.length));
   };
 
-  const getConfigDisplayInfo = (config: ProductConfig) => {
-    const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : 'N/A';
-    return {
-      category: config.category,
-      subcategory: config.subcategory,
-      size: `${sizeInInches}"`,
-      weightRange: config.weight_range || 'N/A'
-    };
+  const formatSize = (sizeValue: number) => {
+    const sizeInInches = (sizeValue * 39.3701).toFixed(1);
+    return `${sizeInInches}"`;
   };
 
   return (
@@ -106,16 +101,16 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled || loading}
-        className="w-full h-8 text-xs justify-between"
+        className="w-full h-8 text-xs justify-between font-normal"
       >
-        <span className="truncate">
+        <span className="truncate text-left">
           {loading ? "Loading..." : (value || "Select product")}
         </span>
-        {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {isOpen ? <ChevronUp className="h-3 w-3 flex-shrink-0" /> : <ChevronDown className="h-3 w-3 flex-shrink-0" />}
       </Button>
 
       {isOpen && (
-        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-hidden shadow-lg border">
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-72 overflow-hidden shadow-lg border">
           <CardContent className="p-2">
             <div className="relative mb-2">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
@@ -123,43 +118,46 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setVisibleCount(50);
+                  setVisibleCount(20);
                 }}
-                placeholder="Search products..."
+                placeholder="Search by code, category..."
                 className="h-7 text-xs pl-7"
                 autoFocus
               />
             </div>
 
-            <div className="max-h-60 overflow-y-auto">
+            <div className="max-h-52 overflow-y-auto">
               {visibleConfigs.length === 0 ? (
                 <div className="text-center py-4 text-xs text-gray-500">
                   {loading ? 'Loading...' : 'No products found'}
                 </div>
               ) : (
                 <>
-                  {visibleConfigs.map((config) => {
-                    const displayInfo = getConfigDisplayInfo(config);
-                    return (
-                      <div
-                        key={config.id}
-                        onClick={() => handleSelect(config.product_code)}
-                        className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <Badge variant="outline" className="text-xs h-4 px-1">
-                            {config.product_code}
-                          </Badge>
-                          <span className="text-xs text-gray-600">{displayInfo.category}</span>
-                        </div>
-                        <div className="text-xs text-gray-500 grid grid-cols-3 gap-1">
-                          <span>{displayInfo.subcategory}</span>
-                          <span>{displayInfo.size}</span>
-                          <span>{displayInfo.weightRange}</span>
+                  {visibleConfigs.map((config) => (
+                    <div
+                      key={config.id}
+                      onClick={() => handleSelect(config.product_code)}
+                      className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <Badge variant="outline" className="text-xs h-4 px-1 font-mono">
+                          {config.product_code}
+                        </Badge>
+                        <span className="text-xs text-gray-600 truncate ml-2">
+                          {config.category}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 flex justify-between items-center">
+                        <span className="truncate flex-1">{config.subcategory}</span>
+                        <div className="flex gap-2 text-xs">
+                          <span>{formatSize(config.size_value)}</span>
+                          {config.weight_range && (
+                            <span className="text-gray-400">{config.weight_range}</span>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                   
                   {visibleCount < filteredConfigs.length && (
                     <Button
@@ -179,18 +177,20 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
       )}
 
       {selectedConfig && (
-        <div className="grid grid-cols-4 gap-2 p-2 bg-white rounded border text-xs mt-1">
-          <div>
-            <span className="font-medium">Category:</span> {getConfigDisplayInfo(selectedConfig).category}
-          </div>
-          <div>
-            <span className="font-medium">Type:</span> {getConfigDisplayInfo(selectedConfig).subcategory}
-          </div>
-          <div>
-            <span className="font-medium">Size:</span> {getConfigDisplayInfo(selectedConfig).size}
-          </div>
-          <div>
-            <span className="font-medium">Weight:</span> {getConfigDisplayInfo(selectedConfig).weightRange}
+        <div className="mt-1 p-2 bg-blue-50 rounded border text-xs">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="truncate">
+              <span className="font-medium">Category:</span> {selectedConfig.category}
+            </div>
+            <div className="truncate">
+              <span className="font-medium">Type:</span> {selectedConfig.subcategory}
+            </div>
+            <div>
+              <span className="font-medium">Size:</span> {formatSize(selectedConfig.size_value)}
+            </div>
+            <div className="truncate">
+              <span className="font-medium">Weight:</span> {selectedConfig.weight_range || 'N/A'}
+            </div>
           </div>
         </div>
       )}
