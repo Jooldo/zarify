@@ -69,6 +69,18 @@ const FinishedGoodsInventory = () => {
     };
   };
 
+  const getRequiredColor = (required: number, currentStock: number) => {
+    if (required <= currentStock) return 'text-green-600';
+    if (required <= currentStock * 1.5) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getShortfallColor = (shortfall: number) => {
+    if (shortfall > 0) return 'text-red-600';
+    if (shortfall === 0) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
   const getDisplaySize = (product: any) => {
     const sizeInInches = product.product_config?.size_value 
       ? (product.product_config.size_value * 39.3701).toFixed(2) 
@@ -171,11 +183,17 @@ const FinishedGoodsInventory = () => {
                   <TableCell className="py-1 px-2 text-xs">{getDisplaySize(product)}</TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">{product.current_stock}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.threshold}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{product.required_quantity}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    <span className={`font-medium ${getRequiredColor(product.required_quantity, product.current_stock)}`}>
+                      {product.required_quantity}
+                    </span>
+                  </TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.in_manufacturing}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-1 py-0">
-                      {getShortfallLabel(shortfall)}
+                      <span className={getShortfallColor(shortfall)}>
+                        {getShortfallLabel(shortfall)}
+                      </span>
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2">

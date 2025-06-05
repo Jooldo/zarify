@@ -54,6 +54,18 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     };
   };
 
+  const getRequiredColor = (required: number, currentStock: number) => {
+    if (required <= currentStock) return 'text-green-600';
+    if (required <= currentStock * 1.5) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getShortfallColor = (shortfall: number) => {
+    if (shortfall > 0) return 'text-red-600';
+    if (shortfall === 0) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
   const handleUpdateStock = (material: RawMaterial) => {
     setSelectedMaterial(material);
     setUpdateStockOpen(true);
@@ -125,14 +137,16 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     <span 
-                      className="cursor-help" 
+                      className={`font-medium ${getRequiredColor(material.required_quantity, material.current_stock)} cursor-help`} 
                       title={`Production Requirements: ${material.production_requirements} + Minimum Stock: ${material.minimum_stock} = Total Required: ${material.required_quantity}`}
                     >
                       {material.required_quantity} {material.unit}
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    {material.shortfall} {material.unit}
+                    <span className={`font-medium ${getShortfallColor(material.shortfall)}`}>
+                      {material.shortfall} {material.unit}
+                    </span>
                   </TableCell>
                   <TableCell className="py-1 px-2">
                     <Badge variant={shortfallStatus.variant} className="text-xs px-1 py-0 flex items-center gap-1 w-fit">
