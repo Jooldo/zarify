@@ -24,6 +24,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const [viewMaterialOpen, setViewMaterialOpen] = useState(false);
   const [raiseRequestOpen, setRaiseRequestOpen] = useState(false);
 
+  const getRequiredStatus = (required: number, current: number) => {
+    if (required <= current) return { variant: 'default' as const, color: 'text-green-600' };
+    if (required <= current * 1.5) return { variant: 'secondary' as const, color: 'text-yellow-600' };
+    return { variant: 'destructive' as const, color: 'text-red-600' };
+  };
+
   const getShortfallStatus = (shortfall: number, minimumStock: number) => {
     // If there is a shortfall (positive value means we need more)
     if (shortfall > 0) {
@@ -52,18 +58,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
       icon: CircleCheck,
       color: 'text-green-600'
     };
-  };
-
-  const getRequiredColor = (required: number, currentStock: number) => {
-    if (required <= currentStock) return 'text-green-600';
-    if (required <= currentStock * 1.5) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getShortfallColor = (shortfall: number) => {
-    if (shortfall > 0) return 'text-red-600';
-    if (shortfall === 0) return 'text-yellow-600';
-    return 'text-green-600';
   };
 
   const handleUpdateStock = (material: RawMaterial) => {
@@ -121,6 +115,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           </TableHeader>
           <TableBody>
             {materials.map((material) => {
+              const requiredInfo = getRequiredStatus(material.required_quantity, material.current_stock);
               const shortfallStatus = getShortfallStatus(material.shortfall, material.minimum_stock);
               const Icon = shortfallStatus.icon;
               
@@ -137,14 +132,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     <span 
-                      className={`font-medium ${getRequiredColor(material.required_quantity, material.current_stock)} cursor-help`} 
+                      className={`font-medium ${requiredInfo.color} cursor-help`} 
                       title={`Production Requirements: ${material.production_requirements} + Minimum Stock: ${material.minimum_stock} = Total Required: ${material.required_quantity}`}
                     >
                       {material.required_quantity} {material.unit}
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <span className={`font-medium ${getShortfallColor(material.shortfall)}`}>
+                    <span className={`font-medium ${shortfallStatus.color}`}>
                       {material.shortfall} {material.unit}
                     </span>
                   </TableCell>

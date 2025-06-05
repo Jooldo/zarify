@@ -40,10 +40,11 @@ const FinishedGoodsInventory = () => {
   };
 
   const getShortfallStatus = (shortfall: number, threshold: number) => {
-    // If there is a shortfall (positive value means we need more)
-    if (shortfall > 0) {
+    // If there is a shortfall (negative value means we need more)
+    if (shortfall < 0) {
+      const shortfallAmount = Math.abs(shortfall);
       // If shortfall is not greater than minimum stock, it's low critical
-      if (shortfall <= threshold) {
+      if (shortfallAmount <= threshold) {
         return { 
           label: 'Low Critical', 
           variant: 'secondary' as const, 
@@ -60,25 +61,13 @@ const FinishedGoodsInventory = () => {
       };
     }
     
-    // If there is a surplus (no shortfall), it's good
+    // If there is a surplus (positive value), it's good
     return { 
       label: 'Good', 
       variant: 'default' as const, 
       icon: CircleCheck,
       color: 'text-green-600'
     };
-  };
-
-  const getRequiredColor = (required: number, currentStock: number) => {
-    if (required <= currentStock) return 'text-green-600';
-    if (required <= currentStock * 1.5) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getShortfallColor = (shortfall: number) => {
-    if (shortfall > 0) return 'text-red-600';
-    if (shortfall === 0) return 'text-yellow-600';
-    return 'text-green-600';
   };
 
   const getDisplaySize = (product: any) => {
@@ -183,17 +172,11 @@ const FinishedGoodsInventory = () => {
                   <TableCell className="py-1 px-2 text-xs">{getDisplaySize(product)}</TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">{product.current_stock}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.threshold}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <span className={`font-medium ${getRequiredColor(product.required_quantity, product.current_stock)}`}>
-                      {product.required_quantity}
-                    </span>
-                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{product.required_quantity}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{product.in_manufacturing}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     <Badge variant={getShortfallVariant(shortfall)} className="text-xs px-1 py-0">
-                      <span className={getShortfallColor(shortfall)}>
-                        {getShortfallLabel(shortfall)}
-                      </span>
+                      {getShortfallLabel(shortfall)}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2">
