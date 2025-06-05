@@ -98,17 +98,40 @@ export const useProcurementRequests = () => {
       if (newStatus === 'Received') {
         console.log('Updating raw material stock for:', request.raw_material_id, 'quantity:', request.quantity_requested);
         
+        // First, fetch the current raw material data
+        const { data: currentMaterial, error: fetchError } = await supabase
+          .from('raw_materials')
+          .select('current_stock, in_procurement')
+          .eq('id', request.raw_material_id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Calculate new values
+        const newCurrentStock = currentMaterial.current_stock + request.quantity_requested;
+        const newInProcurement = Math.max(0, currentMaterial.in_procurement - request.quantity_requested);
+
+        console.log('Stock update calculation:', {
+          currentStock: currentMaterial.current_stock,
+          inProcurement: currentMaterial.in_procurement,
+          quantityReceived: request.quantity_requested,
+          newCurrentStock,
+          newInProcurement
+        });
+
         // Update raw material current stock and reduce in_procurement
         const { error: stockError } = await supabase
           .from('raw_materials')
           .update({ 
-            current_stock: supabase.sql`current_stock + ${request.quantity_requested}`,
-            in_procurement: supabase.sql`GREATEST(0, in_procurement - ${request.quantity_requested})`,
+            current_stock: newCurrentStock,
+            in_procurement: newInProcurement,
             last_updated: new Date().toISOString()
           })
           .eq('id', request.raw_material_id);
 
         if (stockError) throw stockError;
+
+        console.log('Stock updated successfully');
 
         // Log the stock update activity
         await logActivity(
