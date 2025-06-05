@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,11 +58,13 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   };
 
   const addRawMaterial = () => {
+    console.log('Adding new raw material');
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: '' }]);
   };
 
   const removeRawMaterial = (index: number) => {
     if (rawMaterials.length > 1) {
+      console.log('Removing raw material at index:', index);
       const newMaterials = [...rawMaterials];
       newMaterials.splice(index, 1);
       setRawMaterials(newMaterials);
@@ -71,12 +72,16 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   };
 
   const updateRawMaterial = (index: number, field: string, value: any) => {
+    console.log('Updating raw material:', { index, field, value });
     const updatedMaterials = rawMaterials.map((material, i) => {
       if (i === index) {
-        return { ...material, [field]: value };
+        const updated = { ...material, [field]: value };
+        console.log('Updated material:', updated);
+        return updated;
       }
       return material;
     });
+    console.log('New raw materials array:', updatedMaterials);
     setRawMaterials(updatedMaterials);
   };
 

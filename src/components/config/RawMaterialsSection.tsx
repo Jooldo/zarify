@@ -27,8 +27,14 @@ const RawMaterialsSection = ({
 }: RawMaterialsSectionProps) => {
   const { rawMaterials: availableRawMaterials, loading } = useRawMaterials();
 
+  console.log('Available raw materials:', availableRawMaterials);
+  console.log('Current raw materials state:', rawMaterials);
+
   const handleMaterialChange = (index: number, materialId: string) => {
+    console.log('Material changed:', { index, materialId });
     const selectedMaterial = availableRawMaterials.find(m => m.id === materialId);
+    console.log('Selected material:', selectedMaterial);
+    
     updateRawMaterial(index, 'material', materialId);
     if (selectedMaterial) {
       updateRawMaterial(index, 'unit', selectedMaterial.unit);
@@ -54,6 +60,7 @@ const RawMaterialsSection = ({
       <CardContent className="space-y-2 pt-0">
         {rawMaterials.map((material, index) => {
           const selectedMaterial = availableRawMaterials.find(m => m.id === material.material);
+          console.log(`Material ${index}:`, { material, selectedMaterial });
           
           return (
             <div key={index} className="grid grid-cols-12 gap-1 items-end">
