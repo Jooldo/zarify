@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 
 interface RaiseRequestDialogProps {
@@ -18,8 +19,9 @@ interface RaiseRequestDialogProps {
 }
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }: RaiseRequestDialogProps) => {
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
   const [requestQuantity, setRequestQuantity] = useState('');
-  const [supplier, setSupplier] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,9 +49,9 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           raw_material_id: material.id,
           quantity_requested: parseInt(requestQuantity),
           unit: material.unit,
-          supplier_id: null,
+          supplier_id: supplierId || null,
           eta: eta || null,
-          notes: supplier ? `Supplier: ${supplier}${notes ? '\n' + notes : ''}` : notes || null,
+          notes: notes || null,
           merchant_id: merchantId,
           status: 'Pending'
         });
@@ -63,7 +65,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
 
       // Reset form
       setRequestQuantity('');
-      setSupplier('');
+      setSupplierId('');
       setEta('');
       setNotes('');
       onRequestCreated();
@@ -115,17 +117,17 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           </div>
           <div>
             <Label htmlFor="supplier">Supplier</Label>
-            <Select value={supplier} onValueChange={setSupplier}>
+            <Select value={supplierId} onValueChange={setSupplierId} disabled={suppliersLoading}>
               <SelectTrigger>
-                <SelectValue placeholder="Select supplier (optional)" />
+                <SelectValue placeholder={suppliersLoading ? "Loading suppliers..." : "Select supplier (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Mumbai Silver Co.">Mumbai Silver Co.</SelectItem>
-                <SelectItem value="Rajasthan Crafts">Rajasthan Crafts</SelectItem>
-                <SelectItem value="Delhi Accessories">Delhi Accessories</SelectItem>
-                <SelectItem value="Local Supplier">Local Supplier</SelectItem>
-                <SelectItem value="Artisan Supplies">Artisan Supplies</SelectItem>
-                <SelectItem value="Textile Hub">Textile Hub</SelectItem>
+                {suppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplier.company_name}
+                    {supplier.contact_person && ` (${supplier.contact_person})`}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -148,7 +150,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
             />
           </div>
           <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="submit" className="flex-1" disabled={loading || suppliersLoading}>
               {loading ? 'Creating...' : 'Submit Request'}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
