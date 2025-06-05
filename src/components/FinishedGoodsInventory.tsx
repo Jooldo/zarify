@@ -15,6 +15,8 @@ const FinishedGoodsInventory = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
+  console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
+
   const filteredProducts = finishedGoods.filter(product =>
     product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,6 +58,11 @@ const FinishedGoodsInventory = () => {
     setIsViewDialogOpen(true);
   };
 
+  const handleRefresh = async () => {
+    console.log('Manual refresh triggered for finished goods');
+    await refetch();
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -90,6 +97,14 @@ const FinishedGoodsInventory = () => {
               className="pl-10 h-8"
             />
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="h-8"
+          >
+            Refresh
+          </Button>
           <AddProductDialog onProductAdded={refetch} />
         </div>
       </div>

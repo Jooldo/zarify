@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,12 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
 
   const updateOrderItemStatus = async (itemId: string, newStatus: OrderStatus) => {
     try {
+      console.log('Updating order item status:', { itemId, newStatus });
+      
+      // Find the order item to get details for logging
+      const orderItem = order.order_items.find(item => item.id === itemId);
+      console.log('Order item before update:', orderItem);
+      
       const { error } = await supabase
         .from('order_items')
         .update({ status: newStatus })
@@ -33,8 +38,8 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
 
       if (error) throw error;
 
-      // Find the order item to get details for logging
-      const orderItem = order.order_items.find(item => item.id === itemId);
+      console.log('Order item status updated successfully');
+
       if (orderItem) {
         await logActivity(
           'updated',
@@ -49,10 +54,16 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
         description: 'Order item status updated successfully',
       });
 
-      // Refresh both orders and finished goods data
-      onOrderUpdate();
+      // Refresh both orders and finished goods data with a small delay
+      console.log('Refreshing data after status update...');
+      await onOrderUpdate();
+      
       if (onFinishedGoodsUpdate) {
-        onFinishedGoodsUpdate();
+        // Add a small delay to ensure the trigger has processed
+        setTimeout(async () => {
+          console.log('Refreshing finished goods data...');
+          await onFinishedGoodsUpdate();
+        }, 500);
       }
     } catch (error) {
       console.error('Error updating order item status:', error);
