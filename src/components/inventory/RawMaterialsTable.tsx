@@ -47,7 +47,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfallTooltip = () => {
-    return "Shortfall = (Required + Minimum Stock) - (Current Stock + In Procurement)";
+    return "Shortfall = (Required + Minimum Stock) - (Current Stock + In Procurement). Negative values indicate shortfall, positive values indicate surplus.";
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
@@ -146,7 +146,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       title={getShortfallTooltip()}
                     >
                       <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {shortfall > 0 ? `-${shortfall}` : '✓ Sufficient'}
+                        {shortfall > 0 ? `-${shortfall}` : `+${Math.abs(shortfall)}`}
                       </span>
                     </div>
                   </TableCell>

@@ -38,7 +38,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
   };
 
   const getShortfallTooltip = () => {
-    return "Shortfall = (Required + Threshold) - (Current Stock + In Manufacturing)";
+    return "Shortfall = (Required + Threshold) - (Current Stock + In Manufacturing). Negative values indicate shortfall, positive values indicate surplus.";
   };
 
   return (
@@ -112,7 +112,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                     title={getShortfallTooltip()}
                   >
                     <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {shortfall > 0 ? `-${shortfall}` : '✓ Sufficient'}
+                      {shortfall > 0 ? `-${shortfall}` : `+${Math.abs(shortfall)}`}
                     </span>
                   </div>
                 </TableCell>
