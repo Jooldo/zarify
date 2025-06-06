@@ -31,7 +31,6 @@ import {
   useSidebar
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -40,15 +39,11 @@ interface AppSidebarProps {
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const { signOut } = useAuth();
-  const { state, setOpen } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   const handleSignOut = async () => {
     await signOut();
-  };
-
-  const toggleSidebar = () => {
-    setOpen(isCollapsed);
   };
 
   const menuItems = [
@@ -97,7 +92,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   ];
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
           {!isCollapsed && (
