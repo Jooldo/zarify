@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OrderFunnelChart from './OrderFunnelChart';
 import CriticalRawMaterials from './CriticalRawMaterials';
 import CriticalFinishedGoods from './CriticalFinishedGoods';
+import ConversationalQueryWidget from './ConversationalQueryWidget';
 
 interface VisualDashboardProps {
   onNavigateToTab?: (tab: string) => void;
@@ -19,9 +20,14 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Funnel - Takes 2 columns on large screens */}
-        <div className="lg:col-span-2">
+        {/* Order Funnel - Takes 1 column on large screens */}
+        <div>
           <OrderFunnelChart onNavigateToOrders={() => onNavigateToTab?.('orders')} />
+        </div>
+
+        {/* Ask Data Widget - Takes 1 column */}
+        <div>
+          <ConversationalQueryWidget onNavigateToTab={onNavigateToTab} />
         </div>
 
         {/* Critical Materials - Takes 1 column */}
