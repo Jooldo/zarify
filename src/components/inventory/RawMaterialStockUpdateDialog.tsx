@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertCircle, Plus, Minus } from 'lucide-react';
+import { AlertCircle, Plus, Minus, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
@@ -22,6 +22,22 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const formatIndianNumber = (num: number) => {
+    return num.toLocaleString('en-IN');
+  };
+
+  const getInventoryStatus = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
+    const shortfall = (Math.max(requiredQuantity, minimumStock)) - (currentStock + inProcurement);
+    
+    if (shortfall > 0) {
+      return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
+    } else if (currentStock <= minimumStock) {
+      return { status: 'Low', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    } else {
+      return { status: 'Good', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
+    }
+  };
 
   const handleActionSelect = (action: 'add' | 'subtract') => {
     setActionType(action);
@@ -103,6 +119,15 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
 
   if (!material) return null;
 
+  const statusInfo = getInventoryStatus(
+    material.current_stock,
+    material.in_procurement,
+    material.required_quantity || 0,
+    material.minimum_stock
+  );
+
+  const StatusIcon = statusInfo.icon;
+
   if (showConfirmation) {
     const quantityNum = parseInt(quantity);
     const newStock = actionType === 'add' 
@@ -122,9 +147,9 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
             <div className="bg-gray-50 p-4 rounded-md">
               <p><strong>Material:</strong> {material.name}</p>
               <p><strong>Action:</strong> {actionType === 'add' ? 'Add Quantity' : 'Subtract Quantity'}</p>
-              <p><strong>Quantity:</strong> {quantity} {material.unit}</p>
-              <p><strong>Current Stock:</strong> {material.current_stock} {material.unit}</p>
-              <p><strong>New Stock:</strong> {newStock} {material.unit}</p>
+              <p><strong>Quantity:</strong> {formatIndianNumber(parseInt(quantity))} {material.unit}</p>
+              <p><strong>Current Stock:</strong> {formatIndianNumber(material.current_stock)} {material.unit}</p>
+              <p><strong>New Stock:</strong> {formatIndianNumber(newStock)} {material.unit}</p>
             </div>
             
             <div className="flex gap-2">
@@ -157,10 +182,38 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
           <DialogTitle>Update Stock - {material.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="text-sm text-gray-600">
-            <p><strong>Current Stock:</strong> {material.current_stock} {material.unit}</p>
-            <p><strong>Minimum Stock:</strong> {material.minimum_stock} {material.unit}</p>
-            <p><strong>Type:</strong> {material.type}</p>
+          {/* Read-only Material Context */}
+          <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <h4 className="font-medium text-sm text-gray-700">Material Information</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-gray-500">Type:</span>
+                <p className="font-medium">{material.type}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Unit:</span>
+                <p className="font-medium">{material.unit}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Current Stock:</span>
+                <p className="font-medium">{formatIndianNumber(material.current_stock)} {material.unit}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Minimum Stock:</span>
+                <p className="font-medium">{formatIndianNumber(material.minimum_stock)} {material.unit}</p>
+              </div>
+            </div>
+            
+            {/* Current Status */}
+            <div className="pt-2 border-t border-gray-200">
+              <span className="text-gray-500 text-xs">Current Status:</span>
+              <div className={`flex items-center gap-2 mt-1 px-2 py-1 rounded-full ${statusInfo.bgColor} w-fit`}>
+                <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
+                <span className={`text-xs font-medium ${statusInfo.color}`}>
+                  {statusInfo.status}
+                </span>
+              </div>
+            </div>
           </div>
 
           {!actionType && (

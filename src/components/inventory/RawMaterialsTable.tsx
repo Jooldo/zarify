@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit } from 'lucide-react';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
@@ -21,6 +21,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
+
+  const formatIndianNumber = (num: number) => {
+    return num.toLocaleString('en-IN');
+  };
 
   const getStockStatusVariant = (currentStock: number, minimumStock: number) => {
     if (currentStock <= minimumStock) return "destructive" as const;
@@ -88,13 +92,13 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -126,19 +130,22 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       {material.type}
                     </Badge>
                   </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">
+                    {material.unit}
+                  </TableCell>
                   <TableCell className="py-1 px-2">
                     <Badge variant={getStockStatusVariant(material.current_stock, material.minimum_stock)} className="text-xs px-2 py-1 font-bold">
-                      {material.current_stock}
+                      {formatIndianNumber(material.current_stock)}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {material.minimum_stock}
+                    {formatIndianNumber(material.minimum_stock)}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {material.required_quantity || 0}
+                    {formatIndianNumber(material.required_quantity || 0)}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {material.in_procurement}
+                    {formatIndianNumber(material.in_procurement)}
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div 
@@ -146,7 +153,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       title={getShortfallTooltip()}
                     >
                       <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {shortfall > 0 ? `-${shortfall}` : `+${Math.abs(shortfall)}`}
+                        {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
                       </span>
                     </div>
                   </TableCell>
@@ -157,9 +164,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                         {statusInfo.status}
                       </span>
                     </div>
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    {material.unit}
                   </TableCell>
                   <TableCell className="py-1 px-2">
                     <div className="flex gap-1">
@@ -178,7 +182,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                         onClick={() => handleUpdateStock(material)}
                         title="Update Stock"
                       >
-                        <AlertCircle className="h-3 w-3" />
+                        <Edit className="h-3 w-3" />
                       </Button>
                       {shortfall > 0 && (
                         <Button 
