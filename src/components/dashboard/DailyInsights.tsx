@@ -1,11 +1,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Package, Clock, TrendingUp, Bell, Check, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Package, Clock, TrendingUp, Bell, Check, Settings, RefreshCw } from 'lucide-react';
 import { useDailyInsights } from '@/hooks/useDailyInsights';
 
 const DailyInsights = () => {
-  const { insights, loading } = useDailyInsights();
+  const { insights, loading, refetch } = useDailyInsights();
 
   const getIcon = (iconName: string) => {
     const icons = {
@@ -39,11 +40,25 @@ const DailyInsights = () => {
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+  };
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Daily Insights</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Daily Insights</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled
+              className="h-8 w-8"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -59,7 +74,18 @@ const DailyInsights = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Today's Insights</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">Today's Insights</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            className="h-8 w-8 hover:bg-gray-100"
+            title="Refresh insights"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
