@@ -109,6 +109,7 @@ const FinishedGoodsConfig = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Size & Weight</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
@@ -127,6 +128,9 @@ const FinishedGoodsConfig = () => {
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   {getDisplaySize(config)}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs font-medium">
+                  {config.threshold || 'N/A'}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   <Badge 

@@ -96,29 +96,16 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="currentStock">Current Stock</Label>
-              <Input 
-                id="currentStock" 
-                type="number" 
-                placeholder="0" 
-                value={formData.current_stock}
-                onChange={(e) => handleInputChange('current_stock', parseInt(e.target.value) || 0)}
-                min="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="minStock">Minimum Stock</Label>
-              <Input 
-                id="minStock" 
-                type="number" 
-                placeholder="0" 
-                value={formData.minimum_stock}
-                onChange={(e) => handleInputChange('minimum_stock', parseInt(e.target.value) || 0)}
-                min="0"
-              />
-            </div>
+          <div>
+            <Label htmlFor="minStock">Minimum Stock</Label>
+            <Input 
+              id="minStock" 
+              type="number" 
+              placeholder="0" 
+              value={formData.minimum_stock}
+              onChange={(e) => handleInputChange('minimum_stock', parseInt(e.target.value) || 0)}
+              min="0"
+            />
           </div>
           <div>
             <Label htmlFor="unit">Unit *</Label>
