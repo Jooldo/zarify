@@ -25,13 +25,6 @@ const RMProcurementTab = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Raw Material Procurement</h2>
-        <p className="text-muted-foreground">
-          Manage procurement requests, supplier relationships, and purchase orders for raw materials.
-        </p>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-2">

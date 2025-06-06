@@ -8,13 +8,6 @@ const FGProcurementTab = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Finished Good Procurement</h2>
-        <p className="text-muted-foreground">
-          Manage production planning, manufacturing schedules, and finished goods procurement.
-        </p>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="production" className="flex items-center gap-2">
