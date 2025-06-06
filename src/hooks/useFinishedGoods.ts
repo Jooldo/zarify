@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +16,7 @@ export interface FinishedGood {
     subcategory: string;
     size_value: number;
     weight_range: string | null;
+    is_active: boolean;
   };
 }
 
@@ -34,7 +34,7 @@ export const useFinishedGoods = () => {
         .from('finished_goods')
         .select(`
           *,
-          product_config:product_configs(category, subcategory, size_value, weight_range)
+          product_config:product_configs(category, subcategory, size_value, weight_range, is_active)
         `)
         .order('product_code');
 
