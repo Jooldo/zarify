@@ -12,10 +12,9 @@ import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog'
 import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
 
 const RawMaterialsConfig = () => {
-  const { rawMaterials, loading, refetch } = useRawMaterials();
+  const { rawMaterials, loading, refetch, createRawMaterial } = useRawMaterials();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
   const [isUpdateMaterialOpen, setIsUpdateMaterialOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
@@ -27,9 +26,8 @@ const RawMaterialsConfig = () => {
     return matchesSearch && matchesType;
   });
 
-  const handleMaterialAdded = () => {
-    refetch();
-    setIsAddMaterialOpen(false);
+  const handleMaterialAdded = async () => {
+    await refetch();
   };
 
   const handleViewMaterial = (material: any) => {
@@ -42,8 +40,8 @@ const RawMaterialsConfig = () => {
     setIsUpdateMaterialOpen(true);
   };
 
-  const handleMaterialUpdated = () => {
-    refetch();
+  const handleMaterialUpdated = async () => {
+    await refetch();
     setIsUpdateMaterialOpen(false);
   };
 
@@ -88,20 +86,7 @@ const RawMaterialsConfig = () => {
               </option>
             ))}
           </select>
-          <Dialog open={isAddMaterialOpen} onOpenChange={setIsAddMaterialOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-                <Plus className="h-3 w-3" />
-                Add Material
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-sm">Add Raw Material</DialogTitle>
-              </DialogHeader>
-              <AddMaterialDialog onMaterialAdded={handleMaterialAdded} />
-            </DialogContent>
-          </Dialog>
+          <AddMaterialDialog onAddMaterial={createRawMaterial} />
         </div>
       </div>
 
@@ -169,23 +154,18 @@ const RawMaterialsConfig = () => {
       </div>
 
       {/* View Material Dialog */}
-      <Dialog open={isViewMaterialOpen} onOpenChange={setIsViewMaterialOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-sm">Raw Material Details</DialogTitle>
-          </DialogHeader>
-          {selectedMaterial && (
-            <ViewRawMaterialDialog material={selectedMaterial} />
-          )}
-        </DialogContent>
-      </Dialog>
+      <ViewRawMaterialDialog 
+        material={selectedMaterial}
+        isOpen={isViewMaterialOpen}
+        onOpenChange={setIsViewMaterialOpen}
+      />
 
       {/* Update Material Dialog */}
       <UpdateRawMaterialDialog 
         material={selectedMaterial}
         isOpen={isUpdateMaterialOpen}
-        onClose={() => setIsUpdateMaterialOpen(false)}
-        onUpdate={handleMaterialUpdated}
+        onOpenChange={setIsUpdateMaterialOpen}
+        onMaterialUpdated={handleMaterialUpdated}
       />
 
       {/* Empty state */}
