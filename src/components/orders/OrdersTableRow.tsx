@@ -79,7 +79,6 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
                 <OrderDetails 
                   order={order} 
                   onOrderUpdate={onOrderUpdate}
-                  onFinishedGoodsUpdate={onFinishedGoodsUpdate}
                 />
               </DialogContent>
             </Dialog>
