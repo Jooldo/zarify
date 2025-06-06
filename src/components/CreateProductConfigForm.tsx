@@ -19,7 +19,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [sizeValue, setSizeValue] = useState('');
-  const [weightRange, setWeightRange] = useState('');
+  const [weightInGrams, setWeightInGrams] = useState('');
   const [threshold, setThreshold] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +42,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setCategory(initialData.category || '');
       setSubcategory(initialData.subcategory || '');
       setSizeValue(initialData.sizeValue || '');
-      setWeightRange(initialData.weightRange || '');
+      setWeightInGrams(initialData.weightInGrams || '');
       setThreshold(initialData.threshold || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: '' }]);
@@ -54,7 +54,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     
     const categoryCode = category.slice(0, 3).toUpperCase();
     const subcategoryCode = subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
-    const weightCode = weightRange ? weightRange.split('-')[0] + 'G' : '';
+    const weightCode = weightInGrams ? weightInGrams + 'G' : '';
     
     return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
   };
@@ -104,15 +104,15 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!category || !subcategory || !sizeValue || !weightRange) {
+    if (!category || !subcategory || !sizeValue || !weightInGrams) {
       alert('Please fill in all required fields');
       return;
     }
 
-    // Validate weight range format
-    const weightRegex = /^\d+(\.\d+)?-\d+(\.\d+)?\s*(gms?|g)$/i;
-    if (!weightRegex.test(weightRange.trim())) {
-      alert('Please enter weight range in format: 35-45 gms');
+    // Validate weight format (should be a positive number)
+    const weight = parseFloat(weightInGrams);
+    if (isNaN(weight) || weight <= 0) {
+      alert('Please enter a valid weight in grams');
       return;
     }
 
@@ -132,7 +132,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         category,
         subcategory,
         sizeValue,
-        weightRange,
+        weightInGrams,
         threshold: threshold ? parseInt(threshold) : 0,
         isActive,
         productCode,
@@ -204,12 +204,15 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
             </div>
             
             <div>
-              <Label htmlFor="weightRange" className="text-xs">Weight Range *</Label>
+              <Label htmlFor="weightInGrams" className="text-xs">Weight (grams) *</Label>
               <Input
-                id="weightRange"
-                value={weightRange}
-                onChange={(e) => setWeightRange(e.target.value)}
-                placeholder="35-45 gms"
+                id="weightInGrams"
+                type="number"
+                step="0.1"
+                min="0"
+                value={weightInGrams}
+                onChange={(e) => setWeightInGrams(e.target.value)}
+                placeholder="35.5"
                 className="h-7 text-xs"
                 required
               />
@@ -234,7 +237,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
             category={category}
             subcategory={subcategory}
             sizeValue={sizeValue}
-            weightRange={weightRange}
+            weightInGrams={weightInGrams}
             isActive={isActive}
             generateProductCode={generateProductCode}
             setIsActive={setIsActive}

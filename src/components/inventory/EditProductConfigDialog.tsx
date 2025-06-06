@@ -87,7 +87,8 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
     
     const categoryCode = config.category.slice(0, 3).toUpperCase();
     const subcategoryCode = config.subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
-    const weightCode = config.weight_range ? config.weight_range.split('-')[0] + 'G' : '';
+    // Extract weight from weight_range (e.g., "35.5g" -> "35.5G")
+    const weightCode = config.weight_range ? config.weight_range.replace('g', 'G') : '';
     
     return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
   };
@@ -212,7 +213,8 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
 
   if (!config) return null;
 
-  const sizeInInches = config.size_value ? (config.size_value * 39.3701).toFixed(2) : '';
+  const sizeInInches = config.size_value ? config.size_value.toFixed(2) : 'N/A';
+  const weightDisplay = config.weight_range || 'N/A';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -257,9 +259,9 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
               />
             </div>
             <div>
-              <Label className="text-xs">Weight Range (Read Only)</Label>
+              <Label className="text-xs">Weight (Read Only)</Label>
               <Input
-                value={config.weight_range || 'N/A'}
+                value={weightDisplay}
                 className="h-7 text-xs bg-gray-50"
                 readOnly
               />

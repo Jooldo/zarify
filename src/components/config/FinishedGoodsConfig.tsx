@@ -50,7 +50,7 @@ const FinishedGoodsConfig = () => {
   };
 
   const getDisplaySize = (config: any) => {
-    // Display size_value directly as inches (no conversion needed)
+    // Display size_value directly as inches and weight_range as stored
     const sizeInInches = config.size_value?.toFixed(2) || 'N/A';
     if (config.weight_range) {
       return `${sizeInInches}" / ${config.weight_range}`;

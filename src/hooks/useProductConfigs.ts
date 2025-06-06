@@ -86,7 +86,7 @@ export const useProductConfigs = () => {
     category: string;
     subcategory: string;
     sizeValue: string;
-    weightRange: string;
+    weightInGrams: string;
     threshold?: number;
     productCode: string;
     isActive: boolean;
@@ -103,6 +103,9 @@ export const useProductConfigs = () => {
       // Store size value directly as inches (no conversion needed)
       const sizeValueInInches = parseFloat(configData.sizeValue);
       
+      // Convert weight to grams (store as numeric value)
+      const weightInGrams = parseFloat(configData.weightInGrams);
+      
       // Insert product config
       const { data: config, error: configError } = await supabase
         .from('product_configs')
@@ -110,7 +113,7 @@ export const useProductConfigs = () => {
           category: configData.category,
           subcategory: configData.subcategory,
           size_value: sizeValueInInches,
-          weight_range: configData.weightRange,
+          weight_range: `${weightInGrams}g`,
           product_code: configData.productCode,
           is_active: configData.isActive,
           merchant_id: merchantId

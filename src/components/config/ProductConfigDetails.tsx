@@ -7,7 +7,7 @@ interface ProductConfigDetailsProps {
   category: string;
   subcategory: string;
   sizeValue: string;
-  weightRange: string;
+  weightInGrams: string;
   isActive: boolean;
   generateProductCode: () => string;
   setIsActive: (active: boolean) => void;
@@ -17,7 +17,7 @@ const ProductConfigDetails = ({
   category, 
   subcategory, 
   sizeValue, 
-  weightRange,
+  weightInGrams,
   isActive, 
   generateProductCode, 
   setIsActive 
@@ -37,7 +37,7 @@ const ProductConfigDetails = ({
         <div>
           <Label className="text-xs font-medium">Full Description:</Label>
           <div className="text-xs text-gray-600">
-            {category} - {subcategory} ({sizeValue}" / {weightRange})
+            {category} - {subcategory} ({sizeValue}" / {weightInGrams}g)
           </div>
         </div>
         <div>

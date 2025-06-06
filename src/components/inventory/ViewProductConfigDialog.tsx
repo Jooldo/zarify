@@ -60,7 +60,7 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
         </div>
         {config.weight_range && (
           <div>
-            <Label className="text-xs font-medium">Weight Range:</Label>
+            <Label className="text-xs font-medium">Weight:</Label>
             <div className="text-sm">{config.weight_range}</div>
           </div>
         )}
