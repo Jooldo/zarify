@@ -45,7 +45,7 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
         unit: material.unit || '',
         minimum_stock: material.minimum_stock || 0,
         cost_per_unit: material.cost_per_unit || 0,
-        supplier_id: material.supplier_id || '',
+        supplier_id: material.supplier_id || 'no-supplier',
       });
       fetchSuppliers();
     }
@@ -91,7 +91,7 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
           unit: formData.unit,
           minimum_stock: formData.minimum_stock,
           cost_per_unit: formData.cost_per_unit || null,
-          supplier_id: formData.supplier_id || null,
+          supplier_id: formData.supplier_id === 'no-supplier' ? null : formData.supplier_id,
           last_updated: new Date().toISOString()
         })
         .eq('id', material.id);
@@ -204,7 +204,7 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
                 <SelectValue placeholder="Select supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No supplier</SelectItem>
+                <SelectItem value="no-supplier">No supplier</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.company_name}
