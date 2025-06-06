@@ -2,14 +2,16 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, CircleAlert, CircleCheck, TriangleAlert } from 'lucide-react';
+import { Eye, CircleAlert, CircleCheck, TriangleAlert, Edit, Trash2 } from 'lucide-react';
 
 interface FinishedGoodsTableProps {
   products: any[];
   onViewProduct: (product: any) => void;
+  onEditProduct?: (product: any) => void;
+  onDeleteProduct?: (product: any) => void;
 }
 
-const FinishedGoodsTable = ({ products, onViewProduct }: FinishedGoodsTableProps) => {
+const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, onDeleteProduct }: FinishedGoodsTableProps) => {
   const calculateShortfall = (currentStock: number, inManufacturing: number, threshold: number, requiredQuantity: number) => {
     return (currentStock + inManufacturing) - (threshold + requiredQuantity);
   };
@@ -116,14 +118,36 @@ const FinishedGoodsTable = ({ products, onViewProduct }: FinishedGoodsTableProps
                   {product.last_produced ? new Date(product.last_produced).toLocaleDateString() : 'Never'}
                 </TableCell>
                 <TableCell className="py-1 px-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => onViewProduct(product)}
-                  >
-                    <Eye className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => onViewProduct(product)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    {onEditProduct && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => onEditProduct(product)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {onDeleteProduct && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-red-50 hover:border-red-200"
+                        onClick={() => onDeleteProduct(product)}
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );

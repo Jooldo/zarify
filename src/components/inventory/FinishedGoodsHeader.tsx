@@ -2,20 +2,17 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Package } from 'lucide-react';
-import AddProductDialog from './AddProductDialog';
 
 interface FinishedGoodsHeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
-  onProductAdded: () => void;
 }
 
 const FinishedGoodsHeader = ({
   searchTerm,
   onSearchChange,
-  onRefresh,
-  onProductAdded
+  onRefresh
 }: FinishedGoodsHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -41,7 +38,6 @@ const FinishedGoodsHeader = ({
         >
           Refresh
         </Button>
-        <AddProductDialog onProductAdded={onProductAdded} />
       </div>
     </div>
   );
