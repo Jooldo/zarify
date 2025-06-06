@@ -4,9 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Package, Clock, TrendingUp, Bell, Check, Settings, RefreshCw } from 'lucide-react';
 import { useDailyInsights } from '@/hooks/useDailyInsights';
+import { useState } from 'react';
 
 const DailyInsights = () => {
   const { insights, loading, refetch } = useDailyInsights();
+  const [refreshing, setRefreshing] = useState(false);
 
   const getIcon = (iconName: string) => {
     const icons = {
@@ -40,11 +42,18 @@ const DailyInsights = () => {
     }
   };
 
-  const handleRefresh = () => {
-    refetch();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  if (loading) {
+  const isLoading = loading || refreshing;
+
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -56,7 +65,7 @@ const DailyInsights = () => {
               disabled
               className="h-8 w-8"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 animate-spin" />
             </Button>
           </div>
         </CardHeader>
@@ -82,8 +91,9 @@ const DailyInsights = () => {
             onClick={handleRefresh}
             className="h-8 w-8 hover:bg-gray-100"
             title="Refresh insights"
+            disabled={refreshing}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </CardHeader>
