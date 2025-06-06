@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertCircle } from 'lucide-react';
+import { Eye, Plus, AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
@@ -26,6 +26,28 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     if (currentStock <= minimumStock) return "destructive" as const;
     if (currentStock <= minimumStock * 1.5) return "secondary" as const;
     return "default" as const;
+  };
+
+  const calculateShortfall = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
+    const totalAvailable = currentStock + inProcurement;
+    const needed = Math.max(requiredQuantity, minimumStock);
+    return needed - totalAvailable;
+  };
+
+  const getInventoryStatus = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
+    const shortfall = calculateShortfall(currentStock, inProcurement, requiredQuantity, minimumStock);
+    
+    if (shortfall > 0) {
+      return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
+    } else if (currentStock <= minimumStock) {
+      return { status: 'Low', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    } else {
+      return { status: 'Good', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
+    }
+  };
+
+  const getShortfallTooltip = () => {
+    return "Shortfall = (Required + Minimum Stock) - (Current Stock + In Procurement)";
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
@@ -69,14 +91,30 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {materials.map((material) => {
-              const shortfall = Math.max(0, (material.required || 0) + material.minimum_stock - material.current_stock);
+              const shortfall = calculateShortfall(
+                material.current_stock,
+                material.in_procurement,
+                material.required_quantity,
+                material.minimum_stock
+              );
+
+              const statusInfo = getInventoryStatus(
+                material.current_stock,
+                material.in_procurement,
+                material.required_quantity,
+                material.minimum_stock
+              );
+
+              const StatusIcon = statusInfo.icon;
               
               return (
                 <TableRow key={material.id} className="h-10">
@@ -97,12 +135,28 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                     {material.minimum_stock}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {material.required || 0}
+                    {material.required_quantity || 0}
                   </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <span className={`text-xs ${shortfall > 0 ? 'text-red-600 font-bold' : 'text-green-600'}`}>
-                      {shortfall > 0 ? shortfall : 'OK'}
-                    </span>
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {material.in_procurement}
+                  </TableCell>
+                  <TableCell className="px-2 py-1">
+                    <div 
+                      className="cursor-help"
+                      title={getShortfallTooltip()}
+                    >
+                      <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {shortfall > 0 ? `-${shortfall}` : '✓ Sufficient'}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-2 py-1">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
+                      <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
+                      <span className={`text-xs font-medium ${statusInfo.color}`}>
+                        {statusInfo.status}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
                     {material.unit}

@@ -3,9 +3,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertCircle, Plus, Minus } from 'lucide-react';
+import { AlertCircle, Plus, Minus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
@@ -153,36 +152,77 @@ const StockUpdateDialog = ({ isOpen, onOpenChange, product, onProductUpdated }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Update Stock - {product.product_code}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Update Stock - {product.product_code}
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="text-sm text-gray-600">
-            <p><strong>Current Stock:</strong> {product.current_stock}</p>
-            <p><strong>Category:</strong> {product.product_config.category}</p>
+        
+        <div className="space-y-6">
+          {/* Product Context Card */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h3 className="text-sm font-semibold text-blue-900 mb-3">Product Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Category:</span>
+                <p className="font-medium">{product.product_config.category}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Subcategory:</span>
+                <p className="font-medium">{product.product_config.subcategory}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Size:</span>
+                <p className="font-medium">{product.product_config.size_value}" inches</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Weight Range:</span>
+                <p className="font-medium">{product.product_config.weight_range || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Stock Info */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Current Stock Status</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="text-center">
+                <p className="text-gray-600">Current Stock</p>
+                <p className="text-lg font-bold text-blue-600">{product.current_stock}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-600">Threshold</p>
+                <p className="text-lg font-bold text-gray-700">{product.threshold}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-600">In Manufacturing</p>
+                <p className="text-lg font-bold text-green-600">{product.in_manufacturing}</p>
+              </div>
+            </div>
           </div>
 
           {!actionType && (
             <div className="space-y-3">
-              <Label>Choose Action:</Label>
+              <Label className="text-base font-medium">Choose Action:</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button 
                   variant="outline" 
-                  className="h-16 flex flex-col gap-2"
+                  className="h-20 flex flex-col gap-2 border-green-200 hover:bg-green-50"
                   onClick={() => handleActionSelect('tag-in')}
                 >
-                  <Plus className="h-5 w-5 text-green-600" />
-                  <span>Tag In</span>
+                  <Plus className="h-6 w-6 text-green-600" />
+                  <span className="font-medium">Tag In</span>
                   <span className="text-xs text-gray-500">Add Stock</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="h-16 flex flex-col gap-2"
+                  className="h-20 flex flex-col gap-2 border-red-200 hover:bg-red-50"
                   onClick={() => handleActionSelect('tag-out')}
                 >
-                  <Minus className="h-5 w-5 text-red-600" />
-                  <span>Tag Out</span>
+                  <Minus className="h-6 w-6 text-red-600" />
+                  <span className="font-medium">Tag Out</span>
                   <span className="text-xs text-gray-500">Remove Stock</span>
                 </Button>
               </div>
@@ -190,14 +230,14 @@ const StockUpdateDialog = ({ isOpen, onOpenChange, product, onProductUpdated }: 
           )}
 
           {actionType && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
                 {actionType === 'tag-in' ? (
-                  <Plus className="h-4 w-4 text-green-600" />
+                  <Plus className="h-5 w-5 text-green-600" />
                 ) : (
-                  <Minus className="h-4 w-4 text-red-600" />
+                  <Minus className="h-5 w-5 text-red-600" />
                 )}
-                <Label>
+                <Label className="text-base font-medium">
                   {actionType === 'tag-in' ? 'Quantity to Add:' : 'Quantity to Remove:'}
                 </Label>
               </div>
@@ -207,6 +247,7 @@ const StockUpdateDialog = ({ isOpen, onOpenChange, product, onProductUpdated }: 
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="Enter quantity"
                 min="1"
+                className="text-lg text-center font-medium"
               />
               <div className="flex gap-2">
                 <Button 

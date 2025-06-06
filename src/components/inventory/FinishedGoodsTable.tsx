@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye } from 'lucide-react';
+import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
 
 interface FinishedGoodsTableProps {
@@ -24,6 +24,23 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
     return needed - totalAvailable;
   };
 
+  const getInventoryStatus = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
+    const shortfall = calculateShortfall(currentStock, inManufacturing, requiredQuantity, threshold);
+    const totalAvailable = currentStock + inManufacturing;
+    
+    if (shortfall > 0) {
+      return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
+    } else if (currentStock <= threshold) {
+      return { status: 'Low', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    } else {
+      return { status: 'Good', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
+    }
+  };
+
+  const getShortfallTooltip = () => {
+    return "Shortfall = (Required + Threshold) - (Current Stock + In Manufacturing)";
+  };
+
   return (
     <div className="bg-white rounded-lg border">
       <Table>
@@ -38,6 +55,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
             <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
           </TableRow>
@@ -50,6 +68,15 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
               product.required_quantity,
               product.threshold
             );
+
+            const statusInfo = getInventoryStatus(
+              product.current_stock,
+              product.in_manufacturing,
+              product.required_quantity,
+              product.threshold
+            );
+
+            const StatusIcon = statusInfo.icon;
 
             return (
               <TableRow key={product.id} className="h-10">
@@ -80,9 +107,22 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                   {product.in_manufacturing}
                 </TableCell>
                 <TableCell className="px-2 py-1">
-                  <span className={`text-xs ${shortfall > 0 ? 'text-red-600 font-bold' : 'text-green-600'}`}>
-                    {shortfall > 0 ? `Need ${shortfall}` : 'Sufficient'}
-                  </span>
+                  <div 
+                    className="cursor-help"
+                    title={getShortfallTooltip()}
+                  >
+                    <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {shortfall > 0 ? `-${shortfall}` : '✓ Sufficient'}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="px-2 py-1">
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
+                    <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
+                    <span className={`text-xs font-medium ${statusInfo.color}`}>
+                      {statusInfo.status}
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs">
                   {product.last_produced ? new Date(product.last_produced).toLocaleDateString() : 'Never'}
