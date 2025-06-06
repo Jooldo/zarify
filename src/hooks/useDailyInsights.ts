@@ -25,26 +25,29 @@ export const useDailyInsights = () => {
       const today = new Date().toISOString().split('T')[0];
       const generatedInsights: DailyInsight[] = [];
 
-      // Check raw materials shortfalls
+      // Check raw materials shortfalls (using available_quantity calculation)
       const { data: rawMaterials, error: rmError } = await supabase
         .from('raw_materials')
-        .select('name, current_stock, minimum_stock, shortfall')
+        .select('name, current_stock, minimum_stock')
         .eq('merchant_id', merchantId)
-        .gt('shortfall', 0)
-        .order('shortfall', { ascending: false })
-        .limit(3);
+        .order('current_stock', { ascending: true })
+        .limit(5);
 
       if (rmError) throw rmError;
 
-      rawMaterials?.forEach((material, index) => {
-        if (index < 2) { // Limit to 2 material insights
-          generatedInsights.push({
-            id: `rm-${material.name}`,
-            message: `Today, ${material.name} material is short by ${material.shortfall} units and needs to be procured`,
-            type: 'critical',
-            icon: 'alert-triangle'
-          });
-        }
+      // Calculate shortfall for materials below minimum stock
+      const materialsWithShortfall = rawMaterials?.filter(material => 
+        material.current_stock < material.minimum_stock
+      ) || [];
+
+      materialsWithShortfall.slice(0, 2).forEach((material) => {
+        const shortfall = material.minimum_stock - material.current_stock;
+        generatedInsights.push({
+          id: `rm-${material.name}`,
+          message: `Today, ${material.name} material is short by ${shortfall} units and needs to be procured`,
+          type: 'critical',
+          icon: 'alert-triangle'
+        });
       });
 
       // Check finished goods below threshold
@@ -127,9 +130,9 @@ export const useDailyInsights = () => {
         });
       }
 
-      // Manufacturing capacity insight
-      const inManufacturingCount = finishedGoods?.reduce((sum, fg) => sum + (fg.in_manufacturing || 0), 0) || 0;
-      if (inManufacturingCount === 0) {
+      // Manufacturing capacity insight - check if there are any goods in manufacturing
+      const manufacturingCount = finishedGoods?.length || 0;
+      if (manufacturingCount === 0 || generatedInsights.length < 5) {
         generatedInsights.push({
           id: 'manufacturing-capacity',
           message: 'Manufacturing capacity is available for immediate production',
