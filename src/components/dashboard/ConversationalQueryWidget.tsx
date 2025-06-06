@@ -14,13 +14,13 @@ interface ConversationalQueryWidgetProps {
 
 const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidgetProps) => {
   const [query, setQuery] = useState('');
-  const { responses, isLoading, submitQuery } = useConversationalQuery();
+  const { queryHistory, isProcessing, processQuery } = useConversationalQuery();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || isLoading) return;
+    if (!query.trim() || isProcessing) return;
     
-    await submitQuery(query);
+    await processQuery(query);
     setQuery('');
   };
 
@@ -39,13 +39,13 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask about your inventory, orders, or procurement..."
-            disabled={isLoading}
+            disabled={isProcessing}
             className="text-sm"
           />
           <Button 
             type="submit" 
             size="sm" 
-            disabled={!query.trim() || isLoading}
+            disabled={!query.trim() || isProcessing}
             className="px-3"
           >
             <Send className="h-4 w-4" />
@@ -55,7 +55,7 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
         {/* Responses */}
         <ScrollArea className="h-80">
           <div className="space-y-4 pr-4">
-            {responses.length === 0 ? (
+            {queryHistory.length === 0 ? (
               <div className="text-center text-sm text-gray-500 py-8">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <p>Ask a question about your data to get started</p>
@@ -67,7 +67,7 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
                 </div>
               </div>
             ) : (
-              responses.map((response, index) => (
+              queryHistory.map((response, index) => (
                 <div key={index} className="space-y-2">
                   {/* User Query */}
                   <div className="bg-blue-50 rounded-lg p-3">
@@ -85,7 +85,7 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
               ))
             )}
             
-            {isLoading && (
+            {isProcessing && (
               <div className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
