@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import InventoryTab from "@/components/InventoryTab";
 import OrdersTab from "@/components/OrdersTab";
@@ -9,6 +9,8 @@ import UsersTab from "@/components/UsersTab";
 import ProductConfigTab from "@/components/ProductConfigTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
+import RawMaterialInventory from "@/components/RawMaterialInventory";
+import FinishedGoodsInventory from "@/components/FinishedGoodsInventory";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -18,7 +20,7 @@ const Index = () => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex w-full min-h-screen bg-gray-50">
         <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
@@ -30,11 +32,12 @@ const Index = () => {
                 {activeTab === "dashboard" && "Dashboard"}
                 {activeTab === "orders" && "Orders"}
                 {activeTab === "inventory" && "Inventory"}
+                {activeTab === "inventory-raw-materials" && "Raw Material Inventory"}
+                {activeTab === "inventory-finished-goods" && "Finished Goods Inventory"}
                 {activeTab === "users" && "Users"}
                 {activeTab === "config" && "Product Configuration"}
                 {activeTab === "activity" && "Activity Logs"}
               </h1>
-              <SidebarTrigger />
             </div>
 
             {/* Main Content */}
@@ -49,6 +52,14 @@ const Index = () => {
 
               <TabsContent value="inventory" className="space-y-6 mt-0">
                 <InventoryTab />
+              </TabsContent>
+              
+              <TabsContent value="inventory-raw-materials" className="space-y-6 mt-0">
+                <RawMaterialInventory onRequestCreated={() => {}} />
+              </TabsContent>
+              
+              <TabsContent value="inventory-finished-goods" className="space-y-6 mt-0">
+                <FinishedGoodsInventory />
               </TabsContent>
 
               <TabsContent value="users" className="space-y-6 mt-0">

@@ -9,7 +9,9 @@ import {
   LogOut,
   Activity,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Layers,
+  Box
 } from "lucide-react";
 
 import {
@@ -23,6 +25,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -43,7 +48,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   };
 
   const toggleSidebar = () => {
-    setOpen(!isCollapsed);
+    setOpen(isCollapsed);
   };
 
   const menuItems = [
@@ -61,6 +66,18 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       title: "Inventory",
       value: "inventory",
       icon: Package,
+      subItems: [
+        {
+          title: "Raw Materials",
+          value: "inventory-raw-materials",
+          icon: Layers,
+        },
+        {
+          title: "Finished Goods",
+          value: "inventory-finished-goods",
+          icon: Box,
+        }
+      ]
     },
     {
       title: "Users",
@@ -105,13 +122,34 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton 
-                    isActive={activeTab === item.value}
-                    onClick={() => onTabChange(item.value)}
+                    isActive={activeTab === item.value || 
+                      (item.subItems && item.subItems.some(sub => activeTab === sub.value))}
+                    onClick={() => {
+                      if (!item.subItems) {
+                        onTabChange(item.value);
+                      }
+                    }}
                     tooltip={isCollapsed ? item.title : undefined}
                   >
                     <item.icon className="h-4 w-4" />
                     {!isCollapsed && <span>{item.title}</span>}
                   </SidebarMenuButton>
+                  
+                  {item.subItems && !isCollapsed && (
+                    <SidebarMenuSub>
+                      {item.subItems.map(subItem => (
+                        <SidebarMenuSubItem key={subItem.value}>
+                          <SidebarMenuSubButton 
+                            isActive={activeTab === subItem.value}
+                            onClick={() => onTabChange(subItem.value)}
+                          >
+                            <subItem.icon className="h-4 w-4 mr-2" />
+                            <span>{subItem.title}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
