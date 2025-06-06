@@ -12,6 +12,7 @@ export interface FinishedGood {
   required_quantity: number;
   in_manufacturing: number;
   last_produced?: string;
+  tag_enabled?: boolean;
   product_config: {
     category: string;
     subcategory: string;

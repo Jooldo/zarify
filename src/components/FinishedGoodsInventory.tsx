@@ -6,12 +6,15 @@ import FinishedGoodsTable from './inventory/FinishedGoodsTable';
 import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
 import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
 import StockUpdateDialog from './inventory/StockUpdateDialog';
+import TagAuditTrail from './inventory/TagAuditTrail';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('inventory');
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
@@ -43,7 +46,11 @@ const FinishedGoodsInventory = () => {
     await refetch();
   };
 
-  if (loading) {
+  const handleTagOperationComplete = () => {
+    refetch();
+  };
+
+  if (loading && activeTab === 'inventory') {
     return (
       <div className="space-y-4">
         <FinishedGoodsHeader
@@ -60,22 +67,36 @@ const FinishedGoodsInventory = () => {
 
   return (
     <div className="space-y-4">
-      <FinishedGoodsHeader
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onRefresh={handleRefresh}
-      />
-      
-      <FinishedGoodsTable 
-        products={filteredProducts}
-        onViewProduct={handleViewProduct}
-        onEditProduct={handleEditProduct}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
+          <TabsTrigger value="audit">Tag Audit Trail</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="inventory" className="space-y-4 mt-4">
+          <FinishedGoodsHeader
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onRefresh={handleRefresh}
+            onTagOperationComplete={handleTagOperationComplete}
+          />
+          
+          <FinishedGoodsTable 
+            products={filteredProducts}
+            onViewProduct={handleViewProduct}
+            onEditProduct={handleEditProduct}
+          />
 
-      <FinishedGoodsEmptyState 
-        hasProducts={finishedGoods.length > 0}
-        filteredCount={filteredProducts.length}
-      />
+          <FinishedGoodsEmptyState 
+            hasProducts={finishedGoods.length > 0}
+            filteredCount={filteredProducts.length}
+          />
+        </TabsContent>
+        
+        <TabsContent value="audit" className="space-y-4 mt-4">
+          <TagAuditTrail />
+        </TabsContent>
+      </Tabs>
 
       <ViewFinishedGoodDialog
         product={selectedProduct}

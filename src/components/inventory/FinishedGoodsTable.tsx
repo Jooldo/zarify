@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
+import TaggedInventoryBadge from './TaggedInventoryBadge';
 
 interface FinishedGoodsTableProps {
   products: FinishedGood[];
@@ -85,7 +86,10 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
             return (
               <TableRow key={product.id} className="h-10">
                 <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">
-                  {product.product_code}
+                  <div className="flex items-center gap-2">
+                    {product.product_code}
+                    <TaggedInventoryBadge isTagEnabled={product.tag_enabled || false} />
+                  </div>
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs">
                   {product.product_config.category}

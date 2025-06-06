@@ -64,6 +64,7 @@ export type Database = {
           product_code: string
           product_config_id: string
           required_quantity: number | null
+          tag_enabled: boolean | null
           threshold: number | null
           updated_at: string | null
         }
@@ -77,6 +78,7 @@ export type Database = {
           product_code: string
           product_config_id: string
           required_quantity?: number | null
+          tag_enabled?: boolean | null
           threshold?: number | null
           updated_at?: string | null
         }
@@ -90,6 +92,7 @@ export type Database = {
           product_code?: string
           product_config_id?: string
           required_quantity?: number | null
+          tag_enabled?: boolean | null
           threshold?: number | null
           updated_at?: string | null
         }
@@ -106,6 +109,56 @@ export type Database = {
             columns: ["product_config_id"]
             isOneToOne: false
             referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_tags: {
+        Row: {
+          created_at: string
+          id: string
+          merchant_id: string
+          operation_type: string | null
+          product_id: string
+          qr_code_data: string | null
+          quantity: number
+          status: string
+          tag_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merchant_id: string
+          operation_type?: string | null
+          product_id: string
+          qr_code_data?: string | null
+          quantity: number
+          status?: string
+          tag_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merchant_id?: string
+          operation_type?: string | null
+          product_id?: string
+          qr_code_data?: string | null
+          quantity?: number
+          status?: string
+          tag_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_tags_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_goods"
             referencedColumns: ["id"]
           },
         ]
@@ -587,6 +640,56 @@ export type Database = {
           },
         ]
       }
+      tag_audit_log: {
+        Row: {
+          action: string
+          id: string
+          merchant_id: string
+          new_stock: number | null
+          previous_stock: number | null
+          product_id: string
+          quantity: number
+          tag_id: string
+          timestamp: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          merchant_id: string
+          new_stock?: number | null
+          previous_stock?: number | null
+          product_id: string
+          quantity: number
+          tag_id: string
+          timestamp?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          merchant_id?: string
+          new_stock?: number | null
+          previous_stock?: number | null
+          product_id?: string
+          quantity?: number
+          tag_id?: string
+          timestamp?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tag_audit_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "finished_goods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity_log: {
         Row: {
           action: string
@@ -684,6 +787,10 @@ export type Database = {
       }
       get_next_suborder_id: {
         Args: { order_number: string; item_index: number }
+        Returns: string
+      }
+      get_next_tag_id: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_user_merchant_id: {
