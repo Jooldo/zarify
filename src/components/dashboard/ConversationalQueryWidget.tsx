@@ -4,13 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, Zap } from 'lucide-react';
 import { useConversationalQuery } from '@/hooks/useConversationalQuery';
 import QueryResponseDisplay from './QueryResponseDisplay';
 
 interface ConversationalQueryWidgetProps {
   onNavigateToTab?: (tab: string) => void;
 }
+
+const QUICK_QUESTIONS = [
+  "What's my low stock?",
+  "Show pending orders", 
+  "Materials to procure",
+  "Finished goods status",
+  "Orders delivered this week",
+  "Critical raw materials",
+  "Manufacturing progress",
+  "Top shortfall materials",
+  "Procurement requests",
+  "Below threshold items",
+  "Order funnel status",
+  "Latest deliveries"
+];
 
 const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidgetProps) => {
   const [query, setQuery] = useState('');
@@ -24,6 +39,11 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
     setQuery('');
   };
 
+  const handleQuickQuestion = async (question: string) => {
+    if (isProcessing) return;
+    await processQuery(question);
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -33,6 +53,28 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Quick Questions */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1 text-xs font-medium text-gray-600">
+            <Zap className="h-3 w-3" />
+            Quick Questions
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {QUICK_QUESTIONS.map((question, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickQuestion(question)}
+                disabled={isProcessing}
+                className="h-7 px-2 text-xs hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700"
+              >
+                {question}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Query Input */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
@@ -53,18 +95,12 @@ const ConversationalQueryWidget = ({ onNavigateToTab }: ConversationalQueryWidge
         </form>
 
         {/* Responses */}
-        <ScrollArea className="h-80">
+        <ScrollArea className="h-72">
           <div className="space-y-4 pr-4">
             {queryHistory.length === 0 ? (
-              <div className="text-center text-sm text-gray-500 py-8">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p>Ask a question about your data to get started</p>
-                <div className="mt-3 text-xs space-y-1">
-                  <p className="font-medium">Try asking:</p>
-                  <p>"What's my low stock?"</p>
-                  <p>"Show pending orders"</p>
-                  <p>"Materials to procure"</p>
-                </div>
+              <div className="text-center text-sm text-gray-500 py-6">
+                <MessageSquare className="h-6 w-6 mx-auto mb-2 text-gray-300" />
+                <p>Click a quick question above or ask your own</p>
               </div>
             ) : (
               queryHistory.map((response, index) => (
