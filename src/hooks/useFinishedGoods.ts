@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +48,8 @@ export const useFinishedGoods = () => {
         .from('order_items')
         .select(`
           product_config_id,
-          quantity
+          quantity,
+          status
         `)
         .in('status', ['Created', 'In Progress']);
 
@@ -57,7 +59,9 @@ export const useFinishedGoods = () => {
 
       // Calculate required quantities for each product config
       const requiredQuantities = orderItemsData?.reduce((acc, item) => {
-        acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
+        if (item.status === 'Created' || item.status === 'In Progress') {
+          acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
+        }
         return acc;
       }, {} as Record<string, number>) || {};
 

@@ -14,12 +14,11 @@ import { useActivityLog } from '@/hooks/useActivityLog';
 interface OrderDetailsProps {
   order: any;
   onOrderUpdate: () => void;
-  onFinishedGoodsUpdate?: () => void;
 }
 
 type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
 
-const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDetailsProps) => {
+const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('Created');
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
@@ -54,20 +53,6 @@ const OrderDetails = ({ order, onOrderUpdate, onFinishedGoodsUpdate }: OrderDeta
         title: 'Success',
         description: 'Order item status updated successfully',
       });
-
-      // For status changes that affect stock (Ready/Delivered), refresh finished goods first
-      if ((newStatus === 'Ready' || newStatus === 'Delivered') && 
-          (orderItem?.status !== 'Ready' && orderItem?.status !== 'Delivered')) {
-        console.log('Stock-affecting status change detected, refreshing finished goods...');
-        
-        // Wait a bit for the database trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        if (onFinishedGoodsUpdate) {
-          console.log('Calling onFinishedGoodsUpdate...');
-          await onFinishedGoodsUpdate();
-        }
-      }
 
       // Always refresh orders data
       console.log('Refreshing orders data...');
