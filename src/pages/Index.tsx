@@ -3,20 +3,53 @@ import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
-import InventoryTab from "@/components/InventoryTab";
 import OrdersTab from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
-import ProductConfigTab from "@/components/ProductConfigTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
-import RawMaterialInventory from "@/components/RawMaterialInventory";
-import FinishedGoodsInventory from "@/components/FinishedGoodsInventory";
+import RawMaterialManagement from "@/components/RawMaterialManagement";
+import FinishedGoodManagement from "@/components/FinishedGoodManagement";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const handleNavigateToTab = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return "Dashboard";
+      case "orders":
+        return "Orders";
+      case "rm-inventory":
+        return "Raw Material Inventory";
+      case "rm-config":
+        return "Raw Material Configuration";
+      case "rm-procurement":
+        return "Raw Material Procurement";
+      case "fg-inventory":
+        return "Finished Goods Inventory";
+      case "fg-config":
+        return "Finished Goods Configuration";
+      case "fg-procurement":
+        return "Finished Goods Procurement";
+      case "users":
+        return "Users";
+      case "activity":
+        return "Activity Logs";
+      default:
+        return "Dashboard";
+    }
+  };
+
+  const isRawMaterialTab = () => {
+    return ['rm-inventory', 'rm-config', 'rm-procurement'].includes(activeTab);
+  };
+
+  const isFinishedGoodTab = () => {
+    return ['fg-inventory', 'fg-config', 'fg-procurement'].includes(activeTab);
   };
 
   return (
@@ -29,14 +62,7 @@ const Index = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <h1 className="text-2xl font-semibold text-gray-900">
-                {activeTab === "dashboard" && "Dashboard"}
-                {activeTab === "orders" && "Orders"}
-                {activeTab === "inventory" && "Inventory"}
-                {activeTab === "inventory-raw-materials" && "Raw Material Inventory"}
-                {activeTab === "inventory-finished-goods" && "Finished Goods Inventory"}
-                {activeTab === "users" && "Users"}
-                {activeTab === "config" && "Product Configuration"}
-                {activeTab === "activity" && "Activity Logs"}
+                {getPageTitle()}
               </h1>
             </div>
 
@@ -50,24 +76,26 @@ const Index = () => {
                 <OrdersTab />
               </TabsContent>
 
-              <TabsContent value="inventory" className="space-y-6 mt-0">
-                <InventoryTab />
-              </TabsContent>
-              
-              <TabsContent value="inventory-raw-materials" className="space-y-6 mt-0">
-                <RawMaterialInventory onRequestCreated={() => {}} />
-              </TabsContent>
-              
-              <TabsContent value="inventory-finished-goods" className="space-y-6 mt-0">
-                <FinishedGoodsInventory />
-              </TabsContent>
+              {isRawMaterialTab() && (
+                <TabsContent value={activeTab} className="space-y-6 mt-0">
+                  <RawMaterialManagement 
+                    activeTab={activeTab} 
+                    onTabChange={handleNavigateToTab} 
+                  />
+                </TabsContent>
+              )}
+
+              {isFinishedGoodTab() && (
+                <TabsContent value={activeTab} className="space-y-6 mt-0">
+                  <FinishedGoodManagement 
+                    activeTab={activeTab} 
+                    onTabChange={handleNavigateToTab} 
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="users" className="space-y-6 mt-0">
                 <UsersTab />
-              </TabsContent>
-
-              <TabsContent value="config" className="space-y-6 mt-0">
-                <ProductConfigTab />
               </TabsContent>
 
               <TabsContent value="activity" className="space-y-6 mt-0">

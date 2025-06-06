@@ -11,7 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  Box
+  Box,
+  Wrench,
+  ShoppingBag
 } from "lucide-react";
 
 import {
@@ -58,19 +60,46 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       icon: ShoppingCart,
     },
     {
-      title: "Inventory",
-      value: "inventory",
-      icon: Package,
+      title: "Raw Material Management",
+      value: "raw-material-management",
+      icon: Layers,
       subItems: [
         {
-          title: "Raw Materials",
-          value: "inventory-raw-materials",
-          icon: Layers,
+          title: "RM Inventory",
+          value: "rm-inventory",
+          icon: Package,
         },
         {
-          title: "Finished Goods",
-          value: "inventory-finished-goods",
-          icon: Box,
+          title: "RM Config",
+          value: "rm-config",
+          icon: Settings,
+        },
+        {
+          title: "RM Procurement",
+          value: "rm-procurement",
+          icon: ShoppingBag,
+        }
+      ]
+    },
+    {
+      title: "Finished Good Management",
+      value: "finished-good-management",
+      icon: Box,
+      subItems: [
+        {
+          title: "FG Inventory",
+          value: "fg-inventory",
+          icon: Package,
+        },
+        {
+          title: "FG Config",
+          value: "fg-config",
+          icon: Wrench,
+        },
+        {
+          title: "FG Procurement",
+          value: "fg-procurement",
+          icon: ShoppingBag,
         }
       ]
     },
@@ -78,11 +107,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       title: "Users",
       value: "users",
       icon: Users,
-    },
-    {
-      title: "Product Config",
-      value: "config",
-      icon: Settings,
     },
     {
       title: "Activity Logs",
