@@ -20,6 +20,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [subcategory, setSubcategory] = useState('');
   const [sizeValue, setSizeValue] = useState('');
   const [weightRange, setWeightRange] = useState('');
+  const [threshold, setThreshold] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
@@ -42,6 +43,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setSubcategory(initialData.subcategory || '');
       setSizeValue(initialData.sizeValue || '');
       setWeightRange(initialData.weightRange || '');
+      setThreshold(initialData.threshold || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: '' }]);
     }
@@ -131,6 +133,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         subcategory,
         sizeValue,
         weightRange,
+        threshold: threshold ? parseInt(threshold) : 0,
         isActive,
         productCode,
         rawMaterials
@@ -211,6 +214,20 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="threshold" className="text-xs">Stock Threshold</Label>
+            <Input
+              id="threshold"
+              type="number"
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder="10"
+              className="h-7 text-xs"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">Minimum stock level before alert</p>
           </div>
 
           <ProductConfigDetails 

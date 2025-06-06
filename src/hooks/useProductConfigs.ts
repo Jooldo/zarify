@@ -74,6 +74,7 @@ export const useProductConfigs = () => {
     subcategory: string;
     sizeValue: string;
     weightRange: string;
+    threshold?: number;
     productCode: string;
     isActive: boolean;
     rawMaterials: Array<{
@@ -132,6 +133,24 @@ export const useProductConfigs = () => {
         }
       }
 
+      // Create finished goods entry with threshold if provided
+      if (configData.threshold !== undefined && configData.threshold > 0) {
+        const { error: finishedGoodsError } = await supabase
+          .from('finished_goods')
+          .insert({
+            product_config_id: config.id,
+            product_code: configData.productCode,
+            threshold: configData.threshold,
+            current_stock: 0,
+            required_quantity: 0,
+            merchant_id: merchantId
+          });
+
+        if (finishedGoodsError) {
+          console.error('Error creating finished goods entry:', finishedGoodsError);
+        }
+      }
+
       // Refresh the list
       await fetchProductConfigs();
       return config;
@@ -152,6 +171,16 @@ export const useProductConfigs = () => {
       if (materialsError) {
         console.error('Error deleting product config materials:', materialsError);
         throw materialsError;
+      }
+
+      // Delete related finished goods entry
+      const { error: finishedGoodsError } = await supabase
+        .from('finished_goods')
+        .delete()
+        .eq('product_config_id', configId);
+
+      if (finishedGoodsError) {
+        console.error('Error deleting finished goods entry:', finishedGoodsError);
       }
 
       // Then delete the config

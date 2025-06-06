@@ -1,0 +1,204 @@
+
+import { useState } from 'react';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Search, Plus, AlertCircle, Edit, Eye } from 'lucide-react';
+import AddMaterialDialog from '@/components/inventory/AddMaterialDialog';
+import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog';
+import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
+
+const RawMaterialsConfig = () => {
+  const { rawMaterials, loading, refetch } = useRawMaterials();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
+  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
+  const [isUpdateMaterialOpen, setIsUpdateMaterialOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+
+  const filteredMaterials = rawMaterials.filter(material => {
+    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         material.type.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || material.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const handleMaterialAdded = () => {
+    refetch();
+    setIsAddMaterialOpen(false);
+  };
+
+  const handleViewMaterial = (material: any) => {
+    setSelectedMaterial(material);
+    setIsViewMaterialOpen(true);
+  };
+
+  const handleEditMaterial = (material: any) => {
+    setSelectedMaterial(material);
+    setIsUpdateMaterialOpen(true);
+  };
+
+  const handleMaterialUpdated = () => {
+    refetch();
+    setIsUpdateMaterialOpen(false);
+  };
+
+  // Get unique material types for the filter
+  const materialTypes = ['all', ...Array.from(new Set(rawMaterials.map(m => m.type)))];
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Raw Materials Configuration</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-lg">Loading raw materials...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header with Search and Add Button */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search raw materials..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-8"
+          />
+        </div>
+        <div className="flex gap-2 items-center">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="h-8 px-3 text-xs border border-gray-300 rounded-md"
+          >
+            {materialTypes.map((type) => (
+              <option key={type} value={type}>
+                {type === 'all' ? 'All Types' : type}
+              </option>
+            ))}
+          </select>
+          <Dialog open={isAddMaterialOpen} onOpenChange={setIsAddMaterialOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2 h-8 px-3 text-xs">
+                <Plus className="h-3 w-3" />
+                Add Material
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-sm">Add Raw Material</DialogTitle>
+              </DialogHeader>
+              <AddMaterialDialog onMaterialAdded={handleMaterialAdded} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Raw Materials Table */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="h-8">
+              <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Cost/Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMaterials.map((material) => (
+              <TableRow key={material.id} className="h-10">
+                <TableCell className="py-1 px-2 text-xs font-medium">
+                  {material.name}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    {material.type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {material.unit}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {material.cost_per_unit ? `₹${material.cost_per_unit}` : 'N/A'}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {material.minimum_stock}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {material.supplier?.company_name || 'Not assigned'}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleViewMaterial(material)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleEditMaterial(material)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* View Material Dialog */}
+      <Dialog open={isViewMaterialOpen} onOpenChange={setIsViewMaterialOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Raw Material Details</DialogTitle>
+          </DialogHeader>
+          {selectedMaterial && (
+            <ViewRawMaterialDialog material={selectedMaterial} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Material Dialog */}
+      <UpdateRawMaterialDialog 
+        material={selectedMaterial}
+        isOpen={isUpdateMaterialOpen}
+        onClose={() => setIsUpdateMaterialOpen(false)}
+        onUpdate={handleMaterialUpdated}
+      />
+
+      {/* Empty state */}
+      {filteredMaterials.length === 0 && !loading && (
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">
+            {rawMaterials.length === 0 ? 'No raw materials found. Add some materials to get started.' : 'No materials found matching your search.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RawMaterialsConfig;
