@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { formatSmartDecimal, formatIndianNumberSmart } from '@/lib/utils';
 
 interface RawMaterialRequirement {
   id: string;
@@ -81,10 +80,10 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
   };
 
   const getDisplaySize = (product: any) => {
-    // Display size_value with smart decimal formatting
-    const sizeFormatted = formatSmartDecimal(product.product_config?.size_value || 0);
+    // Display size_value directly as inches (no conversion needed)
+    const sizeInInches = product.product_config?.size_value?.toFixed(2) || 'N/A';
     const weightRange = product.product_config?.weight_range || 'N/A';
-    return `${sizeFormatted}" / ${weightRange}`;
+    return `${sizeInInches}" / ${weightRange}`;
   };
 
   if (!product) return null;
@@ -113,15 +112,15 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             </div>
             <div>
               <Label className="text-sm font-medium">Current Stock:</Label>
-              <div className="text-sm font-bold text-blue-600">{formatIndianNumberSmart(product.current_stock)} units</div>
+              <div className="text-sm font-bold text-blue-600">{product.current_stock} units</div>
             </div>
             <div>
               <Label className="text-sm font-medium">In Manufacturing:</Label>
-              <div className="text-sm">{formatIndianNumberSmart(product.in_manufacturing)} units</div>
+              <div className="text-sm">{product.in_manufacturing} units</div>
             </div>
             <div>
               <Label className="text-sm font-medium">Required Quantity:</Label>
-              <div className="text-sm">{formatIndianNumberSmart(product.required_quantity)} units</div>
+              <div className="text-sm">{product.required_quantity} units</div>
             </div>
           </div>
 
@@ -160,16 +159,16 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                             {material.raw_material.type}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
-                            {formatSmartDecimal(material.quantity_required)} {material.unit}
+                            {material.quantity_required} {material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2 font-bold text-purple-600">
-                            {formatSmartDecimal(totalRequired)} {material.raw_material.unit}
+                            {totalRequired} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2 font-medium">
-                            {formatSmartDecimal(material.raw_material.current_stock)} {material.raw_material.unit}
+                            {material.raw_material.current_stock} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
-                            {formatSmartDecimal(material.raw_material.minimum_stock)} {material.raw_material.unit}
+                            {material.raw_material.minimum_stock} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
                             <Badge variant={status.variant} className="text-xs px-1 py-0">

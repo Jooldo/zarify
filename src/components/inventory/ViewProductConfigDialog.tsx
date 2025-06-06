@@ -1,197 +1,119 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { formatSmartDecimal, formatIndianNumberSmart } from '@/lib/utils';
 
-interface RawMaterialRequirement {
+interface ProductConfig {
   id: string;
-  quantity_required: number;
-  unit: string;
-  raw_material: {
-    id: string;
-    name: string;
-    type: string;
-    current_stock: number;
-    minimum_stock: number;
+  category: string;
+  subcategory: string;
+  size_value: number;
+  weight_range: string | null;
+  product_code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  product_config_materials?: {
+    raw_material_id: string;
+    quantity_required: number;
     unit: string;
-  };
+    raw_material?: {
+      name: string;
+      type: string;
+    };
+  }[];
 }
 
 interface ViewProductConfigDialogProps {
-  product: any;
-  isOpen: boolean;
-  onClose: () => void;
+  config: ProductConfig;
 }
 
-const ViewProductConfigDialog = ({ product, isOpen, onClose }: ViewProductConfigDialogProps) => {
-  const [rawMaterials, setRawMaterials] = useState<RawMaterialRequirement[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (product && isOpen) {
-      fetchRawMaterials();
-    }
-  }, [product, isOpen]);
-
-  const fetchRawMaterials = async () => {
-    if (!product?.product_config_id) return;
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('product_config_materials')
-        .select(`
-          id,
-          quantity_required,
-          unit,
-          raw_material:raw_materials(
-            id,
-            name,
-            type,
-            current_stock,
-            minimum_stock,
-            unit
-          )
-        `)
-        .eq('product_config_id', product.product_config_id);
-
-      if (error) throw error;
-      setRawMaterials(data || []);
-    } catch (error) {
-      console.error('Error fetching raw materials:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch raw material requirements',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStockStatus = (available: number, totalRequired: number) => {
-    if (available >= totalRequired) return { label: 'Available', variant: 'default' as const };
-    if (available > 0) return { label: 'Insufficient', variant: 'secondary' as const };
-    return { label: 'Out of Stock', variant: 'destructive' as const };
-  };
-
-  const getDisplaySize = (product: any) => {
-    // Display size_value with smart decimal formatting
-    const sizeFormatted = formatSmartDecimal(product.product_config?.size_value || 0);
-    const weightRange = product.product_config?.weight_range || 'N/A';
-    return `${sizeFormatted}" / ${weightRange}`;
-  };
-
-  if (!product) return null;
+const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
+  // Display size_value directly as inches (no conversion needed)
+  const sizeValueInInches = config.size_value?.toFixed(2) || config.size_value;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg">Product Details - {product.product_code}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Product Information */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div>
-              <Label className="text-sm font-medium">Category:</Label>
-              <div className="text-sm">{product.product_config?.category || 'N/A'}</div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Subcategory:</Label>
-              <div className="text-sm">{product.product_config?.subcategory || 'N/A'}</div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Size & Weight:</Label>
-              <div className="text-sm">{getDisplaySize(product)}</div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Current Stock:</Label>
-              <div className="text-sm font-bold text-blue-600">{formatIndianNumberSmart(product.current_stock)} units</div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">In Manufacturing:</Label>
-              <div className="text-sm">{formatIndianNumberSmart(product.in_manufacturing)} units</div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Required Quantity:</Label>
-              <div className="text-sm">{formatIndianNumberSmart(product.required_quantity)} units</div>
-            </div>
-          </div>
-
-          {/* Raw Materials Requirements */}
-          <div className="space-y-3">
-            <h4 className="font-medium text-sm">Raw Materials Required:</h4>
-            {loading ? (
-              <div className="text-center py-4">Loading raw materials...</div>
-            ) : rawMaterials.length > 0 ? (
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="h-8">
-                      <TableHead className="text-xs py-1 px-2">Material Name</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Type</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Required per Unit</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Total Required</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Available Stock</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Minimum Stock</TableHead>
-                      <TableHead className="text-xs py-1 px-2">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rawMaterials.map((material) => {
-                      const totalRequired = material.quantity_required * product.required_quantity;
-                      const status = getStockStatus(
-                        material.raw_material.current_stock,
-                        totalRequired
-                      );
-                      return (
-                        <TableRow key={material.id} className="h-8">
-                          <TableCell className="text-xs py-1 px-2 font-medium">
-                            {material.raw_material.name}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2">
-                            {material.raw_material.type}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2">
-                            {formatSmartDecimal(material.quantity_required)} {material.unit}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2 font-bold text-purple-600">
-                            {formatSmartDecimal(totalRequired)} {material.raw_material.unit}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2 font-medium">
-                            {formatSmartDecimal(material.raw_material.current_stock)} {material.raw_material.unit}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2">
-                            {formatSmartDecimal(material.raw_material.minimum_stock)} {material.raw_material.unit}
-                          </TableCell>
-                          <TableCell className="text-xs py-1 px-2">
-                            <Badge variant={status.variant} className="text-xs px-1 py-0">
-                              {status.label}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500 text-sm">
-                No raw material requirements found for this product.
-              </div>
-            )}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <Label className="text-xs font-medium">Product Code:</Label>
+          <div className="text-sm font-bold font-mono bg-gray-50 p-1 rounded">
+            {config.product_code}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        <div>
+          <Label className="text-xs font-medium">Status:</Label>
+          <Badge variant={config.is_active ? "default" : "secondary"} className="text-xs h-4 px-1">
+            {config.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+        <div>
+          <Label className="text-xs font-medium">Category:</Label>
+          <div className="text-sm font-medium">{config.category}</div>
+        </div>
+        <div>
+          <Label className="text-xs font-medium">Subcategory:</Label>
+          <div className="text-sm">{config.subcategory}</div>
+        </div>
+        <div>
+          <Label className="text-xs font-medium">Size Value:</Label>
+          <div className="text-sm">{sizeValueInInches}"</div>
+        </div>
+        {config.weight_range && (
+          <div>
+            <Label className="text-xs font-medium">Weight:</Label>
+            <div className="text-sm">{config.weight_range}</div>
+          </div>
+        )}
+        <div>
+          <Label className="text-xs font-medium">Created:</Label>
+          <div className="text-xs text-gray-600">
+            {new Date(config.created_at).toLocaleDateString()}
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs font-medium">Last Updated:</Label>
+          <div className="text-xs text-gray-600">
+            {new Date(config.updated_at).toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+      
+      {config.product_config_materials && config.product_config_materials.length > 0 && (
+        <div className="mt-4">
+          <Label className="text-xs font-medium">Raw Materials Required:</Label>
+          <div className="mt-1 space-y-1">
+            {config.product_config_materials.map((material, index) => (
+              <div key={index} className="p-2 bg-gray-50 rounded text-xs">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <span className="font-medium">Material:</span>{' '}
+                    <div className="text-xs font-medium text-blue-700">
+                      {material.raw_material?.name || 'Unknown Material'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {material.raw_material?.type || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-medium">Quantity:</span>{' '}
+                    <div className="text-xs font-medium">
+                      {material.quantity_required} {material.unit}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-medium">Unit:</span>{' '}
+                    <Badge variant="outline" className="text-xs h-3 px-1">
+                      {material.unit}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default ViewFinishedGoodDialog;
+export default ViewProductConfigDialog;

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
-import { formatIndianNumberSmart, formatSmartDecimal } from '@/lib/utils';
+import TaggedInventoryBadge from './TaggedInventoryBadge';
 
 interface FinishedGoodsTableProps {
   products: FinishedGood[];
@@ -13,6 +13,10 @@ interface FinishedGoodsTableProps {
 }
 
 const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: FinishedGoodsTableProps) => {
+  const formatIndianNumber = (num: number) => {
+    return num.toLocaleString('en-IN');
+  };
+
   const getStockStatusVariant = (stock: number, threshold: number) => {
     if (stock <= threshold) return "destructive" as const;
     if (stock <= threshold * 1.5) return "secondary" as const;
@@ -27,6 +31,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
 
   const getInventoryStatus = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
     const shortfall = calculateShortfall(currentStock, inManufacturing, requiredQuantity, threshold);
+    const totalAvailable = currentStock + inManufacturing;
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -81,7 +86,10 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
             return (
               <TableRow key={product.id} className="h-10">
                 <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">
-                  {product.product_code}
+                  <div className="flex items-center gap-2">
+                    {product.product_code}
+                    <TaggedInventoryBadge isTagEnabled={product.tag_enabled || false} />
+                  </div>
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs">
                   {product.product_config.category}
@@ -90,21 +98,21 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                   {product.product_config.subcategory}
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs">
-                  {formatSmartDecimal(product.product_config.size_value)}"
+                  {product.product_config.size_value}"
                 </TableCell>
                 <TableCell className="px-2 py-1">
                   <Badge variant={getStockStatusVariant(product.current_stock, product.threshold)} className="text-xs px-2 py-1 font-bold">
-                    {formatIndianNumberSmart(product.current_stock)}
+                    {formatIndianNumber(product.current_stock)}
                   </Badge>
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs font-medium">
-                  {formatIndianNumberSmart(product.threshold)}
+                  {formatIndianNumber(product.threshold)}
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs font-medium">
-                  {formatIndianNumberSmart(product.required_quantity)}
+                  {formatIndianNumber(product.required_quantity)}
                 </TableCell>
                 <TableCell className="px-2 py-1 text-xs font-medium">
-                  {formatIndianNumberSmart(product.in_manufacturing)}
+                  {formatIndianNumber(product.in_manufacturing)}
                 </TableCell>
                 <TableCell className="px-2 py-1">
                   <div 
@@ -112,7 +120,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                     title={getShortfallTooltip()}
                   >
                     <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {shortfall > 0 ? `-${formatIndianNumberSmart(shortfall)}` : `+${formatIndianNumberSmart(Math.abs(shortfall))}`}
+                      {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
                     </span>
                   </div>
                 </TableCell>

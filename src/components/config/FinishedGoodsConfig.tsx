@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,6 @@ import CreateProductConfigForm from '@/components/CreateProductConfigForm';
 import ViewProductConfigDialog from '@/components/inventory/ViewProductConfigDialog';
 import EditProductConfigDialog from '@/components/inventory/EditProductConfigDialog';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
-import { formatSmartDecimal } from '@/lib/utils';
 
 const FinishedGoodsConfig = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,12 +50,12 @@ const FinishedGoodsConfig = () => {
   };
 
   const getDisplaySize = (config: any) => {
-    // Display size_value with smart decimal formatting
-    const sizeFormatted = formatSmartDecimal(config.size_value || 0);
+    // Display size_value directly as inches and weight_range as stored
+    const sizeInInches = config.size_value?.toFixed(2) || 'N/A';
     if (config.weight_range) {
-      return `${sizeFormatted}" / ${config.weight_range}`;
+      return `${sizeInInches}" / ${config.weight_range}`;
     }
-    return `${sizeFormatted}"`;
+    return `${sizeInInches}"`;
   };
 
   if (loading) {
