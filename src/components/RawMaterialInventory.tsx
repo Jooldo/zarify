@@ -35,10 +35,6 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleMaterialAdded = () => {
-    refetch();
-  };
-
   const handleRequestCreated = () => {
     refetch();
     if (onRequestCreated) {
@@ -46,20 +42,14 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     }
   };
 
-  // Get unique material types for the filter
-  const materialTypes = ['all', ...Array.from(new Set(rawMaterials.map(m => m.type)))];
-
   return (
     <div className="space-y-4">
       <RawMaterialsHeader
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterType={filterType}
-        onFilterChange={setFilterType}
-        filterStatus={filterStatus}
-        onFilterStatusChange={setFilterStatus}
-        materialTypes={materialTypes}
-        onMaterialAdded={handleMaterialAdded}
+        setSearchTerm={setSearchTerm}
+        typeFilter={filterType}
+        setTypeFilter={setFilterType}
+        onRefresh={refetch}
       />
       
       <RawMaterialsTable 
