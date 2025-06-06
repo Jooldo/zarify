@@ -3,14 +3,12 @@ import { useState } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, AlertCircle, Edit, Eye } from 'lucide-react';
 import AddMaterialDialog from '@/components/inventory/AddMaterialDialog';
 import ViewRawMaterialDialog from '@/components/inventory/ViewRawMaterialDialog';
 import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDialog';
-import AddSupplierDialog from '@/components/config/AddSupplierDialog';
 
 const RawMaterialsConfig = () => {
   const { rawMaterials, loading, refetch, createRawMaterial } = useRawMaterials();
@@ -28,10 +26,6 @@ const RawMaterialsConfig = () => {
   });
 
   const handleMaterialAdded = async () => {
-    await refetch();
-  };
-
-  const handleSupplierAdded = async () => {
     await refetch();
   };
 
@@ -91,7 +85,6 @@ const RawMaterialsConfig = () => {
               </option>
             ))}
           </select>
-          <AddSupplierDialog onSupplierAdded={handleSupplierAdded} />
           <AddMaterialDialog onAddMaterial={createRawMaterial} />
         </div>
       </div>

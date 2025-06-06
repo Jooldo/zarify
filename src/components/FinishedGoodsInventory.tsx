@@ -5,24 +5,28 @@ import FinishedGoodsHeader from './inventory/FinishedGoodsHeader';
 import FinishedGoodsTable from './inventory/FinishedGoodsTable';
 import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
 import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
-import EditFinishedGoodDialog from './inventory/EditFinishedGoodDialog';
-import DeleteFinishedGoodDialog from './inventory/DeleteFinishedGoodDialog';
+import StockUpdateDialog from './inventory/StockUpdateDialog';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
 
-  const filteredProducts = finishedGoods.filter(product =>
-    product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter for active products only and apply search
+  const filteredProducts = finishedGoods
+    .filter(product => {
+      // Only show active products (assuming product_config has is_active field)
+      const isActive = product.product_config?.is_active !== false;
+      const matchesSearch = product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return isActive && matchesSearch;
+    });
 
   const handleViewProduct = (product: any) => {
     setSelectedProduct(product);
@@ -31,12 +35,7 @@ const FinishedGoodsInventory = () => {
 
   const handleEditProduct = (product: any) => {
     setSelectedProduct(product);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDeleteProduct = (product: any) => {
-    setSelectedProduct(product);
-    setIsDeleteDialogOpen(true);
+    setIsStockUpdateDialogOpen(true);
   };
 
   const handleRefresh = async () => {
@@ -71,7 +70,6 @@ const FinishedGoodsInventory = () => {
         products={filteredProducts}
         onViewProduct={handleViewProduct}
         onEditProduct={handleEditProduct}
-        onDeleteProduct={handleDeleteProduct}
       />
 
       <FinishedGoodsEmptyState 
@@ -85,18 +83,11 @@ const FinishedGoodsInventory = () => {
         onClose={() => setIsViewDialogOpen(false)}
       />
 
-      <EditFinishedGoodDialog
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+      <StockUpdateDialog
+        isOpen={isStockUpdateDialogOpen}
+        onOpenChange={setIsStockUpdateDialogOpen}
         product={selectedProduct}
         onProductUpdated={refetch}
-      />
-
-      <DeleteFinishedGoodDialog
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        product={selectedProduct}
-        onProductDeleted={refetch}
       />
     </div>
   );

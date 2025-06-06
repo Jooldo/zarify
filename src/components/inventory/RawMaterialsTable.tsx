@@ -3,12 +3,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye, CircleAlert, CircleCheck, TriangleAlert } from 'lucide-react';
-import type { RawMaterial } from '@/hooks/useRawMaterials';
-import UpdateStockDialog from './UpdateStockDialog';
-import UpdateRawMaterialDialog from './UpdateRawMaterialDialog';
+import { Eye, Plus, AlertCircle } from 'lucide-react';
+import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
+import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -18,66 +17,30 @@ interface RawMaterialsTableProps {
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: RawMaterialsTableProps) => {
+  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
-  const [updateStockOpen, setUpdateStockOpen] = useState(false);
-  const [updateMaterialOpen, setUpdateMaterialOpen] = useState(false);
-  const [viewMaterialOpen, setViewMaterialOpen] = useState(false);
-  const [raiseRequestOpen, setRaiseRequestOpen] = useState(false);
 
-  const getRequiredStatus = (required: number, current: number) => {
-    if (required <= current) return { variant: 'default' as const, color: 'text-green-600' };
-    if (required <= current * 1.5) return { variant: 'secondary' as const, color: 'text-yellow-600' };
-    return { variant: 'destructive' as const, color: 'text-red-600' };
-  };
-
-  const getShortfallStatus = (shortfall: number, minimumStock: number) => {
-    // If there is a shortfall (positive value means we need more)
-    if (shortfall > 0) {
-      // If shortfall is not greater than minimum stock, it's low critical
-      if (shortfall <= minimumStock) {
-        return { 
-          label: 'Low Critical', 
-          variant: 'secondary' as const, 
-          icon: TriangleAlert,
-          color: 'text-yellow-600'
-        };
-      }
-      // If shortfall is greater than minimum stock, it's highly critical
-      return { 
-        label: 'Highly Critical', 
-        variant: 'destructive' as const, 
-        icon: CircleAlert,
-        color: 'text-red-600'
-      };
-    }
-    
-    // If there is a surplus (no shortfall), it's good
-    return { 
-      label: 'Good', 
-      variant: 'default' as const, 
-      icon: CircleCheck,
-      color: 'text-green-600'
-    };
-  };
-
-  const handleUpdateStock = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setUpdateStockOpen(true);
-  };
-
-  const handleUpdateMaterial = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setUpdateMaterialOpen(true);
+  const getStockStatusVariant = (currentStock: number, minimumStock: number) => {
+    if (currentStock <= minimumStock) return "destructive" as const;
+    if (currentStock <= minimumStock * 1.5) return "secondary" as const;
+    return "default" as const;
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
     setSelectedMaterial(material);
-    setViewMaterialOpen(true);
+    setIsViewMaterialOpen(true);
   };
 
   const handleRaiseRequest = (material: RawMaterial) => {
     setSelectedMaterial(material);
-    setRaiseRequestOpen(true);
+    setIsRequestDialogOpen(true);
+  };
+
+  const handleUpdateStock = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsStockUpdateOpen(true);
   };
 
   const handleRequestCreated = () => {
@@ -89,8 +52,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-600">Loading materials...</div>
+      <div className="text-center py-8">
+        <div className="text-lg">Loading raw materials...</div>
       </div>
     );
   }
@@ -104,53 +67,45 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Minimum Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Cost per Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {materials.map((material) => {
-              const requiredInfo = getRequiredStatus(material.required_quantity, material.current_stock);
-              const shortfallStatus = getShortfallStatus(material.shortfall, material.minimum_stock);
-              const Icon = shortfallStatus.icon;
+              const shortfall = Math.max(0, (material.required || 0) + material.minimum_stock - material.current_stock);
               
               return (
-                <TableRow key={material.id} className="h-8">
-                  <TableCell className="py-1 px-2 text-xs font-medium">{material.name}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{material.type}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{material.current_stock} {material.unit}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{material.minimum_stock} {material.unit}</TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <span className={material.in_procurement > 0 ? 'text-blue-600 font-medium' : ''}>
-                      {material.in_procurement} {material.unit}
-                    </span>
+                <TableRow key={material.id} className="h-10">
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {material.name}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <span 
-                      className={`font-medium ${requiredInfo.color} cursor-help`} 
-                      title={`Production Requirements: ${material.production_requirements} + Minimum Stock: ${material.minimum_stock} = Total Required: ${material.required_quantity}`}
-                    >
-                      {material.required_quantity} {material.unit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    <span className={`font-medium ${shortfallStatus.color}`}>
-                      {material.shortfall} {material.unit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <Badge variant={shortfallStatus.variant} className="text-xs px-1 py-0 flex items-center gap-1 w-fit">
-                      <Icon className="h-2 w-2" />
-                      {shortfallStatus.label}
+                    <Badge variant="outline" className="text-xs h-4 px-1">
+                      {material.type}
                     </Badge>
                   </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Badge variant={getStockStatusVariant(material.current_stock, material.minimum_stock)} className="text-xs px-2 py-1 font-bold">
+                      {material.current_stock}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {material.minimum_stock}
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {material.required || 0}
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    <span className={`text-xs ${shortfall > 0 ? 'text-red-600 font-bold' : 'text-green-600'}`}>
+                      {shortfall > 0 ? shortfall : 'OK'}
+                    </span>
+                  </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    {material.cost_per_unit ? `₹${material.cost_per_unit}` : '-'}
+                    {material.unit}
                   </TableCell>
                   <TableCell className="py-1 px-2">
                     <div className="flex gap-1">
@@ -166,26 +121,20 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                         variant="outline" 
                         size="sm" 
                         className="h-6 w-6 p-0"
-                        onClick={() => handleUpdateMaterial(material)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 px-2 text-xs"
                         onClick={() => handleUpdateStock(material)}
+                        title="Update Stock"
                       >
-                        Update Stock
+                        <AlertCircle className="h-3 w-3" />
                       </Button>
-                      {(material.current_stock <= material.minimum_stock || material.shortfall > 0) && (
+                      {shortfall > 0 && (
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="h-6 px-2 text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
+                          className="h-6 w-6 p-0"
                           onClick={() => handleRaiseRequest(material)}
+                          title="Raise Request"
                         >
-                          Raise Request
+                          <Plus className="h-3 w-3" />
                         </Button>
                       )}
                     </div>
@@ -197,31 +146,24 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         </Table>
       </div>
 
-      <UpdateStockDialog
-        isOpen={updateStockOpen}
-        onOpenChange={setUpdateStockOpen}
+      <ViewRawMaterialDialog 
         material={selectedMaterial}
-        onStockUpdated={onUpdate}
+        isOpen={isViewMaterialOpen}
+        onOpenChange={setIsViewMaterialOpen}
       />
 
-      <UpdateRawMaterialDialog
-        isOpen={updateMaterialOpen}
-        onOpenChange={setUpdateMaterialOpen}
-        material={selectedMaterial}
-        onMaterialUpdated={onUpdate}
-      />
-
-      <ViewRawMaterialDialog
-        isOpen={viewMaterialOpen}
-        onOpenChange={setViewMaterialOpen}
-        material={selectedMaterial}
-      />
-
-      <RaiseRequestDialog
-        isOpen={raiseRequestOpen}
-        onOpenChange={setRaiseRequestOpen}
+      <RaiseRequestDialog 
+        isOpen={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
         material={selectedMaterial}
         onRequestCreated={handleRequestCreated}
+      />
+
+      <RawMaterialStockUpdateDialog
+        isOpen={isStockUpdateOpen}
+        onOpenChange={setIsStockUpdateOpen}
+        material={selectedMaterial}
+        onStockUpdated={onUpdate}
       />
     </>
   );
