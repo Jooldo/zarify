@@ -7,7 +7,9 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Activity
+  Activity,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 import {
@@ -20,8 +22,11 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem
+  SidebarMenuItem,
+  useSidebar
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -30,9 +35,15 @@ interface AppSidebarProps {
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const { signOut } = useAuth();
+  const { state, setOpen } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const toggleSidebar = () => {
+    setOpen(!isCollapsed);
   };
 
   const menuItems = [
@@ -71,14 +82,24 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-3 pt-3 pb-1">
-          <h1 className="text-lg font-bold text-sidebar-foreground">Anklet Order Management</h1>
+        <div className="flex items-center justify-between px-3 pt-3 pb-1">
+          {!isCollapsed && (
+            <h1 className="text-lg font-bold text-sidebar-foreground">Anklet Order Management</h1>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="ml-auto h-6 w-6" 
+            onClick={toggleSidebar}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
         </div>
       </SidebarHeader>
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          {!isCollapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -86,10 +107,10 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                   <SidebarMenuButton 
                     isActive={activeTab === item.value}
                     onClick={() => onTabChange(item.value)}
-                    tooltip={item.title}
+                    tooltip={isCollapsed ? item.title : undefined}
                   >
                     <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
+                    {!isCollapsed && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -102,9 +123,13 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleSignOut} className="text-red-500 hover:text-red-600">
+              <SidebarMenuButton 
+                onClick={handleSignOut} 
+                className="text-red-500 hover:text-red-600"
+                tooltip={isCollapsed ? "Sign Out" : undefined}
+              >
                 <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
+                {!isCollapsed && <span>Sign Out</span>}
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
