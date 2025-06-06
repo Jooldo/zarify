@@ -1,8 +1,10 @@
+
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
+import { formatSmartDecimal } from '@/lib/utils';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
@@ -11,7 +13,7 @@ const OrdersTab = () => {
 
   const flattenedOrders = orders.flatMap(order => 
     order.order_items.map(suborder => {
-      const sizeInInches = suborder.product_config.size_value?.toFixed(2) || 'N/A';
+      const sizeFormatted = formatSmartDecimal(suborder.product_config.size_value || 0);
       const weightRange = suborder.product_config.weight_range || 'N/A';
       
       return {
@@ -27,7 +29,7 @@ const OrdersTab = () => {
         productCode: suborder.product_config.product_code,
         category: suborder.product_config.category,
         subcategory: suborder.product_config.subcategory,
-        size: `${sizeInInches}" / ${weightRange}`,
+        size: `${sizeFormatted}" / ${weightRange}`,
         price: suborder.total_price
       };
     })
