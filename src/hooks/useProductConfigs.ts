@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type ProductConfig = Database['public']['Tables']['product_configs']['Row'] & {
+  threshold?: number;
   product_config_materials?: {
     raw_material_id: string;
     quantity_required: number;
@@ -12,6 +13,9 @@ type ProductConfig = Database['public']['Tables']['product_configs']['Row'] & {
       name: string;
       type: string;
     };
+  }[];
+  finished_goods?: {
+    threshold: number;
   }[];
 };
 
@@ -35,6 +39,9 @@ export const useProductConfigs = () => {
               name,
               type
             )
+          ),
+          finished_goods (
+            threshold
           )
         `)
         .order('created_at', { ascending: false });
@@ -44,7 +51,13 @@ export const useProductConfigs = () => {
         return;
       }
 
-      setProductConfigs(data || []);
+      // Transform the data to include threshold at the top level
+      const transformedData = (data || []).map(config => ({
+        ...config,
+        threshold: config.finished_goods?.[0]?.threshold || null
+      }));
+
+      setProductConfigs(transformedData);
     } catch (error) {
       console.error('Error fetching product configs:', error);
     } finally {
