@@ -70,14 +70,14 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           icon: Package,
         },
         {
-          title: "RM Config",
-          value: "rm-config",
-          icon: Settings,
-        },
-        {
           title: "RM Procurement",
           value: "rm-procurement",
           icon: ShoppingBag,
+        },
+        {
+          title: "RM Config",
+          value: "rm-config",
+          icon: Settings,
         }
       ]
     },
@@ -92,14 +92,14 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           icon: Package,
         },
         {
-          title: "FG Config",
-          value: "fg-config",
-          icon: Wrench,
-        },
-        {
           title: "FG Procurement",
           value: "fg-procurement",
           icon: ShoppingBag,
+        },
+        {
+          title: "FG Config",
+          value: "fg-config",
+          icon: Wrench,
         }
       ]
     },

@@ -14,15 +14,15 @@ interface FinishedGoodManagementProps {
 const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManagementProps) => {
   const getActiveTabValue = () => {
     if (activeTab === 'fg-inventory') return 'inventory';
-    if (activeTab === 'fg-config') return 'config';
     if (activeTab === 'fg-procurement') return 'procurement';
+    if (activeTab === 'fg-config') return 'config';
     return 'inventory';
   };
 
   const handleTabChange = (value: string) => {
     if (value === 'inventory') onTabChange('fg-inventory');
-    else if (value === 'config') onTabChange('fg-config');
     else if (value === 'procurement') onTabChange('fg-procurement');
+    else if (value === 'config') onTabChange('fg-config');
   };
 
   return (
@@ -33,13 +33,13 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
             <Package className="h-4 w-4" />
             FG Inventory
           </TabsTrigger>
-          <TabsTrigger value="config" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            FG Config
-          </TabsTrigger>
           <TabsTrigger value="procurement" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" />
             FG Procurement
+          </TabsTrigger>
+          <TabsTrigger value="config" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            FG Config
           </TabsTrigger>
         </TabsList>
 
@@ -47,12 +47,12 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
           <FinishedGoodsInventory />
         </TabsContent>
 
-        <TabsContent value="config" className="space-y-6">
-          <FinishedGoodsConfig />
-        </TabsContent>
-
         <TabsContent value="procurement" className="space-y-6">
           <FGProcurementTab />
+        </TabsContent>
+
+        <TabsContent value="config" className="space-y-6">
+          <FinishedGoodsConfig />
         </TabsContent>
       </Tabs>
     </div>
