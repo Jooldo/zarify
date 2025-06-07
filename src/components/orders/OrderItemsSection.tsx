@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import OrderItemForm from './OrderItemForm';
 
-interface OrderItem {
+interface OrderFormItem {
   productCode: string;
   quantity: number;
-  price: number;
+  price: string; // String for form handling
 }
 
 interface OrderItemsSectionProps {
-  items: OrderItem[];
+  items: OrderFormItem[];
   onAddItem: () => void;
   updateItem: (index: number, field: string, value: any) => void;
   removeItem: (index: number) => void;
@@ -26,7 +26,10 @@ const OrderItemsSection = ({
   generateSuborderId
 }: OrderItemsSectionProps) => {
   const calculateTotal = () => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return items.reduce((total, item) => {
+      const price = item.price === '' ? 0 : Number(item.price);
+      return total + (price * item.quantity);
+    }, 0);
   };
 
   return (
@@ -40,10 +43,10 @@ const OrderItemsSection = ({
             key={index}
             item={item}
             index={index}
-            items={items}
+            suborderId={generateSuborderId(index)}
             updateItem={updateItem}
             removeItem={removeItem}
-            generateSuborderId={generateSuborderId}
+            canRemove={items.length > 1}
           />
         ))}
 

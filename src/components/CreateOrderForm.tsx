@@ -10,13 +10,19 @@ interface CreateOrderFormProps {
   onOrderCreated: () => void;
 }
 
+interface OrderFormItem {
+  productCode: string;
+  quantity: number;
+  price: string; // Keep as string for form handling
+}
+
 const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [items, setItems] = useState([{
+  const [items, setItems] = useState<OrderFormItem[]>([{
     productCode: '',
     quantity: 1,
-    price: '' // Changed from 0 to empty string
+    price: '' // Empty string as placeholder
   }]);
 
   const { submitOrder, loading } = useOrderSubmission({ onOrderCreated, onClose });
@@ -25,7 +31,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
     setItems([...items, {
       productCode: '',
       quantity: 1,
-      price: '' // Changed from 0 to empty string
+      price: '' // Empty string as placeholder
     }]);
   };
 
@@ -52,7 +58,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert empty price strings to 0 for submission
+    // Convert string prices to numbers for submission
     const itemsWithValidPrices = items.map(item => ({
       ...item,
       price: item.price === '' ? 0 : Number(item.price)
