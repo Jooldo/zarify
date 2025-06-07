@@ -111,7 +111,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             <TableHeader>
               <TableRow className="h-8">
                 <TableHead className="py-1 text-xs">Suborder ID</TableHead>
-                <TableHead className="py-1 text-xs">Product Code</TableHead>
+                <TableHead className="py-1 text-xs">Category</TableHead>
+                <TableHead className="py-1 text-xs">Product Type</TableHead>
                 <TableHead className="py-1 text-xs">Qty</TableHead>
                 <TableHead className="py-1 text-xs">Unit Price</TableHead>
                 <TableHead className="py-1 text-xs">Total</TableHead>
@@ -123,7 +124,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
               {order.order_items.map((item: any) => (
                 <TableRow key={item.id} className="h-10">
                   <TableCell className="py-1 text-xs font-medium">{item.suborder_id}</TableCell>
-                  <TableCell className="py-1 text-xs font-mono">{item.product_config.product_code}</TableCell>
+                  <TableCell className="py-1 text-xs">{item.product_config.category}</TableCell>
+                  <TableCell className="py-1 text-xs">{item.product_config.subcategory}</TableCell>
                   <TableCell className="py-1 text-xs">{item.quantity}</TableCell>
                   <TableCell className="py-1 text-xs">₹{item.unit_price.toLocaleString()}</TableCell>
                   <TableCell className="py-1 text-xs">₹{item.total_price.toLocaleString()}</TableCell>

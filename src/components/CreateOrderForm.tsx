@@ -91,7 +91,15 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
           onCustomerPhoneChange={setCustomerPhone}
         />
 
-        {/* Expected Delivery Section */}
+        <OrderItemsSection
+          items={items}
+          onAddItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
+          generateSuborderId={generatePreviewSuborderId}
+        />
+
+        {/* Expected Delivery Section - Moved after order items */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Delivery Information</CardTitle>
@@ -113,14 +121,6 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
             </div>
           </CardContent>
         </Card>
-
-        <OrderItemsSection
-          items={items}
-          onAddItem={addItem}
-          updateItem={updateItem}
-          removeItem={removeItem}
-          generateSuborderId={generatePreviewSuborderId}
-        />
 
         <div className="flex gap-2 justify-end pt-2 border-t">
           <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-8 text-xs">

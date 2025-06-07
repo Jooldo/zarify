@@ -14,6 +14,8 @@ interface OrdersTableRowProps {
     orderId: string;
     customer: string;
     productCode: string;
+    category: string;
+    subcategory: string;
     quantity: number;
     status: string;
     price: number;
@@ -82,7 +84,8 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
         <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.suborder_id}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
-        <TableCell className="py-1 px-2 text-xs font-mono bg-gray-50">{item.productCode}</TableCell>
+        <TableCell className="py-1 px-2 text-xs">{item.category}</TableCell>
+        <TableCell className="py-1 px-2 text-xs">{item.subcategory}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
           <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>

@@ -89,7 +89,9 @@ const OrdersTab = () => {
         item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.productCode.toLowerCase().includes(searchTerm.toLowerCase())
+        item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subcategory.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
