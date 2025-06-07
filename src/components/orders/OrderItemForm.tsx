@@ -52,40 +52,44 @@ const OrderItemForm = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-1">
+      <div className="space-y-3">
+        {/* First line: Product Code */}
+        <div>
           <ProductCodeSelector
             value={item.productCode}
             onChange={(value) => updateItem(index, 'productCode', value)}
           />
         </div>
 
-        <div>
-          <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity *</Label>
-          <Input
-            id={`quantity-${index}`}
-            type="number"
-            value={item.quantity}
-            onChange={(e) => updateItem(index, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-            min="1"
-            className="h-8 text-xs"
-            required
-          />
-        </div>
+        {/* Second line: Quantity and Price */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity *</Label>
+            <Input
+              id={`quantity-${index}`}
+              type="number"
+              value={item.quantity}
+              onChange={(e) => updateItem(index, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+              min="1"
+              className="h-8 text-xs"
+              required
+            />
+          </div>
 
-        <div>
-          <Label htmlFor={`price-${index}`} className="text-xs">Price per Unit (₹) *</Label>
-          <Input
-            id={`price-${index}`}
-            type="number"
-            value={item.price}
-            onChange={(e) => handlePriceChange(e.target.value)}
-            placeholder="Enter price per unit"
-            min="0"
-            step="0.01"
-            className="h-8 text-xs"
-            required
-          />
+          <div>
+            <Label htmlFor={`price-${index}`} className="text-xs">Price per Unit (₹) *</Label>
+            <Input
+              id={`price-${index}`}
+              type="number"
+              value={item.price}
+              onChange={(e) => handlePriceChange(e.target.value)}
+              placeholder="Enter price per unit"
+              min="0"
+              step="0.01"
+              className="h-8 text-xs"
+              required
+            />
+          </div>
         </div>
       </div>
 
