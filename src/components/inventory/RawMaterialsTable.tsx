@@ -202,17 +202,15 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
-                      {shortfall > 0 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleRaiseRequest(material)}
-                          title="Raise Request"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleRaiseRequest(material)}
+                        title="Raise Request"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,8 +18,6 @@ interface RaiseRequestDialogProps {
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }: RaiseRequestDialogProps) => {
   const [requestQuantity, setRequestQuantity] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -48,8 +45,8 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           quantity_requested: parseInt(requestQuantity),
           unit: material.unit,
           supplier_id: null,
-          eta: eta || null,
-          notes: supplier ? `Supplier: ${supplier}${notes ? '\n' + notes : ''}` : notes || null,
+          eta: null,
+          notes: notes || null,
           merchant_id: merchantId,
           status: 'Pending'
         });
@@ -63,8 +60,6 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
 
       // Reset form
       setRequestQuantity('');
-      setSupplier('');
-      setEta('');
       setNotes('');
       onRequestCreated();
       onOpenChange(false);
@@ -102,7 +97,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
             </div>
           </div>
           <div>
-            <Label htmlFor="requestQuantity">Request Quantity *</Label>
+            <Label htmlFor="requestQuantity">Request Quantity ({material.unit}) *</Label>
             <Input 
               id="requestQuantity" 
               type="number" 
@@ -111,31 +106,6 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
               placeholder={shortfall.toString()}
               min="1"
               required
-            />
-          </div>
-          <div>
-            <Label htmlFor="supplier">Supplier</Label>
-            <Select value={supplier} onValueChange={setSupplier}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Mumbai Silver Co.">Mumbai Silver Co.</SelectItem>
-                <SelectItem value="Rajasthan Crafts">Rajasthan Crafts</SelectItem>
-                <SelectItem value="Delhi Accessories">Delhi Accessories</SelectItem>
-                <SelectItem value="Local Supplier">Local Supplier</SelectItem>
-                <SelectItem value="Artisan Supplies">Artisan Supplies</SelectItem>
-                <SelectItem value="Textile Hub">Textile Hub</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="eta">Expected Delivery Date</Label>
-            <Input 
-              id="eta" 
-              type="date" 
-              value={eta}
-              onChange={(e) => setEta(e.target.value)}
             />
           </div>
           <div>
