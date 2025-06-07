@@ -43,7 +43,7 @@ const OrderItemForm = ({ item, index, suborderId, updateItem, removeItem, canRem
           <Label className="text-xs">Product Code</Label>
           <ProductCodeSelector
             value={item.productCode}
-            onChange={(value) => updateItem(index, 'productCode', value)}
+            onValueChange={(value) => updateItem(index, 'productCode', value)}
           />
         </div>
         <div>
