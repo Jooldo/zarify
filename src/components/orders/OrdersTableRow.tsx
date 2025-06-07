@@ -111,9 +111,9 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
                     <Eye className="h-3 w-3" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Order Details</DialogTitle>
+                    <DialogTitle className="text-sm">Order Details</DialogTitle>
                   </DialogHeader>
                   <OrderDetails 
                     order={order} 
