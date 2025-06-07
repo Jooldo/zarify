@@ -25,11 +25,21 @@ interface ViewRequestDialogProps {
   onUpdateRequestStatus: (requestId: string, newStatus: string) => void;
 }
 
+// Dummy supplier data
+const DUMMY_SUPPLIERS: Supplier[] = [
+  { id: 'supplier-1', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
+  { id: 'supplier-2', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
+  { id: 'supplier-3', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
+  { id: 'supplier-4', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
+  { id: 'supplier-5', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
+];
+
 const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus }: ViewRequestDialogProps) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
   const [editMode, setEditMode] = useState(false);
   const [editEta, setEditEta] = useState('');
+  const [editNotes, setEditNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -64,9 +74,14 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
           .eq('merchant_id', merchantId);
 
         if (error) throw error;
-        setSuppliers(data || []);
+        
+        // Combine real suppliers with dummy data
+        const allSuppliers = [...(data || []), ...DUMMY_SUPPLIERS];
+        setSuppliers(allSuppliers);
       } catch (error) {
         console.error('Error fetching suppliers:', error);
+        // If there's an error, just use dummy data
+        setSuppliers(DUMMY_SUPPLIERS);
       }
     };
 
@@ -75,17 +90,18 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       if (selectedRequest) {
         setSelectedSupplier(selectedRequest.supplier_id || '');
         setEditEta(selectedRequest.eta || '');
+        setEditNotes(selectedRequest.notes || '');
       }
     }
   }, [isOpen, selectedRequest]);
 
   const handleCompleteRequest = async () => {
-    if (!selectedRequest || (!selectedSupplier && !editEta)) return;
+    if (!selectedRequest) return;
 
     setLoading(true);
     try {
       const updates: any = {};
-      let updatedNotes = selectedRequest.notes || '';
+      let updatedNotes = editNotes || '';
 
       if (selectedSupplier) {
         const selectedSupplierData = suppliers.find(s => s.id === selectedSupplier);
@@ -253,32 +269,39 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             )}
           </div>
 
-          {selectedRequest?.notes && (
-            <div>
-              <Label className="text-sm">Notes</Label>
+          <div>
+            <Label className="text-sm">Notes</Label>
+            {editMode ? (
               <Textarea 
-                value={selectedRequest.notes} 
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                className="mt-1 text-sm min-h-[60px]"
+                placeholder="Add notes about the request"
+              />
+            ) : (
+              <Textarea 
+                value={selectedRequest?.notes || 'No notes'} 
                 disabled 
                 className="mt-1 text-sm min-h-[60px]"
               />
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="flex gap-2 pt-2">
-            {isIncomplete && !editMode && (
+            {!editMode && (
               <Button 
                 onClick={() => setEditMode(true)} 
                 className="flex-1 flex items-center gap-2"
                 variant="outline"
               >
                 <Edit className="h-3 w-3" />
-                Complete Request
+                Edit Details
               </Button>
             )}
             {editMode && (
               <Button 
                 onClick={handleCompleteRequest} 
-                disabled={loading || (!selectedSupplier && !editEta)} 
+                disabled={loading} 
                 className="flex-1"
               >
                 {loading ? 'Updating...' : 'Save Changes'}

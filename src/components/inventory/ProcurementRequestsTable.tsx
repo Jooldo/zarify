@@ -75,7 +75,7 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
                     <div className="flex items-center gap-1">
                       {request.request_number}
                       {isIncomplete && (
-                        <AlertCircle className="h-3 w-3 text-amber-500" title="Incomplete request - missing supplier or ETA" />
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
                       )}
                     </div>
                   </TableCell>

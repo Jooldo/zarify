@@ -10,9 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
-import { useSuppliers } from '@/hooks/useSuppliers';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
+
+interface Supplier {
+  id: string;
+  company_name: string;
+  contact_person: string;
+}
 
 interface RaiseRequestDialogProps {
   isOpen: boolean;
@@ -22,15 +27,24 @@ interface RaiseRequestDialogProps {
   mode: 'inventory' | 'procurement';
 }
 
+// Dummy supplier data
+const DUMMY_SUPPLIERS: Supplier[] = [
+  { id: 'supplier-1', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
+  { id: 'supplier-2', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
+  { id: 'supplier-3', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
+  { id: 'supplier-4', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
+  { id: 'supplier-5', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
+];
+
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
   const [quantity, setQuantity] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
-  const { suppliers } = useSuppliers();
   const { profile } = useUserProfile();
 
   // Don't render if material is null
@@ -224,18 +238,13 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
           <div>
             <Label htmlFor="notes">
               {isInventoryMode ? 'Additional Notes' : 'Notes'}
-              {isInventoryMode && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  (Optional - describe urgency or special requirements)
-                </span>
-              )}
             </Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={isInventoryMode 
-                ? "Describe urgency or special requirements (optional)" 
+                ? "Describe urgency or special requirements" 
                 : "Additional notes or requirements"
               }
               rows={3}
