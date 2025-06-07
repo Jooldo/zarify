@@ -5,65 +5,98 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useActivityLog } from '@/hooks/useActivityLog';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 
 interface RaiseRequestDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  material: RawMaterial | null;
+  material: RawMaterial;
   onRequestCreated: () => void;
 }
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }: RaiseRequestDialogProps) => {
-  const [requestQuantity, setRequestQuantity] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
+  const { suppliers } = useSuppliers();
+  const { profile } = useUserProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!material) return;
+    if (!quantity || !material) return;
 
     setLoading(true);
     try {
-      // Get merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
-
+      const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
       if (merchantError) throw merchantError;
 
       // Generate request number
-      const requestNumber = `PR-${Date.now().toString().slice(-6)}`;
+      const timestamp = Date.now();
+      const requestNumber = `REQ-${timestamp}`;
+
+      // Get the selected supplier info
+      const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
+      const supplierNotes = selectedSupplier ? `Supplier: ${selectedSupplier.company_name}` : '';
+      const finalNotes = supplierNotes ? (notes ? `${supplierNotes}\n${notes}` : supplierNotes) : notes;
 
       const { error } = await supabase
         .from('procurement_requests')
         .insert({
           request_number: requestNumber,
           raw_material_id: material.id,
-          quantity_requested: parseInt(requestQuantity),
+          quantity_requested: parseInt(quantity),
           unit: material.unit,
-          supplier_id: null,
-          eta: null,
-          notes: notes || null,
+          supplier_id: selectedSupplierId || null,
+          eta: eta || null,
+          notes: finalNotes || null,
+          status: 'Pending',
+          date_requested: new Date().toISOString().split('T')[0],
           merchant_id: merchantId,
-          status: 'Pending'
+          first_name: profile?.firstName || null,
+          last_name: profile?.lastName || null
         });
 
       if (error) throw error;
+
+      // Update raw material in_procurement
+      const { error: updateError } = await supabase
+        .from('raw_materials')
+        .update({ 
+          in_procurement: (material.in_procurement || 0) + parseInt(quantity),
+          request_status: 'Pending'
+        })
+        .eq('id', material.id);
+
+      if (updateError) throw updateError;
+
+      await logActivity(
+        'Created',
+        'Procurement Request',
+        requestNumber,
+        `Procurement request created for ${material.name} - ${quantity} ${material.unit}`
+      );
 
       toast({
         title: 'Success',
         description: 'Procurement request created successfully',
       });
 
-      // Reset form
-      setRequestQuantity('');
-      setNotes('');
       onRequestCreated();
       onOpenChange(false);
+      setQuantity('');
+      setEta('');
+      setNotes('');
+      setSelectedSupplierId('');
     } catch (error) {
       console.error('Error creating procurement request:', error);
       toast({
@@ -76,65 +109,96 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
     }
   };
 
-  if (!material) return null;
-
-  const shortfall = Math.max(0, material.minimum_stock - material.current_stock);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg">Raise Procurement Request</DialogTitle>
+          <DialogTitle>Raise Procurement Request</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{material.name}</span>
-              <Badge variant="outline" className="text-xs">{material.type}</Badge>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-muted-foreground">Current:</span>
-                <span className="ml-1 font-medium">{material.current_stock} {material.unit}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Minimum:</span>
-                <span className="ml-1 font-medium">{material.minimum_stock} {material.unit}</span>
-              </div>
-            </div>
-          </div>
-          
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="requestQuantity" className="text-sm">Request Quantity ({material.unit}) *</Label>
+            <Label>Material</Label>
             <Input 
-              id="requestQuantity" 
-              type="number" 
-              value={requestQuantity}
-              onChange={(e) => setRequestQuantity(e.target.value)}
-              placeholder={shortfall.toString()}
-              min="1"
-              required
-              className="mt-1"
+              value={`${material.name} (${material.type})`} 
+              disabled 
+              className="bg-gray-50"
             />
           </div>
           
           <div>
-            <Label htmlFor="notes" className="text-sm">Notes</Label>
-            <Textarea 
-              id="notes" 
-              placeholder="Add any additional notes..."
+            <Label htmlFor="quantity">Quantity Required *</Label>
+            <div className="flex gap-2">
+              <Input
+                id="quantity"
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="Enter quantity"
+                required
+                min="1"
+                className="flex-1"
+              />
+              <Input
+                value={material.unit}
+                disabled
+                className="w-20 bg-gray-50"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="supplier">Supplier</Label>
+            <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplier.company_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="eta">Expected Delivery Date</Label>
+            <Input
+              id="eta"
+              type="date"
+              value={eta}
+              onChange={(e) => setEta(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-1 min-h-[60px]"
+              placeholder="Additional notes or requirements"
+              rows={3}
             />
           </div>
-          
-          <div className="flex gap-2 pt-2">
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? 'Creating...' : 'Submit Request'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
               Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading || !quantity}
+              className="flex-1"
+            >
+              {loading ? 'Creating...' : 'Create Request'}
             </Button>
           </div>
         </form>

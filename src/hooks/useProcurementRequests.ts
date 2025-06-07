@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +16,8 @@ export interface ProcurementRequest {
   status: 'Pending' | 'Approved' | 'Received';
   date_requested: string;
   raised_by?: string;
+  first_name?: string;
+  last_name?: string;
   raw_material?: {
     name: string;
     type: string;
@@ -60,7 +63,11 @@ export const useProcurementRequests = () => {
           notes: request.notes,
           status: request.status as 'Pending' | 'Approved' | 'Received',
           date_requested: request.date_requested,
-          raised_by: 'Unknown User', // Default value since we can't access profiles directly
+          first_name: request.first_name,
+          last_name: request.last_name,
+          raised_by: request.first_name && request.last_name 
+            ? `${request.first_name} ${request.last_name}`.trim() 
+            : 'Unknown User',
           raw_material: request.raw_material
         }));
       

@@ -319,7 +319,9 @@ export type Database = {
           created_at: string | null
           date_requested: string | null
           eta: string | null
+          first_name: string | null
           id: string
+          last_name: string | null
           merchant_id: string
           notes: string | null
           quantity_requested: number
@@ -334,7 +336,9 @@ export type Database = {
           created_at?: string | null
           date_requested?: string | null
           eta?: string | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           merchant_id: string
           notes?: string | null
           quantity_requested: number
@@ -349,7 +353,9 @@ export type Database = {
           created_at?: string | null
           date_requested?: string | null
           eta?: string | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           merchant_id?: string
           notes?: string | null
           quantity_requested?: number
