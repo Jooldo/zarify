@@ -16,15 +16,15 @@ interface CreateProductConfigFormProps {
 }
 
 const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = false }: CreateProductConfigFormProps) => {
+  const [product, setProduct] = useState(''); // Renamed from subcategory
   const [category, setCategory] = useState('');
-  const [subcategory, setSubcategory] = useState('');
   const [sizeValue, setSizeValue] = useState('');
   const [weightInGrams, setWeightInGrams] = useState('');
   const [threshold, setThreshold] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
-    { material: '', quantity: 0, unit: '' }
+    { material: '', quantity: 0, unit: 'grams' } // Default to grams
   ]);
 
   // Categories list
@@ -39,29 +39,29 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   // Populate form with initial data if updating
   useEffect(() => {
     if (initialData && isUpdate) {
+      setProduct(initialData.subcategory || ''); // Map subcategory to product
       setCategory(initialData.category || '');
-      setSubcategory(initialData.subcategory || '');
       setSizeValue(initialData.sizeValue || '');
       setWeightInGrams(initialData.weightInGrams || '');
       setThreshold(initialData.threshold || '');
       setIsActive(initialData.isActive ?? true);
-      setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: '' }]);
+      setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
     }
   }, [initialData, isUpdate]);
 
   const generateProductCode = () => {
-    if (!category || !subcategory) return '';
+    if (!category || !product) return '';
     
     const categoryCode = category.slice(0, 3).toUpperCase();
-    const subcategoryCode = subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
+    const productCode = product.replace(/\s+/g, '').slice(0, 3).toUpperCase(); // Use product instead of subcategory
     const weightCode = weightInGrams ? weightInGrams + 'G' : '';
     
-    return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
+    return `${categoryCode}-${productCode}${weightCode ? '-' + weightCode : ''}`;
   };
 
   const addRawMaterial = () => {
     console.log('Adding new raw material');
-    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: '' }]);
+    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]); // Default to grams
   };
 
   const removeRawMaterial = (index: number) => {
@@ -104,7 +104,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!category || !subcategory || !sizeValue || !weightInGrams) {
+    if (!product || !category || !sizeValue || !weightInGrams) {
       alert('Please fill in all required fields');
       return;
     }
@@ -130,7 +130,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
       const productConfigData = {
         category,
-        subcategory,
+        subcategory: product, // Map product back to subcategory for backend compatibility
         sizeValue,
         weightInGrams,
         threshold: threshold ? parseInt(threshold) : 0,
@@ -154,126 +154,131 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <Card>
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sm">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0">
-          <div className="grid grid-cols-2 gap-2">
+    <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-0">
+            {/* Product (formerly Subcategory) - First field */}
             <div>
-              <Label htmlFor="category" className="text-xs">Category *</Label>
+              <Label htmlFor="product" className="text-sm font-medium">Product Type *</Label>
+              <Input
+                id="product"
+                value={product}
+                onChange={(e) => setProduct(e.target.value)}
+                placeholder="e.g. Meena Work"
+                className="h-10 text-sm mt-2"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Specify the exact product type or style</p>
+            </div>
+
+            {/* Category - Second field */}
+            <div>
+              <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="h-7 text-xs">
+                <SelectTrigger className="h-10 text-sm mt-2">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat} className="text-xs">
+                    <SelectItem key={cat} value={cat} className="text-sm">
                       {cat}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
-            <div>
-              <Label htmlFor="subcategory" className="text-xs">Subcategory *</Label>
-              <Input
-                id="subcategory"
-                value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
-                placeholder="e.g. Meena Work"
-                className="h-7 text-xs"
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="sizeValue" className="text-xs">Size Value (inches) *</Label>
-              <Input
-                id="sizeValue"
-                value={sizeValue}
-                onChange={(e) => setSizeValue(e.target.value)}
-                placeholder="10"
-                className="h-7 text-xs"
-                required
-              />
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="sizeValue" className="text-sm font-medium">Size Value (inches) *</Label>
+                <Input
+                  id="sizeValue"
+                  value={sizeValue}
+                  onChange={(e) => setSizeValue(e.target.value)}
+                  placeholder="10"
+                  className="h-10 text-sm mt-2"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter size in inches</p>
+              </div>
+              
+              <div>
+                <Label htmlFor="weightInGrams" className="text-sm font-medium">Weight (grams) *</Label>
+                <Input
+                  id="weightInGrams"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={weightInGrams}
+                  onChange={(e) => setWeightInGrams(e.target.value)}
+                  placeholder="35.5"
+                  className="h-10 text-sm mt-2"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter weight in grams only</p>
+              </div>
             </div>
-            
+
             <div>
-              <Label htmlFor="weightInGrams" className="text-xs">Weight (grams) *</Label>
+              <Label htmlFor="threshold" className="text-sm font-medium">Stock Threshold</Label>
               <Input
-                id="weightInGrams"
+                id="threshold"
                 type="number"
-                step="0.1"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder="10"
+                className="h-10 text-sm mt-2"
                 min="0"
-                value={weightInGrams}
-                onChange={(e) => setWeightInGrams(e.target.value)}
-                placeholder="35.5"
-                className="h-7 text-xs"
-                required
               />
+              <p className="text-xs text-gray-500 mt-1">Minimum stock level before alert</p>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="threshold" className="text-xs">Stock Threshold</Label>
-            <Input
-              id="threshold"
-              type="number"
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              placeholder="10"
-              className="h-7 text-xs"
-              min="0"
+            <ProductConfigDetails 
+              category={category}
+              subcategory={product} // Pass product as subcategory for compatibility
+              sizeValue={sizeValue}
+              weightInGrams={weightInGrams}
+              isActive={isActive}
+              generateProductCode={generateProductCode}
+              setIsActive={setIsActive}
             />
-            <p className="text-xs text-gray-500 mt-1">Minimum stock level before alert</p>
-          </div>
+          </CardContent>
+        </Card>
 
-          <ProductConfigDetails 
-            category={category}
-            subcategory={subcategory}
-            sizeValue={sizeValue}
-            weightInGrams={weightInGrams}
-            isActive={isActive}
-            generateProductCode={generateProductCode}
-            setIsActive={setIsActive}
-          />
-        </CardContent>
-      </Card>
+        <RawMaterialsSection 
+          rawMaterials={rawMaterials}
+          addRawMaterial={addRawMaterial}
+          removeRawMaterial={removeRawMaterial}
+          updateRawMaterial={updateRawMaterial}
+          updateRawMaterialBatch={updateRawMaterialBatch}
+        />
 
-      <RawMaterialsSection 
-        rawMaterials={rawMaterials}
-        addRawMaterial={addRawMaterial}
-        removeRawMaterial={removeRawMaterial}
-        updateRawMaterial={updateRawMaterial}
-        updateRawMaterialBatch={updateRawMaterialBatch}
-      />
-
-      <div className="flex gap-2 justify-end pt-1">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onClose} 
-          size="sm" 
-          className="h-7 text-xs px-2"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button 
-          type="submit" 
-          size="sm" 
-          className="h-7 text-xs px-2"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Saving...' : (isUpdate ? 'Update' : 'Create')} Configuration
-        </Button>
-      </div>
-    </form>
+        <div className="flex gap-3 justify-end pt-4 border-t">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose} 
+            size="sm" 
+            className="h-10 text-sm px-6"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            size="sm" 
+            className="h-10 text-sm px-6"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Saving...' : (isUpdate ? 'Update' : 'Create')} Configuration
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

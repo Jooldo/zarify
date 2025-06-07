@@ -82,82 +82,97 @@ const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
     // Display size_value directly as inches (no conversion needed)
     const sizeInInches = config.size_value?.toFixed(2) || 'N/A';
     const weightRange = config.weight_range || 'No weight range';
-    return `${config.product_code} - ${config.category} ${config.subcategory} (${sizeInInches}" / ${weightRange})`;
+    return `${config.product_code} - ${config.subcategory} (${config.category}) | ${sizeInInches}" / ${weightRange}`;
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 h-8 px-3 text-xs">
-          <Plus className="h-3 w-3" />
+        <Button className="flex items-center gap-2 h-9 px-4 text-sm">
+          <Plus className="h-4 w-4" />
           Add Product
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Finished Good</DialogTitle>
+          <DialogTitle className="text-lg">Add Finished Good</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label htmlFor="productConfig">Product Configuration *</Label>
+            <Label htmlFor="productConfig" className="text-sm font-medium">Product Configuration *</Label>
             <Select 
               value={productConfigId} 
               onValueChange={setProductConfigId}
               disabled={configsLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-10 text-sm mt-2">
                 <SelectValue placeholder={configsLoading ? "Loading..." : "Select product configuration"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60">
                 {productConfigs.map((config) => (
-                  <SelectItem key={config.id} value={config.id}>
-                    {getConfigDisplayText(config)}
+                  <SelectItem key={config.id} value={config.id} className="text-sm py-3">
+                    <div className="space-y-1">
+                      <div className="font-medium">{config.product_code}</div>
+                      <div className="text-xs text-gray-600">
+                        {config.subcategory} • {config.category} • {config.size_value?.toFixed(2)}" • {config.weight_range}
+                      </div>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500 mt-1">Select the product configuration to create finished goods for</p>
           </div>
-          <div>
-            <Label htmlFor="currentStock">Current Stock *</Label>
-            <Input 
-              id="currentStock" 
-              type="number" 
-              value={currentStock}
-              onChange={(e) => setCurrentStock(e.target.value)}
-              placeholder="Enter current stock"
-              min="0"
-              required
-            />
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock *</Label>
+              <Input 
+                id="currentStock" 
+                type="number" 
+                value={currentStock}
+                onChange={(e) => setCurrentStock(e.target.value)}
+                placeholder="0"
+                className="h-10 text-sm mt-2"
+                min="0"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="threshold" className="text-sm font-medium">Threshold *</Label>
+              <Input 
+                id="threshold" 
+                type="number" 
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder="10"
+                className="h-10 text-sm mt-2"
+                min="0"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="requiredQuantity" className="text-sm font-medium">Required Quantity *</Label>
+              <Input 
+                id="requiredQuantity" 
+                type="number" 
+                value={requiredQuantity}
+                onChange={(e) => setRequiredQuantity(e.target.value)}
+                placeholder="50"
+                className="h-10 text-sm mt-2"
+                min="0"
+                required
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="threshold">Threshold *</Label>
-            <Input 
-              id="threshold" 
-              type="number" 
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              placeholder="Enter minimum threshold"
-              min="0"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="requiredQuantity">Required Quantity *</Label>
-            <Input 
-              id="requiredQuantity" 
-              type="number" 
-              value={requiredQuantity}
-              onChange={(e) => setRequiredQuantity(e.target.value)}
-              placeholder="Enter required quantity"
-              min="0"
-              required
-            />
-          </div>
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1" disabled={loading || !productConfigId}>
+          
+          <div className="flex gap-3 pt-6 border-t">
+            <Button type="submit" className="flex-1 h-10 text-sm" disabled={loading || !productConfigId}>
               {loading ? 'Adding...' : 'Add Product'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="h-10 text-sm px-6">
               Cancel
             </Button>
           </div>
