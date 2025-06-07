@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,13 +24,13 @@ interface ViewRequestDialogProps {
   onUpdateRequestStatus: (requestId: string, newStatus: string) => void;
 }
 
-// Dummy supplier data
+// Dummy supplier data with proper UUIDs
 const DUMMY_SUPPLIERS: Supplier[] = [
-  { id: 'supplier-1', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
-  { id: 'supplier-2', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
-  { id: 'supplier-3', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
-  { id: 'supplier-4', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
-  { id: 'supplier-5', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
 ];
 
 const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus }: ViewRequestDialogProps) => {
