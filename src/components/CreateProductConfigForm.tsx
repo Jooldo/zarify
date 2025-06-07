@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductConfigDetails from './config/ProductConfigDetails';
-import RawMaterialsSection from './config/RawMaterialsSection';
+import AddRawMaterialConfigDialog from './config/AddRawMaterialConfigDialog';
 
 interface CreateProductConfigFormProps {
   onClose: () => void;
@@ -16,7 +15,7 @@ interface CreateProductConfigFormProps {
 }
 
 const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = false }: CreateProductConfigFormProps) => {
-  const [product, setProduct] = useState(''); // Renamed from subcategory
+  const [product, setProduct] = useState('');
   const [category, setCategory] = useState('');
   const [sizeValue, setSizeValue] = useState('');
   const [weightInGrams, setWeightInGrams] = useState('');
@@ -24,7 +23,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
-    { material: '', quantity: 0, unit: 'grams' } // Default to grams
+    { material: '', quantity: 0, unit: 'grams' }
   ]);
 
   // Categories list
@@ -36,7 +35,6 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     'Karap'
   ];
 
-  // Populate form with initial data if updating
   useEffect(() => {
     if (initialData && isUpdate) {
       setProduct(initialData.subcategory || ''); // Map subcategory to product
@@ -57,48 +55,6 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     const weightCode = weightInGrams ? weightInGrams + 'G' : '';
     
     return `${categoryCode}-${productCode}${weightCode ? '-' + weightCode : ''}`;
-  };
-
-  const addRawMaterial = () => {
-    console.log('Adding new raw material');
-    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]); // Default to grams
-  };
-
-  const removeRawMaterial = (index: number) => {
-    if (rawMaterials.length > 1) {
-      console.log('Removing raw material at index:', index);
-      const newMaterials = [...rawMaterials];
-      newMaterials.splice(index, 1);
-      setRawMaterials(newMaterials);
-    }
-  };
-
-  const updateRawMaterial = (index: number, field: string, value: any) => {
-    console.log('Updating raw material:', { index, field, value });
-    const updatedMaterials = rawMaterials.map((material, i) => {
-      if (i === index) {
-        const updated = { ...material, [field]: value };
-        console.log('Updated material:', updated);
-        return updated;
-      }
-      return material;
-    });
-    console.log('New raw materials array:', updatedMaterials);
-    setRawMaterials(updatedMaterials);
-  };
-
-  const updateRawMaterialBatch = (index: number, updates: { material?: string; unit?: string; quantity?: number }) => {
-    console.log('Batch updating raw material:', { index, updates });
-    const updatedMaterials = rawMaterials.map((material, i) => {
-      if (i === index) {
-        const updated = { ...material, ...updates };
-        console.log('Batch updated material:', updated);
-        return updated;
-      }
-      return material;
-    });
-    console.log('New raw materials array after batch update:', updatedMaterials);
-    setRawMaterials(updatedMaterials);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +109,11 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     }
   };
 
+  const handleRawMaterialsUpdate = (materials: any[]) => {
+    console.log('Updating raw materials:', materials);
+    setRawMaterials(materials.length > 0 ? materials : [{ material: '', quantity: 0, unit: 'grams' }]);
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -161,7 +122,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
             <CardTitle className="text-lg">{isUpdate ? 'Update' : 'Create'} Product Configuration</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-0">
-            {/* Product (formerly Subcategory) - First field */}
+            {/* Product Type - First field */}
             <div>
               <Label htmlFor="product" className="text-sm font-medium">Product Type *</Label>
               <Input
@@ -239,7 +200,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
             <ProductConfigDetails 
               category={category}
-              subcategory={product} // Pass product as subcategory for compatibility
+              subcategory={product}
               sizeValue={sizeValue}
               weightInGrams={weightInGrams}
               isActive={isActive}
@@ -249,13 +210,49 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
           </CardContent>
         </Card>
 
-        <RawMaterialsSection 
-          rawMaterials={rawMaterials}
-          addRawMaterial={addRawMaterial}
-          removeRawMaterial={removeRawMaterial}
-          updateRawMaterial={updateRawMaterial}
-          updateRawMaterialBatch={updateRawMaterialBatch}
-        />
+        {/* Raw Materials Configuration */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Raw Materials Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Configure Required Materials</Label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Add the raw materials needed to produce this product
+                  </p>
+                </div>
+                <AddRawMaterialConfigDialog 
+                  rawMaterials={rawMaterials}
+                  onUpdateRawMaterials={handleRawMaterialsUpdate}
+                />
+              </div>
+
+              {/* Display configured materials */}
+              {rawMaterials.length > 0 && rawMaterials.some(m => m.material) && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Configured Materials:</Label>
+                  <div className="grid gap-2">
+                    {rawMaterials
+                      .filter(material => material.material && material.quantity > 0)
+                      .map((material, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                          <div className="text-sm">
+                            <span className="font-medium">Material {index + 1}</span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {material.quantity} {material.unit}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex gap-3 justify-end pt-4 border-t">
           <Button 
