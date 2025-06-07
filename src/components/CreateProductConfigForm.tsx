@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -297,11 +296,11 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                         )}
                       </div>
 
-                      {/* Split Layout: Raw Material | Quantity + Unit */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Raw Material Selection with Search */}
-                        <div className="space-y-2">
-                          <Label className="text-sm">Select Raw Material *</Label>
+                      {/* Split Layout: Raw Material Selection | Quantity + Unit */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Raw Material Selection Section */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Raw Material *</Label>
                           <Popover 
                             open={openMaterialSelectors[index]} 
                             onOpenChange={(open) => toggleMaterialSelector(index, open)}
@@ -382,29 +381,32 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                           )}
                         </div>
 
-                        {/* Quantity and Unit */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label className="text-sm">Quantity *</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={material.quantity}
-                              onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              className="h-10"
-                              min="0"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label className="text-sm">Unit</Label>
-                            <Input
-                              value={selectedMaterial?.unit || material.unit}
-                              className="h-10 bg-gray-100"
-                              readOnly
-                              placeholder="Auto"
-                            />
+                        {/* Quantity and Unit Section */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Quantity & Unit</Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-gray-600">Quantity *</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={material.quantity}
+                                onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className="h-10"
+                                min="0"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-xs text-gray-600">Unit</Label>
+                              <Input
+                                value={selectedMaterial?.unit || material.unit}
+                                className="h-10 bg-gray-100"
+                                readOnly
+                                placeholder="Auto"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
