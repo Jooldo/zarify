@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -39,8 +38,7 @@ export const useProcurementRequests = () => {
         .from('procurement_requests')
         .select(`
           *,
-          raw_material:raw_materials(name, type),
-          profile:profiles(first_name, last_name)
+          raw_material:raw_materials(name, type)
         `)
         .eq('merchant_id', merchantId)
         .neq('status', 'None')
@@ -62,7 +60,7 @@ export const useProcurementRequests = () => {
           notes: request.notes,
           status: request.status as 'Pending' | 'Approved' | 'Received',
           date_requested: request.date_requested,
-          raised_by: request.profile ? `${request.profile.first_name || ''} ${request.profile.last_name || ''}`.trim() : 'Unknown',
+          raised_by: 'Unknown User', // Default value since we can't access profiles directly
           raw_material: request.raw_material
         }));
       
