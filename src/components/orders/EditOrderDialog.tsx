@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,8 +27,6 @@ interface OrderFormItem {
 
 const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [expectedDelivery, setExpectedDelivery] = useState('');
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [newItems, setNewItems] = useState<OrderFormItem[]>([]);
@@ -37,8 +34,6 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
 
   useEffect(() => {
     if (order && isOpen) {
-      setCustomerName(order.customer?.name || '');
-      setCustomerPhone(order.customer?.phone || '');
       setExpectedDelivery(order.expected_delivery ? new Date(order.expected_delivery).toISOString().split('T')[0] : '');
       setOrderItems(order.order_items || []);
       setNewItems([]);
@@ -160,29 +155,16 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
     return `S-OD${orderNum}-${String(newIndex).padStart(2, '0')}`;
   };
 
+  const canEditSuborderData = (item: any) => {
+    return item.status === 'Created';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       console.log('Starting order update for order:', order.id);
-      console.log('Customer ID:', order.customer?.id);
-
-      // Update customer information - ensure we have a valid customer ID
-      if (order.customer?.id) {
-        const { error: customerError } = await supabase
-          .from('customers')
-          .update({
-            name: customerName,
-            phone: customerPhone
-          })
-          .eq('id', order.customer.id);
-
-        if (customerError) {
-          console.error('Customer update error:', customerError);
-          throw customerError;
-        }
-      }
 
       // Add new order items
       if (newItems.length > 0) {
@@ -227,19 +209,28 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
         }
       }
 
-      // Update existing order items - ensure all required fields are present
+      // Update existing order items
       for (const item of orderItems) {
         if (!item.id) {
           console.warn('Skipping item without ID:', item);
           continue;
         }
 
-        const updateData = {
-          quantity: Number(item.quantity) || 1,
-          unit_price: Number(item.unit_price) || 0,
-          total_price: Number(item.total_price) || 0,
-          status: item.status || 'Created'
-        };
+        // Only update status if suborder is not in "Created" status
+        let updateData: any;
+        if (item.status === 'Created') {
+          updateData = {
+            quantity: Number(item.quantity) || 1,
+            unit_price: Number(item.unit_price) || 0,
+            total_price: Number(item.total_price) || 0,
+            status: item.status || 'Created'
+          };
+        } else {
+          // Only allow status updates for non-created suborders
+          updateData = {
+            status: item.status || 'Created'
+          };
+        }
 
         console.log('Updating order item:', item.id, updateData);
 
@@ -311,61 +302,31 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-sm">Edit Order - {order?.order_number}</DialogTitle>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="h-6 text-xs">
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete Order
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                    Delete Order
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this entire order? This action cannot be undone and will remove all suborders.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={deleteEntireOrder} className="bg-red-600 hover:bg-red-700">
-                    Delete Order
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <DialogTitle className="text-sm">Edit Order - {order?.order_number}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Customer Information */}
+          {/* Customer Information - Read Only */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Customer Information</CardTitle>
+              <CardTitle className="text-sm">Customer Information (Read Only)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="customerName" className="text-xs">Customer Name *</Label>
+                  <Label className="text-xs">Customer Name</Label>
                   <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-7 text-xs"
-                    required
+                    value={order?.customer?.name || ''}
+                    disabled
+                    className="h-7 text-xs bg-gray-100"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="customerPhone" className="text-xs">Phone Number</Label>
+                  <Label className="text-xs">Phone Number</Label>
                   <Input
-                    id="customerPhone"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="h-7 text-xs"
+                    value={order?.customer?.phone || ''}
+                    disabled
+                    className="h-7 text-xs bg-gray-100"
                   />
                 </div>
               </div>
@@ -398,27 +359,29 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                       <Badge className={`text-xs ${getStatusColor(item.status)}`}>
                         {item.status}
                       </Badge>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" className="h-5 w-5 p-0">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Suborder</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this suborder? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteOrderItem(item.id)} className="bg-red-600 hover:bg-red-700">
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      {canEditSuborderData(item) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" className="h-5 w-5 p-0">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Suborder</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this suborder? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteOrderItem(item.id)} className="bg-red-600 hover:bg-red-700">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                   
@@ -431,6 +394,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                         onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
                         min="1"
                         className="h-6 text-xs"
+                        disabled={!canEditSuborderData(item)}
                       />
                     </div>
                     <div>
@@ -442,6 +406,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                         min="0"
                         step="0.01"
                         className="h-6 text-xs"
+                        disabled={!canEditSuborderData(item)}
                       />
                     </div>
                     <div>
