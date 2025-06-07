@@ -8,6 +8,8 @@ import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
 import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
+import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
+import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -20,7 +22,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any[]>([]);
+  const { loading: orderDetailsLoading, fetchRawMaterialOrderDetails } = useOrderedQtyDetails();
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
@@ -51,7 +56,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfallTooltip = () => {
-    return "Shortfall = (Required + Minimum Stock) - (Current Stock + In Procurement). Negative values indicate shortfall, positive values indicate surplus.";
+    return "Shortfall = (Ordered Qty + Minimum Stock) - (Current Stock + In Procurement). Negative values indicate shortfall, positive values indicate surplus.";
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
@@ -67,6 +72,13 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const handleUpdateStock = (material: RawMaterial) => {
     setSelectedMaterial(material);
     setIsStockUpdateOpen(true);
+  };
+
+  const handleOrderedQtyClick = async (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsOrderDetailsOpen(true);
+    const details = await fetchRawMaterialOrderDetails(material.id);
+    setOrderDetails(details);
   };
 
   const handleRequestCreated = () => {
@@ -95,7 +107,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Required</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Ordered Qty</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
@@ -141,8 +153,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)}
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.required_quantity || 0)}
+                  <TableCell className="py-1 px-2">
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      onClick={() => handleOrderedQtyClick(material)}
+                    >
+                      {formatIndianNumber(material.required_quantity || 0)}
+                    </Button>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.in_procurement)}
@@ -222,6 +240,15 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         onOpenChange={setIsStockUpdateOpen}
         material={selectedMaterial}
         onStockUpdated={onUpdate}
+      />
+
+      <OrderedQtyDetailsDialog
+        isOpen={isOrderDetailsOpen}
+        onClose={() => setIsOrderDetailsOpen(false)}
+        materialName={selectedMaterial?.name}
+        orderDetails={orderDetails}
+        totalQuantity={selectedMaterial?.required_quantity || 0}
+        loading={orderDetailsLoading}
       />
     </>
   );
