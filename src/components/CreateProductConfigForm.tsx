@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2 } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Trash2, Search, Check, ChevronsUpDown } from 'lucide-react';
 import ProductConfigDetails from './config/ProductConfigDetails';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { cn } from '@/lib/utils';
 
 interface CreateProductConfigFormProps {
   onClose: () => void;
@@ -28,6 +32,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [rawMaterials, setRawMaterials] = useState([
     { material: '', quantity: 0, unit: 'grams' }
   ]);
+  const [openMaterialSelectors, setOpenMaterialSelectors] = useState<boolean[]>([false]);
 
   const { rawMaterials: availableRawMaterials, loading: rawMaterialsLoading } = useRawMaterials();
 
@@ -49,6 +54,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setThreshold(initialData.threshold || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
+      setOpenMaterialSelectors(new Array(initialData.rawMaterials?.length || 1).fill(false));
     }
   }, [initialData, isUpdate]);
 
@@ -64,6 +70,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
   const addMaterial = () => {
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
+    setOpenMaterialSelectors([...openMaterialSelectors, false]);
   };
 
   const removeMaterial = (index: number) => {
@@ -71,6 +78,10 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       const newMaterials = [...rawMaterials];
       newMaterials.splice(index, 1);
       setRawMaterials(newMaterials);
+      
+      const newOpenStates = [...openMaterialSelectors];
+      newOpenStates.splice(index, 1);
+      setOpenMaterialSelectors(newOpenStates);
     }
   };
 
@@ -90,6 +101,12 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       return material;
     });
     setRawMaterials(updatedMaterials);
+  };
+
+  const toggleMaterialSelector = (index: number, open: boolean) => {
+    const newOpenStates = [...openMaterialSelectors];
+    newOpenStates[index] = open;
+    setOpenMaterialSelectors(newOpenStates);
   };
 
   const getSelectedMaterialInfo = (materialId: string) => {
@@ -282,48 +299,85 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
                       {/* Split Layout: Raw Material | Quantity + Unit */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Raw Material Selection */}
+                        {/* Raw Material Selection with Search */}
                         <div className="space-y-2">
                           <Label className="text-sm">Select Raw Material *</Label>
-                          <Select 
-                            value={material.material} 
-                            onValueChange={(value) => updateMaterial(index, 'material', value)}
-                            disabled={rawMaterialsLoading}
+                          <Popover 
+                            open={openMaterialSelectors[index]} 
+                            onOpenChange={(open) => toggleMaterialSelector(index, open)}
                           >
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder={rawMaterialsLoading ? "Loading..." : "Choose material"} />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-80">
-                              <ScrollArea className="h-80">
-                                <div className="p-1">
-                                  {availableRawMaterials.map((rawMat) => (
-                                    <SelectItem key={rawMat.id} value={rawMat.id} className="py-2 px-2 cursor-pointer">
-                                      <div className="w-full">
-                                        <div className="font-medium text-sm truncate">{rawMat.name}</div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Badge variant="outline" className="text-xs px-1 py-0 h-5">
-                                            {rawMat.type}
-                                          </Badge>
-                                          <span className="text-xs text-gray-600">
-                                            Stock: {rawMat.current_stock} {rawMat.unit}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openMaterialSelectors[index]}
+                                className="w-full justify-between h-10 text-left font-normal"
+                                disabled={rawMaterialsLoading}
+                              >
+                                {material.material ? (
+                                  <span className="truncate">
+                                    {availableRawMaterials.find(m => m.id === material.material)?.name || "Select material..."}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    {rawMaterialsLoading ? "Loading..." : "Select material..."}
+                                  </span>
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search materials..." className="h-9" />
+                                <CommandList>
+                                  <CommandEmpty>No material found.</CommandEmpty>
+                                  <CommandGroup>
+                                    <ScrollArea className="h-48">
+                                      {availableRawMaterials.map((rawMat) => (
+                                        <CommandItem
+                                          key={rawMat.id}
+                                          value={rawMat.name}
+                                          onSelect={() => {
+                                            updateMaterial(index, 'material', rawMat.id);
+                                            toggleMaterialSelector(index, false);
+                                          }}
+                                          className="cursor-pointer"
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              material.material === rawMat.id ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <span className="truncate">{rawMat.name}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </ScrollArea>
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {/* Material Details Below Selector */}
                           {selectedMaterial && (
-                            <div className="text-xs text-gray-600 space-y-1">
+                            <div className="p-3 bg-white rounded border text-xs space-y-2">
                               <div className="flex items-center gap-2">
-                                <span>Type:</span>
+                                <span className="font-medium">Type:</span>
                                 <Badge variant="secondary" className="text-xs h-5 px-2">
                                   {selectedMaterial.type}
                                 </Badge>
                               </div>
-                              <div>Available: {selectedMaterial.current_stock} {selectedMaterial.unit}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Available Stock:</span>
+                                <span className="text-green-600 font-medium">
+                                  {selectedMaterial.current_stock} {selectedMaterial.unit}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Unit:</span>
+                                <span>{selectedMaterial.unit}</span>
+                              </div>
                             </div>
                           )}
                         </div>
