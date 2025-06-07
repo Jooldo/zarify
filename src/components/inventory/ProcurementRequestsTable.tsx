@@ -33,6 +33,7 @@ const ProcurementRequestsTable = ({ requests, onViewRequest }: ProcurementReques
           <TableRow className="h-8">
             <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
@@ -45,6 +46,11 @@ const ProcurementRequestsTable = ({ requests, onViewRequest }: ProcurementReques
             <TableRow key={request.id} className="h-8">
               <TableCell className="py-1 px-2 text-xs font-medium">{request.request_number}</TableCell>
               <TableCell className="py-1 px-2 text-xs">{request.raw_material?.name || 'Unknown'}</TableCell>
+              <TableCell className="py-1 px-2">
+                <Badge variant="outline" className="text-xs h-4 px-1">
+                  {request.raw_material?.type || 'Unknown'}
+                </Badge>
+              </TableCell>
               <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
               <TableCell className="py-1 px-2 text-xs">{extractSupplierFromNotes(request.notes)}</TableCell>
               <TableCell className="py-1 px-2">
