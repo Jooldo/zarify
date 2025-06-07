@@ -88,8 +88,7 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
   };
 
   const formatSize = (sizeValue: number) => {
-    const sizeInInches = (sizeValue * 39.3701).toFixed(1);
-    return `${sizeInInches}"`;
+    return `${sizeValue}"`;
   };
 
   return (
@@ -137,10 +136,10 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                     <div
                       key={config.id}
                       onClick={() => handleSelect(config.product_code)}
-                      className="p-2 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-2 transition-colors bg-white"
+                      className="p-3 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-2 transition-colors bg-white"
                     >
-                      <div className="flex items-start justify-between mb-1">
-                        <Badge variant="outline" className="text-xs h-5 px-1 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="outline" className="text-xs h-5 px-2 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
                           {config.product_code}
                         </Badge>
                         <div className="text-right">
@@ -155,17 +154,19 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="space-y-1">
+                        {/* Product Type (subcategory) - Higher prominence */}
                         <div>
-                          <span className="text-gray-500 text-xs">Category:</span>
-                          <div className="font-medium text-gray-800 truncate">
-                            {config.category}
+                          <span className="text-xs text-gray-500">Product Type:</span>
+                          <div className="text-sm font-semibold text-gray-900 leading-tight">
+                            {config.subcategory}
                           </div>
                         </div>
+                        {/* Category - Lower prominence */}
                         <div>
-                          <span className="text-gray-500 text-xs">Type:</span>
-                          <div className="font-medium text-gray-800 truncate">
-                            {config.subcategory}
+                          <span className="text-xs text-gray-400">Category:</span>
+                          <div className="text-xs text-gray-600">
+                            {config.category}
                           </div>
                         </div>
                       </div>
@@ -193,12 +194,12 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
         <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <span className="font-medium text-gray-700">Category:</span>
-              <div className="text-gray-900">{selectedConfig.category}</div>
+              <span className="font-medium text-gray-700">Product Type:</span>
+              <div className="text-gray-900 font-medium">{selectedConfig.subcategory}</div>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Type:</span>
-              <div className="text-gray-900">{selectedConfig.subcategory}</div>
+              <span className="font-medium text-gray-700">Category:</span>
+              <div className="text-gray-900">{selectedConfig.category}</div>
             </div>
             <div>
               <span className="font-medium text-gray-700">Size:</span>

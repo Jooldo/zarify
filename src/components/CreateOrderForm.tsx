@@ -16,7 +16,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   const [items, setItems] = useState([{
     productCode: '',
     quantity: 1,
-    price: 0
+    price: '' // Changed from 0 to empty string
   }]);
 
   const { submitOrder, loading } = useOrderSubmission({ onOrderCreated, onClose });
@@ -25,7 +25,7 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
     setItems([...items, {
       productCode: '',
       quantity: 1,
-      price: 0
+      price: '' // Changed from 0 to empty string
     }]);
   };
 
@@ -51,7 +51,14 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitOrder(customerName, customerPhone, items);
+    
+    // Convert empty price strings to 0 for submission
+    const itemsWithValidPrices = items.map(item => ({
+      ...item,
+      price: item.price === '' ? 0 : Number(item.price)
+    }));
+    
+    await submitOrder(customerName, customerPhone, itemsWithValidPrices);
   };
 
   return (
