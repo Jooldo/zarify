@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ interface RaiseRequestDialogProps {
   mode: 'inventory' | 'procurement';
 }
 
-// Dummy supplier data with proper UUIDs
+// Dummy supplier data with proper UUIDs - for display only
 const DUMMY_SUPPLIERS: Supplier[] = [
   { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
   { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
@@ -36,13 +37,11 @@ const DUMMY_SUPPLIERS: Supplier[] = [
 ];
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
-  
-
   const [quantity, setQuantity] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
@@ -70,8 +69,37 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
     return 'Create a detailed procurement request with supplier and delivery information.';
   };
 
+  // Load suppliers when dialog opens
+  React.useEffect(() => {
+    if (isOpen && isProcurementMode) {
+      const fetchSuppliers = async () => {
+        try {
+          const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
+          if (merchantError) throw merchantError;
+
+          const { data, error } = await supabase
+            .from('suppliers')
+            .select('id, company_name, contact_person')
+            .eq('merchant_id', merchantId);
+
+          if (error) {
+            console.log('Error fetching suppliers, using dummy data:', error);
+            setSuppliers(DUMMY_SUPPLIERS);
+          } else {
+            // Combine real suppliers with dummy data for display
+            setSuppliers([...(data || []), ...DUMMY_SUPPLIERS]);
+          }
+        } catch (error) {
+          console.error('Error fetching suppliers:', error);
+          setSuppliers(DUMMY_SUPPLIERS);
+        }
+      };
+
+      fetchSuppliers();
+    }
+  }, [isOpen, isProcurementMode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
-    
     e.preventDefault();
     if (!quantity || !material) return;
 
@@ -86,9 +114,22 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
 
       // Get the selected supplier info (only for procurement mode)
       let supplierNotes = '';
+      let validSupplierId = null;
+
       if (isProcurementMode && selectedSupplierId) {
         const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
-        supplierNotes = selectedSupplier ? `Supplier: ${selectedSupplier.company_name}` : '';
+        if (selectedSupplier) {
+          // Check if this is a dummy supplier by checking if it's in our dummy list
+          const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === selectedSupplierId);
+          
+          if (!isDummySupplier) {
+            // Only set supplier_id for real suppliers from database
+            validSupplierId = selectedSupplierId;
+          }
+          
+          // Always add supplier info to notes for tracking
+          supplierNotes = `Supplier: ${selectedSupplier.company_name}`;
+        }
       }
 
       // Add mode indicator to notes
@@ -102,7 +143,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
           raw_material_id: material.id,
           quantity_requested: parseInt(quantity),
           unit: material.unit,
-          supplier_id: isProcurementMode ? (selectedSupplierId || null) : null,
+          supplier_id: validSupplierId, // Only set if it's a real supplier
           eta: isProcurementMode ? (eta || null) : null,
           notes: finalNotes || null,
           status: 'Pending',
@@ -245,10 +286,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={isInventoryMode 
-                ? "Describe urgency or special requirements" 
-                : "Additional notes or requirements"
-              }
+              placeholder="Add notes about the request"
               rows={3}
             />
           </div>

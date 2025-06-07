@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ interface ViewRequestDialogProps {
   onUpdateRequestStatus: (requestId: string, newStatus: string) => void;
 }
 
-// Dummy supplier data with proper UUIDs
+// Dummy supplier data with proper UUIDs - for display only
 const DUMMY_SUPPLIERS: Supplier[] = [
   { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
   { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
@@ -72,14 +73,15 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
           .select('id, company_name, contact_person')
           .eq('merchant_id', merchantId);
 
-        if (error) throw error;
-        
-        // Combine real suppliers with dummy data
-        const allSuppliers = [...(data || []), ...DUMMY_SUPPLIERS];
-        setSuppliers(allSuppliers);
+        if (error) {
+          console.log('Error fetching suppliers, using dummy data:', error);
+          setSuppliers(DUMMY_SUPPLIERS);
+        } else {
+          // Combine real suppliers with dummy data for display
+          setSuppliers([...(data || []), ...DUMMY_SUPPLIERS]);
+        }
       } catch (error) {
         console.error('Error fetching suppliers:', error);
-        // If there's an error, just use dummy data
         setSuppliers(DUMMY_SUPPLIERS);
       }
     };
@@ -105,7 +107,14 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       if (selectedSupplier) {
         const selectedSupplierData = suppliers.find(s => s.id === selectedSupplier);
         if (selectedSupplierData) {
-          updates.supplier_id = selectedSupplier;
+          // Check if this is a dummy supplier
+          const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === selectedSupplier);
+          
+          if (!isDummySupplier) {
+            // Only set supplier_id for real suppliers from database
+            updates.supplier_id = selectedSupplier;
+          }
+          
           // Update or add supplier info in notes
           if (updatedNotes.includes('Supplier:')) {
             updatedNotes = updatedNotes.replace(/Supplier:\s*[^\n]*/, `Supplier: ${selectedSupplierData.company_name}`);
