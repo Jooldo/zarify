@@ -254,9 +254,9 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
         }
       }
 
-      // Update order - ensure we have valid values
+      // Update order - properly handle optional expected_delivery
       const totalAmount = calculateTotalAmount();
-      const orderUpdateData = {
+      const orderUpdateData: any = {
         total_amount: totalAmount,
         updated_date: new Date().toISOString().split('T')[0]
       };
