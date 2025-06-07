@@ -23,15 +23,13 @@ const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusV
             <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Product Type</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Size & Weight</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Stock Available</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Sub Amount</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Total Amount</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Created</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Expected</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
           </TableRow>
         </TableHeader>

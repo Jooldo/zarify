@@ -101,7 +101,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         </CardContent>
       </Card>
 
-      {/* Order Items Table - More compact */}
+      {/* Order Items Table - More compact with additional details */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Order Items</CardTitle>
@@ -111,42 +111,53 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             <TableHeader>
               <TableRow className="h-8">
                 <TableHead className="py-1 text-xs">Suborder ID</TableHead>
+                <TableHead className="py-1 text-xs">Product Code</TableHead>
                 <TableHead className="py-1 text-xs">Category</TableHead>
                 <TableHead className="py-1 text-xs">Product Type</TableHead>
+                <TableHead className="py-1 text-xs">Size & Weight</TableHead>
                 <TableHead className="py-1 text-xs">Qty</TableHead>
                 <TableHead className="py-1 text-xs">Unit Price</TableHead>
-                <TableHead className="py-1 text-xs">Total</TableHead>
+                <TableHead className="py-1 text-xs">Sub Amount</TableHead>
                 <TableHead className="py-1 text-xs">Status</TableHead>
                 <TableHead className="py-1 text-xs text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {order.order_items.map((item: any) => (
-                <TableRow key={item.id} className="h-10">
-                  <TableCell className="py-1 text-xs font-medium">{item.suborder_id}</TableCell>
-                  <TableCell className="py-1 text-xs">{item.product_config.category}</TableCell>
-                  <TableCell className="py-1 text-xs">{item.product_config.subcategory}</TableCell>
-                  <TableCell className="py-1 text-xs">{item.quantity}</TableCell>
-                  <TableCell className="py-1 text-xs">₹{item.unit_price.toLocaleString()}</TableCell>
-                  <TableCell className="py-1 text-xs">₹{item.total_price.toLocaleString()}</TableCell>
-                  <TableCell className="py-1">
-                    <Badge variant="secondary" className="text-xs h-5">{item.status}</Badge>
-                  </TableCell>
-                  <TableCell className="py-1 text-right">
-                    <Select onValueChange={(value) => updateOrderItemStatus(item.id, value as OrderStatus)}>
-                      <SelectTrigger className="w-[120px] h-7 text-xs">
-                        <SelectValue placeholder={item.status} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Created">Created</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Ready">Ready</SelectItem>
-                        <SelectItem value="Delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {order.order_items.map((item: any) => {
+                // Display size exactly as entered in product config without any conversion
+                const sizeValue = item.product_config.size_value || 'N/A';
+                const weightRange = item.product_config.weight_range || 'N/A';
+                const sizeWeight = `${sizeValue}" / ${weightRange}`;
+                
+                return (
+                  <TableRow key={item.id} className="h-10">
+                    <TableCell className="py-1 text-xs font-medium">{item.suborder_id}</TableCell>
+                    <TableCell className="py-1 text-xs">{item.product_config.product_code}</TableCell>
+                    <TableCell className="py-1 text-xs">{item.product_config.category}</TableCell>
+                    <TableCell className="py-1 text-xs">{item.product_config.subcategory}</TableCell>
+                    <TableCell className="py-1 text-xs">{sizeWeight}</TableCell>
+                    <TableCell className="py-1 text-xs">{item.quantity}</TableCell>
+                    <TableCell className="py-1 text-xs">₹{item.unit_price.toLocaleString()}</TableCell>
+                    <TableCell className="py-1 text-xs">₹{item.total_price.toLocaleString()}</TableCell>
+                    <TableCell className="py-1">
+                      <Badge variant="secondary" className="text-xs h-5">{item.status}</Badge>
+                    </TableCell>
+                    <TableCell className="py-1 text-right">
+                      <Select onValueChange={(value) => updateOrderItemStatus(item.id, value as OrderStatus)}>
+                        <SelectTrigger className="w-[120px] h-7 text-xs">
+                          <SelectValue placeholder={item.status} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Created">Created</SelectItem>
+                          <SelectItem value="In Progress">In Progress</SelectItem>
+                          <SelectItem value="Ready">Ready</SelectItem>
+                          <SelectItem value="Delivered">Delivered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

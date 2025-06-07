@@ -16,6 +16,7 @@ interface OrdersTableRowProps {
     productCode: string;
     category: string;
     subcategory: string;
+    size: string;
     quantity: number;
     status: string;
     price: number;
@@ -86,6 +87,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.category}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.subcategory}</TableCell>
+        <TableCell className="py-1 px-2 text-xs">{item.size}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
           <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>
@@ -98,11 +100,8 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         <TableCell className="py-1 px-2">
           <StatusBadge status={getOverallOrderStatus(item.orderId)} />
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs font-medium">₹{item.price.toLocaleString()}</TableCell>
-        <TableCell className="py-1 px-2 text-xs font-medium">₹{item.totalOrderAmount.toLocaleString()}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{new Date(item.updatedDate).toLocaleDateString('en-IN')}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">{new Date(item.expectedDelivery).toLocaleDateString('en-IN')}</TableCell>
         <TableCell className="py-1 px-2">
           <div className="flex gap-1">
             {order && (
