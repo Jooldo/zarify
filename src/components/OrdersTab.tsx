@@ -21,6 +21,40 @@ const OrdersTab = () => {
     dateTo: ''
   });
 
+  // Define utility functions first
+  const getOverallOrderStatus = (orderId: string) => {
+    const order = orders.find(o => o.order_number === orderId);
+    if (!order) return "Created";
+    
+    const statuses = order.order_items.map(sub => sub.status);
+    
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.some(s => s === "In Progress")) return "In Progress";
+    
+    return "Created";
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "Created":
+        return "secondary" as const;
+      case "In Progress":
+        return "default" as const;
+      case "Ready":
+        return "default" as const;
+      case "Delivered":
+        return "outline" as const;
+      default:
+        return "secondary" as const;
+    }
+  };
+
+  const getStockAvailable = (productCode: string) => {
+    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
+    return finishedGood ? finishedGood.current_stock : 0;
+  };
+
   const flattenedOrders = orders.flatMap(order => 
     order.order_items.map(suborder => {
       // Display size exactly as entered in product config without any conversion
@@ -114,39 +148,6 @@ const OrdersTab = () => {
   };
 
   const filteredOrders = applyFilters(flattenedOrders);
-
-  const getOverallOrderStatus = (orderId: string) => {
-    const order = orders.find(o => o.order_number === orderId);
-    if (!order) return "Created";
-    
-    const statuses = order.order_items.map(sub => sub.status);
-    
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.every(s => s === "Ready")) return "Ready";
-    if (statuses.some(s => s === "In Progress")) return "In Progress";
-    
-    return "Created";
-  };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "Created":
-        return "secondary" as const;
-      case "In Progress":
-        return "default" as const;
-      case "Ready":
-        return "default" as const;
-      case "Delivered":
-        return "outline" as const;
-      default:
-        return "secondary" as const;
-    }
-  };
-
-  const getStockAvailable = (productCode: string) => {
-    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
-    return finishedGood ? finishedGood.current_stock : 0;
-  };
 
   const uniqueCustomers = [...new Set(customers.map(c => c.name))];
 
