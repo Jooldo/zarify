@@ -31,6 +31,10 @@ const RMProcurementTab = () => {
     refetch();
   };
 
+  const handleRequestUpdated = () => {
+    refetch(); // Refresh the table when request is updated
+  };
+
   const handleRaiseRequest = () => {
     setRaiseRequestOpen(true);
   };
@@ -115,6 +119,7 @@ const RMProcurementTab = () => {
         onOpenChange={setViewDialogOpen}
         selectedRequest={selectedRequest}
         onUpdateRequestStatus={handleUpdateRequestStatus}
+        onRequestUpdated={handleRequestUpdated}
       />
 
       {raiseRequestOpen && (

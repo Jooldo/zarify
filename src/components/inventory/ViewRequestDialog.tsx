@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ interface ViewRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedRequest: ProcurementRequest | null;
   onUpdateRequestStatus: (requestId: string, newStatus: string) => void;
+  onRequestUpdated?: () => void; // Add this to trigger table refresh
 }
 
 // Dummy supplier data with proper UUIDs - for display only
@@ -34,7 +34,7 @@ const DUMMY_SUPPLIERS: Supplier[] = [
   { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
 ];
 
-const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus }: ViewRequestDialogProps) => {
+const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus, onRequestUpdated }: ViewRequestDialogProps) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
   const [editMode, setEditMode] = useState(false);
@@ -145,6 +145,12 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       });
 
       setEditMode(false);
+      
+      // Trigger table refresh if callback is provided
+      if (onRequestUpdated) {
+        onRequestUpdated();
+      }
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating request:', error);
