@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RawMaterial } from '@/hooks/useRawMaterials';
+import MaterialStatusBadge from './MaterialStatusBadge';
 
 interface ViewRawMaterialDialogProps {
   isOpen: boolean;
@@ -13,67 +14,56 @@ interface ViewRawMaterialDialogProps {
 const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMaterialDialogProps) => {
   if (!material) return null;
 
-  const getStockStatus = (currentStock: number, minimumStock: number) => {
-    if (currentStock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
-    if (currentStock <= minimumStock) return { label: 'Low Stock', variant: 'secondary' as const };
-    return { label: 'In Stock', variant: 'default' as const };
-  };
-
-  const status = getStockStatus(material.current_stock, material.minimum_stock);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>View Material - {material.name}</DialogTitle>
+          <DialogTitle className="text-sm">Material Details</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <Label className="font-medium">Material Name:</Label>
-              <div className="text-lg font-bold">{material.name}</div>
+              <Label className="text-xs font-medium text-gray-600">Name:</Label>
+              <div className="font-semibold">{material.name}</div>
             </div>
             <div>
-              <Label className="font-medium">Type:</Label>
-              <div className="text-lg">{material.type}</div>
+              <Label className="text-xs font-medium text-gray-600">Type:</Label>
+              <div>{material.type}</div>
             </div>
             <div>
-              <Label className="font-medium">Current Stock:</Label>
-              <div className="text-lg font-bold text-blue-600">
+              <Label className="text-xs font-medium text-gray-600">Current Stock:</Label>
+              <div className="font-semibold text-blue-600">
                 {material.current_stock} {material.unit}
               </div>
             </div>
             <div>
-              <Label className="font-medium">Minimum Stock:</Label>
-              <div className="text-lg">{material.minimum_stock} {material.unit}</div>
+              <Label className="text-xs font-medium text-gray-600">Min. Stock:</Label>
+              <div>{material.minimum_stock} {material.unit}</div>
             </div>
             <div>
-              <Label className="font-medium">Required:</Label>
-              <div className="text-lg">{material.required} {material.unit}</div>
+              <Label className="text-xs font-medium text-gray-600">Required:</Label>
+              <div>{material.required} {material.unit}</div>
             </div>
             <div>
-              <Label className="font-medium">In Procurement:</Label>
-              <div className="text-lg">{material.in_procurement} {material.unit}</div>
+              <Label className="text-xs font-medium text-gray-600">In Procurement:</Label>
+              <div>{material.in_procurement} {material.unit}</div>
             </div>
             <div>
-              <Label className="font-medium">Stock Status:</Label>
-              <Badge variant={status.variant} className="text-sm">
-                {status.label}
-              </Badge>
+              <Label className="text-xs font-medium text-gray-600">Status:</Label>
+              <MaterialStatusBadge 
+                currentStock={material.current_stock}
+                minimumStock={material.minimum_stock}
+              />
             </div>
             <div>
-              <Label className="font-medium">Supplier:</Label>
-              <div className="text-lg">{material.supplier?.company_name || 'N/A'}</div>
+              <Label className="text-xs font-medium text-gray-600">Cost/Unit:</Label>
+              <div>₹{material.cost_per_unit || 'N/A'}</div>
             </div>
-            <div>
-              <Label className="font-medium">Cost per Unit:</Label>
-              <div className="text-lg">₹{material.cost_per_unit || 'N/A'}</div>
-            </div>
-            <div>
-              <Label className="font-medium">Last Updated:</Label>
-              <div className="text-sm text-gray-600">
-                {new Date(material.last_updated).toLocaleDateString()}
-              </div>
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-gray-600">Last Updated:</Label>
+            <div className="text-xs text-gray-500">
+              {new Date(material.last_updated).toLocaleDateString()}
             </div>
           </div>
         </div>

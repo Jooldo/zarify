@@ -22,7 +22,6 @@ const UpdateStockDialog = ({ isOpen, onOpenChange, material, onStockUpdated }: U
   if (!material) return null;
 
   const handleUpdate = () => {
-    // Implementation for updating stock
     console.log('Update stock for:', material.name);
     onStockUpdated();
     onOpenChange(false);
@@ -30,19 +29,22 @@ const UpdateStockDialog = ({ isOpen, onOpenChange, material, onStockUpdated }: U
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Update Stock - {material.name}</DialogTitle>
+          <DialogTitle className="text-sm">Update Stock - {material.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2 rounded">
             <div>
-              <Label className="text-xs">Current Stock: {material.current_stock} {material.unit}</Label>
+              <span className="font-medium">Current: </span>
+              {material.current_stock} {material.unit}
             </div>
             <div>
-              <Label className="text-xs">Minimum Stock: {material.minimum_stock} {material.unit}</Label>
+              <span className="font-medium">Min: </span>
+              {material.minimum_stock} {material.unit}
             </div>
           </div>
+          
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor="newStock" className="text-xs">New Stock Quantity</Label>
@@ -52,25 +54,26 @@ const UpdateStockDialog = ({ isOpen, onOpenChange, material, onStockUpdated }: U
                 value={currentStock}
                 onChange={(e) => setCurrentStock(e.target.value)}
                 placeholder={material.current_stock.toString()} 
-                className="h-8 text-xs" 
+                className="h-7 text-xs" 
               />
             </div>
             <div>
-              <Label htmlFor="newThreshold" className="text-xs">New Minimum Stock</Label>
+              <Label htmlFor="newThreshold" className="text-xs">New Min Stock</Label>
               <Input 
                 id="newThreshold" 
                 type="number" 
                 value={minimumStock}
                 onChange={(e) => setMinimumStock(e.target.value)}
                 placeholder={material.minimum_stock.toString()} 
-                className="h-8 text-xs" 
+                className="h-7 text-xs" 
               />
             </div>
           </div>
+          
           <div>
-            <Label htmlFor="updateReason" className="text-xs">Reason for Update</Label>
+            <Label htmlFor="updateReason" className="text-xs">Update Reason</Label>
             <Select value={updateReason} onValueChange={setUpdateReason}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-7 text-xs">
                 <SelectValue placeholder="Select reason" />
               </SelectTrigger>
               <SelectContent>
@@ -81,7 +84,10 @@ const UpdateStockDialog = ({ isOpen, onOpenChange, material, onStockUpdated }: U
               </SelectContent>
             </Select>
           </div>
-          <Button className="w-full h-8 text-xs" onClick={handleUpdate}>Update Stock</Button>
+          
+          <Button className="w-full h-7 text-xs" onClick={handleUpdate}>
+            Update Stock
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
