@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -164,16 +165,24 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
     setLoading(true);
 
     try {
-      // Update customer information
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({
-          name: customerName,
-          phone: customerPhone
-        })
-        .eq('id', order.customer.id);
+      console.log('Starting order update for order:', order.id);
+      console.log('Customer ID:', order.customer?.id);
 
-      if (customerError) throw customerError;
+      // Update customer information - ensure we have a valid customer ID
+      if (order.customer?.id) {
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({
+            name: customerName,
+            phone: customerPhone
+          })
+          .eq('id', order.customer.id);
+
+        if (customerError) {
+          console.error('Customer update error:', customerError);
+          throw customerError;
+        }
+      }
 
       // Add new order items
       if (newItems.length > 0) {
@@ -191,7 +200,10 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
             .eq('product_code', item.productCode)
             .single();
 
-          if (configError) throw configError;
+          if (configError) {
+            console.error('Product config error:', configError);
+            throw configError;
+          }
 
           const suborderId = generateSuborderId(i);
 
@@ -208,37 +220,63 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
               status: 'Created'
             });
 
-          if (itemError) throw itemError;
+          if (itemError) {
+            console.error('Order item insert error:', itemError);
+            throw itemError;
+          }
         }
       }
 
-      // Update existing order items
+      // Update existing order items - ensure all required fields are present
       for (const item of orderItems) {
+        if (!item.id) {
+          console.warn('Skipping item without ID:', item);
+          continue;
+        }
+
+        const updateData = {
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          total_price: Number(item.total_price) || 0,
+          status: item.status || 'Created'
+        };
+
+        console.log('Updating order item:', item.id, updateData);
+
         const { error: itemError } = await supabase
           .from('order_items')
-          .update({
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-            status: item.status
-          })
+          .update(updateData)
           .eq('id', item.id);
 
-        if (itemError) throw itemError;
+        if (itemError) {
+          console.error('Order item update error:', itemError);
+          throw itemError;
+        }
       }
 
-      // Update order
+      // Update order - ensure we have valid values
       const totalAmount = calculateTotalAmount();
+      const orderUpdateData = {
+        total_amount: totalAmount,
+        updated_date: new Date().toISOString().split('T')[0]
+      };
+
+      // Only add expected_delivery if it has a value
+      if (expectedDelivery) {
+        orderUpdateData.expected_delivery = expectedDelivery;
+      }
+
+      console.log('Updating order:', order.id, orderUpdateData);
+
       const { error: orderError } = await supabase
         .from('orders')
-        .update({
-          total_amount: totalAmount,
-          expected_delivery: expectedDelivery || null,
-          updated_date: new Date().toISOString().split('T')[0]
-        })
+        .update(orderUpdateData)
         .eq('id', order.id);
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order update error:', orderError);
+        throw orderError;
+      }
 
       toast({
         title: 'Success',
@@ -475,13 +513,41 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-2 border-t">
-            <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-7 text-xs">
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" className="h-7 text-xs" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Order'}
-            </Button>
+          <div className="flex gap-2 justify-between pt-2 border-t">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" size="sm" className="h-7 text-xs">
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete Order
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    Delete Order
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this entire order? This action cannot be undone and will remove all suborders.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteEntireOrder} className="bg-red-600 hover:bg-red-700">
+                    Delete Order
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose} size="sm" className="h-7 text-xs">
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" className="h-7 text-xs" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Order'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
