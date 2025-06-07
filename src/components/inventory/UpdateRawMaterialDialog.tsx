@@ -16,26 +16,18 @@ interface UpdateRawMaterialDialogProps {
   onMaterialUpdated: () => void;
 }
 
-interface Supplier {
-  id: string;
-  company_name: string;
-}
-
 const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpdated }: UpdateRawMaterialDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     type: '',
     unit: '',
     minimum_stock: 0,
-    cost_per_unit: 0,
-    supplier_id: '',
   });
   const { toast } = useToast();
 
   const materialTypes = ["Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
-  const units = ["pieces", "meters", "rolls", "kg"];
+  const units = ["grams", "pieces", "meters", "rolls", "kg"];
 
   useEffect(() => {
     if (material && isOpen) {
@@ -44,32 +36,9 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
         type: material.type || '',
         unit: material.unit || '',
         minimum_stock: material.minimum_stock || 0,
-        cost_per_unit: material.cost_per_unit || 0,
-        supplier_id: material.supplier_id || 'no-supplier',
       });
-      fetchSuppliers();
     }
   }, [material, isOpen]);
-
-  const fetchSuppliers = async () => {
-    try {
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
-
-      if (merchantError) throw merchantError;
-
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('id, company_name')
-        .eq('merchant_id', merchantId)
-        .order('company_name');
-
-      if (error) throw error;
-      setSuppliers(data || []);
-    } catch (error) {
-      console.error('Error fetching suppliers:', error);
-    }
-  };
 
   const handleUpdate = async () => {
     if (!material || !formData.name || !formData.type || !formData.unit) {
@@ -90,8 +59,6 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
           type: formData.type,
           unit: formData.unit,
           minimum_stock: formData.minimum_stock,
-          cost_per_unit: formData.cost_per_unit || null,
-          supplier_id: formData.supplier_id === 'no-supplier' ? null : formData.supplier_id,
           last_updated: new Date().toISOString()
         })
         .eq('id', material.id);
@@ -183,35 +150,6 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
               onChange={(e) => handleInputChange('minimum_stock', parseInt(e.target.value) || 0)}
               min="0"
             />
-          </div>
-
-          <div>
-            <Label htmlFor="costPerUnit">Cost Per Unit</Label>
-            <Input 
-              id="costPerUnit" 
-              type="number" 
-              step="0.01"
-              value={formData.cost_per_unit}
-              onChange={(e) => handleInputChange('cost_per_unit', parseFloat(e.target.value) || 0)}
-              min="0"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="supplier">Supplier</Label>
-            <Select value={formData.supplier_id} onValueChange={(value) => handleInputChange('supplier_id', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no-supplier">No supplier</SelectItem>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <Button 

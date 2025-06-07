@@ -97,9 +97,7 @@ const RawMaterialsConfig = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Cost/Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -118,13 +116,7 @@ const RawMaterialsConfig = () => {
                   {material.unit}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
-                  {material.cost_per_unit ? `₹${material.cost_per_unit}` : 'N/A'}
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">
                   {material.minimum_stock}
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">
-                  {material.supplier?.company_name || 'Not assigned'}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   <div className="flex gap-1">

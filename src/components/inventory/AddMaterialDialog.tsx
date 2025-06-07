@@ -110,38 +110,21 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
-              <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
-                <SelectTrigger className="h-10 text-sm mt-2">
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableUnits.map((unit) => (
-                    <SelectItem key={unit.value} value={unit.value} className="text-sm">
-                      {unit.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">Use grams for weight-based materials</p>
-            </div>
-            
-            <div>
-              <Label htmlFor="costPerUnit" className="text-sm font-medium">Cost Per Unit</Label>
-              <Input 
-                id="costPerUnit" 
-                type="number" 
-                placeholder="0.00" 
-                step="0.01"
-                value={formData.cost_per_unit || ''}
-                onChange={(e) => handleInputChange('cost_per_unit', parseFloat(e.target.value) || undefined)}
-                className="h-10 text-sm mt-2"
-                min="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">Enter cost in rupees</p>
-            </div>
+          <div>
+            <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
+            <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
+              <SelectTrigger className="h-10 text-sm mt-2">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.value} value={unit.value} className="text-sm">
+                    {unit.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">Use grams for weight-based materials</p>
           </div>
 
           <div>
