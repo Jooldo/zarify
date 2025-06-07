@@ -611,6 +611,8 @@ export type Database = {
           payment_terms: string | null
           phone: string | null
           updated_at: string | null
+          whatsapp_enabled: boolean | null
+          whatsapp_number: string | null
         }
         Insert: {
           company_name: string
@@ -623,6 +625,8 @@ export type Database = {
           payment_terms?: string | null
           phone?: string | null
           updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_number?: string | null
         }
         Update: {
           company_name?: string
@@ -635,6 +639,8 @@ export type Database = {
           payment_terms?: string | null
           phone?: string | null
           updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_number?: string | null
         }
         Relationships: [
           {
@@ -734,6 +740,63 @@ export type Database = {
           user_name?: string
         }
         Relationships: []
+      }
+      whatsapp_notifications: {
+        Row: {
+          created_at: string | null
+          delivery_status: string | null
+          error_message: string | null
+          id: string
+          merchant_id: string
+          message_content: string
+          procurement_request_id: string
+          sent_at: string | null
+          status: string
+          supplier_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_status?: string | null
+          error_message?: string | null
+          id?: string
+          merchant_id: string
+          message_content: string
+          procurement_request_id: string
+          sent_at?: string | null
+          status?: string
+          supplier_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_status?: string | null
+          error_message?: string | null
+          id?: string
+          merchant_id?: string
+          message_content?: string
+          procurement_request_id?: string
+          sent_at?: string | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workers: {
         Row: {

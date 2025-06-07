@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from './useActivityLog';
+import { useWhatsAppNotifications } from './useWhatsAppNotifications';
 
 export interface ProcurementRequest {
   id: string;
@@ -29,6 +29,7 @@ export const useProcurementRequests = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
+  const { sendWhatsAppNotification } = useWhatsAppNotifications();
 
   const fetchRequests = async () => {
     try {
@@ -102,6 +103,43 @@ export const useProcurementRequests = () => {
 
       if (updateError) throw updateError;
 
+      // If status is "Approved", send WhatsApp notification to supplier
+      if (newStatus === 'Approved') {
+        console.log('Status changed to Approved, sending WhatsApp notification...');
+        
+        // Get supplier details for WhatsApp notification
+        let supplierData = null;
+        if (request.supplier_id) {
+          const { data: supplier, error: supplierError } = await supabase
+            .from('suppliers')
+            .select('company_name, whatsapp_number, whatsapp_enabled')
+            .eq('id', request.supplier_id)
+            .single();
+
+          if (!supplierError && supplier) {
+            supplierData = supplier;
+          }
+        }
+
+        // If we have supplier data and WhatsApp is enabled, send notification
+        if (supplierData?.whatsapp_enabled && supplierData?.whatsapp_number) {
+          console.log('Sending WhatsApp to supplier:', supplierData.company_name);
+          await sendWhatsAppNotification(
+            requestId,
+            request.supplier_id!,
+            supplierData.whatsapp_number,
+            supplierData.company_name,
+            request.raw_material?.name || 'Unknown Material',
+            request.quantity_requested,
+            request.unit,
+            request.request_number,
+            request.eta
+          );
+        } else {
+          console.log('WhatsApp notification skipped - supplier data not available or WhatsApp disabled');
+        }
+      }
+
       // If status is "Received", update the raw material stock
       if (newStatus === 'Received') {
         console.log('Updating raw material stock for:', request.raw_material_id, 'quantity:', request.quantity_requested);
@@ -155,12 +193,12 @@ export const useProcurementRequests = () => {
         'Status Updated',
         'Procurement Request',
         requestId,
-        `Procurement request ${request.request_number} status changed to ${newStatus}`
+        `Procurement request ${request.request_number} status changed to ${newStatus}${newStatus === 'Approved' ? ' (WhatsApp notification sent to supplier)' : ''}`
       );
 
       toast({
         title: 'Success',
-        description: `Request status updated to ${newStatus}`,
+        description: `Request status updated to ${newStatus}${newStatus === 'Approved' ? '. WhatsApp notification sent to supplier.' : ''}`,
       });
 
       // Refresh requests

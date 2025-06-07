@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Edit } from 'lucide-react';
+import { AlertCircle, Edit, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useWhatsAppNotifications, type WhatsAppNotification } from '@/hooks/useWhatsAppNotifications';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface Supplier {
@@ -41,7 +42,9 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   const [editEta, setEditEta] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [whatsappHistory, setWhatsappHistory] = useState<WhatsAppNotification[]>([]);
   const { toast } = useToast();
+  const { getNotificationHistory, sendWhatsAppNotification } = useWhatsAppNotifications();
 
   const extractSupplierFromNotes = (notes?: string) => {
     if (!notes) return '-';
@@ -86,8 +89,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       }
     };
 
+    const fetchWhatsAppHistory = async () => {
+      if (selectedRequest) {
+        const history = await getNotificationHistory(selectedRequest.id);
+        setWhatsappHistory(history);
+      }
+    };
+
     if (isOpen) {
       fetchSuppliers();
+      fetchWhatsAppHistory();
       if (selectedRequest) {
         setSelectedSupplier(selectedRequest.supplier_id || '');
         setEditEta(selectedRequest.eta || '');
@@ -161,6 +172,63 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!selectedRequest) return;
+
+    const supplier = suppliers.find(s => s.id === selectedSupplier);
+    if (!supplier) {
+      toast({
+        title: 'Error',
+        description: 'Please select a supplier first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Get supplier WhatsApp details
+    const { data: supplierData, error } = await supabase
+      .from('suppliers')
+      .select('whatsapp_number, whatsapp_enabled')
+      .eq('id', supplier.id)
+      .single();
+
+    if (error || !supplierData?.whatsapp_number) {
+      toast({
+        title: 'Error',
+        description: 'Supplier WhatsApp number not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!supplierData.whatsapp_enabled) {
+      toast({
+        title: 'Error',
+        description: 'WhatsApp notifications are disabled for this supplier',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const success = await sendWhatsAppNotification(
+      selectedRequest.id,
+      supplier.id,
+      supplierData.whatsapp_number,
+      supplier.company_name,
+      selectedRequest.raw_material?.name || 'Unknown Material',
+      selectedRequest.quantity_requested,
+      selectedRequest.unit,
+      selectedRequest.request_number,
+      selectedRequest.eta
+    );
+
+    if (success) {
+      // Refresh WhatsApp history
+      const history = await getNotificationHistory(selectedRequest.id);
+      setWhatsappHistory(history);
     }
   };
 
@@ -301,7 +369,45 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             )}
           </div>
 
+          {/* WhatsApp Notifications Section */}
+          {whatsappHistory.length > 0 && (
+            <div>
+              <Label className="text-sm flex items-center gap-1">
+                <MessageCircle className="h-3 w-3" />
+                WhatsApp Notifications
+              </Label>
+              <div className="mt-1 space-y-1 max-h-20 overflow-y-auto">
+                {whatsappHistory.map((notification) => (
+                  <div key={notification.id} className="text-xs bg-gray-50 p-2 rounded">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={notification.status === 'sent' ? 'default' : 'destructive'} className="text-xs">
+                        {notification.status}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        {new Date(notification.sent_at).toLocaleString()}
+                      </span>
+                    </div>
+                    {notification.error_message && (
+                      <div className="text-red-600 mt-1">{notification.error_message}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-2">
+            {!editMode && selectedSupplier && (
+              <Button 
+                onClick={handleSendWhatsApp} 
+                className="flex-1 flex items-center gap-2"
+                variant="outline"
+                size="sm"
+              >
+                <MessageCircle className="h-3 w-3" />
+                Send WhatsApp
+              </Button>
+            )}
             {!editMode && (
               <Button 
                 onClick={() => setEditMode(true)} 
