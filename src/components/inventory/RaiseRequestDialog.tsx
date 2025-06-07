@@ -16,7 +16,7 @@ import type { RawMaterial } from '@/hooks/useRawMaterials';
 interface RaiseRequestDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  material: RawMaterial;
+  material: RawMaterial | null;
   onRequestCreated: () => void;
 }
 
@@ -30,6 +30,11 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
   const { logActivity } = useActivityLog();
   const { suppliers } = useSuppliers();
   const { profile } = useUserProfile();
+
+  // Don't render if material is null
+  if (!material) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
