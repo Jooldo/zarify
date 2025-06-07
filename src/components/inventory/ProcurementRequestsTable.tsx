@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus } from 'lucide-react';
+import { Eye, Plus, AlertCircle } from 'lucide-react';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ProcurementRequestsTableProps {
@@ -27,6 +27,16 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
     return supplierMatch ? supplierMatch[1].trim() : '-';
   };
 
+  const getRequestOrigin = (notes?: string) => {
+    if (!notes) return 'procurement';
+    return notes.includes('Source: Inventory Alert') ? 'inventory' : 'procurement';
+  };
+
+  const isIncompleteRequest = (request: ProcurementRequest) => {
+    const origin = getRequestOrigin(request.notes);
+    return origin === 'inventory' && (!request.supplier_id || !request.eta);
+  };
+
   return (
     <div className="space-y-4">
       {onRaiseRequest && (
@@ -46,6 +56,7 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
               <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Origin</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
@@ -54,36 +65,56 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
             </TableRow>
           </TableHeader>
           <TableBody>
-            {requests.map((request) => (
-              <TableRow key={request.id} className="h-8">
-                <TableCell className="py-1 px-2 text-xs font-medium">{request.request_number}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{request.raw_material?.name || 'Unknown'}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    {request.raw_material?.type || 'Unknown'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{extractSupplierFromNotes(request.notes)}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
-                    {request.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
-                <TableCell className="py-1 px-2 text-xs">{request.raised_by || '-'}</TableCell>
-                <TableCell className="py-1 px-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-6 w-6 p-0"
-                    onClick={() => onViewRequest(request)}
-                  >
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {requests.map((request) => {
+              const origin = getRequestOrigin(request.notes);
+              const isIncomplete = isIncompleteRequest(request);
+              
+              return (
+                <TableRow key={request.id} className="h-8">
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    <div className="flex items-center gap-1">
+                      {request.request_number}
+                      {isIncomplete && (
+                        <AlertCircle className="h-3 w-3 text-amber-500" title="Incomplete request - missing supplier or ETA" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{request.raw_material?.name || 'Unknown'}</TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Badge variant="outline" className="text-xs h-4 px-1">
+                      {request.raw_material?.type || 'Unknown'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Badge 
+                      variant={origin === 'inventory' ? "secondary" : "default"} 
+                      className="text-xs h-4 px-1"
+                    >
+                      {origin === 'inventory' ? 'Alert' : 'Request'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{extractSupplierFromNotes(request.notes)}</TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Badge variant={getStatusVariant(request.status)} className="text-xs px-1 py-0">
+                      {request.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs">{request.raised_by || '-'}</TableCell>
+                  <TableCell className="py-1 px-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => onViewRequest(request)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

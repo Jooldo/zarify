@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -157,6 +156,7 @@ const RMProcurementTab = () => {
               onOpenChange={setRaiseRequestOpen}
               material={selectedMaterial}
               onRequestCreated={handleRequestCreated}
+              mode="procurement"
             />
           )}
         </>

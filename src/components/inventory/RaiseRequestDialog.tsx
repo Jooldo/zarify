@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
@@ -18,9 +19,10 @@ interface RaiseRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   material: RawMaterial | null;
   onRequestCreated: () => void;
+  mode: 'inventory' | 'procurement';
 }
 
-const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }: RaiseRequestDialogProps) => {
+const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
   const [quantity, setQuantity] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
@@ -36,6 +38,23 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
     return null;
   }
 
+  const isInventoryMode = mode === 'inventory';
+  const isProcurementMode = mode === 'procurement';
+
+  const getDialogTitle = () => {
+    if (isInventoryMode) {
+      return 'Quick Stock Alert Request';
+    }
+    return 'Raise Procurement Request';
+  };
+
+  const getDialogDescription = () => {
+    if (isInventoryMode) {
+      return 'Submit a quick request for stock replenishment. Procurement team will handle supplier selection and delivery scheduling.';
+    }
+    return 'Create a detailed procurement request with supplier and delivery information.';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quantity || !material) return;
@@ -49,10 +68,16 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
       const timestamp = Date.now();
       const requestNumber = `REQ-${timestamp}`;
 
-      // Get the selected supplier info
-      const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
-      const supplierNotes = selectedSupplier ? `Supplier: ${selectedSupplier.company_name}` : '';
-      const finalNotes = supplierNotes ? (notes ? `${supplierNotes}\n${notes}` : supplierNotes) : notes;
+      // Get the selected supplier info (only for procurement mode)
+      let supplierNotes = '';
+      if (isProcurementMode && selectedSupplierId) {
+        const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
+        supplierNotes = selectedSupplier ? `Supplier: ${selectedSupplier.company_name}` : '';
+      }
+
+      // Add mode indicator to notes
+      const modeNote = isInventoryMode ? 'Source: Inventory Alert' : 'Source: Procurement Request';
+      const finalNotes = [modeNote, supplierNotes, notes].filter(Boolean).join('\n');
 
       const { error } = await supabase
         .from('procurement_requests')
@@ -61,8 +86,8 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
           raw_material_id: material.id,
           quantity_requested: parseInt(quantity),
           unit: material.unit,
-          supplier_id: selectedSupplierId || null,
-          eta: eta || null,
+          supplier_id: isProcurementMode ? (selectedSupplierId || null) : null,
+          eta: isProcurementMode ? (eta || null) : null,
           notes: finalNotes || null,
           status: 'Pending',
           date_requested: new Date().toISOString().split('T')[0],
@@ -84,16 +109,22 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
 
       if (updateError) throw updateError;
 
+      const activityDescription = isInventoryMode 
+        ? `Stock alert created for ${material.name} - ${quantity} ${material.unit}`
+        : `Procurement request created for ${material.name} - ${quantity} ${material.unit}`;
+
       await logActivity(
         'Created',
-        'Procurement Request',
+        isInventoryMode ? 'Stock Alert' : 'Procurement Request',
         requestNumber,
-        `Procurement request created for ${material.name} - ${quantity} ${material.unit}`
+        activityDescription
       );
 
       toast({
         title: 'Success',
-        description: 'Procurement request created successfully',
+        description: isInventoryMode 
+          ? 'Stock alert submitted successfully. Procurement team will handle the details.'
+          : 'Procurement request created successfully',
       });
 
       onRequestCreated();
@@ -106,7 +137,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
       console.error('Error creating procurement request:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create procurement request',
+        description: `Failed to create ${isInventoryMode ? 'stock alert' : 'procurement request'}`,
         variant: 'destructive',
       });
     } finally {
@@ -118,7 +149,15 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Raise Procurement Request</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {getDialogTitle()}
+            <Badge variant={isInventoryMode ? "secondary" : "default"} className="text-xs">
+              {isInventoryMode ? "Quick" : "Detailed"}
+            </Badge>
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            {getDialogDescription()}
+          </p>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -152,39 +191,53 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="supplier">Supplier</Label>
-            <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isProcurementMode && (
+            <>
+              <div>
+                <Label htmlFor="supplier">Supplier</Label>
+                <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supplier (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="eta">Expected Delivery Date</Label>
+                <Input
+                  id="eta"
+                  type="date"
+                  value={eta}
+                  onChange={(e) => setEta(e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           <div>
-            <Label htmlFor="eta">Expected Delivery Date</Label>
-            <Input
-              id="eta"
-              type="date"
-              value={eta}
-              onChange={(e) => setEta(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">
+              {isInventoryMode ? 'Additional Notes' : 'Notes'}
+              {isInventoryMode && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  (Optional - describe urgency or special requirements)
+                </span>
+              )}
+            </Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes or requirements"
+              placeholder={isInventoryMode 
+                ? "Describe urgency or special requirements (optional)" 
+                : "Additional notes or requirements"
+              }
               rows={3}
             />
           </div>
@@ -203,7 +256,10 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated }
               disabled={loading || !quantity}
               className="flex-1"
             >
-              {loading ? 'Creating...' : 'Create Request'}
+              {loading 
+                ? (isInventoryMode ? 'Submitting...' : 'Creating...') 
+                : (isInventoryMode ? 'Submit Alert' : 'Create Request')
+              }
             </Button>
           </div>
         </form>

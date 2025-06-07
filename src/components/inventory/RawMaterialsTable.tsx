@@ -231,6 +231,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         onOpenChange={setIsRequestDialogOpen}
         material={selectedMaterial}
         onRequestCreated={handleRequestCreated}
+        mode="inventory"
       />
 
       <RawMaterialStockUpdateDialog
