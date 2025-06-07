@@ -1,15 +1,24 @@
+
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
+import OrdersQuickFilters from './orders/OrdersQuickFilters';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [stockFilter, setStockFilter] = useState('All');
 
-  const flattenedOrders = orders.flatMap(order => 
+  // Sort orders by creation date (latest first)
+  const sortedOrders = [...orders].sort((a, b) => 
+    new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+  );
+
+  const flattenedOrders = sortedOrders.flatMap(order => 
     order.order_items.map(suborder => {
       // Display size exactly as entered in product config without any conversion
       const sizeValue = suborder.product_config.size_value || 'N/A';
@@ -34,15 +43,32 @@ const OrdersTab = () => {
     })
   );
 
-  const filteredOrders = flattenedOrders.filter(item => 
-    item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.productCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getStockAvailable = (productCode: string) => {
+    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
+    return finishedGood ? finishedGood.current_stock : 0;
+  };
+
+  const filteredOrders = flattenedOrders.filter(item => {
+    // Search filter
+    const matchesSearch = item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.productCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+
+    // Stock filter
+    const stockAvailable = getStockAvailable(item.productCode);
+    const matchesStock = stockFilter === 'All' || 
+      (stockFilter === 'Low Stock' && stockAvailable < item.quantity) ||
+      (stockFilter === 'In Stock' && stockAvailable >= item.quantity);
+
+    return matchesSearch && matchesStatus && matchesStock;
+  });
 
   const getOverallOrderStatus = (orderId: string) => {
-    const order = orders.find(o => o.order_number === orderId);
+    const order = sortedOrders.find(o => o.order_number === orderId);
     if (!order) return "Created";
     
     const statuses = order.order_items.map(sub => sub.status);
@@ -69,11 +95,6 @@ const OrdersTab = () => {
     }
   };
 
-  const getStockAvailable = (productCode: string) => {
-    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
-    return finishedGood ? finishedGood.current_stock : 0;
-  };
-
   if (loading) {
     return <div className="flex items-center justify-center p-8">Loading...</div>;
   }
@@ -86,9 +107,16 @@ const OrdersTab = () => {
         onOrderCreated={refetch}
       />
       
+      <OrdersQuickFilters
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        stockFilter={stockFilter}
+        setStockFilter={setStockFilter}
+      />
+      
       <OrdersTable 
         filteredOrders={filteredOrders}
-        orders={orders}
+        orders={sortedOrders}
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}
