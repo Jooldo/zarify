@@ -1,6 +1,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CustomerInfoSection from './orders/CustomerInfoSection';
 import OrderItemsSection from './orders/OrderItemsSection';
 import { useOrderSubmission } from '@/hooks/useOrderSubmission';
@@ -19,6 +22,7 @@ interface OrderFormItem {
 const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [expectedDelivery, setExpectedDelivery] = useState('');
   const [items, setItems] = useState<OrderFormItem[]>([{
     productCode: '',
     quantity: 1,
@@ -26,6 +30,13 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
   }]);
 
   const { submitOrder, loading } = useOrderSubmission({ onOrderCreated, onClose });
+
+  // Calculate default expected delivery date (7 days from now)
+  const getDefaultExpectedDelivery = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+  };
 
   const addItem = () => {
     setItems([...items, {
@@ -64,7 +75,10 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
       price: item.price === '' ? 0 : Number(item.price)
     }));
     
-    await submitOrder(customerName, customerPhone, itemsWithValidPrices);
+    // Set default expected delivery if not provided
+    const deliveryDate = expectedDelivery || getDefaultExpectedDelivery();
+    
+    await submitOrder(customerName, customerPhone, itemsWithValidPrices, deliveryDate);
   };
 
   return (
@@ -76,6 +90,29 @@ const CreateOrderForm = ({ onClose, onOrderCreated }: CreateOrderFormProps) => {
           onCustomerNameChange={setCustomerName}
           onCustomerPhoneChange={setCustomerPhone}
         />
+
+        {/* Expected Delivery Section */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Delivery Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <Label htmlFor="expectedDelivery" className="text-xs">Expected Delivery Date</Label>
+              <Input
+                id="expectedDelivery"
+                type="date"
+                value={expectedDelivery}
+                onChange={(e) => setExpectedDelivery(e.target.value)}
+                placeholder={getDefaultExpectedDelivery()}
+                className="h-8 text-xs"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Default: {new Date(getDefaultExpectedDelivery()).toLocaleDateString('en-IN')} (7 days from today)
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <OrderItemsSection
           items={items}
