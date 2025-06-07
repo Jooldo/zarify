@@ -37,6 +37,7 @@ const DUMMY_SUPPLIERS: Supplier[] = [
 ];
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
+  // ALL HOOKS MUST BE DECLARED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const [quantity, setQuantity] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
@@ -47,11 +48,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
 
-  // Don't render if material is null
-  if (!material) {
-    return null;
-  }
-
+  // Derived values
   const isInventoryMode = mode === 'inventory';
   const isProcurementMode = mode === 'procurement';
 
@@ -70,7 +67,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   };
 
   // Load suppliers when dialog opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && isProcurementMode) {
       const fetchSuppliers = async () => {
         try {
@@ -201,6 +198,11 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       setLoading(false);
     }
   };
+
+  // NOW we can handle the null material case after all hooks are declared
+  if (!material) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
