@@ -89,7 +89,7 @@ const RawMaterialsConfig = () => {
         </div>
       </div>
 
-      {/* Raw Materials Table - Removed Supplier Column */}
+      {/* Raw Materials Table */}
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
@@ -99,6 +99,7 @@ const RawMaterialsConfig = () => {
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Cost/Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -121,6 +122,9 @@ const RawMaterialsConfig = () => {
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   {material.minimum_stock}
+                </TableCell>
+                <TableCell className="py-1 px-2 text-xs">
+                  {material.supplier?.company_name || 'Not assigned'}
                 </TableCell>
                 <TableCell className="py-1 px-2 text-xs">
                   <div className="flex gap-1">
