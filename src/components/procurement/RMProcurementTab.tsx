@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -6,6 +7,7 @@ import { FileText, Users, TrendingUp } from 'lucide-react';
 import ProcurementRequestsTable from '../inventory/ProcurementRequestsTable';
 import ViewRequestDialog from '../inventory/ViewRequestDialog';
 import RaiseRequestDialog from '../inventory/RaiseRequestDialog';
+import MultiItemProcurementDialog from './MultiItemProcurementDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
@@ -17,6 +19,7 @@ const RMProcurementTab = () => {
   const [selectedRequest, setSelectedRequest] = useState<ProcurementRequest | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [raiseRequestOpen, setRaiseRequestOpen] = useState(false);
+  const [multiItemDialogOpen, setMultiItemDialogOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [materialForRequest, setMaterialForRequest] = useState<string>('');
   const [activeTab, setActiveTab] = useState("requests");
@@ -39,6 +42,10 @@ const RMProcurementTab = () => {
     setRaiseRequestOpen(true);
   };
 
+  const handleRaiseMultiItemRequest = () => {
+    setMultiItemDialogOpen(true);
+  };
+
   const handleMaterialSelect = (materialId: string) => {
     const material = rawMaterials.find(m => m.id === materialId);
     setSelectedMaterial(material || null);
@@ -48,6 +55,7 @@ const RMProcurementTab = () => {
   const handleRequestCreated = () => {
     refetch();
     setRaiseRequestOpen(false);
+    setMultiItemDialogOpen(false);
     setSelectedMaterial(null);
     setMaterialForRequest('');
   };
@@ -80,6 +88,7 @@ const RMProcurementTab = () => {
                 requests={requests} 
                 onViewRequest={handleViewRequest}
                 onRaiseRequest={handleRaiseRequest}
+                onRaiseMultiItemRequest={handleRaiseMultiItemRequest}
               />
             )}
           </div>
@@ -120,6 +129,12 @@ const RMProcurementTab = () => {
         selectedRequest={selectedRequest}
         onUpdateRequestStatus={handleUpdateRequestStatus}
         onRequestUpdated={handleRequestUpdated}
+      />
+
+      <MultiItemProcurementDialog
+        isOpen={multiItemDialogOpen}
+        onOpenChange={setMultiItemDialogOpen}
+        onRequestCreated={handleRequestCreated}
       />
 
       {raiseRequestOpen && (

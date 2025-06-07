@@ -2,16 +2,22 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertCircle } from 'lucide-react';
+import { Eye, Plus, AlertCircle, ShoppingCart } from 'lucide-react';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ProcurementRequestsTableProps {
   requests: ProcurementRequest[];
   onViewRequest: (request: ProcurementRequest) => void;
   onRaiseRequest?: () => void;
+  onRaiseMultiItemRequest?: () => void;
 }
 
-const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: ProcurementRequestsTableProps) => {
+const ProcurementRequestsTable = ({ 
+  requests, 
+  onViewRequest, 
+  onRaiseRequest, 
+  onRaiseMultiItemRequest 
+}: ProcurementRequestsTableProps) => {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'Pending': return "secondary" as const;
@@ -29,7 +35,9 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
 
   const getRequestOrigin = (notes?: string) => {
     if (!notes) return 'procurement';
-    return notes.includes('Source: Inventory Alert') ? 'inventory' : 'procurement';
+    if (notes.includes('Source: Inventory Alert')) return 'inventory';
+    if (notes.includes('Source: Multi-Item Procurement Request')) return 'multi-item';
+    return 'procurement';
   };
 
   const isIncompleteRequest = (request: ProcurementRequest) => {
@@ -39,12 +47,20 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
 
   return (
     <div className="space-y-4">
-      {onRaiseRequest && (
-        <div className="flex justify-end">
-          <Button onClick={onRaiseRequest} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Raise Procurement Request
-          </Button>
+      {(onRaiseRequest || onRaiseMultiItemRequest) && (
+        <div className="flex justify-end gap-2">
+          {onRaiseMultiItemRequest && (
+            <Button onClick={onRaiseMultiItemRequest} className="flex items-center gap-2" variant="outline">
+              <ShoppingCart className="h-4 w-4" />
+              Multi-Item Request
+            </Button>
+          )}
+          {onRaiseRequest && (
+            <Button onClick={onRaiseRequest} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Single Item Request
+            </Button>
+          )}
         </div>
       )}
       
@@ -88,10 +104,16 @@ const ProcurementRequestsTable = ({ requests, onViewRequest, onRaiseRequest }: P
                   <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
                   <TableCell className="py-1 px-2">
                     <Badge 
-                      variant={origin === 'inventory' ? "secondary" : "default"} 
+                      variant={
+                        origin === 'inventory' ? "secondary" : 
+                        origin === 'multi-item' ? "default" : 
+                        "outline"
+                      } 
                       className="text-xs h-4 px-1"
                     >
-                      {origin === 'inventory' ? 'Alert' : 'Request'}
+                      {origin === 'inventory' ? 'Alert' : 
+                       origin === 'multi-item' ? 'Multi' : 
+                       'Single'}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">{extractSupplierFromNotes(request.notes)}</TableCell>
