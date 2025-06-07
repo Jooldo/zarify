@@ -15,6 +15,7 @@ export interface ProcurementRequest {
   notes?: string;
   status: 'Pending' | 'Approved' | 'Received';
   date_requested: string;
+  raised_by?: string;
   raw_material?: {
     name: string;
     type: string;
@@ -38,7 +39,8 @@ export const useProcurementRequests = () => {
         .from('procurement_requests')
         .select(`
           *,
-          raw_material:raw_materials(name, type)
+          raw_material:raw_materials(name, type),
+          profile:profiles(first_name, last_name)
         `)
         .eq('merchant_id', merchantId)
         .neq('status', 'None')
@@ -60,6 +62,7 @@ export const useProcurementRequests = () => {
           notes: request.notes,
           status: request.status as 'Pending' | 'Approved' | 'Received',
           date_requested: request.date_requested,
+          raised_by: request.profile ? `${request.profile.first_name || ''} ${request.profile.last_name || ''}`.trim() : 'Unknown',
           raw_material: request.raw_material
         }));
       
