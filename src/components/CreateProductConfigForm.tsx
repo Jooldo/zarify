@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -314,7 +313,10 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                             >
                               {material.material ? (
                                 <span className="truncate">
-                                  {availableRawMaterials.find(m => m.id === material.material)?.name || "Select material..."}
+                                  {(() => {
+                                    const selectedMat = availableRawMaterials.find(m => m.id === material.material);
+                                    return selectedMat ? `${selectedMat.name} (${selectedMat.type})` : "Select material...";
+                                  })()}
                                 </span>
                               ) : (
                                 <span className="text-muted-foreground">
@@ -334,7 +336,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                                     {availableRawMaterials.map((rawMat) => (
                                       <CommandItem
                                         key={rawMat.id}
-                                        value={rawMat.name}
+                                        value={`${rawMat.name} (${rawMat.type})`}
                                         onSelect={() => {
                                           updateMaterial(index, 'material', rawMat.id);
                                           toggleMaterialSelector(index, false);
@@ -347,7 +349,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                                             material.material === rawMat.id ? "opacity-100" : "opacity-0"
                                           )}
                                         />
-                                        <span className="truncate">{rawMat.name}</span>
+                                        <span className="truncate">{rawMat.name} ({rawMat.type})</span>
                                       </CommandItem>
                                     ))}
                                   </ScrollArea>
