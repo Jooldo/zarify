@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2 } from 'lucide-react';
 import ProductConfigDetails from './config/ProductConfigDetails';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -244,7 +244,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
           </CardContent>
         </Card>
 
-        {/* Raw Materials Configuration - Integrated directly in form */}
+        {/* Raw Materials Configuration */}
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Raw Materials Configuration</CardTitle>
@@ -280,64 +280,78 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                         )}
                       </div>
 
-                      {/* Raw Material Selection */}
-                      <div className="space-y-2">
-                        <Label className="text-sm">Select Raw Material *</Label>
-                        <Select 
-                          value={material.material} 
-                          onValueChange={(value) => updateMaterial(index, 'material', value)}
-                          disabled={rawMaterialsLoading}
-                        >
-                          <SelectTrigger className="h-10">
-                            <SelectValue placeholder={rawMaterialsLoading ? "Loading materials..." : "Choose raw material"} />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            {availableRawMaterials.map((rawMat) => (
-                              <SelectItem key={rawMat.id} value={rawMat.id} className="py-3">
-                                <div className="space-y-1">
-                                  <div className="font-medium">{rawMat.name}</div>
-                                  <div className="text-xs text-gray-600 flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">{rawMat.type}</Badge>
-                                    <span>Stock: {rawMat.current_stock} {rawMat.unit}</span>
-                                    <span>Unit: {rawMat.unit}</span>
-                                  </div>
+                      {/* Split Layout: Raw Material | Quantity + Unit */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Raw Material Selection */}
+                        <div className="space-y-2">
+                          <Label className="text-sm">Select Raw Material *</Label>
+                          <Select 
+                            value={material.material} 
+                            onValueChange={(value) => updateMaterial(index, 'material', value)}
+                            disabled={rawMaterialsLoading}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder={rawMaterialsLoading ? "Loading..." : "Choose material"} />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-80">
+                              <ScrollArea className="h-80">
+                                <div className="p-1">
+                                  {availableRawMaterials.map((rawMat) => (
+                                    <SelectItem key={rawMat.id} value={rawMat.id} className="py-2 px-2 cursor-pointer">
+                                      <div className="w-full">
+                                        <div className="font-medium text-sm truncate">{rawMat.name}</div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="outline" className="text-xs px-1 py-0 h-5">
+                                            {rawMat.type}
+                                          </Badge>
+                                          <span className="text-xs text-gray-600">
+                                            Stock: {rawMat.current_stock} {rawMat.unit}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
                                 </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {selectedMaterial && (
-                          <div className="text-xs text-gray-600 flex gap-4">
-                            <span>Type: <Badge variant="secondary" className="text-xs">{selectedMaterial.type}</Badge></span>
-                            <span>Available: {selectedMaterial.current_stock} {selectedMaterial.unit}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Quantity and Unit */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm">Quantity Required *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={material.quantity}
-                            onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                            className="h-10"
-                            min="0"
-                          />
+                              </ScrollArea>
+                            </SelectContent>
+                          </Select>
+                          {selectedMaterial && (
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span>Type:</span>
+                                <Badge variant="secondary" className="text-xs h-5 px-2">
+                                  {selectedMaterial.type}
+                                </Badge>
+                              </div>
+                              <div>Available: {selectedMaterial.current_stock} {selectedMaterial.unit}</div>
+                            </div>
+                          )}
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-sm">Unit</Label>
-                          <Input
-                            value={selectedMaterial?.unit || material.unit}
-                            className="h-10 bg-gray-100"
-                            readOnly
-                            placeholder="Unit will be set automatically"
-                          />
-                          <p className="text-xs text-gray-500">Unit is set based on selected material</p>
+
+                        {/* Quantity and Unit */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Quantity *</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={material.quantity}
+                              onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              className="h-10"
+                              min="0"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label className="text-sm">Unit</Label>
+                            <Input
+                              value={selectedMaterial?.unit || material.unit}
+                              className="h-10 bg-gray-100"
+                              readOnly
+                              placeholder="Auto"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
