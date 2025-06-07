@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -280,7 +281,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                   const selectedMaterial = getSelectedMaterialInfo(material.material);
                   
                   return (
-                    <div key={index} className="p-4 border rounded-lg bg-gray-50 space-y-4">
+                    <div key={index} className="p-4 border rounded-lg bg-gray-50 space-y-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Raw Material #{index + 1}</Label>
                         {rawMaterials.length > 1 && (
@@ -296,120 +297,110 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                         )}
                       </div>
 
-                      {/* Split Layout: Raw Material Selection | Quantity + Unit */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Raw Material Selection Section */}
-                        <div className="space-y-3">
-                          <Label className="text-sm font-medium">Raw Material *</Label>
-                          <Popover 
-                            open={openMaterialSelectors[index]} 
-                            onOpenChange={(open) => toggleMaterialSelector(index, open)}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openMaterialSelectors[index]}
-                                className="w-full justify-between h-10 text-left font-normal"
-                                disabled={rawMaterialsLoading}
-                              >
-                                {material.material ? (
-                                  <span className="truncate">
-                                    {availableRawMaterials.find(m => m.id === material.material)?.name || "Select material..."}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    {rawMaterialsLoading ? "Loading..." : "Select material..."}
-                                  </span>
-                                )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0" align="start">
-                              <Command>
-                                <CommandInput placeholder="Search materials..." className="h-9" />
-                                <CommandList>
-                                  <CommandEmpty>No material found.</CommandEmpty>
-                                  <CommandGroup>
-                                    <ScrollArea className="h-48">
-                                      {availableRawMaterials.map((rawMat) => (
-                                        <CommandItem
-                                          key={rawMat.id}
-                                          value={rawMat.name}
-                                          onSelect={() => {
-                                            updateMaterial(index, 'material', rawMat.id);
-                                            toggleMaterialSelector(index, false);
-                                          }}
-                                          className="cursor-pointer"
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              material.material === rawMat.id ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <span className="truncate">{rawMat.name}</span>
-                                        </CommandItem>
-                                      ))}
-                                    </ScrollArea>
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          
-                          {/* Material Details Below Selector */}
-                          {selectedMaterial && (
-                            <div className="p-3 bg-white rounded border text-xs space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Type:</span>
-                                <Badge variant="secondary" className="text-xs h-5 px-2">
-                                  {selectedMaterial.type}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Available Stock:</span>
-                                <span className="text-green-600 font-medium">
-                                  {selectedMaterial.current_stock} {selectedMaterial.unit}
+                      {/* First Line: Raw Material Selection */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Raw Material *</Label>
+                        <Popover 
+                          open={openMaterialSelectors[index]} 
+                          onOpenChange={(open) => toggleMaterialSelector(index, open)}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={openMaterialSelectors[index]}
+                              className="w-full justify-between h-10 text-left font-normal"
+                              disabled={rawMaterialsLoading}
+                            >
+                              {material.material ? (
+                                <span className="truncate">
+                                  {availableRawMaterials.find(m => m.id === material.material)?.name || "Select material..."}
                                 </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">Unit:</span>
-                                <span>{selectedMaterial.unit}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {rawMaterialsLoading ? "Loading..." : "Select material..."}
+                                </span>
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search materials..." className="h-9" />
+                              <CommandList>
+                                <CommandEmpty>No material found.</CommandEmpty>
+                                <CommandGroup>
+                                  <ScrollArea className="h-48">
+                                    {availableRawMaterials.map((rawMat) => (
+                                      <CommandItem
+                                        key={rawMat.id}
+                                        value={rawMat.name}
+                                        onSelect={() => {
+                                          updateMaterial(index, 'material', rawMat.id);
+                                          toggleMaterialSelector(index, false);
+                                        }}
+                                        className="cursor-pointer"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            material.material === rawMat.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <span className="truncate">{rawMat.name}</span>
+                                      </CommandItem>
+                                    ))}
+                                  </ScrollArea>
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
-                        {/* Quantity and Unit Section */}
-                        <div className="space-y-3">
-                          <Label className="text-sm font-medium">Quantity & Unit</Label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label className="text-xs text-gray-600">Quantity *</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={material.quantity}
-                                onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
-                                placeholder="0.00"
-                                className="h-10"
-                                min="0"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label className="text-xs text-gray-600">Unit</Label>
-                              <Input
-                                value={selectedMaterial?.unit || material.unit}
-                                className="h-10 bg-gray-100"
-                                readOnly
-                                placeholder="Auto"
-                              />
-                            </div>
-                          </div>
+                      {/* Second Line: Quantity and Unit */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Quantity *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={material.quantity}
+                            onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="h-10"
+                            min="0"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Unit</Label>
+                          <Input
+                            value={selectedMaterial?.unit || material.unit}
+                            className="h-10 bg-gray-100"
+                            readOnly
+                            placeholder="Auto"
+                          />
                         </div>
                       </div>
+
+                      {/* Material Details */}
+                      {selectedMaterial && (
+                        <div className="p-3 bg-white rounded border text-xs space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Type:</span>
+                            <Badge variant="secondary" className="text-xs h-5 px-2">
+                              {selectedMaterial.type}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Available Stock:</span>
+                            <span className="text-green-600 font-medium">
+                              {selectedMaterial.current_stock} {selectedMaterial.unit}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
