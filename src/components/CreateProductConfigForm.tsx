@@ -1,11 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2 } from 'lucide-react';
 import ProductConfigDetails from './config/ProductConfigDetails';
-import AddRawMaterialConfigDialog from './config/AddRawMaterialConfigDialog';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface CreateProductConfigFormProps {
   onClose: () => void;
@@ -26,6 +29,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     { material: '', quantity: 0, unit: 'grams' }
   ]);
 
+  const { rawMaterials: availableRawMaterials, loading: rawMaterialsLoading } = useRawMaterials();
+
   // Categories list
   const categories = [
     'Khusboo',
@@ -37,7 +42,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
   useEffect(() => {
     if (initialData && isUpdate) {
-      setProduct(initialData.subcategory || ''); // Map subcategory to product
+      setProduct(initialData.subcategory || '');
       setCategory(initialData.category || '');
       setSizeValue(initialData.sizeValue || '');
       setWeightInGrams(initialData.weightInGrams || '');
@@ -51,10 +56,44 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     if (!category || !product) return '';
     
     const categoryCode = category.slice(0, 3).toUpperCase();
-    const productCode = product.replace(/\s+/g, '').slice(0, 3).toUpperCase(); // Use product instead of subcategory
+    const productCode = product.replace(/\s+/g, '').slice(0, 3).toUpperCase();
     const weightCode = weightInGrams ? weightInGrams + 'G' : '';
     
     return `${categoryCode}-${productCode}${weightCode ? '-' + weightCode : ''}`;
+  };
+
+  const addMaterial = () => {
+    setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
+  };
+
+  const removeMaterial = (index: number) => {
+    if (rawMaterials.length > 1) {
+      const newMaterials = [...rawMaterials];
+      newMaterials.splice(index, 1);
+      setRawMaterials(newMaterials);
+    }
+  };
+
+  const updateMaterial = (index: number, field: 'material' | 'quantity' | 'unit', value: any) => {
+    const updatedMaterials = rawMaterials.map((material, i) => {
+      if (i === index) {
+        if (field === 'material') {
+          const selectedMaterial = availableRawMaterials.find(m => m.id === value);
+          return { 
+            ...material, 
+            [field]: value,
+            unit: selectedMaterial?.unit || material.unit
+          };
+        }
+        return { ...material, [field]: value };
+      }
+      return material;
+    });
+    setRawMaterials(updatedMaterials);
+  };
+
+  const getSelectedMaterialInfo = (materialId: string) => {
+    return availableRawMaterials.find(m => m.id === materialId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +125,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
       const productConfigData = {
         category,
-        subcategory: product, // Map product back to subcategory for backend compatibility
+        subcategory: product,
         sizeValue,
         weightInGrams,
         threshold: threshold ? parseInt(threshold) : 0,
@@ -107,11 +146,6 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleRawMaterialsUpdate = (materials: any[]) => {
-    console.log('Updating raw materials:', materials);
-    setRawMaterials(materials.length > 0 ? materials : [{ material: '', quantity: 0, unit: 'grams' }]);
   };
 
   return (
@@ -210,46 +244,119 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
           </CardContent>
         </Card>
 
-        {/* Raw Materials Configuration */}
+        {/* Raw Materials Configuration - Integrated directly in form */}
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Raw Materials Configuration</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">Configure Required Materials</Label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Add the raw materials needed to produce this product
-                  </p>
-                </div>
-                <AddRawMaterialConfigDialog 
-                  rawMaterials={rawMaterials}
-                  onUpdateRawMaterials={handleRawMaterialsUpdate}
-                />
+              <div>
+                <Label className="text-sm font-medium">Configure Required Materials</Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Add the raw materials needed to produce this product
+                </p>
               </div>
 
-              {/* Display configured materials */}
-              {rawMaterials.length > 0 && rawMaterials.some(m => m.material) && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Configured Materials:</Label>
-                  <div className="grid gap-2">
-                    {rawMaterials
-                      .filter(material => material.material && material.quantity > 0)
-                      .map((material, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                          <div className="text-sm">
-                            <span className="font-medium">Material {index + 1}</span>
+              {/* Raw Materials List */}
+              <div className="space-y-4">
+                {rawMaterials.map((material, index) => {
+                  const selectedMaterial = getSelectedMaterialInfo(material.material);
+                  
+                  return (
+                    <div key={index} className="p-4 border rounded-lg bg-gray-50 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Raw Material #{index + 1}</Label>
+                        {rawMaterials.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeMaterial(index)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Raw Material Selection */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">Select Raw Material *</Label>
+                        <Select 
+                          value={material.material} 
+                          onValueChange={(value) => updateMaterial(index, 'material', value)}
+                          disabled={rawMaterialsLoading}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder={rawMaterialsLoading ? "Loading materials..." : "Choose raw material"} />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {availableRawMaterials.map((rawMat) => (
+                              <SelectItem key={rawMat.id} value={rawMat.id} className="py-3">
+                                <div className="space-y-1">
+                                  <div className="font-medium">{rawMat.name}</div>
+                                  <div className="text-xs text-gray-600 flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">{rawMat.type}</Badge>
+                                    <span>Stock: {rawMat.current_stock} {rawMat.unit}</span>
+                                    <span>Unit: {rawMat.unit}</span>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedMaterial && (
+                          <div className="text-xs text-gray-600 flex gap-4">
+                            <span>Type: <Badge variant="secondary" className="text-xs">{selectedMaterial.type}</Badge></span>
+                            <span>Available: {selectedMaterial.current_stock} {selectedMaterial.unit}</span>
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {material.quantity} {material.unit}
-                          </div>
+                        )}
+                      </div>
+
+                      {/* Quantity and Unit */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Quantity Required *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={material.quantity}
+                            onChange={(e) => updateMaterial(index, 'quantity', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="h-10"
+                            min="0"
+                          />
                         </div>
-                      ))}
-                  </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm">Unit</Label>
+                          <Input
+                            value={selectedMaterial?.unit || material.unit}
+                            className="h-10 bg-gray-100"
+                            readOnly
+                            placeholder="Unit will be set automatically"
+                          />
+                          <p className="text-xs text-gray-500">Unit is set based on selected material</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Add More Button */}
+                <div className="flex justify-center pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addMaterial}
+                    className="h-10 px-6"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Another Raw Material
+                  </Button>
                 </div>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
