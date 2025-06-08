@@ -44,9 +44,21 @@ export const useMaterialTypes = () => {
 
   const createMaterialType = async (name: string, description?: string) => {
     try {
+      // Get the current user's merchant_id
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError || !merchantId) {
+        throw new Error('Unable to get merchant ID');
+      }
+
       const { data, error } = await supabase
         .from('material_types')
-        .insert([{ name, description }])
+        .insert([{ 
+          name, 
+          description: description || '',
+          merchant_id: merchantId
+        }])
         .select()
         .single();
 

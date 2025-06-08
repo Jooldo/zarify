@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { CreateRawMaterialData } from '@/hooks/useRawMaterials';
 import MaterialTypeSelector from './MaterialTypeSelector';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddMaterialDialogProps {
   onAddMaterial: (data: CreateRawMaterialData) => Promise<void>;
@@ -23,24 +25,65 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
     unit: '',
     cost_per_unit: undefined,
   });
+  const { toast } = useToast();
 
-  // Standardized units with grams as default for weight-based materials
+  // Standardized units with consistent naming
   const availableUnits = [
     { value: "grams", label: "Grams (g)" },
     { value: "pieces", label: "Pieces" },
     { value: "meters", label: "Meters (m)" },
     { value: "rolls", label: "Rolls" },
-    { value: "kilograms", label: "Kilograms (kg)" }
+    { value: "kg", label: "Kilograms (kg)" }
   ];
+
+  const checkForDuplicate = async (name: string, type: string) => {
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .select('id')
+        .eq('merchant_id', merchantId)
+        .eq('name', name.trim())
+        .eq('type', type.trim())
+        .limit(1);
+
+      if (error) throw error;
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking for duplicate:', error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.type || !formData.unit) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
       return;
     }
 
     setLoading(true);
     try {
+      // Check for duplicate
+      const isDuplicate = await checkForDuplicate(formData.name, formData.type);
+      if (isDuplicate) {
+        toast({
+          title: 'Error',
+          description: 'A raw material with this name and type already exists',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       await onAddMaterial(formData);
       setFormData({
         name: '',

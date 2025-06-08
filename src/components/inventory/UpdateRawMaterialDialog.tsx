@@ -29,7 +29,14 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
   });
   const { toast } = useToast();
 
-  const units = ["grams", "pieces", "meters", "rolls", "kg"];
+  // Consistent units with AddMaterialDialog
+  const availableUnits = [
+    { value: "grams", label: "Grams (g)" },
+    { value: "pieces", label: "Pieces" },
+    { value: "meters", label: "Meters (m)" },
+    { value: "rolls", label: "Rolls" },
+    { value: "kg", label: "Kilograms (kg)" }
+  ];
 
   useEffect(() => {
     if (material && isOpen) {
@@ -41,6 +48,33 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
       });
     }
   }, [material, isOpen]);
+
+  const checkForDuplicate = async (name: string, type: string) => {
+    if (!material) return false;
+    
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .select('id')
+        .eq('merchant_id', merchantId)
+        .eq('name', name.trim())
+        .eq('type', type.trim())
+        .neq('id', material.id) // Exclude current material
+        .limit(1);
+
+      if (error) throw error;
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking for duplicate:', error);
+      return false;
+    }
+  };
 
   const handleUpdate = async () => {
     if (!material || !formData.name || !formData.type || !formData.unit) {
@@ -54,6 +88,19 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
 
     setLoading(true);
     try {
+      // Check for duplicate only if name or type changed
+      if (formData.name !== material.name || formData.type !== material.type) {
+        const isDuplicate = await checkForDuplicate(formData.name, formData.type);
+        if (isDuplicate) {
+          toast({
+            title: 'Error',
+            description: 'A raw material with this name and type already exists',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('raw_materials')
         .update({
@@ -195,9 +242,9 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
               className="w-full h-10 px-3 mt-2 text-sm border border-gray-300 rounded-md"
             >
               <option value="">Select unit</option>
-              {units.map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit.charAt(0).toUpperCase() + unit.slice(1)}
+              {availableUnits.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
                 </option>
               ))}
             </select>
