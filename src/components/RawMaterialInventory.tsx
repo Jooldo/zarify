@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
+import RawMaterialFilters from './inventory/RawMaterialFilters';
 
 interface RawMaterialInventoryProps {
   onRequestCreated?: () => void;
@@ -11,28 +12,61 @@ interface RawMaterialInventoryProps {
 const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) => {
   const { rawMaterials, loading, refetch } = useRawMaterials();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [filters, setFilters] = useState({
+    type: 'all',
+    status: 'all',
+    stockLevel: 'all',
+    supplier: 'all',
+    shortfallRange: 'all'
+  });
+
+  // Get unique suppliers for filter options
+  const suppliers = [...new Set(rawMaterials.map(material => material.supplier_name).filter(Boolean))];
 
   const filteredMaterials = rawMaterials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          material.type.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || material.type === filterType;
+    
+    const matchesType = filters.type === 'all' || material.type === filters.type;
+    
+    const matchesSupplier = filters.supplier === 'all' || material.supplier_name === filters.supplier;
     
     let matchesStatus = true;
-    if (filterStatus === 'Low Stock') {
+    if (filters.status === 'Low Stock') {
       matchesStatus = material.current_stock <= material.minimum_stock;
-    } else if (filterStatus === 'In Stock') {
+    } else if (filters.status === 'In Stock') {
       matchesStatus = material.current_stock > material.minimum_stock;
-    } else if (filterStatus === 'High Shortfall') {
+    } else if (filters.status === 'High Shortfall') {
       matchesStatus = material.shortfall > 10;
-    } else if (filterStatus === 'Procurement Needed') {
+    } else if (filters.status === 'Procurement Needed') {
       matchesStatus = material.shortfall > 0;
-    } else if (filterStatus === 'High Requirement') {
+    } else if (filters.status === 'High Requirement') {
       matchesStatus = material.required_quantity > material.current_stock * 1.5;
+    } else if (filters.status !== 'all') {
+      matchesStatus = false;
+    }
+
+    let matchesStockLevel = true;
+    if (filters.stockLevel === 'critical') {
+      matchesStockLevel = material.current_stock <= material.minimum_stock;
+    } else if (filters.stockLevel === 'low') {
+      matchesStockLevel = material.current_stock <= material.minimum_stock * 1.5 && material.current_stock > material.minimum_stock;
+    } else if (filters.stockLevel === 'normal') {
+      matchesStockLevel = material.current_stock > material.minimum_stock * 1.5;
+    }
+
+    let matchesShortfallRange = true;
+    if (filters.shortfallRange === 'none') {
+      matchesShortfallRange = material.shortfall <= 0;
+    } else if (filters.shortfallRange === 'low') {
+      matchesShortfallRange = material.shortfall >= 1 && material.shortfall <= 10;
+    } else if (filters.shortfallRange === 'medium') {
+      matchesShortfallRange = material.shortfall >= 11 && material.shortfall <= 50;
+    } else if (filters.shortfallRange === 'high') {
+      matchesShortfallRange = material.shortfall > 50;
     }
     
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType && matchesStatus && matchesStockLevel && matchesSupplier && matchesShortfallRange;
   });
 
   const handleRequestCreated = () => {
@@ -47,10 +81,12 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
       <RawMaterialsHeader
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        typeFilter={filterType}
-        setTypeFilter={setFilterType}
-        statusFilter={filterStatus}
-        setStatusFilter={setFilterStatus}
+      />
+      
+      <RawMaterialFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        suppliers={suppliers}
       />
       
       <RawMaterialsTable 

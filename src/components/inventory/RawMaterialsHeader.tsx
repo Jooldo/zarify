@@ -1,36 +1,16 @@
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Package2 } from 'lucide-react';
 
 interface RawMaterialsHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  typeFilter: string;
-  setTypeFilter: (type: string) => void;
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
 }
 
 const RawMaterialsHeader = ({ 
   searchTerm, 
-  setSearchTerm, 
-  typeFilter, 
-  setTypeFilter,
-  statusFilter,
-  setStatusFilter
+  setSearchTerm
 }: RawMaterialsHeaderProps) => {
-  const materialTypes = ["all", "Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
-  const statusOptions = [
-    "All",
-    "Low Stock",
-    "In Stock", 
-    "High Shortfall",
-    "Procurement Needed",
-    "High Requirement"
-  ];
-
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -48,32 +28,6 @@ const RawMaterialsHeader = ({
             className="pl-10 h-8"
           />
         </div>
-        
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40 h-8">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {materialTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type === 'all' ? 'All Types' : type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48 h-8">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );
