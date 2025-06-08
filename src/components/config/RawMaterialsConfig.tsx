@@ -11,10 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import ConfigHeader from '@/components/procurement/headers/ConfigHeader';
 
 const RawMaterialsConfig = () => {
@@ -34,7 +33,7 @@ const RawMaterialsConfig = () => {
     type: '',
     unit: '',
     minimum_stock: '',
-    supplier_ids: []
+    current_stock: ''
   });
 
   const resetForm = () => {
@@ -43,7 +42,7 @@ const RawMaterialsConfig = () => {
       type: '',
       unit: '',
       minimum_stock: '',
-      supplier_ids: []
+      current_stock: ''
     });
   };
 
@@ -59,7 +58,7 @@ const RawMaterialsConfig = () => {
       type: material.type || '',
       unit: material.unit || '',
       minimum_stock: material.minimum_stock?.toString() || '',
-      supplier_ids: material.supplier_ids || []
+      current_stock: material.current_stock?.toString() || ''
     });
     setIsEditDialogOpen(true);
   };
@@ -75,9 +74,15 @@ const RawMaterialsConfig = () => {
       if (merchantError) throw merchantError;
 
       const materialData = {
-        ...formData,
+        name: formData.name,
+        type: formData.type,
+        unit: formData.unit,
         minimum_stock: parseInt(formData.minimum_stock) || 0,
-        merchant_id: merchantId
+        current_stock: parseInt(formData.current_stock) || 0,
+        merchant_id: merchantId,
+        required: 0,
+        in_procurement: 0,
+        last_updated: new Date().toISOString()
       };
 
       if (selectedMaterial) {
@@ -194,14 +199,30 @@ const RawMaterialsConfig = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="unit">Unit</Label>
+          <Label htmlFor="unit">Unit *</Label>
+          <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="grams">Grams (g)</SelectItem>
+              <SelectItem value="pieces">Pieces</SelectItem>
+              <SelectItem value="meters">Meters (m)</SelectItem>
+              <SelectItem value="rolls">Rolls</SelectItem>
+              <SelectItem value="kg">Kilograms (kg)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="current_stock">Current Stock</Label>
           <Input
-            id="unit"
-            value={formData.unit}
-            onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-            placeholder="kg, pcs, meters, etc."
+            id="current_stock"
+            type="number"
+            value={formData.current_stock}
+            onChange={(e) => setFormData(prev => ({ ...prev, current_stock: e.target.value }))}
+            min="0"
           />
         </div>
         <div className="space-y-2">
@@ -211,6 +232,7 @@ const RawMaterialsConfig = () => {
             type="number"
             value={formData.minimum_stock}
             onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock: e.target.value }))}
+            min="0"
           />
         </div>
       </div>
@@ -265,6 +287,7 @@ const RawMaterialsConfig = () => {
                   <TableHead className="text-foreground">Material</TableHead>
                   <TableHead className="text-foreground">Type</TableHead>
                   <TableHead className="text-foreground">Unit</TableHead>
+                  <TableHead className="text-foreground">Current Stock</TableHead>
                   <TableHead className="text-foreground">Min Stock</TableHead>
                   <TableHead className="text-foreground">Actions</TableHead>
                 </TableRow>
@@ -283,6 +306,7 @@ const RawMaterialsConfig = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-foreground">{material.unit || '-'}</TableCell>
+                    <TableCell className="text-foreground">{material.current_stock || 0}</TableCell>
                     <TableCell className="text-foreground">{material.minimum_stock || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -306,7 +330,7 @@ const RawMaterialsConfig = () => {
                 ))}
                 {filteredMaterials.length === 0 && (
                   <TableRow className="border-border">
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? 'No materials found matching your search.' : 'No materials configured yet.'}
                     </TableCell>
                   </TableRow>
