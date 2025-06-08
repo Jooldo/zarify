@@ -41,7 +41,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
   const { rawMaterials, loading: rawMaterialsLoading } = useRawMaterials();
-  const { suppliers, loading: suppliersLoading } = useSuppliers();
+  const { suppliers, loading: suppliersLoading, refetch: refetchSuppliers } = useSuppliers();
 
   const addItem = () => {
     const newItem: ProcurementItem = {
