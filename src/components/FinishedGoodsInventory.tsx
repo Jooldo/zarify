@@ -1,6 +1,8 @@
 
 import { useState } from 'react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import FinishedGoodsHeader from './inventory/FinishedGoodsHeader';
 import FinishedGoodsTable from './inventory/FinishedGoodsTable';
 import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
@@ -56,8 +58,6 @@ const FinishedGoodsInventory = () => {
     return (
       <div className="space-y-4">
         <FinishedGoodsHeader
-          searchTerm=""
-          onSearchChange={() => {}}
           onRefresh={() => {}}
         />
         <div className="text-center py-8">
@@ -77,11 +77,19 @@ const FinishedGoodsInventory = () => {
         
         <TabsContent value="inventory" className="space-y-4 mt-4">
           <FinishedGoodsHeader
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
             onRefresh={handleRefresh}
             onTagOperationComplete={handleTagOperationComplete}
           />
+          
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
           
           <FinishedGoodsTable 
             products={filteredProducts}

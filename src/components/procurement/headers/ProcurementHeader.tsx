@@ -1,7 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ShoppingBag, Clock, CheckCircle, Search } from "lucide-react";
+import { ShoppingBag, Clock, CheckCircle } from "lucide-react";
 
 interface ProcurementHeaderProps {
   requestStats?: {
@@ -9,11 +8,9 @@ interface ProcurementHeaderProps {
     pending: number;
     completed: number;
   };
-  searchTerm?: string;
-  onSearchChange?: (term: string) => void;
 }
 
-const ProcurementHeader = ({ requestStats, searchTerm, onSearchChange }: ProcurementHeaderProps) => {
+const ProcurementHeader = ({ requestStats }: ProcurementHeaderProps) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -21,18 +18,6 @@ const ProcurementHeader = ({ requestStats, searchTerm, onSearchChange }: Procure
           <h2 className="text-xl font-semibold text-gray-900">Procurement Requests</h2>
           <p className="text-sm text-gray-600">Manage and track raw material procurement requests</p>
         </div>
-        
-        {onSearchChange && (
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search procurement requests..."
-              value={searchTerm || ''}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-8"
-            />
-          </div>
-        )}
       </div>
 
       {requestStats && (

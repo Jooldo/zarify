@@ -1,11 +1,8 @@
 
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Package2, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
+import { Package2, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface RawMaterialsHeaderProps {
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
   materialStats?: {
     critical: number;
     good: number;
@@ -14,8 +11,6 @@ interface RawMaterialsHeaderProps {
 }
 
 const RawMaterialsHeader = ({ 
-  searchTerm, 
-  setSearchTerm,
   materialStats
 }: RawMaterialsHeaderProps) => {
   return (
@@ -25,16 +20,6 @@ const RawMaterialsHeader = ({
           <Package2 className="h-5 w-5" />
           Raw Materials Inventory
         </h3>
-        
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search raw materials..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-8"
-          />
-        </div>
       </div>
 
       {materialStats && (

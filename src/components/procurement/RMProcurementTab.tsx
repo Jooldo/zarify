@@ -1,6 +1,9 @@
+
 import { useState, useMemo } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import ProcurementRequestsTable from '@/components/inventory/ProcurementRequestsTable';
 import ViewRequestDialog from '@/components/inventory/ViewRequestDialog';
 import DeleteRequestDialog from '@/components/procurement/DeleteRequestDialog';
@@ -102,9 +105,17 @@ const RMProcurementTab = () => {
     <div className="space-y-6">
       <ProcurementHeader 
         requestStats={requestStats}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
       />
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search procurement requests..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-8"
+        />
+      </div>
 
       <div className="bg-card rounded-lg border border-border min-h-[400px]">
         <ProcurementRequestsTable

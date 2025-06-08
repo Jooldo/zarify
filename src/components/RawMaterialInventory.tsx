@@ -1,6 +1,8 @@
 
 import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
 
@@ -48,10 +50,18 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   return (
     <div className="space-y-4">
       <RawMaterialsHeader
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
         materialStats={materialStats}
       />
+      
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search raw materials..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-8"
+        />
+      </div>
       
       <RawMaterialsTable 
         materials={filteredMaterials} 
