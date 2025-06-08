@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -165,16 +166,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <FileText className="h-5 w-5" />
-              Procurement Request Details
+              Request Details
               <Badge className={getStatusColor(selectedRequest.status)}>
                 {selectedRequest.status}
               </Badge>
               {isMultiItem && (
-                <Badge variant="default" className="flex items-center gap-1">
+                <Badge variant="outline" className="flex items-center gap-1">
                   <ShoppingCart className="h-3 w-3" />
                   Multi-Item
                 </Badge>
@@ -182,84 +183,78 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Header Section - Request Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="space-y-4">
+            {/* Compact Header Section */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded text-sm">
               <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-gray-400" />
+                <Hash className="h-3 w-3 text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-500">Request Number</p>
-                  <p className="font-mono text-sm font-medium">{selectedRequest.request_number}</p>
+                  <p className="text-xs text-gray-500">Request #</p>
+                  <p className="font-mono font-medium">{selectedRequest.request_number}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-gray-400" />
+                <CalendarDays className="h-3 w-3 text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-500">Date Requested</p>
-                  <p className="text-sm">{new Date(selectedRequest.date_requested).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-500">Requested</p>
+                  <p>{new Date(selectedRequest.date_requested).toLocaleDateString()}</p>
                 </div>
               </div>
               {selectedRequest.raised_by && (
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-400" />
+                  <User className="h-3 w-3 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Raised By</p>
-                    <p className="text-sm">{selectedRequest.raised_by}</p>
+                    <p>{selectedRequest.raised_by}</p>
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-gray-400" />
+                <Package className="h-3 w-3 text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-500">Total Quantity</p>
-                  <p className="text-sm font-medium">{getTotalQuantity()} {selectedRequest.unit}</p>
+                  <p className="text-xs text-gray-500">Total Qty</p>
+                  <p className="font-medium">{getTotalQuantity()} {selectedRequest.unit}</p>
                 </div>
               </div>
             </div>
 
-            {/* Materials Section */}
-            <div className="space-y-4">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                {isMultiItem ? 'Materials in Request' : 'Raw Material'}
+            {/* Materials Section - More Compact */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Package className="h-3 w-3" />
+                {isMultiItem ? 'Materials' : 'Material'}
               </Label>
               
               {isMultiItem ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {multiItemMaterials.map((material, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded border">
+                    <div key={index} className="p-2 bg-gray-50 rounded border text-sm">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium">{material.name}</p>
-                          <p className="text-sm text-gray-600">Type: {material.type}</p>
-                          <p className="text-sm text-gray-600">Quantity: {material.quantity} {material.unit}</p>
-                          {material.notes && (
-                            <p className="text-sm text-gray-500 mt-1">Notes: {material.notes}</p>
-                          )}
+                          <p className="font-medium">{material.name} ({material.type})</p>
+                          <p className="text-gray-600">{material.quantity} {material.unit}</p>
+                          {material.notes && <p className="text-gray-500 text-xs">{material.notes}</p>}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          Item {index + 1}
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">{index + 1}</Badge>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-3 bg-gray-50 rounded border">
-                  <p className="font-medium">{selectedRequest.raw_material?.name}</p>
-                  <p className="text-sm text-gray-600">Type: {selectedRequest.raw_material?.type}</p>
-                  <p className="text-sm text-gray-600">Quantity: {selectedRequest.quantity_requested} {selectedRequest.unit}</p>
+                <div className="p-2 bg-gray-50 rounded border text-sm">
+                  <p className="font-medium">{selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})</p>
+                  <p className="text-gray-600">{selectedRequest.quantity_requested} {selectedRequest.unit}</p>
                 </div>
               )}
             </div>
 
-            {/* Details Section - Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Details Section - Compact Two Column */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Left Column */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {!isMultiItem && (
                   <div>
-                    <Label htmlFor="quantity">Quantity Requested</Label>
+                    <Label htmlFor="quantity" className="text-sm">Quantity</Label>
                     {isEditing ? (
                       <div className="flex gap-2 mt-1">
                         <Input
@@ -271,16 +266,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                             quantity_requested: parseInt(e.target.value) || 0
                           })}
                           min="1"
-                          className="flex-1"
+                          className="flex-1 h-8"
                         />
                         <Input
                           value={selectedRequest.unit}
                           disabled
-                          className="w-20 bg-gray-50"
+                          className="w-16 h-8 bg-gray-50 text-xs"
                         />
                       </div>
                     ) : (
-                      <p className="mt-1 p-2 bg-gray-50 rounded border">
+                      <p className="mt-1 p-2 bg-gray-50 rounded border text-sm">
                         {selectedRequest.quantity_requested} {selectedRequest.unit}
                       </p>
                     )}
@@ -288,8 +283,8 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                 )}
 
                 <div>
-                  <Label htmlFor="supplier" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
+                  <Label htmlFor="supplier" className="text-sm flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
                     Supplier
                   </Label>
                   {isEditing ? (
@@ -301,10 +296,10 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                           supplier_id: value || undefined
                         })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8">
                           <SelectValue placeholder={
                             filteredSuppliers.length === 0 
-                              ? "No suppliers configured for this material" 
+                              ? "No suppliers available" 
                               : "Select supplier"
                           } />
                         </SelectTrigger>
@@ -316,14 +311,9 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                           ))}
                         </SelectContent>
                       </Select>
-                      {filteredSuppliers.length === 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          No suppliers have been configured to supply this material.
-                        </p>
-                      )}
                     </div>
                   ) : (
-                    <p className="mt-1 p-2 bg-gray-50 rounded border">
+                    <p className="mt-1 p-2 bg-gray-50 rounded border text-sm">
                       {getSupplierName(selectedRequest.supplier_id)}
                     </p>
                   )}
@@ -331,11 +321,11 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
               </div>
 
               {/* Right Column */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <Label htmlFor="eta" className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    Expected Delivery Date
+                  <Label htmlFor="eta" className="text-sm flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    Expected Delivery
                   </Label>
                   {isEditing ? (
                     <Input
@@ -346,37 +336,20 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                         ...editedRequest,
                         eta: e.target.value || undefined
                       })}
-                      className="mt-1"
+                      className="mt-1 h-8"
                     />
                   ) : (
-                    <p className="mt-1 p-2 bg-gray-50 rounded border">
+                    <p className="mt-1 p-2 bg-gray-50 rounded border text-sm">
                       {selectedRequest.eta ? new Date(selectedRequest.eta).toLocaleDateString() : 'Not specified'}
                     </p>
                   )}
                 </div>
-
-                {/* Status Update */}
-                {!isEditing && selectedRequest.status !== 'Received' && (
-                  <div>
-                    <Label>Update Status</Label>
-                    <Select value={selectedRequest.status} onValueChange={handleStatusChange}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Approved">Approved</SelectItem>
-                        <SelectItem value="Received">Received</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Full Width - Notes */}
+            {/* Notes Section */}
             <div>
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes" className="text-sm">Notes</Label>
               {isEditing ? (
                 <Textarea
                   id="notes"
@@ -385,23 +358,40 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                     ...editedRequest,
                     notes: e.target.value
                   })}
-                  rows={4}
+                  rows={3}
                   className="mt-1"
                   placeholder="Add notes about the request"
                 />
               ) : (
-                <div className="mt-1 p-3 bg-gray-50 rounded border min-h-[100px] whitespace-pre-wrap">
+                <div className="mt-1 p-2 bg-gray-50 rounded border min-h-[60px] whitespace-pre-wrap text-sm">
                   {selectedRequest.notes || 'No notes provided'}
                 </div>
               )}
             </div>
 
+            {/* Status Update Section - After Notes */}
+            {!isEditing && selectedRequest.status !== 'Received' && (
+              <div>
+                <Label className="text-sm">Update Status</Label>
+                <Select value={selectedRequest.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="mt-1 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Received">Received</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Actions */}
-            <div className="flex gap-2 pt-4 border-t">
+            <div className="flex gap-2 pt-3 border-t">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                size="sm"
               >
                 Close
               </Button>
@@ -411,10 +401,11 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                 <Button 
                   variant="outline"
                   onClick={() => setIsWhatsAppDialogOpen(true)}
-                  className="flex items-center gap-2"
+                  size="sm"
+                  className="flex items-center gap-1"
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Send WhatsApp
+                  <MessageCircle className="h-3 w-3" />
+                  WhatsApp
                 </Button>
               )}
               
@@ -427,24 +418,25 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                       setEditedRequest({ ...selectedRequest });
                     }}
                     disabled={loading}
+                    size="sm"
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSaveChanges}
                     disabled={loading}
-                    className="flex-1"
+                    size="sm"
                   >
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? 'Saving...' : 'Save'}
                   </Button>
                 </>
               ) : (
                 selectedRequest.status === 'Pending' && !isMultiItem && (
                   <Button 
                     onClick={() => setIsEditing(true)}
-                    className="flex-1"
+                    size="sm"
                   >
-                    Edit Request
+                    Edit
                   </Button>
                 )
               )}
