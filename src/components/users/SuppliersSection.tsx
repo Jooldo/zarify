@@ -143,12 +143,12 @@ const SuppliersSection = () => {
             placeholder="Search suppliers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 text-sm"
+            className="h-7 text-xs"
           />
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="h-8 text-xs">
+            <Button size="sm" className="h-7 text-xs px-2">
               <Plus className="h-3 w-3 mr-1" />
               Add Supplier
             </Button>
@@ -166,63 +166,63 @@ const SuppliersSection = () => {
       </div>
 
       {filteredSuppliers.length === 0 ? (
-        <div className="text-center py-6">
-          <div className="text-sm text-gray-500">No suppliers found</div>
+        <div className="text-center py-4">
+          <div className="text-xs text-gray-500">No suppliers found</div>
         </div>
       ) : (
         <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="h-8">
-                <TableHead className="h-8 px-2 text-xs font-medium">Company</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium">Contact</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium">Phone</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium">Materials</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium">WhatsApp</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium">Created</TableHead>
-                <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
+              <TableRow className="h-6">
+                <TableHead className="h-6 px-1 text-xs font-medium">Company</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Contact</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Phone</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Materials</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">WhatsApp</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Created</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium w-16">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id} className="h-8 hover:bg-gray-50">
-                  <TableCell className="px-2 py-1 text-xs font-medium truncate max-w-24">{supplier.company_name}</TableCell>
-                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{supplier.contact_person || '-'}</TableCell>
-                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{supplier.phone || '-'}</TableCell>
-                  <TableCell className="px-2 py-1 text-xs truncate max-w-32">
+                <TableRow key={supplier.id} className="h-6 hover:bg-gray-50">
+                  <TableCell className="px-1 py-0.5 text-xs font-medium truncate max-w-20">{supplier.company_name}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-16">{supplier.contact_person || '-'}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-16">{supplier.phone || '-'}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-24">
                     {getMaterialNames(supplier.materials_supplied)}
                   </TableCell>
-                  <TableCell className="px-2 py-1">
+                  <TableCell className="px-1 py-0.5">
                     <Badge 
                       variant={supplier.whatsapp_enabled ? "default" : "secondary"} 
-                      className="text-xs h-4 px-1"
+                      className="text-xs h-3 px-1"
                     >
-                      {supplier.whatsapp_enabled ? 'Enabled' : 'Disabled'}
+                      {supplier.whatsapp_enabled ? 'Yes' : 'No'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-2 py-1 text-xs">{new Date(supplier.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</TableCell>
-                  <TableCell className="px-2 py-1">
+                  <TableCell className="px-1 py-0.5 text-xs">{new Date(supplier.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</TableCell>
+                  <TableCell className="px-1 py-0.5">
                     <div className="flex items-center gap-0.5">
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-5 w-5 p-0"
                         onClick={() => handleViewSupplier(supplier)}
                       >
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-2.5 w-2.5" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-5 w-5 p-0"
                         onClick={() => handleEditSupplier(supplier)}
                       >
-                        <Pen className="h-3 w-3" />
+                        <Pen className="h-2.5 w-2.5" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
-                            <Trash className="h-3 w-3" />
+                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-600 hover:text-red-700">
+                            <Trash className="h-2.5 w-2.5" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-md">
@@ -233,10 +233,10 @@ const SuppliersSection = () => {
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel className="h-8 text-xs">Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="h-7 text-xs">Cancel</AlertDialogCancel>
                             <AlertDialogAction 
                               onClick={() => deleteSupplier(supplier.id)}
-                              className="h-8 text-xs"
+                              className="h-7 text-xs"
                             >
                               Delete
                             </AlertDialogAction>
