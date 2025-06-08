@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, DialogTrigger as AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
+import AddSupplierForm from './AddSupplierForm';
+import EditSupplierForm from './EditSupplierForm';
+import ViewSupplierDialog from './ViewSupplierDialog';
 
 interface Supplier {
   id: string;
@@ -15,6 +20,9 @@ interface Supplier {
   contact_person?: string;
   phone?: string;
   email?: string;
+  payment_terms?: string;
+  whatsapp_number?: string;
+  whatsapp_enabled?: boolean;
   materials_supplied?: string[];
   created_at: string;
 }
@@ -24,6 +32,10 @@ const SuppliersSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const { rawMaterials } = useRawMaterials();
   const { toast } = useToast();
 
   const filteredSuppliers = suppliers.filter(supplier =>
@@ -34,9 +46,15 @@ const SuppliersSection = () => {
 
   const fetchSuppliers = async () => {
     try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
+        .eq('merchant_id', merchantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -75,6 +93,40 @@ const SuppliersSection = () => {
     }
   };
 
+  const getMaterialNames = (materialIds?: string[]) => {
+    if (!materialIds || materialIds.length === 0) return '-';
+    
+    const names = materialIds
+      .map(id => {
+        const material = rawMaterials.find(m => m.id === id);
+        return material ? material.name : null;
+      })
+      .filter(Boolean);
+    
+    return names.length > 0 ? names.join(', ') : '-';
+  };
+
+  const handleAddSuccess = () => {
+    setIsAddDialogOpen(false);
+    fetchSuppliers();
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditDialogOpen(false);
+    setSelectedSupplier(null);
+    fetchSuppliers();
+  };
+
+  const handleViewSupplier = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditSupplier = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setIsEditDialogOpen(true);
+  };
+
   useEffect(() => {
     fetchSuppliers();
   }, []);
@@ -101,11 +153,14 @@ const SuppliersSection = () => {
               Add Supplier
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-base">Add New Supplier</DialogTitle>
+              <DialogTitle>Add New Supplier</DialogTitle>
             </DialogHeader>
-            <p className="text-xs text-gray-500">Supplier form will be implemented here</p>
+            <AddSupplierForm
+              onSuccess={handleAddSuccess}
+              onCancel={() => setIsAddDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -123,6 +178,7 @@ const SuppliersSection = () => {
                 <TableHead className="h-8 px-2 text-xs font-medium">Contact</TableHead>
                 <TableHead className="h-8 px-2 text-xs font-medium">Phone</TableHead>
                 <TableHead className="h-8 px-2 text-xs font-medium">Materials</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">WhatsApp</TableHead>
                 <TableHead className="h-8 px-2 text-xs font-medium">Created</TableHead>
                 <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
               </TableRow>
@@ -134,15 +190,33 @@ const SuppliersSection = () => {
                   <TableCell className="px-2 py-1 text-xs truncate max-w-20">{supplier.contact_person || '-'}</TableCell>
                   <TableCell className="px-2 py-1 text-xs truncate max-w-20">{supplier.phone || '-'}</TableCell>
                   <TableCell className="px-2 py-1 text-xs truncate max-w-32">
-                    {supplier.materials_supplied ? supplier.materials_supplied.join(', ') : '-'}
+                    {getMaterialNames(supplier.materials_supplied)}
+                  </TableCell>
+                  <TableCell className="px-2 py-1">
+                    <Badge 
+                      variant={supplier.whatsapp_enabled ? "default" : "secondary"} 
+                      className="text-xs h-4 px-1"
+                    >
+                      {supplier.whatsapp_enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-2 py-1 text-xs">{new Date(supplier.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</TableCell>
                   <TableCell className="px-2 py-1">
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleViewSupplier(supplier)}
+                      >
                         <Eye className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleEditSupplier(supplier)}
+                      >
                         <Pen className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
@@ -177,6 +251,32 @@ const SuppliersSection = () => {
           </Table>
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Supplier</DialogTitle>
+          </DialogHeader>
+          {selectedSupplier && (
+            <EditSupplierForm
+              supplier={selectedSupplier}
+              onSuccess={handleEditSuccess}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setSelectedSupplier(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <ViewSupplierDialog
+        isOpen={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        supplier={selectedSupplier}
+      />
     </div>
   );
 };
