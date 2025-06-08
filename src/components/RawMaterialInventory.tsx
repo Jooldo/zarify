@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
-import RawMaterialFilters from './inventory/RawMaterialFilters';
+import SwiggyStyleFilters from './inventory/SwiggyStyleFilters';
 
 interface RawMaterialInventoryProps {
   onRequestCreated?: () => void;
@@ -20,8 +20,8 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     shortfallRange: 'all'
   });
 
-  // Get unique suppliers for filter options
-  const suppliers = [...new Set(rawMaterials.map(material => material.supplier_name).filter(Boolean))];
+  // Get unique suppliers for filter options - using 'supplier' instead of 'supplier_name'
+  const suppliers = [...new Set(rawMaterials.map(material => material.supplier).filter(Boolean))];
 
   const filteredMaterials = rawMaterials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,7 +29,8 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     
     const matchesType = filters.type === 'all' || material.type === filters.type;
     
-    const matchesSupplier = filters.supplier === 'all' || material.supplier_name === filters.supplier;
+    // Using 'supplier' instead of 'supplier_name'
+    const matchesSupplier = filters.supplier === 'all' || material.supplier === filters.supplier;
     
     let matchesStatus = true;
     if (filters.status === 'Low Stock') {
@@ -83,10 +84,11 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
         setSearchTerm={setSearchTerm}
       />
       
-      <RawMaterialFilters
+      <SwiggyStyleFilters
         filters={filters}
         onFiltersChange={setFilters}
         suppliers={suppliers}
+        filterType="rawMaterials"
       />
       
       <RawMaterialsTable 

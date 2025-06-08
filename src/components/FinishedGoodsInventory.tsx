@@ -4,7 +4,7 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import FinishedGoodsHeader from './inventory/FinishedGoodsHeader';
 import FinishedGoodsTable from './inventory/FinishedGoodsTable';
 import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
-import FinishedGoodsFilters from './inventory/FinishedGoodsFilters';
+import SwiggyStyleFilters from './inventory/SwiggyStyleFilters';
 import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
 import StockUpdateDialog from './inventory/StockUpdateDialog';
 import TagAuditTrail from './inventory/TagAuditTrail';
@@ -21,7 +21,10 @@ const FinishedGoodsInventory = () => {
     status: 'all',
     stockLevel: 'all',
     sizeRange: 'all',
-    shortfallRange: 'all'
+    shortfallRange: 'all',
+    inStock: false,
+    critical: false,
+    manufacturing: false
   });
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
@@ -45,6 +48,11 @@ const FinishedGoodsInventory = () => {
       
       // Calculate shortfall for filtering
       const shortfall = Math.max(product.required_quantity, product.threshold) - (product.current_stock + product.in_manufacturing);
+      
+      // Handle toggle filters
+      if (filters.inStock && product.current_stock <= product.threshold) return false;
+      if (filters.critical && shortfall <= 0) return false;
+      if (filters.manufacturing && product.in_manufacturing === 0) return false;
       
       let matchesStatus = true;
       if (filters.status === 'Critical') {
@@ -141,10 +149,11 @@ const FinishedGoodsInventory = () => {
             onTagOperationComplete={handleTagOperationComplete}
           />
           
-          <FinishedGoodsFilters
+          <SwiggyStyleFilters
             filters={filters}
             onFiltersChange={setFilters}
             categories={categories}
+            filterType="finishedGoods"
           />
           
           <FinishedGoodsTable 
