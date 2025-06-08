@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -63,8 +62,6 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
   }>>({});
   const { toast } = useToast();
 
-  if (!item) return null;
-
   // Initialize step data when item changes
   React.useEffect(() => {
     if (item) {
@@ -94,12 +91,14 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
   };
 
   const getMaxCompletableQuantity = (stepNumber: number) => {
+    if (!item) return 0;
     if (stepNumber === 1) return item.quantity_required;
     const previousStep = item.manufacturing_steps.find(step => step.step === stepNumber - 1);
     return previousStep?.completed_quantity || 0;
   };
 
   const generateChildTicket = (parentStep: number, failedQuantity: number) => {
+    if (!item) return null;
     return {
       id: `CT-${item.id.substring(0, 8)}-${parentStep}-${Date.now()}`,
       parent_step: parentStep,
@@ -124,6 +123,8 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
   };
 
   const handleUpdate = () => {
+    if (!item) return;
+    
     const updatedItem = { ...item };
     updatedItem.assigned_worker = assignedWorker || item.assigned_worker;
 
@@ -166,7 +167,9 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
       // Generate child ticket for QC failed items
       if (currentStepData.qc_failed > 0) {
         const childTicket = generateChildTicket(step.step, currentStepData.qc_failed);
-        newChildTickets.push(childTicket);
+        if (childTicket) {
+          newChildTickets.push(childTicket);
+        }
       }
 
       // Determine step status with proper typing
@@ -226,6 +229,19 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
       description: `All steps updated successfully${newChildTickets.length > 0 ? `. ${newChildTickets.length} child ticket(s) created for QC failures.` : ''}`,
     });
   };
+
+  // Handle the case when item is null - don't render the dialog content but still keep it in sync with open state
+  if (!item) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Loading...</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
