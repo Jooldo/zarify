@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ interface Supplier {
   id: string;
   company_name: string;
   contact_person: string;
+  materials_supplied?: string[];
 }
 
 interface RaiseRequestDialogProps {
@@ -29,11 +29,11 @@ interface RaiseRequestDialogProps {
 
 // Dummy supplier data with proper UUIDs - for display only
 const DUMMY_SUPPLIERS: Supplier[] = [
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson', materials_supplied: [] },
 ];
 
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
@@ -43,6 +43,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
@@ -76,7 +77,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
 
           const { data, error } = await supabase
             .from('suppliers')
-            .select('id, company_name, contact_person')
+            .select('id, company_name, contact_person, materials_supplied')
             .eq('merchant_id', merchantId);
 
           if (error) {
@@ -95,6 +96,28 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       fetchSuppliers();
     }
   }, [isOpen, isProcurementMode]);
+
+  // Filter suppliers based on selected material
+  useEffect(() => {
+    if (material && suppliers.length > 0) {
+      const filtered = suppliers.filter(supplier => {
+        // If materials_supplied is null, undefined, or empty, show the supplier (legacy support)
+        if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
+          return true;
+        }
+        // Check if the material ID is in the supplier's materials_supplied array
+        return supplier.materials_supplied.includes(material.id);
+      });
+      setFilteredSuppliers(filtered);
+      
+      // Reset selected supplier if it's not in the filtered list
+      if (selectedSupplierId && !filtered.some(s => s.id === selectedSupplierId)) {
+        setSelectedSupplierId('');
+      }
+    } else {
+      setFilteredSuppliers(suppliers);
+    }
+  }, [material, suppliers, selectedSupplierId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,16 +279,25 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
                 <Label htmlFor="supplier">Supplier</Label>
                 <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select supplier (optional)" />
+                    <SelectValue placeholder={
+                      filteredSuppliers.length === 0 
+                        ? "No suppliers configured for this material" 
+                        : "Select supplier (optional)"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
-                    {suppliers.map((supplier) => (
+                    {filteredSuppliers.map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.id}>
                         {supplier.company_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {filteredSuppliers.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No suppliers have been configured to supply this material. You can still create the request.
+                  </p>
+                )}
               </div>
 
               <div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ interface Supplier {
   id: string;
   company_name: string;
   contact_person: string;
+  materials_supplied?: string[];
 }
 
 interface ProcurementItem {
@@ -38,11 +38,11 @@ interface MultiItemProcurementDialogProps {
 
 // Dummy supplier data with proper UUIDs - for display only
 const DUMMY_SUPPLIERS: Supplier[] = [
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis' },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis', materials_supplied: [] },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson', materials_supplied: [] },
 ];
 
 const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: MultiItemProcurementDialogProps) => {
@@ -69,7 +69,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
 
           const { data, error } = await supabase
             .from('suppliers')
-            .select('id, company_name, contact_person')
+            .select('id, company_name, contact_person, materials_supplied')
             .eq('merchant_id', merchantId);
 
           if (error) {
@@ -118,6 +118,19 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
 
   const getSupplierById = (id: string) => {
     return suppliers.find(supplier => supplier.id === id);
+  };
+
+  const getFilteredSuppliersForMaterial = (materialId: string) => {
+    if (!materialId) return suppliers;
+    
+    return suppliers.filter(supplier => {
+      // If materials_supplied is null, undefined, or empty, show the supplier (legacy support)
+      if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
+        return true;
+      }
+      // Check if the material ID is in the supplier's materials_supplied array
+      return supplier.materials_supplied.includes(materialId);
+    });
   };
 
   const isFormValid = () => {
@@ -317,111 +330,131 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
               </Button>
             </div>
 
-            {items.map((item, index) => (
-              <div key={item.id} className="p-4 border rounded-lg space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Item #{index + 1}</span>
-                  {items.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Raw Material Selection */}
-                  <div>
-                    <Label>Raw Material *</Label>
-                    <Select 
-                      value={item.rawMaterialId} 
-                      onValueChange={(value) => updateItem(item.id, 'rawMaterialId', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select material" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rawMaterials.map((material) => (
-                          <SelectItem key={material.id} value={material.id}>
-                            {material.name} ({material.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            {items.map((item, index) => {
+              const filteredSuppliers = getFilteredSuppliersForMaterial(item.rawMaterialId);
+              
+              return (
+                <div key={item.id} className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Item #{index + 1}</span>
+                    {items.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
 
-                  {/* Quantity */}
-                  <div>
-                    <Label>Quantity *</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                        placeholder="Enter quantity"
-                        min="1"
-                        className="flex-1"
-                      />
-                      {item.rawMaterialId && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Raw Material Selection */}
+                    <div>
+                      <Label>Raw Material *</Label>
+                      <Select 
+                        value={item.rawMaterialId} 
+                        onValueChange={(value) => {
+                          updateItem(item.id, 'rawMaterialId', value);
+                          // Reset supplier when material changes
+                          updateItem(item.id, 'supplierId', '');
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rawMaterials.map((material) => (
+                            <SelectItem key={material.id} value={material.id}>
+                              {material.name} ({material.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                      <Label>Quantity *</Label>
+                      <div className="flex gap-2">
                         <Input
-                          value={getRawMaterialById(item.rawMaterialId)?.unit || ''}
-                          disabled
-                          className="w-20 bg-gray-50"
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                          placeholder="Enter quantity"
+                          min="1"
+                          className="flex-1"
                         />
+                        {item.rawMaterialId && (
+                          <Input
+                            value={getRawMaterialById(item.rawMaterialId)?.unit || ''}
+                            disabled
+                            className="w-20 bg-gray-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Supplier */}
+                    <div>
+                      <Label>Supplier *</Label>
+                      <Select 
+                        value={item.supplierId} 
+                        onValueChange={(value) => updateItem(item.id, 'supplierId', value)}
+                        disabled={!item.rawMaterialId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            !item.rawMaterialId
+                              ? "Select material first"
+                              : filteredSuppliers.length === 0
+                              ? "No suppliers for this material"
+                              : "Select supplier"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredSuppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.company_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {item.rawMaterialId && filteredSuppliers.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          No suppliers configured for this material
+                        </p>
                       )}
                     </div>
-                  </div>
 
-                  {/* Supplier */}
-                  <div>
-                    <Label>Supplier *</Label>
-                    <Select 
-                      value={item.supplierId} 
-                      onValueChange={(value) => updateItem(item.id, 'supplierId', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    {/* Individual Delivery Date (if not using global) */}
+                    {!useGlobalDeliveryDate && (
+                      <div>
+                        <Label>Expected Delivery Date</Label>
+                        <Input
+                          type="date"
+                          value={item.deliveryDate}
+                          onChange={(e) => updateItem(item.id, 'deliveryDate', e.target.value)}
+                        />
+                      </div>
+                    )}
 
-                  {/* Individual Delivery Date (if not using global) */}
-                  {!useGlobalDeliveryDate && (
-                    <div>
-                      <Label>Expected Delivery Date</Label>
-                      <Input
-                        type="date"
-                        value={item.deliveryDate}
-                        onChange={(e) => updateItem(item.id, 'deliveryDate', e.target.value)}
+                    {/* Notes */}
+                    <div className={`${useGlobalDeliveryDate ? 'md:col-span-2 lg:col-span-3' : 'md:col-span-2'}`}>
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={item.notes}
+                        onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
+                        placeholder="Add notes for this item"
+                        rows={2}
                       />
                     </div>
-                  )}
-
-                  {/* Notes */}
-                  <div className={`${useGlobalDeliveryDate ? 'md:col-span-2 lg:col-span-3' : 'md:col-span-2'}`}>
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={item.notes}
-                      onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
-                      placeholder="Add notes for this item"
-                      rows={2}
-                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex gap-2 pt-4">
