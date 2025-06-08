@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, Plus, AlertCircle, ShoppingCart } from 'lucide-react';
+import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ProcurementRequestsTableProps {
@@ -45,39 +46,52 @@ const ProcurementRequestsTable = ({
     return origin === 'inventory' && (!request.supplier_id || !request.eta);
   };
 
-  // Group requests by supplier and request number to show combined materials
-  const getGroupedMaterials = (requestNumber: string, notes?: string) => {
-    const isMultiItem = notes?.includes('Source: Multi-Item Procurement Request');
-    if (!isMultiItem) return null;
+  const parseMultiItemMaterials = (notes?: string) => {
+    if (!notes || !notes.includes('Materials in this request:')) return null;
+    
+    const materialsSection = notes.split('Materials in this request:')[1];
+    if (!materialsSection) return null;
 
-    // Find all requests with the same supplier and similar timestamp
-    const relatedRequests = requests.filter(r => {
-      const rOrigin = getRequestOrigin(r.notes);
-      const rSupplier = extractSupplierFromNotes(r.notes);
-      const currentSupplier = extractSupplierFromNotes(notes);
-      
-      return rOrigin === 'multi-item' && 
-             rSupplier === currentSupplier &&
-             Math.abs(new Date(r.date_requested).getTime() - new Date(requests.find(req => req.request_number === requestNumber)?.date_requested || '').getTime()) < 60000; // Within 1 minute
-    });
-
-    return relatedRequests;
+    const materialLines = materialsSection.trim().split('\n').filter(line => line.trim());
+    
+    return materialLines.map(line => {
+      // Parse format: "1. Material Name (Type) - Quantity Unit - Notes"
+      const match = line.match(/^\d+\.\s*(.+?)\s*\((.+?)\)\s*-\s*(\d+)\s*(\w+)(?:\s*-\s*(.+))?$/);
+      if (match) {
+        return {
+          name: match[1].trim(),
+          type: match[2].trim(),
+          quantity: parseInt(match[3]),
+          unit: match[4].trim(),
+          notes: match[5]?.trim() || ''
+        };
+      }
+      return null;
+    }).filter(Boolean);
   };
 
   const getMaterialDisplayText = (request: ProcurementRequest) => {
-    const relatedRequests = getGroupedMaterials(request.request_number, request.notes);
+    const origin = getRequestOrigin(request.notes);
     
-    if (relatedRequests && relatedRequests.length > 1) {
-      const materialName = request.raw_material?.name || 'Unknown';
-      const materialType = request.raw_material?.type || 'Unknown';
-      const additionalCount = relatedRequests.length - 1;
+    if (origin === 'multi-item') {
+      const materials = parseMultiItemMaterials(request.notes);
       
-      return (
-        <div className="flex flex-col">
-          <span className="font-medium">{materialName}</span>
-          <span className="text-xs text-gray-500">({materialType}) +{additionalCount} more</span>
-        </div>
-      );
+      if (materials && materials.length > 1) {
+        const primaryMaterial = materials[0];
+        const additionalCount = materials.length - 1;
+        
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">{primaryMaterial.name}</span>
+            <span className="text-xs text-gray-500">({primaryMaterial.type})</span>
+            <MaterialDetailsPopover materials={materials}>
+              <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline text-left mt-1">
+                +{additionalCount} more
+              </button>
+            </MaterialDetailsPopover>
+          </div>
+        );
+      }
     }
 
     return (

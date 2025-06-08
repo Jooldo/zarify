@@ -150,79 +150,87 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
       const createdRequests = [];
       const baseTimestamp = Date.now();
 
-      // Create a procurement request for each item (even if same supplier)
-      // This maintains individual tracking while still grouping by supplier conceptually
+      // Create one procurement request per supplier
       let requestIndex = 0;
       for (const [supplierId, supplierItems] of Object.entries(itemsBySupplier)) {
-        for (const item of supplierItems) {
-          const requestNumber = `REQ-${baseTimestamp}-${String(requestIndex + 1).padStart(3, '0')}`;
-          
+        const supplier = getSupplierById(supplierId);
+        const requestNumber = `REQ-${baseTimestamp}-${String(requestIndex + 1).padStart(3, '0')}`;
+        
+        // Determine if this is a real supplier or dummy
+        const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === supplierId);
+        const validSupplierId = isDummySupplier ? null : supplierId;
+
+        // Prepare supplier info for notes
+        const supplierNotes = supplier ? `Supplier: ${supplier.company_name}` : '';
+        
+        // Create detailed list of all materials for this supplier
+        const materialsList = supplierItems.map((item, index) => {
           const rawMaterial = getRawMaterialById(item.rawMaterialId);
-          const supplier = getSupplierById(supplierId);
-          
-          if (!rawMaterial) continue;
+          return `${index + 1}. ${rawMaterial?.name || 'Unknown'} (${rawMaterial?.type || 'Unknown'}) - ${item.quantity} ${rawMaterial?.unit || 'units'}${item.notes ? ` - ${item.notes}` : ''}`;
+        }).join('\n');
+        
+        const groupInfo = `Multi-Item Request: ${supplierItems.length} materials for ${supplier?.company_name || 'Unknown Supplier'}`;
+        
+        const finalNotes = [
+          'Source: Multi-Item Procurement Request',
+          groupInfo,
+          supplierNotes,
+          'Materials in this request:',
+          materialsList
+        ].filter(Boolean).join('\n');
 
-          // Determine if this is a real supplier or dummy
-          const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === supplierId);
-          const validSupplierId = isDummySupplier ? null : supplierId;
+        // Use global delivery date if enabled, otherwise use the first item's date
+        const deliveryDate = useGlobalDeliveryDate ? globalDeliveryDate : supplierItems[0].deliveryDate;
 
-          // Prepare supplier info for notes
-          const supplierNotes = supplier ? `Supplier: ${supplier.company_name}` : '';
-          
-          // Add grouping information to notes
-          const groupInfo = supplierItems.length > 1 ? 
-            `Batch Request: ${supplierItems.length} items for ${supplier?.company_name || 'Unknown Supplier'}` : '';
-          
-          const finalNotes = [
-            'Source: Multi-Item Procurement Request',
-            groupInfo,
-            supplierNotes,
-            item.notes
-          ].filter(Boolean).join('\n');
+        // For display purposes, we'll use the first material as the "primary" material
+        const primaryItem = supplierItems[0];
+        const primaryMaterial = getRawMaterialById(primaryItem.rawMaterialId);
 
-          // Use global delivery date if enabled, otherwise use item-specific date
-          const deliveryDate = useGlobalDeliveryDate ? globalDeliveryDate : item.deliveryDate;
+        if (!primaryMaterial) continue;
 
-          const { error } = await supabase
-            .from('procurement_requests')
-            .insert({
-              request_number: requestNumber,
-              raw_material_id: item.rawMaterialId,
-              quantity_requested: parseInt(item.quantity),
-              unit: rawMaterial.unit,
-              supplier_id: validSupplierId,
-              eta: deliveryDate || null,
-              notes: finalNotes || null,
-              status: 'Pending',
-              date_requested: new Date().toISOString().split('T')[0],
-              merchant_id: merchantId,
-              first_name: profile?.firstName || null,
-              last_name: profile?.lastName || null
-            });
-
-          if (error) throw error;
-
-          // Update raw material in_procurement
-          const { error: updateError } = await supabase
-            .from('raw_materials')
-            .update({ 
-              in_procurement: (rawMaterial.in_procurement || 0) + parseInt(item.quantity),
-              request_status: 'Pending'
-            })
-            .eq('id', item.rawMaterialId);
-
-          if (updateError) throw updateError;
-
-          createdRequests.push({
-            requestNumber,
-            materialName: rawMaterial.name,
-            quantity: item.quantity,
-            unit: rawMaterial.unit,
-            supplier: supplier?.company_name || 'Unknown'
+        const { error } = await supabase
+          .from('procurement_requests')
+          .insert({
+            request_number: requestNumber,
+            raw_material_id: primaryItem.rawMaterialId,
+            quantity_requested: parseInt(primaryItem.quantity),
+            unit: primaryMaterial.unit,
+            supplier_id: validSupplierId,
+            eta: deliveryDate || null,
+            notes: finalNotes || null,
+            status: 'Pending',
+            date_requested: new Date().toISOString().split('T')[0],
+            merchant_id: merchantId,
+            first_name: profile?.firstName || null,
+            last_name: profile?.lastName || null
           });
 
-          requestIndex++;
+        if (error) throw error;
+
+        // Update raw materials procurement quantities for all items
+        for (const item of supplierItems) {
+          const rawMaterial = getRawMaterialById(item.rawMaterialId);
+          if (rawMaterial) {
+            const { error: updateError } = await supabase
+              .from('raw_materials')
+              .update({ 
+                in_procurement: (rawMaterial.in_procurement || 0) + parseInt(item.quantity),
+                request_status: 'Pending'
+              })
+              .eq('id', item.rawMaterialId);
+
+            if (updateError) throw updateError;
+          }
         }
+
+        createdRequests.push({
+          requestNumber,
+          supplierName: supplier?.company_name || 'Unknown',
+          materialCount: supplierItems.length,
+          primaryMaterial: primaryMaterial.name
+        });
+
+        requestIndex++;
       }
 
       // Log activity for the batch creation
