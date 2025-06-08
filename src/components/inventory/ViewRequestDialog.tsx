@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ interface ViewRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedRequest: ProcurementRequest | null;
   onUpdateRequestStatus: (requestId: string, newStatus: string) => void;
-  onRequestUpdated?: () => void; // Add this to trigger table refresh
+  onRequestUpdated?: () => void;
 }
 
 // Dummy supplier data with proper UUIDs - for display only
@@ -40,6 +41,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
   const [editMode, setEditMode] = useState(false);
   const [editEta, setEditEta] = useState('');
+  const [editQuantity, setEditQuantity] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [whatsappHistory, setWhatsappHistory] = useState<WhatsAppNotification[]>([]);
@@ -54,13 +56,50 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
   const getRequestOrigin = (notes?: string) => {
     if (!notes) return 'procurement';
-    return notes.includes('Source: Inventory Alert') ? 'inventory' : 'procurement';
+    if (notes.includes('Source: Inventory Alert')) return 'inventory';
+    if (notes.includes('Source: Multi-Item Procurement Request')) return 'multi-item';
+    return 'procurement';
+  };
+
+  const parseMultiItemMaterials = (notes?: string) => {
+    if (!notes || !notes.includes('Materials in this request:')) return null;
+    
+    const materialsSection = notes.split('Materials in this request:')[1];
+    if (!materialsSection) return null;
+
+    const materialLines = materialsSection.trim().split('\n').filter(line => line.trim());
+    
+    return materialLines.map(line => {
+      // Parse format: "1. Material Name (Type) - Quantity Unit - Notes"
+      const match = line.match(/^\d+\.\s*(.+?)\s*\((.+?)\)\s*-\s*(\d+)\s*(\w+)(?:\s*-\s*(.+))?$/);
+      if (match) {
+        return {
+          name: match[1].trim(),
+          type: match[2].trim(),
+          quantity: parseInt(match[3]),
+          unit: match[4].trim(),
+          notes: match[5]?.trim() || ''
+        };
+      }
+      return null;
+    }).filter(Boolean);
   };
 
   const isIncompleteRequest = () => {
     if (!selectedRequest) return false;
     const origin = getRequestOrigin(selectedRequest.notes);
     return origin === 'inventory' && (!selectedRequest.supplier_id || !selectedRequest.eta);
+  };
+
+  const isMultiItemRequest = () => {
+    if (!selectedRequest) return false;
+    return getRequestOrigin(selectedRequest.notes) === 'multi-item';
+  };
+
+  const getTotalQuantityForMultiItem = () => {
+    const materials = parseMultiItemMaterials(selectedRequest?.notes);
+    if (!materials) return selectedRequest?.quantity_requested || 0;
+    return materials.reduce((total, material) => total + material.quantity, 0);
   };
 
   useEffect(() => {
@@ -80,7 +119,6 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
           console.log('Error fetching suppliers, using dummy data:', error);
           setSuppliers(DUMMY_SUPPLIERS);
         } else {
-          // Combine real suppliers with dummy data for display
           setSuppliers([...(data || []), ...DUMMY_SUPPLIERS]);
         }
       } catch (error) {
@@ -102,6 +140,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       if (selectedRequest) {
         setSelectedSupplier(selectedRequest.supplier_id || '');
         setEditEta(selectedRequest.eta || '');
+        setEditQuantity(isMultiItemRequest() ? getTotalQuantityForMultiItem().toString() : selectedRequest.quantity_requested.toString());
         setEditNotes(selectedRequest.notes || '');
       }
     }
@@ -118,15 +157,12 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       if (selectedSupplier) {
         const selectedSupplierData = suppliers.find(s => s.id === selectedSupplier);
         if (selectedSupplierData) {
-          // Check if this is a dummy supplier
           const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === selectedSupplier);
           
           if (!isDummySupplier) {
-            // Only set supplier_id for real suppliers from database
             updates.supplier_id = selectedSupplier;
           }
           
-          // Update or add supplier info in notes
           if (updatedNotes.includes('Supplier:')) {
             updatedNotes = updatedNotes.replace(/Supplier:\s*[^\n]*/, `Supplier: ${selectedSupplierData.company_name}`);
           } else {
@@ -137,6 +173,11 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
       if (editEta) {
         updates.eta = editEta;
+      }
+
+      // Update quantity only for single item requests
+      if (!isMultiItemRequest() && editQuantity && parseInt(editQuantity) !== selectedRequest.quantity_requested) {
+        updates.quantity_requested = parseInt(editQuantity);
       }
 
       if (updatedNotes !== selectedRequest.notes) {
@@ -157,7 +198,6 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
       setEditMode(false);
       
-      // Trigger table refresh if callback is provided
       if (onRequestUpdated) {
         onRequestUpdated();
       }
@@ -188,7 +228,6 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       return;
     }
 
-    // Get supplier WhatsApp details
     const { data: supplierData, error } = await supabase
       .from('suppliers')
       .select('whatsapp_number, whatsapp_enabled')
@@ -218,7 +257,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       supplier.id,
       supplierData.whatsapp_number,
       supplier.company_name,
-      selectedRequest.raw_material?.name || 'Unknown Material',
+      selectedRequest.raw_material?.name || 'Multiple Materials',
       selectedRequest.quantity_requested,
       selectedRequest.unit,
       selectedRequest.request_number,
@@ -226,7 +265,6 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
     );
 
     if (success) {
-      // Refresh WhatsApp history
       const history = await getNotificationHistory(selectedRequest.id);
       setWhatsappHistory(history);
     }
@@ -234,15 +272,17 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
   const origin = getRequestOrigin(selectedRequest?.notes);
   const isIncomplete = isIncompleteRequest();
+  const isMultiItem = isMultiItemRequest();
+  const multiItemMaterials = parseMultiItemMaterials(selectedRequest?.notes);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             Request Details
-            <Badge variant={origin === 'inventory' ? "secondary" : "default"} className="text-xs">
-              {origin === 'inventory' ? 'From Alert' : 'Direct Request'}
+            <Badge variant={origin === 'inventory' ? "secondary" : origin === 'multi-item' ? "default" : "outline"} className="text-xs">
+              {origin === 'inventory' ? 'From Alert' : origin === 'multi-item' ? 'Multi-Item' : 'Single Item'}
             </Badge>
             {isIncomplete && (
               <div className="flex items-center gap-1">
@@ -253,24 +293,59 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {/* Material(s) Section */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{selectedRequest?.raw_material?.name || ''}</span>
-              <Badge variant="outline" className="text-xs">{selectedRequest?.raw_material?.type || 'Unknown'}</Badge>
-            </div>
             <div className="text-xs text-muted-foreground">
               Request ID: {selectedRequest?.request_number}
             </div>
+            
+            {isMultiItem && multiItemMaterials ? (
+              <div>
+                <Label className="text-sm font-medium">Materials ({multiItemMaterials.length} items)</Label>
+                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto border rounded-lg p-2">
+                  {multiItemMaterials.map((material, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
+                      <div>
+                        <span className="font-medium">{material.name}</span>
+                        <span className="text-gray-500 ml-1">({material.type})</span>
+                      </div>
+                      <div className="text-right">
+                        <div>{material.quantity} {material.unit}</div>
+                        {material.notes && (
+                          <div className="text-gray-500 text-xs">{material.notes}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">{selectedRequest?.raw_material?.name || ''}</span>
+                  <Badge variant="outline" className="text-xs ml-2">{selectedRequest?.raw_material?.type || 'Unknown'}</Badge>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-sm">Quantity</Label>
-              <Input 
-                value={`${selectedRequest?.quantity_requested || 0} ${selectedRequest?.unit || ''}`} 
-                disabled 
-                className="mt-1 text-sm"
-              />
+              <Label className="text-sm">Total Quantity</Label>
+              {editMode && !isMultiItem ? (
+                <Input
+                  type="number"
+                  value={editQuantity}
+                  onChange={(e) => setEditQuantity(e.target.value)}
+                  className="mt-1 text-sm"
+                />
+              ) : (
+                <Input 
+                  value={`${isMultiItem ? getTotalQuantityForMultiItem() : selectedRequest?.quantity_requested || 0} ${selectedRequest?.unit || ''}`} 
+                  disabled 
+                  className="mt-1 text-sm"
+                />
+              )}
             </div>
             <div>
               <Label className="text-sm">Status</Label>
