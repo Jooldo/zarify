@@ -5,21 +5,12 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
-import OrderFilters from './orders/OrderFilters';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    status: 'all',
-    subStatus: 'all',
-    stockStatus: 'all',
-    customer: 'all',
-    dateFrom: '',
-    dateTo: ''
-  });
 
   // Define utility functions first
   const getOverallOrderStatus = (orderId: string) => {
@@ -80,78 +71,18 @@ const OrdersTab = () => {
     })
   );
 
-  const applyFilters = (orders: any[]) => {
-    let filtered = orders;
-
-    // Text search filter
+  const filteredOrders = flattenedOrders.filter(item => {
+    // Text search filter only
     if (searchTerm) {
-      filtered = filtered.filter(item => 
-        item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.subcategory.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      return item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
     }
-
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(item => {
-        const overallStatus = getOverallOrderStatus(item.orderId);
-        return overallStatus === filters.status;
-      });
-    }
-
-    // Sub-status filter
-    if (filters.subStatus !== 'all') {
-      filtered = filtered.filter(item => item.status === filters.subStatus);
-    }
-
-    // Stock status filter
-    if (filters.stockStatus !== 'all') {
-      filtered = filtered.filter(item => {
-        const stockAvailable = getStockAvailable(item.productCode);
-        const isLowStock = stockAvailable < item.quantity;
-        const isOutOfStock = stockAvailable === 0;
-        
-        switch (filters.stockStatus) {
-          case 'in-stock':
-            return !isLowStock && !isOutOfStock;
-          case 'low-stock':
-            return isLowStock && !isOutOfStock;
-          case 'out-of-stock':
-            return isOutOfStock;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Customer filter
-    if (filters.customer !== 'all') {
-      filtered = filtered.filter(item => item.customer === filters.customer);
-    }
-
-    // Date range filter
-    if (filters.dateFrom) {
-      filtered = filtered.filter(item => 
-        new Date(item.createdDate) >= new Date(filters.dateFrom)
-      );
-    }
-
-    if (filters.dateTo) {
-      filtered = filtered.filter(item => 
-        new Date(item.createdDate) <= new Date(filters.dateTo)
-      );
-    }
-
-    return filtered;
-  };
-
-  const filteredOrders = applyFilters(flattenedOrders);
-
-  const uniqueCustomers = [...new Set(customers.map(c => c.name))];
+    return true;
+  });
 
   if (loading) {
     return <div className="flex items-center justify-center p-8">Loading...</div>;
@@ -163,12 +94,6 @@ const OrdersTab = () => {
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm}
         onOrderCreated={refetch}
-      />
-      
-      <OrderFilters 
-        filters={filters}
-        onFiltersChange={setFilters}
-        customers={uniqueCustomers}
       />
       
       <OrdersTable 
@@ -183,7 +108,7 @@ const OrdersTab = () => {
 
       {filteredOrders.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">No orders found matching your search and filters.</p>
+          <p className="text-gray-500 text-sm">No orders found matching your search.</p>
         </div>
       )}
     </div>

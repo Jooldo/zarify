@@ -4,7 +4,6 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import FinishedGoodsHeader from './inventory/FinishedGoodsHeader';
 import FinishedGoodsTable from './inventory/FinishedGoodsTable';
 import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
-import SwiggyStyleFilters from './inventory/SwiggyStyleFilters';
 import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
 import StockUpdateDialog from './inventory/StockUpdateDialog';
 import TagAuditTrail from './inventory/TagAuditTrail';
@@ -16,25 +15,12 @@ const FinishedGoodsInventory = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('inventory');
-  const [filters, setFilters] = useState({
-    category: 'all',
-    status: 'all',
-    stockLevel: 'all',
-    sizeRange: 'all',
-    shortfallRange: 'all',
-    inStock: false,
-    critical: false,
-    manufacturing: false
-  });
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
 
-  // Get unique categories for filter options
-  const categories = [...new Set(finishedGoods.map(product => product.product_config?.category).filter(Boolean))];
-
-  // Filter for active products only and apply search and filters
+  // Filter for active products only and apply search
   const filteredProducts = finishedGoods
     .filter(product => {
       // Only show active products
@@ -44,59 +30,7 @@ const FinishedGoodsInventory = () => {
                            product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCategory = filters.category === 'all' || product.product_config?.category === filters.category;
-      
-      // Calculate shortfall for filtering
-      const shortfall = Math.max(product.required_quantity, product.threshold) - (product.current_stock + product.in_manufacturing);
-      
-      // Handle toggle filters
-      if (filters.inStock && product.current_stock <= product.threshold) return false;
-      if (filters.critical && shortfall <= 0) return false;
-      if (filters.manufacturing && product.in_manufacturing === 0) return false;
-      
-      let matchesStatus = true;
-      if (filters.status === 'Critical') {
-        matchesStatus = shortfall > 0;
-      } else if (filters.status === 'Low') {
-        matchesStatus = product.current_stock <= product.threshold && shortfall <= 0;
-      } else if (filters.status === 'Good') {
-        matchesStatus = product.current_stock > product.threshold && shortfall <= 0;
-      } else if (filters.status === 'Procurement Needed') {
-        matchesStatus = shortfall > 0;
-      } else if (filters.status !== 'all') {
-        matchesStatus = false;
-      }
-
-      let matchesStockLevel = true;
-      if (filters.stockLevel === 'critical') {
-        matchesStockLevel = product.current_stock <= product.threshold;
-      } else if (filters.stockLevel === 'low') {
-        matchesStockLevel = product.current_stock <= product.threshold * 1.5 && product.current_stock > product.threshold;
-      } else if (filters.stockLevel === 'normal') {
-        matchesStockLevel = product.current_stock > product.threshold * 1.5;
-      }
-
-      let matchesSizeRange = true;
-      if (filters.sizeRange === 'small') {
-        matchesSizeRange = product.product_config?.size_value <= 12;
-      } else if (filters.sizeRange === 'medium') {
-        matchesSizeRange = product.product_config?.size_value >= 13 && product.product_config?.size_value <= 18;
-      } else if (filters.sizeRange === 'large') {
-        matchesSizeRange = product.product_config?.size_value > 18;
-      }
-
-      let matchesShortfallRange = true;
-      if (filters.shortfallRange === 'surplus') {
-        matchesShortfallRange = shortfall <= 0;
-      } else if (filters.shortfallRange === 'low') {
-        matchesShortfallRange = shortfall >= 1 && shortfall <= 50;
-      } else if (filters.shortfallRange === 'medium') {
-        matchesShortfallRange = shortfall >= 51 && shortfall <= 200;
-      } else if (filters.shortfallRange === 'high') {
-        matchesShortfallRange = shortfall > 200;
-      }
-      
-      return isActive && matchesSearch && matchesCategory && matchesStatus && matchesStockLevel && matchesSizeRange && matchesShortfallRange;
+      return isActive && matchesSearch;
     });
 
   const handleViewProduct = (product: any) => {
@@ -147,13 +81,6 @@ const FinishedGoodsInventory = () => {
             onSearchChange={setSearchTerm}
             onRefresh={handleRefresh}
             onTagOperationComplete={handleTagOperationComplete}
-          />
-          
-          <SwiggyStyleFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            categories={categories}
-            filterType="finishedGoods"
           />
           
           <FinishedGoodsTable 
