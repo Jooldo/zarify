@@ -7,7 +7,6 @@ import ViewRequestDialog from '@/components/inventory/ViewRequestDialog';
 import DeleteRequestDialog from '@/components/procurement/DeleteRequestDialog';
 import MultiItemProcurementDialog from '@/components/procurement/MultiItemProcurementDialog';
 import BOMLegacyGenerationDialog from '@/components/procurement/BOMLegacyGenerationDialog';
-import ProcurementFilters from '@/components/procurement/ProcurementFilters';
 import ProcurementHeader from '@/components/procurement/headers/ProcurementHeader';
 
 const RMProcurementTab = () => {
@@ -20,16 +19,6 @@ const RMProcurementTab = () => {
   const [isBOMDialogOpen, setIsBOMDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    status: 'all',
-    supplier: 'all',
-    materialType: 'all',
-    raisedBy: 'all',
-    dateFrom: '',
-    dateTo: ''
-  });
-
   // Calculate request stats
   const requestStats = useMemo(() => {
     const total = requests.length;
@@ -37,68 +26,6 @@ const RMProcurementTab = () => {
     const completed = requests.filter(req => req.status === 'Received').length;
     return { total, pending, completed };
   }, [requests]);
-
-  // Extract filter options from data
-  const filterOptions = useMemo(() => {
-    const supplierNames = [...new Set(
-      requests
-        .map(req => suppliers.find(s => s.id === req.supplier_id)?.company_name)
-        .filter(Boolean)
-    )].sort();
-
-    const materialTypes = [...new Set(
-      requests
-        .map(req => req.raw_material?.type)
-        .filter(Boolean)
-    )].sort();
-
-    const raisedByOptions = [...new Set(
-      requests
-        .map(req => req.raised_by)
-        .filter(Boolean)
-    )].sort();
-
-    return { supplierNames, materialTypes, raisedByOptions };
-  }, [requests, suppliers]);
-
-  // Filter requests based on current filters
-  const filteredRequests = useMemo(() => {
-    return requests.filter(request => {
-      // Status filter
-      if (filters.status !== 'all' && request.status !== filters.status) {
-        return false;
-      }
-
-      // Supplier filter
-      if (filters.supplier !== 'all') {
-        const supplier = suppliers.find(s => s.id === request.supplier_id);
-        if (!supplier || supplier.company_name !== filters.supplier) {
-          return false;
-        }
-      }
-
-      // Material type filter
-      if (filters.materialType !== 'all' && request.raw_material?.type !== filters.materialType) {
-        return false;
-      }
-
-      // Raised by filter
-      if (filters.raisedBy !== 'all' && request.raised_by !== filters.raisedBy) {
-        return false;
-      }
-
-      // Date filters
-      if (filters.dateFrom && new Date(request.date_requested) < new Date(filters.dateFrom)) {
-        return false;
-      }
-
-      if (filters.dateTo && new Date(request.date_requested) > new Date(filters.dateTo)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [requests, filters, suppliers]);
 
   const handleViewRequest = (request) => {
     setSelectedRequest(request);
@@ -160,17 +87,9 @@ const RMProcurementTab = () => {
         requestStats={requestStats}
       />
 
-      <ProcurementFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        suppliers={filterOptions.supplierNames}
-        materialTypes={filterOptions.materialTypes}
-        raisedByOptions={filterOptions.raisedByOptions}
-      />
-
       <div className="bg-card rounded-lg border border-border min-h-[400px]">
         <ProcurementRequestsTable
-          requests={filteredRequests}
+          requests={requests}
           onViewRequest={handleViewRequest}
           onDeleteRequest={handleDeleteRequest}
           onGenerateBOM={handleGenerateBOM}
