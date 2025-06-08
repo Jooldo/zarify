@@ -12,6 +12,7 @@ const OrdersTab = () => {
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
 
   // Calculate order stats
   const orderStats = useMemo(() => {
@@ -23,6 +24,33 @@ const OrdersTab = () => {
       ready: allOrderItems.filter(item => item.status === 'Ready').length,
       delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
     };
+  }, [orders]);
+
+  // Extract unique categories and subcategories from orders
+  const { categories, subcategories } = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    const subcategoriesSet = new Set<string>();
+    
+    orders.forEach(order => {
+      order.order_items.forEach(item => {
+        if (item.product_config.category) categoriesSet.add(item.product_config.category);
+        if (item.product_config.subcategory) subcategoriesSet.add(item.product_config.subcategory);
+      });
+    });
+    
+    return {
+      categories: Array.from(categoriesSet).sort(),
+      subcategories: Array.from(subcategoriesSet).sort()
+    };
+  }, [orders]);
+
+  // Extract unique customer names
+  const customerNames = useMemo(() => {
+    const customersSet = new Set<string>();
+    orders.forEach(order => {
+      if (order.customer.name) customersSet.add(order.customer.name);
+    });
+    return Array.from(customersSet).sort();
   }, [orders]);
 
   // Define utility functions first
@@ -85,15 +113,64 @@ const OrdersTab = () => {
   );
 
   const filteredOrders = flattenedOrders.filter(item => {
-    // Text search filter only
+    // Text search filter
     if (searchTerm) {
-      return item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const searchMatch = item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!searchMatch) return false;
     }
+
+    // Apply filters
+    if (filters.customer && item.customer !== filters.customer) return false;
+    if (filters.orderStatus && getOverallOrderStatus(item.orderId) !== filters.orderStatus) return false;
+    if (filters.suborderStatus && item.status !== filters.suborderStatus) return false;
+    if (filters.category && item.category !== filters.category) return false;
+    if (filters.subcategory && item.subcategory !== filters.subcategory) return false;
+
+    // Date range filter
+    if (filters.dateRange) {
+      const itemDate = new Date(item.createdDate);
+      const today = new Date();
+      const daysDiff = Math.floor((today.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      switch (filters.dateRange) {
+        case 'Today':
+          if (daysDiff !== 0) return false;
+          break;
+        case 'Last 7 days':
+          if (daysDiff > 7) return false;
+          break;
+        case 'Last 30 days':
+          if (daysDiff > 30) return false;
+          break;
+        case 'Last 90 days':
+          if (daysDiff > 90) return false;
+          break;
+      }
+    }
+
+    // Amount range filter
+    if (filters.minAmount && item.totalOrderAmount < parseFloat(filters.minAmount)) return false;
+    if (filters.maxAmount && item.totalOrderAmount > parseFloat(filters.maxAmount)) return false;
+
+    // Quick filters
+    if (filters.hasDeliveryDate && !item.expectedDelivery) return false;
+    if (filters.overdueDelivery) {
+      if (!item.expectedDelivery || new Date(item.expectedDelivery) >= new Date()) return false;
+    }
+    if (filters.lowStock) {
+      const stockAvailable = getStockAvailable(item.productCode);
+      if (stockAvailable >= item.quantity) return false;
+    }
+    if (filters.stockAvailable) {
+      const stockAvailable = getStockAvailable(item.productCode);
+      if (stockAvailable < item.quantity) return false;
+    }
+
     return true;
   });
 
@@ -109,6 +186,10 @@ const OrdersTab = () => {
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm}
         onOrderCreated={refetch}
+        onFiltersChange={setFilters}
+        customers={customerNames}
+        categories={categories}
+        subcategories={subcategories}
       />
       
       <OrdersTable 
@@ -123,7 +204,7 @@ const OrdersTab = () => {
 
       {filteredOrders.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">No orders found matching your search.</p>
+          <p className="text-gray-500 text-sm">No orders found matching your search and filters.</p>
         </div>
       )}
     </div>
