@@ -39,6 +39,8 @@ const RMProcurementTab = () => {
   };
 
   const handleRaiseRequest = () => {
+    setSelectedMaterial(null);
+    setMaterialForRequest('');
     setRaiseRequestOpen(true);
   };
 

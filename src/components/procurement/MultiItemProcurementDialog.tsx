@@ -148,12 +148,14 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
       }, {} as Record<string, ProcurementItem[]>);
 
       const createdRequests = [];
+      const baseTimestamp = Date.now();
 
-      // Create a procurement request for each supplier
+      // Create a procurement request for each item (even if same supplier)
+      // This maintains individual tracking while still grouping by supplier conceptually
+      let requestIndex = 0;
       for (const [supplierId, supplierItems] of Object.entries(itemsBySupplier)) {
         for (const item of supplierItems) {
-          const timestamp = Date.now();
-          const requestNumber = `REQ-${timestamp}-${Math.random().toString(36).substr(2, 4)}`;
+          const requestNumber = `REQ-${baseTimestamp}-${String(requestIndex + 1).padStart(3, '0')}`;
           
           const rawMaterial = getRawMaterialById(item.rawMaterialId);
           const supplier = getSupplierById(supplierId);
@@ -166,8 +168,14 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
 
           // Prepare supplier info for notes
           const supplierNotes = supplier ? `Supplier: ${supplier.company_name}` : '';
+          
+          // Add grouping information to notes
+          const groupInfo = supplierItems.length > 1 ? 
+            `Batch Request: ${supplierItems.length} items for ${supplier?.company_name || 'Unknown Supplier'}` : '';
+          
           const finalNotes = [
             'Source: Multi-Item Procurement Request',
+            groupInfo,
             supplierNotes,
             item.notes
           ].filter(Boolean).join('\n');
@@ -212,6 +220,8 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
             unit: rawMaterial.unit,
             supplier: supplier?.company_name || 'Unknown'
           });
+
+          requestIndex++;
         }
       }
 
@@ -220,12 +230,12 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
         'Created',
         'Multi-Item Procurement Request',
         'BATCH',
-        `Created ${createdRequests.length} procurement requests across ${Object.keys(itemsBySupplier).length} suppliers`
+        `Created ${createdRequests.length} procurement requests grouped by ${Object.keys(itemsBySupplier).length} suppliers`
       );
 
       toast({
         title: 'Success',
-        description: `Created ${createdRequests.length} procurement requests across ${Object.keys(itemsBySupplier).length} suppliers`,
+        description: `Created ${createdRequests.length} procurement requests grouped by ${Object.keys(itemsBySupplier).length} suppliers`,
       });
 
       onRequestCreated();
@@ -254,11 +264,11 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
           <DialogTitle className="flex items-center gap-2">
             Multi-Item Procurement Request
             <Badge variant="default" className="text-xs">
-              Enhanced
+              Supplier Grouped
             </Badge>
           </DialogTitle>
           <p className="text-sm text-muted-foreground mt-2">
-            Create procurement requests for multiple materials. The system will automatically group items by supplier.
+            Create procurement requests for multiple materials. Items will be automatically grouped by supplier for efficient processing.
           </p>
         </DialogHeader>
         

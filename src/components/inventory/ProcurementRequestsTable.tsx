@@ -45,6 +45,49 @@ const ProcurementRequestsTable = ({
     return origin === 'inventory' && (!request.supplier_id || !request.eta);
   };
 
+  // Group requests by supplier and request number to show combined materials
+  const getGroupedMaterials = (requestNumber: string, notes?: string) => {
+    const isMultiItem = notes?.includes('Source: Multi-Item Procurement Request');
+    if (!isMultiItem) return null;
+
+    // Find all requests with the same supplier and similar timestamp
+    const relatedRequests = requests.filter(r => {
+      const rOrigin = getRequestOrigin(r.notes);
+      const rSupplier = extractSupplierFromNotes(r.notes);
+      const currentSupplier = extractSupplierFromNotes(notes);
+      
+      return rOrigin === 'multi-item' && 
+             rSupplier === currentSupplier &&
+             Math.abs(new Date(r.date_requested).getTime() - new Date(requests.find(req => req.request_number === requestNumber)?.date_requested || '').getTime()) < 60000; // Within 1 minute
+    });
+
+    return relatedRequests;
+  };
+
+  const getMaterialDisplayText = (request: ProcurementRequest) => {
+    const relatedRequests = getGroupedMaterials(request.request_number, request.notes);
+    
+    if (relatedRequests && relatedRequests.length > 1) {
+      const materialName = request.raw_material?.name || 'Unknown';
+      const materialType = request.raw_material?.type || 'Unknown';
+      const additionalCount = relatedRequests.length - 1;
+      
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">{materialName}</span>
+          <span className="text-xs text-gray-500">({materialType}) +{additionalCount} more</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium">{request.raw_material?.name || 'Unknown'}</span>
+        <span className="text-xs text-gray-500">({request.raw_material?.type || 'Unknown'})</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {(onRaiseRequest || onRaiseMultiItemRequest) && (
@@ -69,8 +112,7 @@ const ProcurementRequestsTable = ({
           <TableHeader>
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Material & Type</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Origin</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
@@ -95,11 +137,8 @@ const ProcurementRequestsTable = ({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{request.raw_material?.name || 'Unknown'}</TableCell>
-                  <TableCell className="py-1 px-2">
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {request.raw_material?.type || 'Unknown'}
-                    </Badge>
+                  <TableCell className="py-1 px-2 text-xs">
+                    {getMaterialDisplayText(request)}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
                   <TableCell className="py-1 px-2">
