@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -41,8 +42,8 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
-  const { rawMaterials } = useRawMaterials();
-  const { suppliers } = useSuppliers();
+  const { rawMaterials, loading: rawMaterialsLoading } = useRawMaterials();
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
 
   const addItem = () => {
     const newItem: ProcurementItem = {
@@ -80,11 +81,9 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
     if (!materialId) return [];
     
     return suppliers.filter(supplier => {
-      // If materials_supplied is null, undefined, or empty, don't show the supplier
       if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
         return false;
       }
-      // Check if the material ID is in the supplier's materials_supplied array
       return supplier.materials_supplied.includes(materialId);
     });
   };
@@ -230,6 +229,12 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
     }
   };
 
+  // Debug logs
+  console.log('Raw materials loading:', rawMaterialsLoading);
+  console.log('Raw materials count:', rawMaterials.length);
+  console.log('Suppliers loading:', suppliersLoading);
+  console.log('Suppliers count:', suppliers.length);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -306,25 +311,30 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                     {/* Raw Material Selection */}
                     <div>
                       <Label>Raw Material *</Label>
-                      <Select 
-                        value={item.rawMaterialId}
-                        onValueChange={(value) => {
-                          updateItem(item.id, 'rawMaterialId', value);
-                          // Reset supplier when material changes
-                          updateItem(item.id, 'supplierId', '');
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select material" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rawMaterials.map((material) => (
-                            <SelectItem key={material.id} value={material.id}>
-                              {material.name} ({material.type})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {rawMaterialsLoading ? (
+                        <div className="text-sm text-gray-500">Loading materials...</div>
+                      ) : (
+                        <Select 
+                          value={item.rawMaterialId}
+                          onValueChange={(value) => {
+                            console.log('Material selected:', value);
+                            updateItem(item.id, 'rawMaterialId', value);
+                            // Reset supplier when material changes
+                            updateItem(item.id, 'supplierId', '');
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select material" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {rawMaterials.map((material) => (
+                              <SelectItem key={material.id} value={material.id}>
+                                {material.name} ({material.type})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     {/* Quantity */}
@@ -352,28 +362,32 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                     {/* Supplier */}
                     <div>
                       <Label>Supplier *</Label>
-                      <Select 
-                        value={item.supplierId} 
-                        onValueChange={(value) => updateItem(item.id, 'supplierId', value)}
-                        disabled={!item.rawMaterialId}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={
-                            !item.rawMaterialId
-                              ? "Select material first"
-                              : filteredSuppliers.length === 0
-                              ? "No suppliers for this material"
-                              : "Select supplier"
-                          } />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredSuppliers.map((supplier) => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.company_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {suppliersLoading ? (
+                        <div className="text-sm text-gray-500">Loading suppliers...</div>
+                      ) : (
+                        <Select 
+                          value={item.supplierId} 
+                          onValueChange={(value) => updateItem(item.id, 'supplierId', value)}
+                          disabled={!item.rawMaterialId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              !item.rawMaterialId
+                                ? "Select material first"
+                                : filteredSuppliers.length === 0
+                                ? "No suppliers for this material"
+                                : "Select supplier"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredSuppliers.map((supplier) => (
+                              <SelectItem key={supplier.id} value={supplier.id}>
+                                {supplier.company_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       {item.rawMaterialId && filteredSuppliers.length === 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
                           No suppliers configured for this material

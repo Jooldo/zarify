@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Package, User, FileText, Building2, Hash } from 'lucide-react';
+import { CalendarDays, Package, User, FileText, Building2, Hash, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
@@ -19,6 +19,14 @@ interface ViewRequestDialogProps {
   selectedRequest: ProcurementRequest | null;
   onUpdateRequestStatus: (requestId: string, newStatus: string) => Promise<void>;
   onRequestUpdated: () => void;
+}
+
+interface MultiItemMaterial {
+  name: string;
+  type: string;
+  quantity: number;
+  unit: string;
+  notes?: string;
 }
 
 const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus, onRequestUpdated }: ViewRequestDialogProps) => {
@@ -62,6 +70,42 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const getRequestOrigin = (notes?: string) => {
+    if (!notes) return 'procurement';
+    if (notes.includes('Source: Inventory Alert')) return 'inventory';
+    if (notes.includes('Source: Multi-Item Procurement Request')) return 'multi-item';
+    return 'procurement';
+  };
+
+  const parseMultiItemMaterials = (notes?: string): MultiItemMaterial[] => {
+    if (!notes || !notes.includes('Materials in this request:')) return [];
+    
+    const materialsSection = notes.split('Materials in this request:')[1];
+    if (!materialsSection) return [];
+
+    const materialLines = materialsSection.trim().split('\n').filter(line => line.trim());
+    
+    const materials: MultiItemMaterial[] = [];
+    for (const line of materialLines) {
+      // Parse format: "1. Material Name (Type) - Quantity Unit - Notes"
+      const match = line.match(/^\d+\.\s*(.+?)\s*\((.+?)\)\s*-\s*(\d+)\s*(\w+)(?:\s*-\s*(.+))?$/);
+      if (match) {
+        materials.push({
+          name: match[1].trim(),
+          type: match[2].trim(),
+          quantity: parseInt(match[3]),
+          unit: match[4].trim(),
+          notes: match[5]?.trim() || ''
+        });
+      }
+    }
+    return materials;
+  };
+
+  const requestOrigin = getRequestOrigin(selectedRequest.notes);
+  const isMultiItem = requestOrigin === 'multi-item';
+  const multiItemMaterials = isMultiItem ? parseMultiItemMaterials(selectedRequest.notes) : [];
 
   const handleSaveChanges = async () => {
     if (!editedRequest) return;
@@ -110,9 +154,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
     return supplier ? supplier.company_name : 'Unknown Supplier';
   };
 
+  const getTotalQuantity = () => {
+    if (isMultiItem && multiItemMaterials.length > 0) {
+      return multiItemMaterials.reduce((total, material) => total + material.quantity, 0);
+    }
+    return selectedRequest.quantity_requested;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -120,12 +171,18 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             <Badge className={getStatusColor(selectedRequest.status)}>
               {selectedRequest.status}
             </Badge>
+            {isMultiItem && (
+              <Badge variant="default" className="flex items-center gap-1">
+                <ShoppingCart className="h-3 w-3" />
+                Multi-Item
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Header Section - Request Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2">
               <Hash className="h-4 w-4 text-gray-400" />
               <div>
@@ -149,49 +206,84 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                 </div>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-gray-400" />
+              <div>
+                <p className="text-xs text-gray-500">Total Quantity</p>
+                <p className="text-sm font-medium">{getTotalQuantity()} {selectedRequest.unit}</p>
+              </div>
+            </div>
           </div>
 
-          {/* Main Content - Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Material & Quantity */}
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Raw Material
-                </Label>
-                <p className="mt-1 p-2 bg-gray-50 rounded border">
-                  {selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="quantity">Quantity Requested</Label>
-                {isEditing ? (
-                  <div className="flex gap-2 mt-1">
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={editedRequest.quantity_requested}
-                      onChange={(e) => setEditedRequest({
-                        ...editedRequest,
-                        quantity_requested: parseInt(e.target.value) || 0
-                      })}
-                      min="1"
-                      className="flex-1"
-                    />
-                    <Input
-                      value={selectedRequest.unit}
-                      disabled
-                      className="w-20 bg-gray-50"
-                    />
+          {/* Materials Section */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              {isMultiItem ? 'Materials in Request' : 'Raw Material'}
+            </Label>
+            
+            {isMultiItem ? (
+              <div className="space-y-3">
+                {multiItemMaterials.map((material, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded border">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{material.name}</p>
+                        <p className="text-sm text-gray-600">Type: {material.type}</p>
+                        <p className="text-sm text-gray-600">Quantity: {material.quantity} {material.unit}</p>
+                        {material.notes && (
+                          <p className="text-sm text-gray-500 mt-1">Notes: {material.notes}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Item {index + 1}
+                      </Badge>
+                    </div>
                   </div>
-                ) : (
-                  <p className="mt-1 p-2 bg-gray-50 rounded border">
-                    {selectedRequest.quantity_requested} {selectedRequest.unit}
-                  </p>
-                )}
+                ))}
               </div>
+            ) : (
+              <div className="p-3 bg-gray-50 rounded border">
+                <p className="font-medium">{selectedRequest.raw_material?.name}</p>
+                <p className="text-sm text-gray-600">Type: {selectedRequest.raw_material?.type}</p>
+                <p className="text-sm text-gray-600">Quantity: {selectedRequest.quantity_requested} {selectedRequest.unit}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Details Section - Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              {!isMultiItem && (
+                <div>
+                  <Label htmlFor="quantity">Quantity Requested</Label>
+                  {isEditing ? (
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="quantity"
+                        type="number"
+                        value={editedRequest.quantity_requested}
+                        onChange={(e) => setEditedRequest({
+                          ...editedRequest,
+                          quantity_requested: parseInt(e.target.value) || 0
+                        })}
+                        min="1"
+                        className="flex-1"
+                      />
+                      <Input
+                        value={selectedRequest.unit}
+                        disabled
+                        className="w-20 bg-gray-50"
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1 p-2 bg-gray-50 rounded border">
+                      {selectedRequest.quantity_requested} {selectedRequest.unit}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="supplier" className="flex items-center gap-2">
@@ -236,7 +328,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
               </div>
             </div>
 
-            {/* Right Column - Delivery & Status */}
+            {/* Right Column */}
             <div className="space-y-4">
               <div>
                 <Label htmlFor="eta" className="flex items-center gap-2">
@@ -333,7 +425,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                 </Button>
               </>
             ) : (
-              selectedRequest.status === 'Pending' && (
+              selectedRequest.status === 'Pending' && !isMultiItem && (
                 <Button 
                   onClick={() => setIsEditing(true)}
                   className="flex-1"
