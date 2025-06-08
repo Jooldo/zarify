@@ -8,7 +8,7 @@ import MultiItemProcurementDialog from '@/components/procurement/MultiItemProcur
 import BOMLegacyGenerationDialog from '@/components/procurement/BOMLegacyGenerationDialog';
 
 const RMProcurementTab = () => {
-  const { requests, loading, refetch } = useProcurementRequests();
+  const { requests, loading, refetch, updateRequestStatus } = useProcurementRequests();
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -41,6 +41,10 @@ const RMProcurementTab = () => {
     setSelectedRequest(null);
   };
 
+  const handleRequestUpdated = () => {
+    refetch();
+  };
+
   if (loading) {
     return <div>Loading procurement requests...</div>;
   }
@@ -58,7 +62,9 @@ const RMProcurementTab = () => {
       <ViewRequestDialog
         isOpen={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
-        request={selectedRequest}
+        selectedRequest={selectedRequest}
+        onUpdateRequestStatus={updateRequestStatus}
+        onRequestUpdated={handleRequestUpdated}
       />
 
       <DeleteRequestDialog
