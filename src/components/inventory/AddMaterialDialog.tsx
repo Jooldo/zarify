@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,6 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
     current_stock: 0,
     minimum_stock: 0,
     unit: '',
-    cost_per_unit: undefined,
   });
   const { toast } = useToast();
 
@@ -82,6 +82,7 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
         return;
       }
 
+      console.log('Submitting material data:', formData);
       await onAddMaterial(formData);
       setFormData({
         name: '',
@@ -89,18 +90,27 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
         current_stock: 0,
         minimum_stock: 0,
         unit: '',
-        cost_per_unit: undefined,
       });
       setDuplicateError('');
       setOpen(false);
+      toast({
+        title: 'Success',
+        description: 'Raw material added successfully',
+      });
     } catch (error) {
-      // Error is handled in the hook
+      console.error('Error adding material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add raw material',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: keyof CreateRawMaterialData, value: string | number) => {
+    console.log('Field change:', field, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -154,7 +164,10 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
             <div>
               <MaterialTypeSelector
                 value={formData.type}
-                onValueChange={(value) => handleInputChange('type', value)}
+                onValueChange={(value) => {
+                  console.log('Material type selected:', value);
+                  handleInputChange('type', value);
+                }}
                 placeholder="Select or add material type"
                 required
               />

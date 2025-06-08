@@ -27,19 +27,25 @@ const MaterialTypeSelector = ({
   const [open, setOpen] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddNew, setShowAddNew] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const { materialTypes, loading, createMaterialType } = useMaterialTypes();
 
   const handleCreateNew = async () => {
     if (!newTypeName.trim()) return;
     
+    setIsCreating(true);
     try {
-      await createMaterialType(newTypeName.trim());
+      console.log('Creating new material type:', newTypeName.trim());
+      const newType = await createMaterialType(newTypeName.trim());
+      console.log('Material type created successfully:', newType);
       onValueChange(newTypeName.trim());
       setNewTypeName('');
       setShowAddNew(false);
       setOpen(false);
     } catch (error) {
-      // Error is handled in the hook
+      console.error('Error creating material type:', error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -57,6 +63,7 @@ const MaterialTypeSelector = ({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between h-10 text-sm mt-2"
+            disabled={loading}
           >
             {selectedType ? selectedType.name : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -86,6 +93,7 @@ const MaterialTypeSelector = ({
                     key={type.id}
                     value={type.name}
                     onSelect={(currentValue) => {
+                      console.log('Selecting material type:', currentValue);
                       onValueChange(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }}
@@ -118,20 +126,22 @@ const MaterialTypeSelector = ({
                   onChange={(e) => setNewTypeName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
+                      e.preventDefault();
                       handleCreateNew();
                     } else if (e.key === 'Escape') {
                       setShowAddNew(false);
                       setNewTypeName('');
                     }
                   }}
+                  disabled={isCreating}
                 />
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={handleCreateNew}
-                    disabled={!newTypeName.trim()}
+                    disabled={!newTypeName.trim() || isCreating}
                   >
-                    Add
+                    {isCreating ? 'Adding...' : 'Add'}
                   </Button>
                   <Button
                     size="sm"
@@ -140,6 +150,7 @@ const MaterialTypeSelector = ({
                       setShowAddNew(false);
                       setNewTypeName('');
                     }}
+                    disabled={isCreating}
                   >
                     Cancel
                   </Button>
