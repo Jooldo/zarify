@@ -102,6 +102,9 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         </TableCell>
         <TableCell className="py-1 px-2 text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{new Date(item.updatedDate).toLocaleDateString('en-IN')}</TableCell>
+        <TableCell className="py-1 px-2 text-xs">
+          {item.expectedDelivery ? new Date(item.expectedDelivery).toLocaleDateString('en-IN') : '-'}
+        </TableCell>
         <TableCell className="py-1 px-2">
           <div className="flex gap-1">
             {order && (

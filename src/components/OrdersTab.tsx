@@ -1,16 +1,29 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
+import OrdersStatsHeader from './orders/OrdersStatsHeader';
 
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Calculate order stats
+  const orderStats = useMemo(() => {
+    const allOrderItems = orders.flatMap(order => order.order_items);
+    return {
+      total: allOrderItems.length,
+      created: allOrderItems.filter(item => item.status === 'Created').length,
+      inProgress: allOrderItems.filter(item => item.status === 'In Progress').length,
+      ready: allOrderItems.filter(item => item.status === 'Ready').length,
+      delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
+    };
+  }, [orders]);
 
   // Define utility functions first
   const getOverallOrderStatus = (orderId: string) => {
@@ -90,6 +103,8 @@ const OrdersTab = () => {
 
   return (
     <div className="space-y-4">
+      <OrdersStatsHeader orderStats={orderStats} />
+      
       <OrdersHeader 
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm}

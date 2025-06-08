@@ -30,6 +30,7 @@ const OrdersTable = ({ filteredOrders, orders, getOverallOrderStatus, getStatusV
             <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Created</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Expected Delivery</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
           </TableRow>
         </TableHeader>
