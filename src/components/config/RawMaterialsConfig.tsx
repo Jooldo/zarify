@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { useMaterialTypes } from '@/hooks/useMaterialTypes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +13,7 @@ import UpdateRawMaterialDialog from '@/components/inventory/UpdateRawMaterialDia
 
 const RawMaterialsConfig = () => {
   const { rawMaterials, loading, refetch, createRawMaterial } = useRawMaterials();
+  const { materialTypes } = useMaterialTypes();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
@@ -44,8 +46,11 @@ const RawMaterialsConfig = () => {
     setIsUpdateMaterialOpen(false);
   };
 
-  // Get unique material types for the filter
-  const materialTypes = ['all', ...Array.from(new Set(rawMaterials.map(m => m.type)))];
+  // Get material types for the filter, including 'all'
+  const filterOptions = [
+    { value: 'all', label: 'All Types' },
+    ...materialTypes.map(type => ({ value: type.name, label: type.name }))
+  ];
 
   if (loading) {
     return (
@@ -79,9 +84,9 @@ const RawMaterialsConfig = () => {
             onChange={(e) => setFilterType(e.target.value)}
             className="h-8 px-3 text-xs border border-gray-300 rounded-md"
           >
-            {materialTypes.map((type) => (
-              <option key={type} value={type}>
-                {type === 'all' ? 'All Types' : type}
+            {filterOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>

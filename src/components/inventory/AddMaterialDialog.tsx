@@ -4,9 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { CreateRawMaterialData } from '@/hooks/useRawMaterials';
+import MaterialTypeSelector from './MaterialTypeSelector';
 
 interface AddMaterialDialogProps {
   onAddMaterial: (data: CreateRawMaterialData) => Promise<void>;
@@ -23,8 +23,6 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
     unit: '',
     cost_per_unit: undefined,
   });
-
-  const materialTypes = ["Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
 
   // Standardized units with grams as default for weight-based materials
   const availableUnits = [
@@ -94,36 +92,30 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
             </div>
             
             <div>
-              <Label htmlFor="materialType" className="text-sm font-medium">Type *</Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                <SelectTrigger className="h-10 text-sm mt-2">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materialTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-sm">
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MaterialTypeSelector
+                value={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
+                placeholder="Select or add material type"
+                required
+              />
             </div>
           </div>
 
           <div>
             <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
-            <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
-              <SelectTrigger className="h-10 text-sm mt-2">
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUnits.map((unit) => (
-                  <SelectItem key={unit.value} value={unit.value} className="text-sm">
-                    {unit.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={formData.unit}
+              onChange={(e) => handleInputChange('unit', e.target.value)}
+              className="w-full h-10 px-3 mt-2 text-sm border border-gray-300 rounded-md"
+              required
+            >
+              <option value="">Select unit</option>
+              {availableUnits.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-gray-500 mt-1">Use grams for weight-based materials</p>
           </div>
 

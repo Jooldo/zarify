@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
+import MaterialTypeSelector from './MaterialTypeSelector';
 
 interface UpdateRawMaterialDialogProps {
   isOpen: boolean;
@@ -29,7 +29,6 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
   });
   const { toast } = useToast();
 
-  const materialTypes = ["Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
   const units = ["grams", "pieces", "meters", "rolls", "kg"];
 
   useEffect(() => {
@@ -181,36 +180,27 @@ const UpdateRawMaterialDialog = ({ isOpen, onOpenChange, material, onMaterialUpd
             />
           </div>
           
-          <div>
-            <Label htmlFor="materialType">Type *</Label>
-            <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {materialTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <MaterialTypeSelector
+            value={formData.type}
+            onValueChange={(value) => handleInputChange('type', value)}
+            placeholder="Select or add material type"
+            required
+          />
 
           <div>
             <Label htmlFor="unit">Unit *</Label>
-            <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {units.map((unit) => (
-                  <SelectItem key={unit} value={unit}>
-                    {unit.charAt(0).toUpperCase() + unit.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={formData.unit}
+              onChange={(e) => handleInputChange('unit', e.target.value)}
+              className="w-full h-10 px-3 mt-2 text-sm border border-gray-300 rounded-md"
+            >
+              <option value="">Select unit</option>
+              {units.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
