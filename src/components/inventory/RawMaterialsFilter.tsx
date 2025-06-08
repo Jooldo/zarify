@@ -121,12 +121,12 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Material Type</Label>
-            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}>
+            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 {materialTypes.map((type) => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -136,12 +136,12 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Unit</Label>
-            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}>
+            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select unit" />
+                <SelectValue placeholder="All units" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Units</SelectItem>
+                <SelectItem value="all">All Units</SelectItem>
                 {unitOptions.map((unit) => (
                   <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                 ))}
@@ -151,12 +151,12 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -166,12 +166,12 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Supplier</Label>
-            <Select value={filters.supplier} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value }))}>
+            <Select value={filters.supplier} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
+                <SelectValue placeholder="All suppliers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Suppliers</SelectItem>
+                <SelectItem value="all">All Suppliers</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>
                 ))}
@@ -181,12 +181,12 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Stock Level</Label>
-            <Select value={filters.stockLevel} onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value }))}>
+            <Select value={filters.stockLevel} onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select stock level" />
+                <SelectValue placeholder="All levels" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Levels</SelectItem>
+                <SelectItem value="all">All Levels</SelectItem>
                 {stockLevelOptions.map((level) => (
                   <SelectItem key={level} value={level}>{level}</SelectItem>
                 ))}

@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -93,7 +92,6 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
         filters={activeFilters}
         onRemoveFilter={handleRemoveFilter}
         onClearAll={handleClearFilters}
-        totalResults={0}
       />
 
       <FilterDialog
@@ -107,12 +105,12 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
+            <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
@@ -122,12 +120,12 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Subcategory</Label>
-            <Select value={filters.subcategory} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value }))}>
+            <Select value={filters.subcategory} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select subcategory" />
+                <SelectValue placeholder="All subcategories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Subcategories</SelectItem>
+                <SelectItem value="all">All Subcategories</SelectItem>
                 {subcategories.map((subcategory) => (
                   <SelectItem key={subcategory} value={subcategory}>{subcategory}</SelectItem>
                 ))}
@@ -137,12 +135,12 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Size Range</Label>
-            <Select value={filters.sizeRange} onValueChange={(value) => setFilters(prev => ({ ...prev, sizeRange: value }))}>
+            <Select value={filters.sizeRange} onValueChange={(value) => setFilters(prev => ({ ...prev, sizeRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select size range" />
+                <SelectValue placeholder="All sizes" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Sizes</SelectItem>
+                <SelectItem value="all">All Sizes</SelectItem>
                 {sizeRangeOptions.map((range) => (
                   <SelectItem key={range} value={range}>{range}</SelectItem>
                 ))}
@@ -152,12 +150,12 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -167,12 +165,12 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2 md:col-span-2">
             <Label>Active Status</Label>
-            <Select value={filters.isActive} onValueChange={(value) => setFilters(prev => ({ ...prev, isActive: value }))}>
+            <Select value={filters.isActive} onValueChange={(value) => setFilters(prev => ({ ...prev, isActive: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select active status" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="active">Active Only</SelectItem>
                 <SelectItem value="inactive">Inactive Only</SelectItem>
               </SelectContent>

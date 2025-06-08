@@ -103,12 +103,12 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Material Type</Label>
-            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}>
+            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 {materialTypes.map((type) => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -118,12 +118,12 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
 
           <div className="space-y-2">
             <Label>Unit</Label>
-            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}>
+            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select unit" />
+                <SelectValue placeholder="All units" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Units</SelectItem>
+                <SelectItem value="all">All Units</SelectItem>
                 {unitOptions.map((unit) => (
                   <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                 ))}
@@ -133,12 +133,12 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
 
           <div className="space-y-2 md:col-span-2">
             <Label>Minimum Stock Range</Label>
-            <Select value={filters.minStockRange} onValueChange={(value) => setFilters(prev => ({ ...prev, minStockRange: value }))}>
+            <Select value={filters.minStockRange} onValueChange={(value) => setFilters(prev => ({ ...prev, minStockRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select range" />
+                <SelectValue placeholder="All ranges" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Ranges</SelectItem>
+                <SelectItem value="all">All Ranges</SelectItem>
                 {minStockRangeOptions.map((range) => (
                   <SelectItem key={range} value={range}>{range}</SelectItem>
                 ))}
