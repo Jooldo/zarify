@@ -190,30 +190,31 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           <ViewRawMaterialDialog
             material={selectedMaterial}
             isOpen={viewDialogOpen}
-            onClose={() => {
-              setViewDialogOpen(false);
-              setSelectedMaterial(null);
+            onOpenChange={(open) => {
+              setViewDialogOpen(open);
+              if (!open) setSelectedMaterial(null);
             }}
           />
           
           <UpdateRawMaterialDialog
             material={selectedMaterial}
             isOpen={editDialogOpen}
-            onClose={() => {
-              setEditDialogOpen(false);
-              setSelectedMaterial(null);
+            onOpenChange={(open) => {
+              setEditDialogOpen(open);
+              if (!open) setSelectedMaterial(null);
             }}
-            onUpdate={onUpdate}
+            onMaterialUpdated={onUpdate}
           />
           
           <RaiseRequestDialog
             material={selectedMaterial}
             isOpen={requestDialogOpen}
-            onClose={() => {
-              setRequestDialogOpen(false);
-              setSelectedMaterial(null);
+            onOpenChange={(open) => {
+              setRequestDialogOpen(open);
+              if (!open) setSelectedMaterial(null);
             }}
             onRequestCreated={onRequestCreated}
+            mode="inventory"
           />
         </>
       )}
