@@ -307,7 +307,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                     <div>
                       <Label>Raw Material *</Label>
                       <Select 
-                        value={item.rawMaterialId} 
+                        value={item.rawMaterialId}
                         onValueChange={(value) => {
                           updateItem(item.id, 'rawMaterialId', value);
                           // Reset supplier when material changes

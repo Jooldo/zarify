@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Package, User, FileText, Building2 } from 'lucide-react';
+import { CalendarDays, Package, User, FileText, Building2, Hash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
@@ -41,11 +41,9 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   useEffect(() => {
     if (selectedRequest && suppliers.length > 0) {
       const filtered = suppliers.filter(supplier => {
-        // If materials_supplied is null, undefined, or empty, don't show the supplier
         if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
           return false;
         }
-        // Check if the material ID is in the supplier's materials_supplied array
         return supplier.materials_supplied.includes(selectedRequest.raw_material_id);
       });
       setFilteredSuppliers(filtered);
@@ -114,7 +112,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -126,132 +124,163 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Request Information */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Request Number</Label>
-              <p className="mt-1 font-mono text-sm">{selectedRequest.request_number}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Date Requested</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <CalendarDays className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{new Date(selectedRequest.date_requested).toLocaleDateString()}</span>
+          {/* Header Section - Request Info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Hash className="h-4 w-4 text-gray-400" />
+              <div>
+                <p className="text-xs text-gray-500">Request Number</p>
+                <p className="font-mono text-sm font-medium">{selectedRequest.request_number}</p>
               </div>
             </div>
-          </div>
-
-          {/* Material Information */}
-          <div>
-            <Label className="text-sm font-medium text-gray-500">Raw Material</Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Package className="h-4 w-4 text-gray-400" />
-              <span>{selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})</span>
-            </div>
-          </div>
-
-          {/* Quantity */}
-          <div>
-            <Label htmlFor="quantity">Quantity Requested</Label>
-            {isEditing ? (
-              <div className="flex gap-2 mt-1">
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={editedRequest.quantity_requested}
-                  onChange={(e) => setEditedRequest({
-                    ...editedRequest,
-                    quantity_requested: parseInt(e.target.value) || 0
-                  })}
-                  min="1"
-                  className="flex-1"
-                />
-                <Input
-                  value={selectedRequest.unit}
-                  disabled
-                  className="w-20 bg-gray-50"
-                />
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-gray-400" />
+              <div>
+                <p className="text-xs text-gray-500">Date Requested</p>
+                <p className="text-sm">{new Date(selectedRequest.date_requested).toLocaleDateString()}</p>
               </div>
-            ) : (
-              <p className="mt-1">{selectedRequest.quantity_requested} {selectedRequest.unit}</p>
+            </div>
+            {selectedRequest.raised_by && (
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Raised By</p>
+                  <p className="text-sm">{selectedRequest.raised_by}</p>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Supplier */}
-          <div>
-            <Label htmlFor="supplier">Supplier</Label>
-            {isEditing ? (
-              <div className="mt-1">
-                <Select 
-                  value={editedRequest.supplier_id || ''} 
-                  onValueChange={(value) => setEditedRequest({
-                    ...editedRequest,
-                    supplier_id: value || undefined
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      filteredSuppliers.length === 0 
-                        ? "No suppliers configured for this material" 
-                        : "Select supplier"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredSuppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {filteredSuppliers.length === 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    No suppliers have been configured to supply this material.
+          {/* Main Content - Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Material & Quantity */}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Raw Material
+                </Label>
+                <p className="mt-1 p-2 bg-gray-50 rounded border">
+                  {selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="quantity">Quantity Requested</Label>
+                {isEditing ? (
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={editedRequest.quantity_requested}
+                      onChange={(e) => setEditedRequest({
+                        ...editedRequest,
+                        quantity_requested: parseInt(e.target.value) || 0
+                      })}
+                      min="1"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={selectedRequest.unit}
+                      disabled
+                      className="w-20 bg-gray-50"
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-1 p-2 bg-gray-50 rounded border">
+                    {selectedRequest.quantity_requested} {selectedRequest.unit}
                   </p>
                 )}
               </div>
-            ) : (
-              <div className="flex items-center gap-2 mt-1">
-                <Building2 className="h-4 w-4 text-gray-400" />
-                <span>{getSupplierName(selectedRequest.supplier_id)}</span>
-              </div>
-            )}
-          </div>
 
-          {/* Expected Delivery */}
-          <div>
-            <Label htmlFor="eta">Expected Delivery Date</Label>
-            {isEditing ? (
-              <Input
-                id="eta"
-                type="date"
-                value={editedRequest.eta || ''}
-                onChange={(e) => setEditedRequest({
-                  ...editedRequest,
-                  eta: e.target.value || undefined
-                })}
-                className="mt-1"
-              />
-            ) : (
-              <div className="flex items-center gap-2 mt-1">
-                <CalendarDays className="h-4 w-4 text-gray-400" />
-                <span>{selectedRequest.eta ? new Date(selectedRequest.eta).toLocaleDateString() : 'Not specified'}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Raised By */}
-          {selectedRequest.raised_by && (
-            <div>
-              <Label className="text-sm font-medium text-gray-500">Raised By</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <User className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">{selectedRequest.raised_by}</span>
+              <div>
+                <Label htmlFor="supplier" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Supplier
+                </Label>
+                {isEditing ? (
+                  <div className="mt-1">
+                    <Select 
+                      value={editedRequest.supplier_id || ''} 
+                      onValueChange={(value) => setEditedRequest({
+                        ...editedRequest,
+                        supplier_id: value || undefined
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          filteredSuppliers.length === 0 
+                            ? "No suppliers configured for this material" 
+                            : "Select supplier"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredSuppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filteredSuppliers.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        No suppliers have been configured to supply this material.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 p-2 bg-gray-50 rounded border">
+                    {getSupplierName(selectedRequest.supplier_id)}
+                  </p>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Notes */}
+            {/* Right Column - Delivery & Status */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="eta" className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Expected Delivery Date
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="eta"
+                    type="date"
+                    value={editedRequest.eta || ''}
+                    onChange={(e) => setEditedRequest({
+                      ...editedRequest,
+                      eta: e.target.value || undefined
+                    })}
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="mt-1 p-2 bg-gray-50 rounded border">
+                    {selectedRequest.eta ? new Date(selectedRequest.eta).toLocaleDateString() : 'Not specified'}
+                  </p>
+                )}
+              </div>
+
+              {/* Status Update */}
+              {!isEditing && selectedRequest.status !== 'Received' && (
+                <div>
+                  <Label>Update Status</Label>
+                  <Select value={selectedRequest.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Received">Received</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Full Width - Notes */}
           <div>
             <Label htmlFor="notes">Notes</Label>
             {isEditing ? (
@@ -262,35 +291,19 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                   ...editedRequest,
                   notes: e.target.value
                 })}
-                rows={3}
+                rows={4}
                 className="mt-1"
+                placeholder="Add notes about the request"
               />
             ) : (
-              <p className="mt-1 text-sm whitespace-pre-wrap bg-gray-50 p-3 rounded">
+              <div className="mt-1 p-3 bg-gray-50 rounded border min-h-[100px] whitespace-pre-wrap">
                 {selectedRequest.notes || 'No notes provided'}
-              </p>
+              </div>
             )}
           </div>
 
-          {/* Status Update */}
-          {!isEditing && selectedRequest.status !== 'Received' && (
-            <div>
-              <Label>Update Status</Label>
-              <Select value={selectedRequest.status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Received">Received</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {/* Actions */}
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-4 border-t">
             <Button 
               variant="outline" 
               onClick={() => onOpenChange(false)}
