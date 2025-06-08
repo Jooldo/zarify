@@ -15,7 +15,8 @@ import {
   Wrench,
   ShoppingBag,
   TrendingUp,
-  Building2
+  Building2,
+  Factory
 } from "lucide-react";
 
 import {
@@ -104,9 +105,19 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           icon: Package,
         },
         {
-          title: "FG Procurement",
-          value: "fg-procurement",
-          icon: ShoppingBag,
+          title: "FG Manufacturing",
+          value: "fg-manufacturing",
+          icon: Factory,
+        },
+        {
+          title: "Analytics",
+          value: "fg-analytics",
+          icon: BarChart3,
+        },
+        {
+          title: "Workers",
+          value: "fg-workers",
+          icon: Users,
         },
         {
           title: "FG Config",

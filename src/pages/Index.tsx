@@ -39,8 +39,12 @@ const Index = () => {
         return "Finished Goods Inventory";
       case "fg-config":
         return "Finished Goods Configuration";
-      case "fg-procurement":
-        return "Finished Goods Procurement";
+      case "fg-manufacturing":
+        return "Finished Goods Manufacturing";
+      case "fg-analytics":
+        return "Finished Goods Analytics";
+      case "fg-workers":
+        return "Manufacturing Workers";
       case "customers":
         return "Customers";
       case "suppliers":
@@ -59,7 +63,7 @@ const Index = () => {
   };
 
   const isFinishedGoodTab = () => {
-    return ['fg-inventory', 'fg-config', 'fg-procurement'].includes(activeTab);
+    return ['fg-inventory', 'fg-config', 'fg-manufacturing', 'fg-analytics', 'fg-workers'].includes(activeTab);
   };
 
   const isUsersTab = () => {

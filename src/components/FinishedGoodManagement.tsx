@@ -1,9 +1,11 @@
 
-import { Package, Wrench, ShoppingBag } from 'lucide-react';
+import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
-import FGProcurementTab from './procurement/FGProcurementTab';
+import FGManufacturingTab from './manufacturing/FGManufacturingTab';
+import FGAnalytics from './analytics/FGAnalytics';
+import FGWorkers from './workers/FGWorkers';
 
 interface FinishedGoodManagementProps {
   activeTab: string;
@@ -15,8 +17,12 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
     switch (activeTab) {
       case 'fg-inventory':
         return <FinishedGoodsInventory />;
-      case 'fg-procurement':
-        return <FGProcurementTab />;
+      case 'fg-manufacturing':
+        return <FGManufacturingTab />;
+      case 'fg-analytics':
+        return <FGAnalytics />;
+      case 'fg-workers':
+        return <FGWorkers />;
       case 'fg-config':
         return <FinishedGoodsConfig />;
       default:
@@ -34,20 +40,28 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
               Finished Good Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage inventory, production planning, and configuration
+              Manage inventory, manufacturing, analytics, workforce, and configuration
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
+          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
             <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Package className="h-4 w-4" />
               Inventory
             </TabsTrigger>
-            <TabsTrigger value="fg-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <ShoppingBag className="h-4 w-4" />
-              Production
+            <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Factory className="h-4 w-4" />
+              Manufacturing
+            </TabsTrigger>
+            <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Users className="h-4 w-4" />
+              Workers
             </TabsTrigger>
             <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Wrench className="h-4 w-4" />
