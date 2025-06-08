@@ -26,6 +26,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
     category: '',
     subcategory: '',
     dateRange: '',
+    deliveryDateRange: '',
     minAmount: '',
     maxAmount: '',
     hasDeliveryDate: false,
@@ -37,6 +38,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
   const orderStatusOptions = ['Created', 'In Progress', 'Ready', 'Delivered'];
   const suborderStatusOptions = ['Created', 'In Progress', 'Ready', 'Delivered'];
   const dateRangeOptions = ['Today', 'Last 7 days', 'Last 30 days', 'Last 90 days'];
+  const deliveryDateRangeOptions = ['Due Today', 'Due This Week', 'Due This Month', 'Overdue'];
 
   const getActiveFilters = () => {
     const activeFilters = [];
@@ -46,6 +48,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
     if (filters.category) activeFilters.push({ key: 'category', label: 'Category', value: filters.category });
     if (filters.subcategory) activeFilters.push({ key: 'subcategory', label: 'Subcategory', value: filters.subcategory });
     if (filters.dateRange) activeFilters.push({ key: 'dateRange', label: 'Date Range', value: filters.dateRange });
+    if (filters.deliveryDateRange) activeFilters.push({ key: 'deliveryDateRange', label: 'Delivery Date', value: filters.deliveryDateRange });
     if (filters.minAmount) activeFilters.push({ key: 'minAmount', label: 'Min Amount', value: `≥₹${filters.minAmount}` });
     if (filters.maxAmount) activeFilters.push({ key: 'maxAmount', label: 'Max Amount', value: `≤₹${filters.maxAmount}` });
     if (filters.hasDeliveryDate) activeFilters.push({ key: 'hasDeliveryDate', label: 'Has Delivery Date', value: 'Yes' });
@@ -70,6 +73,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
       category: '',
       subcategory: '',
       dateRange: '',
+      deliveryDateRange: '',
       minAmount: '',
       maxAmount: '',
       hasDeliveryDate: false,
@@ -200,7 +204,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
           </div>
 
           <div className="space-y-2">
-            <Label>Date Range</Label>
+            <Label>Order Date Range</Label>
             <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All dates" />
@@ -208,6 +212,21 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
               <SelectContent>
                 <SelectItem value="all">All Dates</SelectItem>
                 {dateRangeOptions.map((range) => (
+                  <SelectItem key={range} value={range}>{range}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Expected Delivery Date</Label>
+            <Select value={filters.deliveryDateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, deliveryDateRange: value === 'all' ? '' : value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="All delivery dates" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Delivery Dates</SelectItem>
+                {deliveryDateRangeOptions.map((range) => (
                   <SelectItem key={range} value={range}>{range}</SelectItem>
                 ))}
               </SelectContent>

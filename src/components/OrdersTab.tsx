@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -13,6 +14,7 @@ interface OrderFilters {
   category: string;
   subcategory: string;
   dateRange: string;
+  deliveryDateRange: string;
   minAmount: string;
   maxAmount: string;
   hasDeliveryDate: boolean;
@@ -33,6 +35,7 @@ const OrdersTab = () => {
     category: '',
     subcategory: '',
     dateRange: '',
+    deliveryDateRange: '',
     minAmount: '',
     maxAmount: '',
     hasDeliveryDate: false,
@@ -176,6 +179,28 @@ const OrdersTab = () => {
           break;
         case 'Last 90 days':
           if (daysDiff > 90) return false;
+          break;
+      }
+    }
+
+    // Delivery date range filter
+    if (filters.deliveryDateRange && item.expectedDelivery) {
+      const deliveryDate = new Date(item.expectedDelivery);
+      const today = new Date();
+      const daysDiff = Math.floor((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      switch (filters.deliveryDateRange) {
+        case 'Due Today':
+          if (daysDiff !== 0) return false;
+          break;
+        case 'Due This Week':
+          if (daysDiff < 0 || daysDiff > 7) return false;
+          break;
+        case 'Due This Month':
+          if (daysDiff < 0 || daysDiff > 30) return false;
+          break;
+        case 'Overdue':
+          if (daysDiff >= 0) return false;
           break;
       }
     }
