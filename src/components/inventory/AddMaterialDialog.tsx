@@ -17,6 +17,7 @@ interface AddMaterialDialogProps {
 const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [duplicateError, setDuplicateError] = useState('');
   const [formData, setFormData] = useState<CreateRawMaterialData>({
     name: '',
     type: '',
@@ -62,6 +63,8 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicateError(''); // Clear any previous error
+    
     if (!formData.name || !formData.type || !formData.unit) {
       toast({
         title: 'Error',
@@ -76,11 +79,8 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
       // Check for duplicate
       const isDuplicate = await checkForDuplicate(formData.name, formData.type);
       if (isDuplicate) {
-        toast({
-          title: 'Error',
-          description: 'A raw material with this name and type already exists',
-          variant: 'destructive',
-        });
+        setDuplicateError('A raw material with this name and type already exists');
+        setLoading(false);
         return;
       }
 
@@ -93,6 +93,7 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
         unit: '',
         cost_per_unit: undefined,
       });
+      setDuplicateError('');
       setOpen(false);
     } catch (error) {
       // Error is handled in the hook
@@ -106,6 +107,11 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
       ...prev,
       [field]: value
     }));
+    
+    // Clear duplicate error when name or type changes
+    if (field === 'name' || field === 'type') {
+      setDuplicateError('');
+    }
   };
 
   return (
@@ -132,6 +138,9 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
                 className="h-10 text-sm mt-2"
                 required
               />
+              {duplicateError && (
+                <p className="text-xs text-red-600 mt-1">{duplicateError}</p>
+              )}
             </div>
             
             <div>
