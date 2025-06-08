@@ -27,6 +27,12 @@ const RawMaterialSelector = ({
 }: RawMaterialSelectorProps) => {
   const selectedMaterial = rawMaterials.find(material => material.id === selectedMaterialId);
 
+  const handleSelect = (materialId: string) => {
+    console.log('RawMaterialSelector: Selecting material with ID:', materialId);
+    onMaterialSelect(materialId);
+    onOpenChange(false);
+  };
+
   return (
     <div>
       <Label>Raw Material *</Label>
@@ -57,11 +63,7 @@ const RawMaterialSelector = ({
                     <CommandItem
                       key={material.id}
                       value={`${material.name} ${material.type}`}
-                      onSelect={() => {
-                        console.log('Selecting material:', material.name, 'with ID:', material.id);
-                        onMaterialSelect(material.id);
-                        onOpenChange(false);
-                      }}
+                      onSelect={() => handleSelect(material.id)}
                     >
                       <Check
                         className={cn(

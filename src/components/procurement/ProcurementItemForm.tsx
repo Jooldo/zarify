@@ -49,7 +49,7 @@ const ProcurementItemForm = ({
   onToggleCombobox
 }: ProcurementItemFormProps) => {
   const selectedMaterial = rawMaterials.find(material => material.id === item.rawMaterialId);
-  console.log(`Item ${index + 1}: rawMaterialId=${item.rawMaterialId}, selectedMaterial=`, selectedMaterial);
+  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterialId=${item.rawMaterialId}, selectedMaterial=`, selectedMaterial);
 
   const getFilteredSuppliersForMaterial = (materialId: string) => {
     if (!materialId) return [];
@@ -63,6 +63,12 @@ const ProcurementItemForm = ({
   };
 
   const filteredSuppliers = getFilteredSuppliersForMaterial(item.rawMaterialId);
+
+  const handleMaterialSelect = (materialId: string) => {
+    console.log('ProcurementItemForm: Material selected:', materialId);
+    onUpdateItem(item.id, 'rawMaterialId', materialId);
+    onUpdateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
+  };
 
   return (
     <div className="p-4 border rounded-lg space-y-4">
@@ -87,10 +93,7 @@ const ProcurementItemForm = ({
           rawMaterials={rawMaterials}
           rawMaterialsLoading={rawMaterialsLoading}
           selectedMaterialId={item.rawMaterialId}
-          onMaterialSelect={(materialId) => {
-            onUpdateItem(item.id, 'rawMaterialId', materialId);
-            onUpdateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
-          }}
+          onMaterialSelect={handleMaterialSelect}
           isOpen={openComboboxes[item.id] || false}
           onOpenChange={(open) => onToggleCombobox(item.id, open)}
         />

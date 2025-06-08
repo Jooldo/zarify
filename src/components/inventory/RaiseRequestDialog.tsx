@@ -7,12 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
-import type { RawMaterial } from '@/hooks/useRawMaterials';
+import { useRawMaterials, type RawMaterial } from '@/hooks/useRawMaterials';
 
 interface RaiseRequestDialogProps {
   isOpen: boolean;
@@ -28,16 +32,20 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
+  const [openMaterialCombobox, setOpenMaterialCombobox] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
   const { suppliers } = useSuppliers();
+  const { rawMaterials } = useRawMaterials();
 
   // Derived values
   const isInventoryMode = mode === 'inventory';
   const isProcurementMode = mode === 'procurement';
+  const selectedMaterial = selectedMaterialId ? rawMaterials.find(m => m.id === selectedMaterialId) : material;
 
   const getDialogTitle = () => {
     if (isInventoryMode) {
@@ -53,16 +61,25 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
     return 'Create a detailed procurement request with supplier and delivery information.';
   };
 
+  // Initialize selected material when dialog opens
+  useEffect(() => {
+    if (isOpen && material) {
+      setSelectedMaterialId(material.id);
+    } else if (isOpen && !material) {
+      setSelectedMaterialId('');
+    }
+  }, [isOpen, material]);
+
   // Filter suppliers based on selected material
   useEffect(() => {
-    if (material && suppliers.length > 0) {
+    if (selectedMaterial && suppliers.length > 0) {
       const filtered = suppliers.filter(supplier => {
         // If materials_supplied is null, undefined, or empty, don't show the supplier for procurement mode
         if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
           return false;
         }
         // Check if the material ID is in the supplier's materials_supplied array
-        return supplier.materials_supplied.includes(material.id);
+        return supplier.materials_supplied.includes(selectedMaterial.id);
       });
       setFilteredSuppliers(filtered);
       
@@ -73,11 +90,11 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
     } else {
       setFilteredSuppliers([]);
     }
-  }, [material, suppliers, selectedSupplierId]);
+  }, [selectedMaterial, suppliers, selectedSupplierId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quantity || !material) return;
+    if (!quantity || !selectedMaterial) return;
 
     setLoading(true);
     try {
@@ -108,9 +125,9 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
         .from('procurement_requests')
         .insert({
           request_number: requestNumber,
-          raw_material_id: material.id,
+          raw_material_id: selectedMaterial.id,
           quantity_requested: parseInt(quantity),
-          unit: material.unit,
+          unit: selectedMaterial.unit,
           supplier_id: validSupplierId,
           eta: isProcurementMode ? (eta || null) : null,
           notes: finalNotes || null,
@@ -127,16 +144,16 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       const { error: updateError } = await supabase
         .from('raw_materials')
         .update({ 
-          in_procurement: (material.in_procurement || 0) + parseInt(quantity),
+          in_procurement: (selectedMaterial.in_procurement || 0) + parseInt(quantity),
           request_status: 'Pending'
         })
-        .eq('id', material.id);
+        .eq('id', selectedMaterial.id);
 
       if (updateError) throw updateError;
 
       const activityDescription = isInventoryMode 
-        ? `Stock alert created for ${material.name} - ${quantity} ${material.unit}`
-        : `Procurement request created for ${material.name} - ${quantity} ${material.unit}`;
+        ? `Stock alert created for ${selectedMaterial.name} - ${quantity} ${selectedMaterial.unit}`
+        : `Procurement request created for ${selectedMaterial.name} - ${quantity} ${selectedMaterial.unit}`;
 
       await logActivity(
         'Created',
@@ -158,6 +175,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       setEta('');
       setNotes('');
       setSelectedSupplierId('');
+      setSelectedMaterialId('');
     } catch (error) {
       console.error('Error creating procurement request:', error);
       toast({
@@ -169,11 +187,6 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       setLoading(false);
     }
   };
-
-  // NOW we can handle the null material case after all hooks are declared
-  if (!material) {
-    return null;
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -191,14 +204,67 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Material</Label>
-            <Input 
-              value={`${material.name} (${material.type})`} 
-              disabled 
-              className="bg-gray-50"
-            />
-          </div>
+          {/* Material Selection - Show combobox if no material is pre-selected */}
+          {!material ? (
+            <div>
+              <Label>Raw Material *</Label>
+              <Popover open={openMaterialCombobox} onOpenChange={setOpenMaterialCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openMaterialCombobox}
+                    className="w-full justify-between"
+                  >
+                    {selectedMaterial
+                      ? `${selectedMaterial.name} (${selectedMaterial.type})`
+                      : "Select material..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search materials..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No materials found.</CommandEmpty>
+                      <CommandGroup>
+                        {rawMaterials.map((materialOption) => (
+                          <CommandItem
+                            key={materialOption.id}
+                            value={`${materialOption.name} ${materialOption.type}`}
+                            onSelect={() => {
+                              setSelectedMaterialId(materialOption.id);
+                              setOpenMaterialCombobox(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedMaterialId === materialOption.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{materialOption.name}</span>
+                              <span className="text-sm text-gray-500">({materialOption.type})</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          ) : (
+            <div>
+              <Label>Material</Label>
+              <Input 
+                value={`${selectedMaterial.name} (${selectedMaterial.type})`} 
+                disabled 
+                className="bg-gray-50"
+              />
+            </div>
+          )}
           
           <div>
             <Label htmlFor="quantity">Quantity Required *</Label>
@@ -213,11 +279,13 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
                 min="1"
                 className="flex-1"
               />
-              <Input
-                value={material.unit}
-                disabled
-                className="w-20 bg-gray-50"
-              />
+              {selectedMaterial && (
+                <Input
+                  value={selectedMaterial.unit}
+                  disabled
+                  className="w-20 bg-gray-50"
+                />
+              )}
             </div>
           </div>
 
@@ -284,7 +352,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !quantity || (isProcurementMode && filteredSuppliers.length > 0 && !selectedSupplierId)}
+              disabled={loading || !quantity || !selectedMaterial || (isProcurementMode && filteredSuppliers.length > 0 && !selectedSupplierId)}
               className="flex-1"
             >
               {loading 
