@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,9 +11,10 @@ import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 interface AddProductDialogProps {
   onProductAdded: () => void;
+  isFloating?: boolean;
 }
 
-const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
+const AddProductDialog = ({ onProductAdded, isFloating = false }: AddProductDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [productConfigId, setProductConfigId] = useState('');
   const [currentStock, setCurrentStock] = useState('');
@@ -85,13 +85,24 @@ const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
     return `${config.product_code} - ${config.subcategory} (${config.category}) | ${sizeInInches}" / ${weightRange}`;
   };
 
+  const TriggerButton = isFloating ? (
+    <Button 
+      className="rounded-full h-16 px-6 shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2"
+    >
+      <Plus className="h-5 w-5" />
+      <span className="font-medium">Add Product</span>
+    </Button>
+  ) : (
+    <Button className="flex items-center gap-2 h-9 px-4 text-sm">
+      <Plus className="h-4 w-4" />
+      Add Product
+    </Button>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 h-9 px-4 text-sm">
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Button>
+        {TriggerButton}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>

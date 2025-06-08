@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -217,10 +216,10 @@ const ProcurementRequestsTable = ({
         <div className="fixed bottom-6 right-6 z-50">
           <Button 
             onClick={onRaiseMultiItemRequest} 
-            className="rounded-full h-14 w-14 shadow-lg hover:shadow-xl transition-shadow"
-            size="icon"
+            className="rounded-full h-16 px-6 shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-5 w-5" />
+            <span className="font-medium">Raise Request</span>
           </Button>
         </div>
       )}

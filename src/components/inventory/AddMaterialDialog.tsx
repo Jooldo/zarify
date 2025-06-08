@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,9 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AddMaterialDialogProps {
   onAddMaterial: (data: CreateRawMaterialData) => Promise<void>;
+  isFloating?: boolean;
 }
 
-const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
+const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [duplicateError, setDuplicateError] = useState('');
@@ -28,7 +28,6 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
   });
   const { toast } = useToast();
 
-  // Standardized units with consistent naming
   const availableUnits = [
     { value: "grams", label: "Grams (g)" },
     { value: "pieces", label: "Pieces" },
@@ -63,7 +62,7 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDuplicateError(''); // Clear any previous error
+    setDuplicateError('');
     
     if (!formData.name || !formData.type || !formData.unit) {
       toast({
@@ -76,7 +75,6 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
 
     setLoading(true);
     try {
-      // Check for duplicate
       const isDuplicate = await checkForDuplicate(formData.name, formData.type);
       if (isDuplicate) {
         setDuplicateError('A raw material with this name and type already exists');
@@ -108,19 +106,29 @@ const AddMaterialDialog = ({ onAddMaterial }: AddMaterialDialogProps) => {
       [field]: value
     }));
     
-    // Clear duplicate error when name or type changes
     if (field === 'name' || field === 'type') {
       setDuplicateError('');
     }
   };
 
+  const TriggerButton = isFloating ? (
+    <Button 
+      className="rounded-full h-16 px-6 shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2"
+    >
+      <Plus className="h-5 w-5" />
+      <span className="font-medium">Add Material</span>
+    </Button>
+  ) : (
+    <Button className="flex items-center gap-2 h-9 px-4 text-sm">
+      <Plus className="h-4 w-4" />
+      Add Material
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 h-9 px-4 text-sm">
-          <Plus className="h-4 w-4" />
-          Add Material
-        </Button>
+        {TriggerButton}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
