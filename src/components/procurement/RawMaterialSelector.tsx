@@ -53,7 +53,7 @@ const RawMaterialSelector = ({
   };
 
   const getInventoryStatus = (material: RawMaterial) => {
-    const shortfall = (material.required_quantity || 0) + material.minimum_stock - material.current_stock - material.in_procurement;
+    const shortfall = (material.required || 0) + material.minimum_stock - material.current_stock - material.in_procurement;
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600' };
@@ -123,7 +123,7 @@ const RawMaterialSelector = ({
                               <span className="font-medium">Stock:</span> {formatIndianNumber(material.current_stock)} {material.unit}
                             </div>
                             <div>
-                              <span className="font-medium">Required:</span> {formatIndianNumber(material.required_quantity || 0)} {material.unit}
+                              <span className="font-medium">Required:</span> {formatIndianNumber(material.required || 0)} {material.unit}
                             </div>
                             <div>
                               <span className="font-medium">In Proc:</span> {formatIndianNumber(material.in_procurement)} {material.unit}

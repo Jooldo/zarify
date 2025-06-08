@@ -66,7 +66,7 @@ const CriticalRawMaterials = ({ onNavigateToProcurement }: CriticalRawMaterialsP
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Required:</span>
                     <span className="text-gray-900">
-                      {material.required_quantity} {material.unit}
+                      {material.required} {material.unit}
                     </span>
                   </div>
                 </div>

@@ -37,14 +37,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     return "default" as const;
   };
 
-  const calculateShortfall = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
+  const calculateShortfall = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
     const totalAvailable = currentStock + inProcurement;
-    const needed = Math.max(requiredQuantity, minimumStock);
+    const needed = Math.max(required, minimumStock);
     return needed - totalAvailable;
   };
 
-  const getInventoryStatus = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
-    const shortfall = calculateShortfall(currentStock, inProcurement, requiredQuantity, minimumStock);
+  const getInventoryStatus = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
+    const shortfall = calculateShortfall(currentStock, inProcurement, required, minimumStock);
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -119,14 +119,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               const shortfall = calculateShortfall(
                 material.current_stock,
                 material.in_procurement,
-                material.required_quantity,
+                material.required,
                 material.minimum_stock
               );
 
               const statusInfo = getInventoryStatus(
                 material.current_stock,
                 material.in_procurement,
-                material.required_quantity,
+                material.required,
                 material.minimum_stock
               );
 
@@ -159,7 +159,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
-                      {formatIndianNumber(material.required_quantity || 0)}
+                      {formatIndianNumber(material.required || 0)}
                     </Button>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
@@ -246,7 +246,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         onClose={() => setIsOrderDetailsOpen(false)}
         materialName={selectedMaterial?.name}
         orderDetails={orderDetails}
-        totalQuantity={selectedMaterial?.required_quantity || 0}
+        totalQuantity={selectedMaterial?.required || 0}
         loading={orderDetailsLoading}
       />
     </>

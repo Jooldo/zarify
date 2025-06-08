@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +26,8 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
     return num.toLocaleString('en-IN');
   };
 
-  const getInventoryStatus = (currentStock: number, inProcurement: number, requiredQuantity: number, minimumStock: number) => {
-    const shortfall = (Math.max(requiredQuantity, minimumStock)) - (currentStock + inProcurement);
+  const getInventoryStatus = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
+    const shortfall = (Math.max(required, minimumStock)) - (currentStock + inProcurement);
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -122,7 +121,7 @@ const RawMaterialStockUpdateDialog = ({ isOpen, onOpenChange, material, onStockU
   const statusInfo = getInventoryStatus(
     material.current_stock,
     material.in_procurement,
-    material.required_quantity || 0,
+    material.required || 0,
     material.minimum_stock
   );
 
