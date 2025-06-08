@@ -5,22 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Eye, Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import UpdateRawMaterialDialog from './UpdateRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
 import OrderedQtyButton from './OrderedQtyButton';
-
-interface RawMaterial {
-  id: string;
-  name: string;
-  type: string;
-  unit: string;
-  minimum_stock: number;
-  current_stock: number;
-  in_procurement: number;
-  required: number;
-  supplier_name?: string;
-}
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -36,11 +25,11 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   const getStatusBadge = (material: RawMaterial) => {
-    const shortfall = Math.max(0, material.required - (material.current_stock + material.in_procurement));
+    const shortfall = Math.max(0, (material.required || 0) - ((material.current_stock || 0) + (material.in_procurement || 0)));
     
     if (shortfall > 0) {
       return <Badge variant="destructive" className="text-xs">Critical</Badge>;
-    } else if (material.current_stock <= material.minimum_stock) {
+    } else if ((material.current_stock || 0) <= (material.minimum_stock || 0)) {
       return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Low</Badge>;
     } else {
       return <Badge variant="outline" className="text-xs border-green-500 text-green-600">Good</Badge>;
@@ -48,7 +37,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfall = (material: RawMaterial) => {
-    return Math.max(0, material.required - (material.current_stock + material.in_procurement));
+    return Math.max(0, (material.required || 0) - ((material.current_stock || 0) + (material.in_procurement || 0)));
   };
 
   const handleView = (material: RawMaterial) => {
@@ -103,15 +92,15 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           ) : (
             materials.map((material) => {
               const shortfall = getShortfall(material);
-              const orderedQty = material.required - material.current_stock - material.in_procurement;
+              const orderedQty = Math.max(0, (material.required || 0) - (material.current_stock || 0) - (material.in_procurement || 0));
               
               return (
                 <TableRow key={material.id} className="hover:bg-gray-50">
                   <TableCell>
                     <div>
                       <div className="font-medium text-sm">{material.name}</div>
-                      {material.supplier_name && (
-                        <div className="text-xs text-gray-500">Supplier: {material.supplier_name}</div>
+                      {material.supplier?.company_name && (
+                        <div className="text-xs text-gray-500">Supplier: {material.supplier.company_name}</div>
                       )}
                     </div>
                   </TableCell>
@@ -120,29 +109,29 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </TableCell>
                   <TableCell className="text-center">
                     <span className={cn("text-sm font-medium", 
-                      material.current_stock <= material.minimum_stock ? "text-red-600" : "text-gray-900"
+                      (material.current_stock || 0) <= (material.minimum_stock || 0) ? "text-red-600" : "text-gray-900"
                     )}>
-                      {material.current_stock}
+                      {material.current_stock || 0}
                     </span>
                     <div className="text-xs text-gray-500">{material.unit}</div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className="text-sm">{material.minimum_stock}</span>
+                    <span className="text-sm">{material.minimum_stock || 0}</span>
                     <div className="text-xs text-gray-500">{material.unit}</div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className="text-sm">{material.in_procurement}</span>
+                    <span className="text-sm">{material.in_procurement || 0}</span>
                     <div className="text-xs text-gray-500">{material.unit}</div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className="text-sm font-medium">{material.required}</span>
+                    <span className="text-sm font-medium">{material.required || 0}</span>
                     <div className="text-xs text-gray-500">{material.unit}</div>
                   </TableCell>
                   <TableCell className="text-center">
                     <OrderedQtyButton
                       materialId={material.id}
                       materialName={material.name}
-                      orderedQuantity={Math.max(0, orderedQty)}
+                      orderedQuantity={orderedQty}
                       type="raw-material"
                     />
                   </TableCell>
