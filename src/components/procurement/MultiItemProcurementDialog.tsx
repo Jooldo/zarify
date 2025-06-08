@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -74,7 +73,10 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   };
 
   const getRawMaterialById = (id: string) => {
-    return rawMaterials.find(material => material.id === id);
+    console.log('Looking for material with ID:', id, 'in materials:', rawMaterials);
+    const material = rawMaterials.find(material => material.id === id);
+    console.log('Found material:', material);
+    return material;
   };
 
   const getSupplierById = (id: string) => {
@@ -295,6 +297,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
             {items.map((item, index) => {
               const filteredSuppliers = getFilteredSuppliersForMaterial(item.rawMaterialId);
               const selectedMaterial = getRawMaterialById(item.rawMaterialId);
+              console.log(`Item ${index + 1}: rawMaterialId=${item.rawMaterialId}, selectedMaterial=`, selectedMaterial);
               
               return (
                 <div key={item.id} className="p-4 border rounded-lg space-y-4">
@@ -348,7 +351,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                                       key={material.id}
                                       value={`${material.name} ${material.type}`}
                                       onSelect={() => {
-                                        console.log('Selected material:', material.name, 'ID:', material.id);
+                                        console.log('Selecting material:', material.name, 'with ID:', material.id);
                                         updateItem(item.id, 'rawMaterialId', material.id);
                                         updateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
                                         toggleCombobox(item.id, false);
