@@ -8,12 +8,13 @@ import MultiItemProcurementDialog from '@/components/procurement/MultiItemProcur
 import BOMLegacyGenerationDialog from '@/components/procurement/BOMLegacyGenerationDialog';
 
 const RMProcurementTab = () => {
-  const { requests, loading, refetch, updateRequestStatus } = useProcurementRequests();
+  const { requests, loading, refetch, updateRequestStatus, deleteRequest } = useProcurementRequests();
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isMultiItemDialogOpen, setIsMultiItemDialogOpen] = useState(false);
   const [isBOMDialogOpen, setIsBOMDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleViewRequest = (request) => {
     setSelectedRequest(request);
@@ -23,6 +24,21 @@ const RMProcurementTab = () => {
   const handleDeleteRequest = (request) => {
     setSelectedRequest(request);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedRequest) return;
+    
+    setDeleteLoading(true);
+    try {
+      await deleteRequest(selectedRequest.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Error deleting request:', error);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleGenerateBOM = (request) => {
@@ -71,6 +87,8 @@ const RMProcurementTab = () => {
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         request={selectedRequest}
+        onConfirmDelete={handleConfirmDelete}
+        loading={deleteLoading}
       />
 
       <MultiItemProcurementDialog
