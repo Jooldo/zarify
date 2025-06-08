@@ -60,13 +60,9 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
       {/* Content Section */}
       <div className="bg-background py-6">
         <div className="min-h-[700px]">
-          <Tabs value={activeTab} className="w-full">
-            <TabsContent value={activeTab} className="mt-0 animate-fade-in">
-              <div className="space-y-6">
-                {renderActiveContent()}
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-6">
+            {renderActiveContent()}
+          </div>
         </div>
       </div>
     </div>
