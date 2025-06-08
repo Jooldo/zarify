@@ -48,11 +48,12 @@ const ProcurementItemForm = ({
   onRemoveItem,
   onToggleCombobox
 }: ProcurementItemFormProps) => {
-  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterialId=${item.rawMaterialId}`);
-  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterials=`, rawMaterials);
+  console.log(`ProcurementItemForm Item ${index + 1} DEBUG:`);
+  console.log(`- item.rawMaterialId: "${item.rawMaterialId}"`);
+  console.log(`- rawMaterials count: ${rawMaterials.length}`);
   
   const selectedMaterial = rawMaterials.find(material => material.id === item.rawMaterialId);
-  console.log(`ProcurementItemForm Item ${index + 1}: selectedMaterial=`, selectedMaterial);
+  console.log(`- selectedMaterial found:`, selectedMaterial);
 
   const getFilteredSuppliersForMaterial = (materialId: string) => {
     if (!materialId) return [];
@@ -69,6 +70,7 @@ const ProcurementItemForm = ({
 
   const handleMaterialSelect = (materialId: string) => {
     console.log('ProcurementItemForm: Material selected:', materialId);
+    console.log('ProcurementItemForm: Updating item ID:', item.id);
     onUpdateItem(item.id, 'rawMaterialId', materialId);
     onUpdateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
   };

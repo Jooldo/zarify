@@ -25,14 +25,18 @@ const RawMaterialSelector = ({
   isOpen,
   onOpenChange
 }: RawMaterialSelectorProps) => {
-  console.log('RawMaterialSelector: selectedMaterialId =', selectedMaterialId);
-  console.log('RawMaterialSelector: rawMaterials =', rawMaterials);
+  console.log('RawMaterialSelector DEBUG:');
+  console.log('- selectedMaterialId:', selectedMaterialId);
+  console.log('- rawMaterials length:', rawMaterials.length);
+  console.log('- rawMaterials IDs:', rawMaterials.map(m => m.id));
   
   const selectedMaterial = rawMaterials.find(material => material.id === selectedMaterialId);
-  console.log('RawMaterialSelector: selectedMaterial =', selectedMaterial);
+  console.log('- selectedMaterial found:', selectedMaterial);
 
   const handleSelect = (materialId: string) => {
     console.log('RawMaterialSelector: Selecting material with ID:', materialId);
+    const materialToSelect = rawMaterials.find(m => m.id === materialId);
+    console.log('RawMaterialSelector: Material being selected:', materialToSelect);
     onMaterialSelect(materialId);
     onOpenChange(false);
   };
