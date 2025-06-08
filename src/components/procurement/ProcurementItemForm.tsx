@@ -48,12 +48,7 @@ const ProcurementItemForm = ({
   onRemoveItem,
   onToggleCombobox
 }: ProcurementItemFormProps) => {
-  console.log(`ProcurementItemForm Item ${index + 1} DEBUG:`);
-  console.log(`- item.rawMaterialId: "${item.rawMaterialId}"`);
-  console.log(`- rawMaterials count: ${rawMaterials.length}`);
-  
   const selectedMaterial = rawMaterials.find(material => material.id === item.rawMaterialId);
-  console.log(`- selectedMaterial found:`, selectedMaterial);
 
   const getFilteredSuppliersForMaterial = (materialId: string) => {
     if (!materialId) return [];
@@ -69,8 +64,6 @@ const ProcurementItemForm = ({
   const filteredSuppliers = getFilteredSuppliersForMaterial(item.rawMaterialId);
 
   const handleMaterialSelect = (materialId: string) => {
-    console.log('ProcurementItemForm: Material selected:', materialId);
-    console.log('ProcurementItemForm: Updating item ID:', item.id);
     onUpdateItem(item.id, 'rawMaterialId', materialId);
     onUpdateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
   };
@@ -92,8 +85,8 @@ const ProcurementItemForm = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Raw Material Selection */}
+      {/* Line 1: Raw Material Selection */}
+      <div className="space-y-2">
         <RawMaterialSelector
           rawMaterials={rawMaterials}
           rawMaterialsLoading={rawMaterialsLoading}
@@ -102,7 +95,10 @@ const ProcurementItemForm = ({
           isOpen={openComboboxes[item.id] || false}
           onOpenChange={(open) => onToggleCombobox(item.id, open)}
         />
+      </div>
 
+      {/* Line 2: Quantity and Supplier */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Quantity */}
         <div>
           <Label>Quantity *</Label>
@@ -131,59 +127,74 @@ const ProcurementItemForm = ({
           {suppliersLoading ? (
             <div className="text-sm text-gray-500">Loading suppliers...</div>
           ) : (
-            <Select 
-              value={item.supplierId} 
-              onValueChange={(value) => onUpdateItem(item.id, 'supplierId', value)}
-              disabled={!item.rawMaterialId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  !item.rawMaterialId
-                    ? "Select material first"
-                    : filteredSuppliers.length === 0
-                    ? "No suppliers for this material"
-                    : "Select supplier"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredSuppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              {filteredSuppliers.length > 0 ? (
+                <Select 
+                  value={item.supplierId} 
+                  onValueChange={(value) => onUpdateItem(item.id, 'supplierId', value)}
+                  disabled={!item.rawMaterialId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !item.rawMaterialId
+                        ? "Select material first"
+                        : "Select supplier"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSuppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
+                  <span className="text-sm text-gray-600">
+                    No supplier found.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                    onClick={() => {
+                      // TODO: Implement add supplier functionality
+                      console.log('Add supplier clicked');
+                    }}
+                  >
+                    Add Supplier
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-          {item.rawMaterialId && filteredSuppliers.length === 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              No suppliers configured for this material
-            </p>
-          )}
-        </div>
-
-        {/* Individual Delivery Date (if not using global) */}
-        {!useGlobalDeliveryDate && (
-          <div>
-            <Label>Expected Delivery Date</Label>
-            <Input
-              type="date"
-              value={item.deliveryDate}
-              onChange={(e) => onUpdateItem(item.id, 'deliveryDate', e.target.value)}
-            />
-          </div>
-        )}
-
-        {/* Notes */}
-        <div className={`${useGlobalDeliveryDate ? 'md:col-span-2 lg:col-span-3' : 'md:col-span-2'}`}>
-          <Label>Notes</Label>
-          <Textarea
-            value={item.notes}
-            onChange={(e) => onUpdateItem(item.id, 'notes', e.target.value)}
-            placeholder="Add notes for this item"
-            rows={2}
-          />
         </div>
       </div>
+
+      {/* Line 3: Notes */}
+      <div className="space-y-2">
+        <Label>Notes</Label>
+        <Textarea
+          value={item.notes}
+          onChange={(e) => onUpdateItem(item.id, 'notes', e.target.value)}
+          placeholder="Add notes for this item"
+          rows={2}
+        />
+      </div>
+
+      {/* Individual Delivery Date (if not using global) */}
+      {!useGlobalDeliveryDate && (
+        <div className="space-y-2">
+          <Label>Expected Delivery Date</Label>
+          <Input
+            type="date"
+            value={item.deliveryDate}
+            onChange={(e) => onUpdateItem(item.id, 'deliveryDate', e.target.value)}
+          />
+        </div>
+      )}
     </div>
   );
 };

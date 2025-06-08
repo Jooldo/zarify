@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import ProcurementRequestsTable from '@/components/inventory/ProcurementRequestsTable';
