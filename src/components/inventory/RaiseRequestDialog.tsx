@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useSuppliers } from '@/hooks/useSuppliers';
+import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 
 interface RaiseRequestDialogProps {
@@ -28,7 +28,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();

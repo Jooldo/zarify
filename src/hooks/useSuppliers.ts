@@ -13,6 +13,7 @@ export interface Supplier {
   merchant_id: string;
   created_at: string;
   updated_at: string;
+  materials_supplied?: string[];
 }
 
 export const useSuppliers = () => {

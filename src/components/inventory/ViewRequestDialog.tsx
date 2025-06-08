@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Package, User, FileText, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useSuppliers } from '@/hooks/useSuppliers';
+import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ViewRequestDialogProps {
@@ -25,7 +25,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   const [isEditing, setIsEditing] = useState(false);
   const [editedRequest, setEditedRequest] = useState<ProcurementRequest | null>(null);
   const [loading, setLoading] = useState(false);
-  const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   
   const { toast } = useToast();
   const { suppliers } = useSuppliers();

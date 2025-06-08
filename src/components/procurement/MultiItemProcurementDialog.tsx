@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import { useSuppliers } from '@/hooks/useSuppliers';
+import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 
 interface ProcurementItem {
