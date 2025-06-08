@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -9,6 +10,7 @@ import {
   Package2,
   BarChart3,
   Building2,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Accordion,
@@ -20,7 +22,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sidebar, SidebarClose, SidebarContent, SidebarFooter, SidebarHeader, SidebarItem, SidebarNav } from "@/components/ui/sidebar";
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton
+} from "@/components/ui/sidebar";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -93,45 +103,50 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       </SidebarHeader>
       <SidebarContent>
         <ScrollArea className="h-full py-2">
-          <SidebarNav>
+          <SidebarMenu>
             {navigationItems.map((item) =>
               item.items ? (
-                <Accordion type="single" collapsible key={item.label}>
-                  <AccordionItem value={item.label}>
-                    <AccordionTrigger className="py-2 font-medium hover:no-underline" onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
-                      <div className="flex items-center space-x-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-1">
-                      {item.items.map((subItem) => (
-                        <SidebarItem
-                          key={subItem.label}
-                          active={activeTab === subItem.tab}
-                          onClick={() => onTabChange(subItem.tab)}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <subItem.icon className="h-3 w-3" />
-                            <span>{subItem.label}</span>
-                          </div>
-                        </SidebarItem>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                <SidebarMenuItem key={item.label}>
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value={item.label}>
+                      <AccordionTrigger className="py-2 font-medium hover:no-underline" onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
+                        <div className="flex items-center space-x-2">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-1">
+                        {item.items.map((subItem) => (
+                          <SidebarMenuButton
+                            key={subItem.label}
+                            isActive={activeTab === subItem.tab}
+                            onClick={() => onTabChange(subItem.tab)}
+                            className="w-full justify-start"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <subItem.icon className="h-3 w-3" />
+                              <span>{subItem.label}</span>
+                            </div>
+                          </SidebarMenuButton>
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </SidebarMenuItem>
               ) : (
-                <SidebarItem
-                  key={item.label}
-                  active={activeTab === item.tab}
-                  onClick={() => onTabChange(item.tab)}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </SidebarItem>
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    isActive={activeTab === item.tab}
+                    onClick={() => onTabChange(item.tab)}
+                    className="w-full justify-start"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )
             )}
-          </SidebarNav>
+          </SidebarMenu>
         </ScrollArea>
       </SidebarContent>
       <SidebarFooter>
