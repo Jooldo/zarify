@@ -1,13 +1,14 @@
 
 import { useState } from 'react';
-import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Filter, Plus } from 'lucide-react';
+import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 
 interface ProductionQueueItem {
   id: string;
@@ -39,7 +40,7 @@ const ProductionQueue = () => {
   const [selectedItem, setSelectedItem] = useState<ProductionQueueItem | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Mock data with manufacturing steps
+  // Mock data with sequential manufacturing steps
   const queueItems: ProductionQueueItem[] = [
     {
       id: '1',
@@ -189,6 +190,28 @@ const ProductionQueue = () => {
     }
   };
 
+  const getCurrentStepProgress = (item: ProductionQueueItem) => {
+    const currentStep = item.manufacturing_steps.find(step => step.step === item.current_step);
+    if (!currentStep) return 0;
+    return (currentStep.completed_quantity / item.quantity_required) * 100;
+  };
+
+  const getOverallProgress = (item: ProductionQueueItem) => {
+    const completedSteps = item.manufacturing_steps.filter(step => step.status === 'Completed').length;
+    const inProgressSteps = item.manufacturing_steps.filter(step => step.status === 'In Progress').length;
+    const totalSteps = item.manufacturing_steps.length;
+    
+    let progress = (completedSteps / totalSteps) * 100;
+    
+    // Add partial progress for in-progress step
+    if (inProgressSteps > 0) {
+      const currentStepProgress = getCurrentStepProgress(item);
+      progress += (currentStepProgress / 100) * (1 / totalSteps) * 100;
+    }
+    
+    return Math.round(progress);
+  };
+
   const handleViewItem = (item: ProductionQueueItem) => {
     setSelectedItem(item);
   };
@@ -328,7 +351,8 @@ const ProductionQueue = () => {
                 <TableRow>
                   <TableHead>Product Details</TableHead>
                   <TableHead>Quantity</TableHead>
-                  <TableHead>Manufacturing Steps</TableHead>
+                  <TableHead>Manufacturing Progress</TableHead>
+                  <TableHead>Current Step</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned Worker</TableHead>
@@ -359,20 +383,40 @@ const ProductionQueue = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Overall Progress</span>
+                          <span>{getOverallProgress(item)}%</span>
+                        </div>
+                        <Progress value={getOverallProgress(item)} className="h-2" />
+                        <div className="flex gap-1">
+                          {item.manufacturing_steps.map((step) => (
+                            <div
+                              key={step.step}
+                              className={`h-2 w-4 rounded-sm ${
+                                step.status === 'Completed'
+                                  ? 'bg-green-500'
+                                  : step.status === 'In Progress'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-gray-200'
+                              }`}
+                              title={`Step ${step.step}: ${step.name} (${step.status})`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div className="space-y-1">
-                        {item.manufacturing_steps.map((step) => (
-                          <div key={step.step} className="flex items-center gap-2">
-                            <Badge 
-                              className={`${getStepStatusColor(step.status)} text-xs`}
-                              variant="outline"
-                            >
-                              Step {step.step}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {step.completed_quantity}/{item.quantity_required}
-                            </span>
-                          </div>
-                        ))}
+                        <Badge className={getStepStatusColor(item.manufacturing_steps[item.current_step - 1]?.status || 'Pending')}>
+                          Step {item.current_step}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                          {item.manufacturing_steps[item.current_step - 1]?.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.manufacturing_steps[item.current_step - 1]?.completed_quantity || 0}/{item.quantity_required}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -464,6 +508,7 @@ const ProductionQueue = () => {
                     <p><strong>Assigned Worker:</strong> {selectedItem.assigned_worker || 'Unassigned'}</p>
                     <p><strong>Est. Completion:</strong> {selectedItem.estimated_completion}</p>
                     <p><strong>Created Date:</strong> {selectedItem.created_date}</p>
+                    <p><strong>Overall Progress:</strong> {getOverallProgress(selectedItem)}%</p>
                   </div>
                 </div>
               </div>
@@ -471,19 +516,44 @@ const ProductionQueue = () => {
               <div>
                 <h4 className="font-semibold mb-3">Manufacturing Steps Progress</h4>
                 <div className="space-y-3">
-                  {selectedItem.manufacturing_steps.map((step) => (
-                    <div key={step.step} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Badge className={getStepStatusColor(step.status)}>
-                          Step {step.step}
-                        </Badge>
-                        <span className="font-medium">{step.name}</span>
+                  {selectedItem.manufacturing_steps.map((step, index) => {
+                    const isCurrentStep = step.step === selectedItem.current_step;
+                    const isPreviousStepCompleted = index === 0 || selectedItem.manufacturing_steps[index - 1].status === 'Completed';
+                    const canStart = isPreviousStepCompleted;
+                    
+                    return (
+                      <div key={step.step} className={`flex items-center justify-between p-3 border rounded-lg ${
+                        isCurrentStep ? 'border-yellow-300 bg-yellow-50' : ''
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col items-center">
+                            <Badge className={`${getStepStatusColor(step.status)} mb-1`}>
+                              Step {step.step}
+                            </Badge>
+                            {!canStart && step.status === 'Pending' && (
+                              <span className="text-xs text-red-500">Waiting</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-medium">{step.name}</span>
+                            {isCurrentStep && (
+                              <span className="ml-2 text-sm text-yellow-600">(Current)</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">
+                            {step.completed_quantity}/{selectedItem.quantity_required} completed
+                          </div>
+                          {step.status === 'In Progress' && (
+                            <div className="text-xs text-yellow-600">
+                              {Math.round((step.completed_quantity / selectedItem.quantity_required) * 100)}% done
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {step.completed_quantity}/{selectedItem.quantity_required} completed
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
