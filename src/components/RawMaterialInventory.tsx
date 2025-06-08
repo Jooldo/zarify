@@ -20,8 +20,11 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     shortfallRange: 'all'
   });
 
-  // Get unique suppliers for filter options - using 'supplier' instead of 'supplier_name'
-  const suppliers = [...new Set(rawMaterials.map(material => material.supplier).filter(Boolean))];
+  // Get unique suppliers for filter options - extract company_name from supplier object
+  const suppliers = [...new Set(rawMaterials
+    .map(material => material.supplier?.company_name)
+    .filter(Boolean)
+  )] as string[];
 
   const filteredMaterials = rawMaterials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,8 +32,8 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     
     const matchesType = filters.type === 'all' || material.type === filters.type;
     
-    // Using 'supplier' instead of 'supplier_name'
-    const matchesSupplier = filters.supplier === 'all' || material.supplier === filters.supplier;
+    // Compare with supplier company_name
+    const matchesSupplier = filters.supplier === 'all' || material.supplier?.company_name === filters.supplier;
     
     let matchesStatus = true;
     if (filters.status === 'Low Stock') {
