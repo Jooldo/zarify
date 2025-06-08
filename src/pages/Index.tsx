@@ -29,6 +29,10 @@ const Index = () => {
         return "Raw Material Configuration";
       case "rm-procurement":
         return "Raw Material Procurement";
+      case "rm-analytics":
+        return "Procurement Analytics";
+      case "rm-suppliers":
+        return "Supplier Management";
       case "fg-inventory":
         return "Finished Goods Inventory";
       case "fg-config":
@@ -45,7 +49,7 @@ const Index = () => {
   };
 
   const isRawMaterialTab = () => {
-    return ['rm-inventory', 'rm-config', 'rm-procurement'].includes(activeTab);
+    return ['rm-inventory', 'rm-config', 'rm-procurement', 'rm-analytics', 'rm-suppliers'].includes(activeTab);
   };
 
   const isFinishedGoodTab = () => {
@@ -61,8 +65,8 @@ const Index = () => {
 
         <SidebarInset className="overflow-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {/* Header - only show if there's a title */}
-            {pageTitle && (
+            {/* Header - only show if there's a title and not handled by component */}
+            {pageTitle && !isRawMaterialTab() && (
               <div className="flex items-center justify-between mb-8">
                 <h1 className="text-2xl font-semibold text-gray-900">
                   {pageTitle}
