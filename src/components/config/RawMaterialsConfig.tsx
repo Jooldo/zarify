@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -34,7 +33,7 @@ const RawMaterialsConfig = () => {
     type: '',
     unit: '',
     cost_per_unit: '',
-    minimum_stock_level: '',
+    minimum_stock: '',
     description: '',
     supplier_ids: []
   });
@@ -45,7 +44,7 @@ const RawMaterialsConfig = () => {
       type: '',
       unit: '',
       cost_per_unit: '',
-      minimum_stock_level: '',
+      minimum_stock: '',
       description: '',
       supplier_ids: []
     });
@@ -63,7 +62,7 @@ const RawMaterialsConfig = () => {
       type: material.type || '',
       unit: material.unit || '',
       cost_per_unit: material.cost_per_unit?.toString() || '',
-      minimum_stock_level: material.minimum_stock_level?.toString() || '',
+      minimum_stock: material.minimum_stock?.toString() || '',
       description: material.description || '',
       supplier_ids: material.supplier_ids || []
     });
@@ -83,7 +82,7 @@ const RawMaterialsConfig = () => {
       const materialData = {
         ...formData,
         cost_per_unit: parseFloat(formData.cost_per_unit) || 0,
-        minimum_stock_level: parseInt(formData.minimum_stock_level) || 0,
+        minimum_stock: parseInt(formData.minimum_stock) || 0,
         merchant_id: merchantId
       };
 
@@ -222,12 +221,12 @@ const RawMaterialsConfig = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="minimum_stock_level">Minimum Stock Level</Label>
+          <Label htmlFor="minimum_stock">Minimum Stock Level</Label>
           <Input
-            id="minimum_stock_level"
+            id="minimum_stock"
             type="number"
-            value={formData.minimum_stock_level}
-            onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock_level: e.target.value }))}
+            value={formData.minimum_stock}
+            onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock: e.target.value }))}
           />
         </div>
       </div>
@@ -315,7 +314,7 @@ const RawMaterialsConfig = () => {
                     </TableCell>
                     <TableCell>{material.unit || '-'}</TableCell>
                     <TableCell>₹{material.cost_per_unit || 0}</TableCell>
-                    <TableCell>{material.minimum_stock_level || 0}</TableCell>
+                    <TableCell>{material.minimum_stock || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button

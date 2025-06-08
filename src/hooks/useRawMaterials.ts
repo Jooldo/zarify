@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,7 @@ export interface RawMaterial {
   unit: string;
   supplier_id?: string;
   cost_per_unit?: number;
+  description?: string;
   required: number;
   in_procurement: number;
   request_status: 'None' | 'Pending' | 'Approved' | 'Received';
