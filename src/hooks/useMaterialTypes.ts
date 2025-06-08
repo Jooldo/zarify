@@ -31,6 +31,12 @@ export const useMaterialTypes = () => {
         throw merchantError;
       }
 
+      if (!merchantId) {
+        console.log('No merchant ID found for user');
+        setMaterialTypes([]);
+        return;
+      }
+
       console.log('Fetching material types for merchant:', merchantId);
 
       const { data, error } = await supabase
@@ -66,13 +72,13 @@ export const useMaterialTypes = () => {
         throw new Error('Unable to get merchant ID');
       }
 
-      console.log('Creating material type:', { name, merchantId });
+      console.log('Creating material type:', { name, description, merchantId });
 
       const { data, error } = await supabase
         .from('material_types')
         .insert([{ 
-          name, 
-          description: description || '',
+          name: name.trim(), 
+          description: description?.trim() || '',
           merchant_id: merchantId
         }])
         .select()
