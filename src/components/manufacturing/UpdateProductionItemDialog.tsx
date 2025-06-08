@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,8 +169,8 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
         newChildTickets.push(childTicket);
       }
 
-      // Determine step status
-      let stepStatus = 'Pending';
+      // Determine step status with proper typing
+      let stepStatus: 'Pending' | 'In Progress' | 'Completed' = 'Pending';
       if (currentStepData.completed_quantity > 0) {
         stepStatus = 'In Progress';
       }
