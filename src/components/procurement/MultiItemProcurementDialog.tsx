@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -63,9 +62,19 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   };
 
   const updateItem = (id: string, field: keyof ProcurementItem, value: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
+    console.log('MultiItemProcurementDialog: updateItem called');
+    console.log('- id:', id);
+    console.log('- field:', field);
+    console.log('- value:', value);
+    console.log('- current items:', items);
+    
+    setItems(prevItems => {
+      const updatedItems = prevItems.map(item => 
+        item.id === id ? { ...item, [field]: value } : item
+      );
+      console.log('- updated items:', updatedItems);
+      return updatedItems;
+    });
   };
 
   const getRawMaterialById = (id: string) => {
