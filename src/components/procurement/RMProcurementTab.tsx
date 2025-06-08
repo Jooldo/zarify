@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -18,6 +17,7 @@ const RMProcurementTab = () => {
   const [isMultiItemDialogOpen, setIsMultiItemDialogOpen] = useState(false);
   const [isBOMDialogOpen, setIsBOMDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Calculate request stats
   const requestStats = useMemo(() => {
@@ -26,6 +26,24 @@ const RMProcurementTab = () => {
     const completed = requests.filter(req => req.status === 'Received').length;
     return { total, pending, completed };
   }, [requests]);
+
+  // Filter requests based on search term
+  const filteredRequests = useMemo(() => {
+    if (!searchTerm) return requests;
+    
+    return requests.filter(request => {
+      const materialName = request.raw_material?.name?.toLowerCase() || '';
+      const materialType = request.raw_material?.type?.toLowerCase() || '';
+      const requestNumber = request.request_number.toLowerCase();
+      const raisedBy = request.raised_by?.toLowerCase() || '';
+      const searchLower = searchTerm.toLowerCase();
+      
+      return materialName.includes(searchLower) ||
+             materialType.includes(searchLower) ||
+             requestNumber.includes(searchLower) ||
+             raisedBy.includes(searchLower);
+    });
+  }, [requests, searchTerm]);
 
   const handleViewRequest = (request) => {
     setSelectedRequest(request);
@@ -83,13 +101,14 @@ const RMProcurementTab = () => {
   return (
     <div className="space-y-6">
       <ProcurementHeader 
-        onRaiseMultiItemRequest={() => setIsMultiItemDialogOpen(true)}
         requestStats={requestStats}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
 
       <div className="bg-card rounded-lg border border-border min-h-[400px]">
         <ProcurementRequestsTable
-          requests={requests}
+          requests={filteredRequests}
           onViewRequest={handleViewRequest}
           onDeleteRequest={handleDeleteRequest}
           onGenerateBOM={handleGenerateBOM}

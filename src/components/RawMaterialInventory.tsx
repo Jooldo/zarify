@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
@@ -18,6 +18,26 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     return matchesSearch;
   });
 
+  // Calculate material stats
+  const materialStats = useMemo(() => {
+    const critical = rawMaterials.filter(material => {
+      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      return shortfall > 0;
+    }).length;
+
+    const low = rawMaterials.filter(material => {
+      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      return shortfall === 0 && material.current_stock <= material.minimum_stock;
+    }).length;
+
+    const good = rawMaterials.filter(material => {
+      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      return shortfall === 0 && material.current_stock > material.minimum_stock;
+    }).length;
+
+    return { critical, low, good };
+  }, [rawMaterials]);
+
   const handleRequestCreated = () => {
     refetch();
     if (onRequestCreated) {
@@ -30,6 +50,7 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
       <RawMaterialsHeader
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        materialStats={materialStats}
       />
       
       <RawMaterialsTable 

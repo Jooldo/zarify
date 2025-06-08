@@ -33,13 +33,14 @@ const FinishedGoodsHeader = ({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+    <div className="flex items-center justify-between">
       <h3 className="text-lg font-semibold flex items-center gap-2">
         <Package className="h-5 w-5" />
         Finished Goods Inventory
       </h3>
-      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-        <div className="relative flex-1 sm:flex-initial sm:w-64">
+      
+      <div className="flex items-center gap-3">
+        <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search products..."

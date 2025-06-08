@@ -1,7 +1,8 @@
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, ShoppingCart, Trash2, FileText, AlertCircle } from 'lucide-react';
+import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -118,15 +119,6 @@ const ProcurementRequestsTable = ({
 
   return (
     <div className="space-y-4">
-      {onRaiseMultiItemRequest && (
-        <div className="flex justify-end">
-          <Button onClick={onRaiseMultiItemRequest} className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
-            Raise Procurement Request
-          </Button>
-        </div>
-      )}
-      
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
@@ -219,6 +211,19 @@ const ProcurementRequestsTable = ({
           </TableBody>
         </Table>
       </div>
+
+      {/* Floating Raise Procurement Request Button */}
+      {onRaiseMultiItemRequest && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button 
+            onClick={onRaiseMultiItemRequest} 
+            className="rounded-full h-14 w-14 shadow-lg hover:shadow-xl transition-shadow"
+            size="icon"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
