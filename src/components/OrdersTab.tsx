@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -7,12 +6,40 @@ import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
 
+interface OrderFilters {
+  customer: string;
+  orderStatus: string;
+  suborderStatus: string;
+  category: string;
+  subcategory: string;
+  dateRange: string;
+  minAmount: string;
+  maxAmount: string;
+  hasDeliveryDate: boolean;
+  overdueDelivery: boolean;
+  lowStock: boolean;
+  stockAvailable: boolean;
+}
+
 const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<OrderFilters>({
+    customer: '',
+    orderStatus: '',
+    suborderStatus: '',
+    category: '',
+    subcategory: '',
+    dateRange: '',
+    minAmount: '',
+    maxAmount: '',
+    hasDeliveryDate: false,
+    overdueDelivery: false,
+    lowStock: false,
+    stockAvailable: false
+  });
 
   // Calculate order stats
   const orderStats = useMemo(() => {
