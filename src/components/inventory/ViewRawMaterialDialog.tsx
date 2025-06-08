@@ -49,7 +49,7 @@ const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMateri
             </div>
             <div>
               <Label className="font-medium">Required:</Label>
-              <div className="text-lg">{material.required_quantity} {material.unit}</div>
+              <div className="text-lg">{material.required} {material.unit}</div>
             </div>
             <div>
               <Label className="font-medium">In Procurement:</Label>
@@ -64,10 +64,6 @@ const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMateri
             <div>
               <Label className="font-medium">Supplier:</Label>
               <div className="text-lg">{material.supplier?.company_name || 'N/A'}</div>
-            </div>
-            <div>
-              <Label className="font-medium">Cost per Unit:</Label>
-              <div className="text-lg">₹{material.cost_per_unit || 'N/A'}</div>
             </div>
             <div>
               <Label className="font-medium">Last Updated:</Label>

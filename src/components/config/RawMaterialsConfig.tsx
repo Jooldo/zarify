@@ -33,9 +33,7 @@ const RawMaterialsConfig = () => {
     name: '',
     type: '',
     unit: '',
-    cost_per_unit: '',
     minimum_stock: '',
-    description: '',
     supplier_ids: []
   });
 
@@ -44,9 +42,7 @@ const RawMaterialsConfig = () => {
       name: '',
       type: '',
       unit: '',
-      cost_per_unit: '',
       minimum_stock: '',
-      description: '',
       supplier_ids: []
     });
   };
@@ -62,9 +58,7 @@ const RawMaterialsConfig = () => {
       name: material.name || '',
       type: material.type || '',
       unit: material.unit || '',
-      cost_per_unit: material.cost_per_unit?.toString() || '',
       minimum_stock: material.minimum_stock?.toString() || '',
-      description: material.description || '',
       supplier_ids: material.supplier_ids || []
     });
     setIsEditDialogOpen(true);
@@ -82,7 +76,6 @@ const RawMaterialsConfig = () => {
 
       const materialData = {
         ...formData,
-        cost_per_unit: parseFloat(formData.cost_per_unit) || 0,
         minimum_stock: parseInt(formData.minimum_stock) || 0,
         merchant_id: merchantId
       };
@@ -201,7 +194,7 @@ const RawMaterialsConfig = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="unit">Unit</Label>
           <Input
@@ -209,16 +202,6 @@ const RawMaterialsConfig = () => {
             value={formData.unit}
             onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
             placeholder="kg, pcs, meters, etc."
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="cost_per_unit">Cost per Unit</Label>
-          <Input
-            id="cost_per_unit"
-            type="number"
-            step="0.01"
-            value={formData.cost_per_unit}
-            onChange={(e) => setFormData(prev => ({ ...prev, cost_per_unit: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -230,16 +213,6 @@ const RawMaterialsConfig = () => {
             onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock: e.target.value }))}
           />
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          rows={3}
-        />
       </div>
 
       <DialogFooter>
@@ -292,7 +265,6 @@ const RawMaterialsConfig = () => {
                   <TableHead className="text-foreground">Material</TableHead>
                   <TableHead className="text-foreground">Type</TableHead>
                   <TableHead className="text-foreground">Unit</TableHead>
-                  <TableHead className="text-foreground">Cost per Unit</TableHead>
                   <TableHead className="text-foreground">Min Stock</TableHead>
                   <TableHead className="text-foreground">Actions</TableHead>
                 </TableRow>
@@ -303,9 +275,6 @@ const RawMaterialsConfig = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium text-foreground">{material.name}</div>
-                        {material.description && (
-                          <div className="text-sm text-muted-foreground">{material.description.substring(0, 50)}...</div>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -314,7 +283,6 @@ const RawMaterialsConfig = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-foreground">{material.unit || '-'}</TableCell>
-                    <TableCell className="text-foreground">₹{material.cost_per_unit || 0}</TableCell>
                     <TableCell className="text-foreground">{material.minimum_stock || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -338,7 +306,7 @@ const RawMaterialsConfig = () => {
                 ))}
                 {filteredMaterials.length === 0 && (
                   <TableRow className="border-border">
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? 'No materials found matching your search.' : 'No materials configured yet.'}
                     </TableCell>
                   </TableRow>

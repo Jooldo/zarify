@@ -13,7 +13,7 @@ export interface RawMaterial {
   unit: string;
   cost_per_unit?: number;
   supplier_id?: string;
-  required_quantity: number;
+  required: number;
   in_procurement: number;
   last_updated: string;
   created_at: string;
@@ -22,7 +22,6 @@ export interface RawMaterial {
   };
   // Add computed properties
   shortfall?: number;
-  required?: number;
   description?: string;
 }
 
@@ -78,9 +77,8 @@ export const useRawMaterials = () => {
       // Transform the data to match our interface and add computed properties
       const transformedData: RawMaterial[] = (data || []).map(material => ({
         ...material,
-        required_quantity: material.required || 0,
-        shortfall: Math.max(0, (material.required || 0) - (material.current_stock + material.in_procurement)),
         required: material.required || 0,
+        shortfall: Math.max(0, (material.required || 0) - (material.current_stock + material.in_procurement)),
       }));
 
       setRawMaterials(transformedData);

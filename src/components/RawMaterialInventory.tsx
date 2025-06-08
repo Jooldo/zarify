@@ -23,17 +23,17 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   // Calculate material stats
   const materialStats = useMemo(() => {
     const critical = rawMaterials.filter(material => {
-      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      const shortfall = Math.max(0, material.required - (material.current_stock + material.in_procurement));
       return shortfall > 0;
     }).length;
 
     const low = rawMaterials.filter(material => {
-      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      const shortfall = Math.max(0, material.required - (material.current_stock + material.in_procurement));
       return shortfall === 0 && material.current_stock <= material.minimum_stock;
     }).length;
 
     const good = rawMaterials.filter(material => {
-      const shortfall = Math.max(0, material.required_quantity - (material.current_stock + material.in_procurement));
+      const shortfall = Math.max(0, material.required - (material.current_stock + material.in_procurement));
       return shortfall === 0 && material.current_stock > material.minimum_stock;
     }).length;
 
