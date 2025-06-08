@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import { Search, Plus, AlertCircle, Edit, Eye } from 'lucide-react';
 import CreateProductConfigForm from '@/components/CreateProductConfigForm';
 import ViewProductConfigDialog from '@/components/inventory/ViewProductConfigDialog';
 import EditProductConfigDialog from '@/components/inventory/EditProductConfigDialog';
+import FinishedGoodsConfigFilter from '@/components/config/FinishedGoodsConfigFilter';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 const FinishedGoodsConfig = () => {
@@ -17,13 +17,54 @@ const FinishedGoodsConfig = () => {
   const [isViewConfigOpen, setIsViewConfigOpen] = useState(false);
   const [isEditConfigOpen, setIsEditConfigOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState(null);
+  const [filters, setFilters] = useState({});
   const { productConfigs, loading, createProductConfig, deleteProductConfig, refetch } = useProductConfigs();
 
-  const filteredConfigs = productConfigs.filter(config => 
-    config.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    config.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    config.product_code?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const applyFilters = (configs: any[], appliedFilters: any) => {
+    return configs.filter(config => {
+      const matchesSearch = config.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           config.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           config.product_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      // Category filter
+      if (appliedFilters.category && config.category !== appliedFilters.category) return false;
+      
+      // Subcategory filter
+      if (appliedFilters.subcategory && config.subcategory !== appliedFilters.subcategory) return false;
+      
+      // Size range filter
+      if (appliedFilters.sizeRange) {
+        const sizeValue = config.size_value || 0;
+        const range = appliedFilters.sizeRange;
+        
+        if (range === '0.15-0.25m' && (sizeValue < 0.15 || sizeValue > 0.25)) return false;
+        if (range === '0.26-0.35m' && (sizeValue < 0.26 || sizeValue > 0.35)) return false;
+        if (range === '0.36-0.45m' && (sizeValue < 0.36 || sizeValue > 0.45)) return false;
+        if (range === '0.46m+' && sizeValue < 0.46) return false;
+      }
+      
+      // Status filter
+      if (appliedFilters.status) {
+        const status = config.is_active ? 'Active' : 'Inactive';
+        if (status !== appliedFilters.status) return false;
+      }
+      
+      // Active status filter
+      if (appliedFilters.isActive) {
+        if (appliedFilters.isActive === 'active' && !config.is_active) return false;
+        if (appliedFilters.isActive === 'inactive' && config.is_active) return false;
+      }
+      
+      // Quick filters
+      if (appliedFilters.hasThreshold && (!config.threshold || config.threshold === 0)) return false;
+      
+      return true;
+    });
+  };
+
+  const filteredConfigs = applyFilters(productConfigs, filters);
 
   const handleCreateConfig = async (configData: any) => {
     try {
@@ -58,6 +99,9 @@ const FinishedGoodsConfig = () => {
     return `${sizeInInches}"`;
   };
 
+  const categories = [...new Set(productConfigs.map(config => config.category).filter(Boolean))];
+  const subcategories = [...new Set(productConfigs.map(config => config.subcategory).filter(Boolean))];
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -72,13 +116,20 @@ const FinishedGoodsConfig = () => {
     <div className="space-y-4">
       {/* Header with Search and Add Button */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search product configurations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-8"
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search product configurations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          <FinishedGoodsConfigFilter
+            onFiltersChange={setFilters}
+            categories={categories}
+            subcategories={subcategories}
           />
         </div>
         <Dialog open={isCreateConfigOpen} onOpenChange={setIsCreateConfigOpen}>
@@ -192,7 +243,7 @@ const FinishedGoodsConfig = () => {
         <div className="text-center py-8">
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 text-sm">
-            {productConfigs.length === 0 ? 'No product configurations found. Add some configurations to get started.' : 'No configurations found matching your search.'}
+            {productConfigs.length === 0 ? 'No product configurations found. Add some configurations to get started.' : 'No configurations found matching your search or filters.'}
           </p>
         </div>
       )}

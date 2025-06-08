@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import FinishedGoodsEmptyState from './inventory/FinishedGoodsEmptyState';
 import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
 import StockUpdateDialog from './inventory/StockUpdateDialog';
 import TagAuditTrail from './inventory/TagAuditTrail';
+import FinishedGoodsFilter from './inventory/FinishedGoodsFilter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const FinishedGoodsInventory = () => {
@@ -17,14 +17,14 @@ const FinishedGoodsInventory = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('inventory');
+  const [filters, setFilters] = useState({});
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
 
-  // Filter for active products only and apply search
-  const filteredProducts = finishedGoods
-    .filter(product => {
+  const applyFilters = (products: any[], appliedFilters: any) => {
+    return products.filter(product => {
       // Only show active products
       const isActive = product.product_config?.is_active !== false;
       
@@ -32,8 +32,51 @@ const FinishedGoodsInventory = () => {
                            product.product_config?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.product_config?.subcategory?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return isActive && matchesSearch;
+      if (!isActive || !matchesSearch) return false;
+
+      // Category filter
+      if (appliedFilters.category && product.product_config?.category !== appliedFilters.category) return false;
+      
+      // Subcategory filter
+      if (appliedFilters.subcategory && product.product_config?.subcategory !== appliedFilters.subcategory) return false;
+      
+      // Size filter
+      if (appliedFilters.size) {
+        const sizeValue = product.product_config?.size_value?.toFixed(2) + 'm';
+        if (sizeValue !== appliedFilters.size) return false;
+      }
+      
+      // Stock level filter
+      if (appliedFilters.stockLevel) {
+        const currentStock = product.current_stock || 0;
+        const threshold = product.threshold || 0;
+        
+        if (appliedFilters.stockLevel === 'In Stock' && currentStock <= 0) return false;
+        if (appliedFilters.stockLevel === 'Low Stock' && (currentStock <= 0 || currentStock > threshold)) return false;
+        if (appliedFilters.stockLevel === 'Out of Stock' && currentStock > 0) return false;
+      }
+      
+      // Tag enabled filter
+      if (appliedFilters.tagEnabled) {
+        if (appliedFilters.tagEnabled === 'enabled' && !product.tag_enabled) return false;
+        if (appliedFilters.tagEnabled === 'disabled' && product.tag_enabled) return false;
+      }
+      
+      // Stock range filters
+      if (appliedFilters.minStock && product.current_stock < parseInt(appliedFilters.minStock)) return false;
+      if (appliedFilters.maxStock && product.current_stock > parseInt(appliedFilters.maxStock)) return false;
+      
+      // Quick filters
+      if (appliedFilters.hasThreshold && (!product.threshold || product.threshold === 0)) return false;
+      if (appliedFilters.lowStock && product.current_stock > (product.threshold || 0)) return false;
+      if (appliedFilters.inManufacturing && (!product.in_manufacturing || product.in_manufacturing === 0)) return false;
+      
+      return true;
     });
+  };
+
+  // Filter for active products only and apply search/filters
+  const filteredProducts = applyFilters(finishedGoods, filters);
 
   const handleViewProduct = (product: any) => {
     setSelectedProduct(product);
@@ -53,6 +96,9 @@ const FinishedGoodsInventory = () => {
   const handleTagOperationComplete = () => {
     refetch();
   };
+
+  const categories = [...new Set(finishedGoods.map(product => product.product_config?.category).filter(Boolean))];
+  const subcategories = [...new Set(finishedGoods.map(product => product.product_config?.subcategory).filter(Boolean))];
 
   if (loading && activeTab === 'inventory') {
     return (
@@ -81,13 +127,20 @@ const FinishedGoodsInventory = () => {
             onTagOperationComplete={handleTagOperationComplete}
           />
           
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-8"
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-8"
+              />
+            </div>
+            <FinishedGoodsFilter
+              onFiltersChange={setFilters}
+              categories={categories}
+              subcategories={subcategories}
             />
           </div>
           

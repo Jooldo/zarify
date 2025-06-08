@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -13,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import ConfigHeader from '@/components/procurement/headers/ConfigHeader';
 import MaterialTypeSelector from '@/components/inventory/MaterialTypeSelector';
+import RawMaterialsConfigFilter from '@/components/config/RawMaterialsConfigFilter';
 
 const RawMaterialsConfig = () => {
   const { rawMaterials, loading, refetch } = useRawMaterials();
@@ -28,6 +28,7 @@ const RawMaterialsConfig = () => {
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -35,6 +36,42 @@ const RawMaterialsConfig = () => {
     unit: '',
     minimum_stock: ''
   });
+
+  const applyFilters = (materials: any[], appliedFilters: any) => {
+    return materials.filter(material => {
+      // Search term filter
+      const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           material.type?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      // Type filter
+      if (appliedFilters.type && material.type !== appliedFilters.type) return false;
+      
+      // Unit filter
+      if (appliedFilters.unit && material.unit !== appliedFilters.unit) return false;
+      
+      // Min stock range filter
+      if (appliedFilters.minStockRange) {
+        const minStock = material.minimum_stock || 0;
+        const range = appliedFilters.minStockRange;
+        
+        if (range === '0-10' && (minStock < 0 || minStock > 10)) return false;
+        if (range === '11-50' && (minStock < 11 || minStock > 50)) return false;
+        if (range === '51-100' && (minStock < 51 || minStock > 100)) return false;
+        if (range === '101-500' && (minStock < 101 || minStock > 500)) return false;
+        if (range === '500+' && minStock <= 500) return false;
+      }
+      
+      // Quick filters
+      if (appliedFilters.hasMinStock && (!material.minimum_stock || material.minimum_stock === 0)) return false;
+      if (appliedFilters.noMinStock && material.minimum_stock && material.minimum_stock > 0) return false;
+      
+      return true;
+    });
+  };
+
+  const filteredMaterials = applyFilters(rawMaterials, filters);
 
   const resetForm = () => {
     setFormData({
@@ -163,11 +200,6 @@ const RawMaterialsConfig = () => {
     }
   };
 
-  const filteredMaterials = rawMaterials.filter(material =>
-    material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.type?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const uniqueTypes = [...new Set(materialTypes.map(type => type.name))];
 
   if (loading) {
@@ -262,12 +294,21 @@ const RawMaterialsConfig = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Input
-            placeholder="Search materials..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search materials..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <RawMaterialsConfigFilter
+              onFiltersChange={setFilters}
+              materialTypes={uniqueTypes}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -323,7 +364,7 @@ const RawMaterialsConfig = () => {
                 {filteredMaterials.length === 0 && (
                   <TableRow className="border-border">
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? 'No materials found matching your search.' : 'No materials configured yet.'}
+                      {searchTerm || Object.keys(filters).some(key => filters[key]) ? 'No materials found matching your search or filters.' : 'No materials configured yet.'}
                     </TableCell>
                   </TableRow>
                 )}
