@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, Package, Scale } from 'lucide-react';
+import { CheckCircle, AlertCircle, Package, Scale, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ProductionQueueItem {
@@ -30,9 +30,18 @@ interface ProductionQueueItem {
     name: string;
     status: 'Pending' | 'In Progress' | 'Completed';
     completed_quantity: number;
-    weight_recorded?: number;
+    assigned_weight?: number;
+    received_weight?: number;
     qc_passed?: number;
     qc_failed?: number;
+  }[];
+  child_tickets?: {
+    id: string;
+    parent_step: number;
+    quantity: number;
+    reason: string;
+    status: 'Open' | 'In Progress' | 'Resolved';
+    created_at: string;
   }[];
 }
 
@@ -46,7 +55,8 @@ interface UpdateProductionItemDialogProps {
 const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: UpdateProductionItemDialogProps) => {
   const [selectedStep, setSelectedStep] = useState<number>(1);
   const [completedQuantity, setCompletedQuantity] = useState<number>(0);
-  const [weight, setWeight] = useState<number>(0);
+  const [assignedWeight, setAssignedWeight] = useState<number>(0);
+  const [receivedWeight, setReceivedWeight] = useState<number>(0);
   const [qcPassed, setQcPassed] = useState<number>(0);
   const [qcFailed, setQcFailed] = useState<number>(0);
   const [assignedWorker, setAssignedWorker] = useState<string>('');
@@ -64,10 +74,22 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
     const stepData = item.manufacturing_steps.find(step => step.step === stepNum);
     if (stepData) {
       setCompletedQuantity(stepData.completed_quantity || 0);
-      setWeight(stepData.weight_recorded || 0);
+      setAssignedWeight(stepData.assigned_weight || 0);
+      setReceivedWeight(stepData.received_weight || 0);
       setQcPassed(stepData.qc_passed || 0);
       setQcFailed(stepData.qc_failed || 0);
     }
+  };
+
+  const generateChildTicket = (parentStep: number, failedQuantity: number) => {
+    return {
+      id: `CT-${item.id.substring(0, 8)}-${parentStep}-${Date.now()}`,
+      parent_step: parentStep,
+      quantity: failedQuantity,
+      reason: `QC Failed - Step ${parentStep}`,
+      status: 'Open' as const,
+      created_at: new Date().toISOString()
+    };
   };
 
   const handleUpdate = () => {
@@ -98,28 +120,37 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
       updatedItem.manufacturing_steps[stepIndex] = {
         ...updatedItem.manufacturing_steps[stepIndex],
         completed_quantity: completedQuantity,
-        weight_recorded: weight,
+        assigned_weight: assignedWeight,
+        received_weight: receivedWeight,
         qc_passed: qcPassed,
         qc_failed: qcFailed,
         status: completedQuantity > 0 ? 'In Progress' : 'Pending'
       };
 
-      // Mark step as completed if all quantity is done
+      // Mark step as completed if all quantity is done and no QC failures
       if (completedQuantity === maxCompletableQuantity && qcFailed === 0) {
         updatedItem.manufacturing_steps[stepIndex].status = 'Completed';
       }
     }
 
-    // If there are QC failures, add them back to the previous step or raw materials
-    if (qcFailed > 0 && selectedStep > 1) {
-      const previousStepIndex = stepIndex - 1;
-      if (previousStepIndex >= 0) {
-        // Add failed quantity back to previous step
-        updatedItem.manufacturing_steps[previousStepIndex].completed_quantity -= qcFailed;
+    // Generate child ticket for QC failed items
+    if (qcFailed > 0) {
+      const childTicket = generateChildTicket(selectedStep, qcFailed);
+      if (!updatedItem.child_tickets) {
+        updatedItem.child_tickets = [];
+      }
+      updatedItem.child_tickets.push(childTicket);
+
+      // Add failed quantity back to previous step or raw materials
+      if (selectedStep > 1) {
+        const previousStepIndex = stepIndex - 1;
+        if (previousStepIndex >= 0) {
+          updatedItem.manufacturing_steps[previousStepIndex].completed_quantity -= qcFailed;
+        }
       }
     }
 
-    // Update current step and overall status
+    // Update overall status and current step
     const completedSteps = updatedItem.manufacturing_steps.filter(step => step.status === 'Completed').length;
     const inProgressSteps = updatedItem.manufacturing_steps.filter(step => step.status === 'In Progress').length;
 
@@ -134,7 +165,6 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
       updatedItem.current_step = 1;
     }
 
-    // Update quantity in progress
     updatedItem.quantity_in_progress = updatedItem.manufacturing_steps
       .filter(step => step.status === 'In Progress')
       .reduce((sum, step) => sum + step.completed_quantity, 0);
@@ -144,21 +174,8 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
     
     toast({
       title: 'Production Updated',
-      description: `Step ${selectedStep} updated successfully`,
+      description: `Step ${selectedStep} updated successfully${qcFailed > 0 ? '. Child ticket created for QC failures.' : ''}`,
     });
-  };
-
-  const getStepStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800';
-      case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Pending':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
   };
 
   const canWorkOnStep = (stepNumber: number) => {
@@ -169,161 +186,196 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Update Production: {item.product_code}
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Package className="h-4 w-4" />
+            Update: {item.product_code}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
-          {/* Product Info */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+        <div className="space-y-4">
+          {/* Compact Product Info */}
+          <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded text-sm">
             <div>
-              <Label className="text-sm font-medium">Product Details</Label>
-              <p className="text-sm">{item.category} • {item.subcategory} • {item.size}</p>
+              <span className="font-medium">Product:</span> {item.category} • {item.subcategory}
             </div>
             <div>
-              <Label className="text-sm font-medium">Total Required</Label>
-              <p className="text-sm">{item.quantity_required} units</p>
+              <span className="font-medium">Size:</span> {item.size}
+            </div>
+            <div>
+              <span className="font-medium">Required:</span> {item.quantity_required}
             </div>
           </div>
 
-          {/* Worker Assignment */}
-          <div className="space-y-2">
-            <Label htmlFor="worker">Assigned Worker</Label>
-            <Input
-              id="worker"
-              value={assignedWorker || item.assigned_worker || ''}
-              onChange={(e) => setAssignedWorker(e.target.value)}
-              placeholder="Enter worker name"
-            />
+          {/* Worker and Step Selection */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-sm">Worker</Label>
+              <Input
+                value={assignedWorker || item.assigned_worker || ''}
+                onChange={(e) => setAssignedWorker(e.target.value)}
+                placeholder="Assign worker"
+                className="h-8"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Step</Label>
+              <Select value={selectedStep.toString()} onValueChange={handleStepChange}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {item.manufacturing_steps.map((step) => (
+                    <SelectItem 
+                      key={step.step} 
+                      value={step.step.toString()}
+                      disabled={!canWorkOnStep(step.step)}
+                    >
+                      Step {step.step}: {step.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Step Selection */}
-          <div className="space-y-2">
-            <Label>Select Manufacturing Step</Label>
-            <Select value={selectedStep.toString()} onValueChange={handleStepChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {item.manufacturing_steps.map((step) => (
-                  <SelectItem 
-                    key={step.step} 
-                    value={step.step.toString()}
-                    disabled={!canWorkOnStep(step.step)}
-                  >
-                    Step {step.step}: {step.name} 
-                    {!canWorkOnStep(step.step) && ' (Previous step incomplete)'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Current Step Status */}
+          {/* Current Step Details */}
           {currentStepData && (
-            <div className="space-y-4 p-4 border rounded-lg">
+            <div className="border rounded p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Step {selectedStep}: {currentStepData.name}</h4>
-                <Badge className={getStepStatusColor(currentStepData.status)}>
+                <h4 className="font-medium text-sm">Step {selectedStep}: {currentStepData.name}</h4>
+                <Badge variant="outline" className="text-xs">
                   {currentStepData.status}
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Compact Form Grid */}
+              <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <Label className="text-sm">Available for Processing</Label>
-                  <p className="text-lg font-semibold text-blue-600">{maxCompletableQuantity} units</p>
+                  <Label className="text-xs">Available</Label>
+                  <div className="font-medium text-blue-600">{maxCompletableQuantity}</div>
                 </div>
                 <div>
-                  <Label className="text-sm">Currently Completed</Label>
-                  <p className="text-lg font-semibold">{currentStepData.completed_quantity} units</p>
+                  <Label className="text-xs">Current</Label>
+                  <div className="font-medium">{currentStepData.completed_quantity}</div>
                 </div>
-              </div>
-
-              <Separator />
-
-              {/* Update Form */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="completed">Completed Quantity</Label>
+                <div>
+                  <Label className="text-xs">Completed</Label>
                   <Input
-                    id="completed"
                     type="number"
                     min="0"
                     max={maxCompletableQuantity}
                     value={completedQuantity}
                     onChange={(e) => setCompletedQuantity(parseInt(e.target.value) || 0)}
+                    className="h-7 text-xs"
                   />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="weight" className="flex items-center gap-1">
-                    <Scale className="h-4 w-4" />
-                    Weight (kg)
+              <Separator />
+
+              {/* Weight Tracking */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs flex items-center gap-1">
+                    <Scale className="h-3 w-3" />
+                    Assigned Weight (kg)
                   </Label>
                   <Input
-                    id="weight"
                     type="number"
                     step="0.01"
-                    min="0"
-                    value={weight}
-                    onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
+                    value={assignedWeight}
+                    onChange={(e) => setAssignedWeight(parseFloat(e.target.value) || 0)}
+                    className="h-7 text-xs"
                   />
                 </div>
+                <div>
+                  <Label className="text-xs flex items-center gap-1">
+                    <Scale className="h-3 w-3" />
+                    Received Weight (kg)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={receivedWeight}
+                    onChange={(e) => setReceivedWeight(parseFloat(e.target.value) || 0)}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="qc-passed" className="flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+              {/* QC Section */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
                     QC Passed
                   </Label>
                   <Input
-                    id="qc-passed"
                     type="number"
                     min="0"
                     max={completedQuantity}
                     value={qcPassed}
                     onChange={(e) => setQcPassed(parseInt(e.target.value) || 0)}
+                    className="h-7 text-xs"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="qc-failed" className="flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
+                <div>
+                  <Label className="text-xs flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 text-red-600" />
                     QC Failed
                   </Label>
                   <Input
-                    id="qc-failed"
                     type="number"
                     min="0"
                     max={completedQuantity}
                     value={qcFailed}
                     onChange={(e) => setQcFailed(parseInt(e.target.value) || 0)}
+                    className="h-7 text-xs"
                   />
                 </div>
               </div>
 
-              {qcFailed > 0 && selectedStep > 1 && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    <AlertCircle className="h-4 w-4 inline mr-1" />
-                    {qcFailed} units will be reassigned to Step {selectedStep - 1} for rework.
-                  </p>
+              {qcFailed > 0 && (
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+                  <div className="flex items-center gap-1 text-amber-800">
+                    <Ticket className="h-3 w-3" />
+                    Child ticket will be created for {qcFailed} failed items
+                  </div>
                 </div>
               )}
             </div>
           )}
 
+          {/* Child Tickets Display */}
+          {item.child_tickets && item.child_tickets.length > 0 && (
+            <div className="border rounded p-3">
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                <Ticket className="h-3 w-3" />
+                Child Tickets ({item.child_tickets.length})
+              </h4>
+              <div className="space-y-1">
+                {item.child_tickets.map((ticket) => (
+                  <div key={ticket.id} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
+                    <span>{ticket.id}</span>
+                    <span>Step {ticket.parent_step} • {ticket.quantity} items</span>
+                    <Badge variant="outline" className="text-xs">
+                      {ticket.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>
-              Update Production
+            <Button size="sm" onClick={handleUpdate}>
+              Update
             </Button>
           </div>
         </div>

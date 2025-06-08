@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
+import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit, Scale, Ticket } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import UpdateProductionItemDialog from './UpdateProductionItemDialog';
 
 interface ProductionQueueItem {
@@ -30,9 +31,18 @@ interface ProductionQueueItem {
     name: string;
     status: 'Pending' | 'In Progress' | 'Completed';
     completed_quantity: number;
-    weight_recorded?: number;
+    assigned_weight?: number;
+    received_weight?: number;
     qc_passed?: number;
     qc_failed?: number;
+  }[];
+  child_tickets?: {
+    id: string;
+    parent_step: number;
+    quantity: number;
+    reason: string;
+    status: 'Open' | 'In Progress' | 'Resolved';
+    created_at: string;
   }[];
 }
 
@@ -44,7 +54,7 @@ const ProductionQueue = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [updateItem, setUpdateItem] = useState<ProductionQueueItem | null>(null);
 
-  // Mock data with sequential manufacturing steps
+  // Updated mock data with weight tracking and child tickets
   const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([
     {
       id: '1',
@@ -62,11 +72,15 @@ const ProductionQueue = () => {
       created_date: '2024-01-10',
       current_step: 3,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 50, weight_recorded: 125.5, qc_passed: 50, qc_failed: 0 },
-        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 50, weight_recorded: 123.8, qc_passed: 50, qc_failed: 0 },
-        { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 20, weight_recorded: 49.2, qc_passed: 18, qc_failed: 2 },
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 50, assigned_weight: 125.5, received_weight: 125.3, qc_passed: 50, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 50, assigned_weight: 125.3, received_weight: 123.8, qc_passed: 48, qc_failed: 2 },
+        { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 20, assigned_weight: 60.0, received_weight: 49.2, qc_passed: 18, qc_failed: 2 },
         { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
         { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ],
+      child_tickets: [
+        { id: 'CT-12345678-2-001', parent_step: 2, quantity: 2, reason: 'QC Failed - Step 2', status: 'Open', created_at: '2024-01-11' },
+        { id: 'CT-12345678-3-002', parent_step: 3, quantity: 2, reason: 'QC Failed - Step 3', status: 'In Progress', created_at: '2024-01-12' }
       ]
     },
     {
@@ -107,11 +121,11 @@ const ProductionQueue = () => {
       created_date: '2024-01-08',
       current_step: 5,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 25, weight_recorded: 62.3, qc_passed: 25, qc_failed: 0 },
-        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 25, weight_recorded: 61.8, qc_passed: 25, qc_failed: 0 },
-        { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 25, weight_recorded: 61.2, qc_passed: 25, qc_failed: 0 },
-        { step: 4, name: 'Finishing', status: 'Completed', completed_quantity: 25, weight_recorded: 60.9, qc_passed: 25, qc_failed: 0 },
-        { step: 5, name: 'Quality Control', status: 'Completed', completed_quantity: 25, weight_recorded: 60.9, qc_passed: 25, qc_failed: 0 }
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 25, assigned_weight: 62.5, received_weight: 62.3, qc_passed: 25, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 25, assigned_weight: 62.3, received_weight: 61.8, qc_passed: 25, qc_failed: 0 },
+        { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 25, assigned_weight: 61.8, received_weight: 61.2, qc_passed: 25, qc_failed: 0 },
+        { step: 4, name: 'Finishing', status: 'Completed', completed_quantity: 25, assigned_weight: 61.2, received_weight: 60.9, qc_passed: 25, qc_failed: 0 },
+        { step: 5, name: 'Quality Control', status: 'Completed', completed_quantity: 25, assigned_weight: 60.9, received_weight: 60.9, qc_passed: 25, qc_failed: 0 }
       ]
     },
     {
@@ -129,11 +143,14 @@ const ProductionQueue = () => {
       created_date: '2024-01-12',
       current_step: 2,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 15, weight_recorded: 41.2, qc_passed: 15, qc_failed: 0 },
-        { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 5, weight_recorded: 13.5, qc_passed: 4, qc_failed: 1 },
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 15, assigned_weight: 42.0, received_weight: 41.2, qc_passed: 15, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 5, assigned_weight: 20.0, received_weight: 13.5, qc_passed: 4, qc_failed: 1 },
         { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
         { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
         { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ],
+      child_tickets: [
+        { id: 'CT-87654321-2-003', parent_step: 2, quantity: 1, reason: 'QC Failed - Step 2', status: 'Open', created_at: '2024-01-13' }
       ]
     }
   ]);
@@ -207,7 +224,6 @@ const ProductionQueue = () => {
     
     let progress = (completedSteps / totalSteps) * 100;
     
-    // Add partial progress for in-progress step
     if (inProgressSteps > 0) {
       const currentStepProgress = getCurrentStepProgress(item);
       progress += (currentStepProgress / 100) * (1 / totalSteps) * 100;
@@ -379,8 +395,16 @@ const ProductionQueue = () => {
                 {filteredItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{item.product_code}</div>
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-2">
+                          {item.product_code}
+                          {item.child_tickets && item.child_tickets.length > 0 && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1">
+                              <Ticket className="h-2 w-2" />
+                              {item.child_tickets.length}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {item.category} • {item.subcategory} • {item.size}
                         </div>
@@ -502,95 +526,139 @@ const ProductionQueue = () => {
         </CardContent>
       </Card>
 
-      {/* View Item Dialog */}
+      {/* Compact View Item Dialog */}
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Production Item Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Production Details: {selectedItem?.product_code}
+            </DialogTitle>
           </DialogHeader>
           {selectedItem && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* Compact Product Info Grid */}
+              <div className="grid grid-cols-4 gap-3 p-3 bg-muted/50 rounded text-sm">
                 <div>
-                  <h4 className="font-semibold mb-2">Product Information</h4>
-                  <div className="space-y-1 text-sm">
-                    <p><strong>Product Code:</strong> {selectedItem.product_code}</p>
-                    <p><strong>Category:</strong> {selectedItem.category}</p>
-                    <p><strong>Subcategory:</strong> {selectedItem.subcategory}</p>
-                    <p><strong>Size:</strong> {selectedItem.size}</p>
-                    <p><strong>Priority:</strong> {selectedItem.priority}</p>
-                    <p><strong>Status:</strong> {selectedItem.status}</p>
-                  </div>
+                  <span className="font-medium">Category:</span><br />
+                  {selectedItem.category}
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Production Details</h4>
-                  <div className="space-y-1 text-sm">
-                    <p><strong>Quantity Required:</strong> {selectedItem.quantity_required}</p>
-                    <p><strong>Quantity in Progress:</strong> {selectedItem.quantity_in_progress}</p>
-                    <p><strong>Assigned Worker:</strong> {selectedItem.assigned_worker || 'Unassigned'}</p>
-                    <p><strong>Est. Completion:</strong> {selectedItem.estimated_completion}</p>
-                    <p><strong>Created Date:</strong> {selectedItem.created_date}</p>
-                    <p><strong>Overall Progress:</strong> {getOverallProgress(selectedItem)}%</p>
-                  </div>
+                  <span className="font-medium">Subcategory:</span><br />
+                  {selectedItem.subcategory}
+                </div>
+                <div>
+                  <span className="font-medium">Size:</span><br />
+                  {selectedItem.size}
+                </div>
+                <div>
+                  <span className="font-medium">Priority:</span><br />
+                  <Badge className={getPriorityColor(selectedItem.priority)} variant="outline">
+                    {selectedItem.priority}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Production Summary */}
+              <div className="grid grid-cols-3 gap-3 p-3 border rounded text-sm">
+                <div>
+                  <span className="font-medium">Required:</span> {selectedItem.quantity_required}
+                </div>
+                <div>
+                  <span className="font-medium">In Progress:</span> {selectedItem.quantity_in_progress}
+                </div>
+                <div>
+                  <span className="font-medium">Progress:</span> {getOverallProgress(selectedItem)}%
                 </div>
               </div>
               
+              {/* Manufacturing Steps */}
               <div>
-                <h4 className="font-semibold mb-3">Manufacturing Steps Progress</h4>
-                <div className="space-y-3">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Scale className="h-4 w-4" />
+                  Manufacturing Steps Progress
+                </h4>
+                <div className="space-y-2">
                   {selectedItem.manufacturing_steps.map((step, index) => {
                     const isCurrentStep = step.step === selectedItem.current_step;
                     const isPreviousStepCompleted = index === 0 || selectedItem.manufacturing_steps[index - 1].status === 'Completed';
                     const canStart = isPreviousStepCompleted;
                     
                     return (
-                      <div key={step.step} className={`flex items-center justify-between p-3 border rounded-lg ${
+                      <div key={step.step} className={`grid grid-cols-12 gap-2 p-2 border rounded text-xs ${
                         isCurrentStep ? 'border-yellow-300 bg-yellow-50' : ''
                       }`}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-center">
-                            <Badge className={`${getStepStatusColor(step.status)} mb-1`}>
-                              Step {step.step}
-                            </Badge>
-                            {!canStart && step.status === 'Pending' && (
-                              <span className="text-xs text-red-500">Waiting</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="font-medium">{step.name}</span>
-                            {isCurrentStep && (
-                              <span className="ml-2 text-sm text-yellow-600">(Current)</span>
-                            )}
-                          </div>
+                        <div className="col-span-3">
+                          <Badge className={`${getStepStatusColor(step.status)} mb-1`} variant="outline">
+                            Step {step.step}
+                          </Badge>
+                          <div className="font-medium">{step.name}</div>
+                          {isCurrentStep && (
+                            <span className="text-yellow-600">(Current)</span>
+                          )}
                         </div>
-                        <div className="text-right space-y-1">
-                          <div className="text-sm text-muted-foreground">
-                            {step.completed_quantity}/{selectedItem.quantity_required} completed
-                          </div>
-                          {step.weight_recorded && (
-                            <div className="text-xs text-blue-600">
-                              Weight: {step.weight_recorded}kg
-                            </div>
-                          )}
-                          {step.qc_passed !== undefined && step.qc_failed !== undefined && (
-                            <div className="text-xs">
-                              <span className="text-green-600">QC Pass: {step.qc_passed}</span>
-                              {step.qc_failed > 0 && (
-                                <span className="text-red-600 ml-2">QC Fail: {step.qc_failed}</span>
-                              )}
-                            </div>
-                          )}
-                          {step.status === 'In Progress' && (
-                            <div className="text-xs text-yellow-600">
-                              {Math.round((step.completed_quantity / selectedItem.quantity_required) * 100)}% done
-                            </div>
-                          )}
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">Quantity</div>
+                          <div>{step.completed_quantity}/{selectedItem.quantity_required}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">Assigned Wt</div>
+                          <div>{step.assigned_weight || '-'} kg</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">Received Wt</div>
+                          <div>{step.received_weight || '-'} kg</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">QC Pass</div>
+                          <div className="text-green-600">{step.qc_passed || 0}</div>
+                        </div>
+                        <div className="col-span-1">
+                          <div className="text-muted-foreground">QC Fail</div>
+                          <div className="text-red-600">{step.qc_failed || 0}</div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
+              {/* Child Tickets */}
+              {selectedItem.child_tickets && selectedItem.child_tickets.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Ticket className="h-4 w-4" />
+                    Child Tickets ({selectedItem.child_tickets.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedItem.child_tickets.map((ticket) => (
+                      <div key={ticket.id} className="grid grid-cols-5 gap-2 p-2 border rounded text-xs">
+                        <div>
+                          <div className="font-medium">{ticket.id}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Parent Step</div>
+                          <div>Step {ticket.parent_step}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Quantity</div>
+                          <div>{ticket.quantity} items</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Status</div>
+                          <Badge variant="outline" className="text-xs">
+                            {ticket.status}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Created</div>
+                          <div>{ticket.created_at}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
