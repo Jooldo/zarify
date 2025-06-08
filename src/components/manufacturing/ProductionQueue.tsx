@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus } from 'lucide-react';
+import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import UpdateProductionItemDialog from './UpdateProductionItemDialog';
 
 interface ProductionQueueItem {
   id: string;
@@ -30,6 +30,9 @@ interface ProductionQueueItem {
     name: string;
     status: 'Pending' | 'In Progress' | 'Completed';
     completed_quantity: number;
+    weight_recorded?: number;
+    qc_passed?: number;
+    qc_failed?: number;
   }[];
 }
 
@@ -39,9 +42,10 @@ const ProductionQueue = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState<ProductionQueueItem | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [updateItem, setUpdateItem] = useState<ProductionQueueItem | null>(null);
 
   // Mock data with sequential manufacturing steps
-  const queueItems: ProductionQueueItem[] = [
+  const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([
     {
       id: '1',
       product_code: 'ANK-001-2.50',
@@ -58,9 +62,9 @@ const ProductionQueue = () => {
       created_date: '2024-01-10',
       current_step: 3,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 50 },
-        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 50 },
-        { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 20 },
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 50, weight_recorded: 125.5, qc_passed: 50, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 50, weight_recorded: 123.8, qc_passed: 50, qc_failed: 0 },
+        { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 20, weight_recorded: 49.2, qc_passed: 18, qc_failed: 2 },
         { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
         { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
       ]
@@ -103,11 +107,11 @@ const ProductionQueue = () => {
       created_date: '2024-01-08',
       current_step: 5,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 25 },
-        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 25 },
-        { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 25 },
-        { step: 4, name: 'Finishing', status: 'Completed', completed_quantity: 25 },
-        { step: 5, name: 'Quality Control', status: 'Completed', completed_quantity: 25 }
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 25, weight_recorded: 62.3, qc_passed: 25, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 25, weight_recorded: 61.8, qc_passed: 25, qc_failed: 0 },
+        { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 25, weight_recorded: 61.2, qc_passed: 25, qc_failed: 0 },
+        { step: 4, name: 'Finishing', status: 'Completed', completed_quantity: 25, weight_recorded: 60.9, qc_passed: 25, qc_failed: 0 },
+        { step: 5, name: 'Quality Control', status: 'Completed', completed_quantity: 25, weight_recorded: 60.9, qc_passed: 25, qc_failed: 0 }
       ]
     },
     {
@@ -125,14 +129,14 @@ const ProductionQueue = () => {
       created_date: '2024-01-12',
       current_step: 2,
       manufacturing_steps: [
-        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 15 },
-        { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 5 },
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 15, weight_recorded: 41.2, qc_passed: 15, qc_failed: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 5, weight_recorded: 13.5, qc_passed: 4, qc_failed: 1 },
         { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
         { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
         { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
       ]
     }
-  ];
+  ]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -214,6 +218,16 @@ const ProductionQueue = () => {
 
   const handleViewItem = (item: ProductionQueueItem) => {
     setSelectedItem(item);
+  };
+
+  const handleUpdateItem = (item: ProductionQueueItem) => {
+    setUpdateItem(item);
+  };
+
+  const handleUpdateComplete = (updatedItem: ProductionQueueItem) => {
+    setQueueItems(items => 
+      items.map(item => item.id === updatedItem.id ? updatedItem : item)
+    );
   };
 
   const handleAddToQueue = () => {
@@ -454,6 +468,13 @@ const ProductionQueue = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleUpdateItem(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         {item.status === 'Queued' && (
                           <Button variant="ghost" size="sm">
                             <Play className="h-4 w-4" />
@@ -472,6 +493,7 @@ const ProductionQueue = () => {
             </Table>
           </div>
 
+          {/* Empty State */}
           {filteredItems.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               No items found in the production queue matching your filters.
@@ -541,10 +563,23 @@ const ProductionQueue = () => {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right space-y-1">
                           <div className="text-sm text-muted-foreground">
                             {step.completed_quantity}/{selectedItem.quantity_required} completed
                           </div>
+                          {step.weight_recorded && (
+                            <div className="text-xs text-blue-600">
+                              Weight: {step.weight_recorded}kg
+                            </div>
+                          )}
+                          {step.qc_passed !== undefined && step.qc_failed !== undefined && (
+                            <div className="text-xs">
+                              <span className="text-green-600">QC Pass: {step.qc_passed}</span>
+                              {step.qc_failed > 0 && (
+                                <span className="text-red-600 ml-2">QC Fail: {step.qc_failed}</span>
+                              )}
+                            </div>
+                          )}
                           {step.status === 'In Progress' && (
                             <div className="text-xs text-yellow-600">
                               {Math.round((step.completed_quantity / selectedItem.quantity_required) * 100)}% done
@@ -560,6 +595,14 @@ const ProductionQueue = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Update Production Item Dialog */}
+      <UpdateProductionItemDialog
+        item={updateItem}
+        open={!!updateItem}
+        onOpenChange={(open) => !open && setUpdateItem(null)}
+        onUpdate={handleUpdateComplete}
+      />
 
       {/* Add to Queue Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
