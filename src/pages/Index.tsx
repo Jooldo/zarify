@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -64,53 +63,66 @@ const Index = () => {
         <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
         <SidebarInset className="overflow-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {/* Header - only show if there's a title and not handled by component */}
-            {pageTitle && !isRawMaterialTab() && (
-              <div className="flex items-center justify-between mb-8">
-                <h1 className="text-2xl font-semibold text-gray-900">
-                  {pageTitle}
-                </h1>
-              </div>
-            )}
-
-            {/* Main Content */}
+          {/* Raw Material Management - Full width with its own layout */}
+          {isRawMaterialTab() && (
             <Tabs value={activeTab} className="w-full">
-              <TabsContent value="dashboard" className="space-y-6 mt-0">
-                <VisualDashboard onNavigateToTab={handleNavigateToTab} />
-              </TabsContent>
-
-              <TabsContent value="orders" className="space-y-6 mt-0">
-                <OrdersTab />
-              </TabsContent>
-
-              {isRawMaterialTab() && (
-                <TabsContent value={activeTab} className="space-y-6 mt-0">
+              <TabsContent value={activeTab} className="space-y-0 mt-0">
+                <div className="px-4 sm:px-6 lg:px-8">
                   <RawMaterialManagement 
                     activeTab={activeTab} 
                     onTabChange={handleNavigateToTab} 
                   />
-                </TabsContent>
-              )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
 
-              {isFinishedGoodTab() && (
-                <TabsContent value={activeTab} className="space-y-6 mt-0">
+          {/* Finished Good Management - Full width with its own layout */}
+          {isFinishedGoodTab() && (
+            <Tabs value={activeTab} className="w-full">
+              <TabsContent value={activeTab} className="space-y-0 mt-0">
+                <div className="px-4 sm:px-6 lg:px-8">
                   <FinishedGoodManagement 
                     activeTab={activeTab} 
                     onTabChange={handleNavigateToTab} 
                   />
-                </TabsContent>
-              )}
-
-              <TabsContent value="users" className="space-y-6 mt-0">
-                <UsersTab />
-              </TabsContent>
-
-              <TabsContent value="activity" className="space-y-6 mt-0">
-                <ActivityLogsTab />
+                </div>
               </TabsContent>
             </Tabs>
-          </div>
+          )}
+
+          {/* Other tabs with standard layout */}
+          {!isRawMaterialTab() && !isFinishedGoodTab() && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              {/* Header - only show if there's a title */}
+              {pageTitle && (
+                <div className="flex items-center justify-between mb-8">
+                  <h1 className="text-2xl font-semibold text-gray-900">
+                    {pageTitle}
+                  </h1>
+                </div>
+              )}
+
+              {/* Main Content */}
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value="dashboard" className="space-y-6 mt-0">
+                  <VisualDashboard onNavigateToTab={handleNavigateToTab} />
+                </TabsContent>
+
+                <TabsContent value="orders" className="space-y-6 mt-0">
+                  <OrdersTab />
+                </TabsContent>
+
+                <TabsContent value="users" className="space-y-6 mt-0">
+                  <UsersTab />
+                </TabsContent>
+
+                <TabsContent value="activity" className="space-y-6 mt-0">
+                  <ActivityLogsTab />
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
         </SidebarInset>
       </div>
     </SidebarProvider>
