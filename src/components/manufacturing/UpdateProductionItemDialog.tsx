@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, AlertCircle, Package, Scale, Ticket } from 'lucide-react';
+import { CheckCircle, AlertCircle, Package, Scale, Ticket, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ProductionQueueItem {
@@ -120,6 +121,42 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getTicketStatusColor = (status: string) => {
+    switch (status) {
+      case 'Resolved':
+        return 'bg-green-100 text-green-800';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Open':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getChildTicketsForStep = (stepNumber: number) => {
+    if (!item?.child_tickets) return [];
+    return item.child_tickets.filter(ticket => ticket.parent_step === stepNumber);
+  };
+
+  const resolveChildTicket = (ticketId: string) => {
+    if (!item) return;
+    
+    const updatedItem = { ...item };
+    if (updatedItem.child_tickets) {
+      updatedItem.child_tickets = updatedItem.child_tickets.map(ticket =>
+        ticket.id === ticketId ? { ...ticket, status: 'Resolved' as const } : ticket
+      );
+    }
+    
+    onUpdate(updatedItem);
+    
+    toast({
+      title: 'Child Ticket Resolved',
+      description: `Ticket ${ticketId} has been marked as resolved.`,
+    });
   };
 
   const handleUpdate = () => {
@@ -293,120 +330,147 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
               Manufacturing Steps Progress
             </h4>
             
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-16">Step</TableHead>
-                    <TableHead className="min-w-32">Step Name</TableHead>
-                    <TableHead className="w-20">Status</TableHead>
-                    <TableHead className="w-16">Max</TableHead>
-                    <TableHead className="w-20">Completed</TableHead>
-                    <TableHead className="w-24">Assigned Wt</TableHead>
-                    <TableHead className="w-24">Received Wt</TableHead>
-                    <TableHead className="w-20">QC Pass</TableHead>
-                    <TableHead className="w-20">QC Fail</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {item.manufacturing_steps.map((step) => {
-                    const currentData = stepData[step.step] || {
-                      completed_quantity: step.completed_quantity || 0,
-                      assigned_weight: step.assigned_weight || 0,
-                      received_weight: step.received_weight || 0,
-                      qc_passed: step.qc_passed || 0,
-                      qc_failed: step.qc_failed || 0,
-                    };
-                    const maxCompletable = getMaxCompletableQuantity(step.step);
-                    
-                    return (
-                      <TableRow key={step.step} className="text-sm">
-                        <TableCell className="font-medium">{step.step}</TableCell>
-                        <TableCell>{step.name}</TableCell>
-                        <TableCell>
+            <div className="space-y-4">
+              {item.manufacturing_steps.map((step) => {
+                const currentData = stepData[step.step] || {
+                  completed_quantity: step.completed_quantity || 0,
+                  assigned_weight: step.assigned_weight || 0,
+                  received_weight: step.received_weight || 0,
+                  qc_passed: step.qc_passed || 0,
+                  qc_failed: step.qc_failed || 0,
+                };
+                const maxCompletable = getMaxCompletableQuantity(step.step);
+                const childTickets = getChildTicketsForStep(step.step);
+                
+                return (
+                  <div key={step.step} className="border rounded-lg overflow-hidden">
+                    {/* Step Header */}
+                    <div className="bg-muted/30 p-3 border-b">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <Badge className={getStepStatusColor(step.status)} variant="outline">
-                            {step.status}
+                            Step {step.step}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-blue-600 font-medium">{maxCompletable}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max={maxCompletable}
-                            value={currentData.completed_quantity}
-                            onChange={(e) => updateStepField(step.step, 'completed_quantity', parseInt(e.target.value) || 0)}
-                            className="h-7 w-16 text-xs"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={currentData.assigned_weight}
-                            onChange={(e) => updateStepField(step.step, 'assigned_weight', parseFloat(e.target.value) || 0)}
-                            className="h-7 w-20 text-xs"
-                            placeholder="kg"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={currentData.received_weight}
-                            onChange={(e) => updateStepField(step.step, 'received_weight', parseFloat(e.target.value) || 0)}
-                            className="h-7 w-20 text-xs"
-                            placeholder="kg"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max={currentData.completed_quantity}
-                            value={currentData.qc_passed}
-                            onChange={(e) => updateStepField(step.step, 'qc_passed', parseInt(e.target.value) || 0)}
-                            className="h-7 w-16 text-xs"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max={currentData.completed_quantity}
-                            value={currentData.qc_failed}
-                            onChange={(e) => updateStepField(step.step, 'qc_failed', parseInt(e.target.value) || 0)}
-                            className="h-7 w-16 text-xs"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          <span className="font-medium">{step.name}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Max: {maxCompletable}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step Data Table */}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/20">
+                            <TableHead className="w-20">Completed</TableHead>
+                            <TableHead className="w-24">Assigned Wt</TableHead>
+                            <TableHead className="w-24">Received Wt</TableHead>
+                            <TableHead className="w-20">QC Pass</TableHead>
+                            <TableHead className="w-20">QC Fail</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow className="text-sm">
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={maxCompletable}
+                                value={currentData.completed_quantity}
+                                onChange={(e) => updateStepField(step.step, 'completed_quantity', parseInt(e.target.value) || 0)}
+                                className="h-7 w-16 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={currentData.assigned_weight}
+                                onChange={(e) => updateStepField(step.step, 'assigned_weight', parseFloat(e.target.value) || 0)}
+                                className="h-7 w-20 text-xs"
+                                placeholder="kg"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={currentData.received_weight}
+                                onChange={(e) => updateStepField(step.step, 'received_weight', parseFloat(e.target.value) || 0)}
+                                className="h-7 w-20 text-xs"
+                                placeholder="kg"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={currentData.completed_quantity}
+                                value={currentData.qc_passed}
+                                onChange={(e) => updateStepField(step.step, 'qc_passed', parseInt(e.target.value) || 0)}
+                                className="h-7 w-16 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={currentData.completed_quantity}
+                                value={currentData.qc_failed}
+                                onChange={(e) => updateStepField(step.step, 'qc_failed', parseInt(e.target.value) || 0)}
+                                className="h-7 w-16 text-xs"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Child Tickets for this Step */}
+                    {childTickets.length > 0 && (
+                      <div className="p-3 bg-muted/10 border-t">
+                        <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
+                          <Ticket className="h-3 w-3" />
+                          Child Tickets ({childTickets.length})
+                        </h5>
+                        <div className="space-y-2">
+                          {childTickets.map((ticket) => (
+                            <div key={ticket.id} className="flex items-center justify-between p-2 bg-background rounded border text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono">{ticket.id}</span>
+                                <span>•</span>
+                                <span>{ticket.quantity} items</span>
+                                <span>•</span>
+                                <span className="text-muted-foreground">{ticket.reason}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={getTicketStatusColor(ticket.status)} variant="outline">
+                                  {ticket.status}
+                                </Badge>
+                                {ticket.status !== 'Resolved' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => resolveChildTicket(ticket.id)}
+                                    className="h-6 px-2"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                    Resolve
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {/* Child Tickets Display */}
-          {item.child_tickets && item.child_tickets.length > 0 && (
-            <div className="border rounded p-3">
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                <Ticket className="h-3 w-3" />
-                Existing Child Tickets ({item.child_tickets.length})
-              </h4>
-              <div className="space-y-1">
-                {item.child_tickets.map((ticket) => (
-                  <div key={ticket.id} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
-                    <span>{ticket.id}</span>
-                    <span>Step {ticket.parent_step} • {ticket.quantity} items</span>
-                    <Badge variant="outline" className="text-xs">
-                      {ticket.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2">
