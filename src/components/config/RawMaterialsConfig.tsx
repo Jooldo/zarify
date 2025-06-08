@@ -32,8 +32,7 @@ const RawMaterialsConfig = () => {
     name: '',
     type: '',
     unit: '',
-    minimum_stock: '',
-    current_stock: ''
+    minimum_stock: ''
   });
 
   const resetForm = () => {
@@ -41,8 +40,7 @@ const RawMaterialsConfig = () => {
       name: '',
       type: '',
       unit: '',
-      minimum_stock: '',
-      current_stock: ''
+      minimum_stock: ''
     });
   };
 
@@ -57,14 +55,23 @@ const RawMaterialsConfig = () => {
       name: material.name || '',
       type: material.type || '',
       unit: material.unit || '',
-      minimum_stock: material.minimum_stock?.toString() || '',
-      current_stock: material.current_stock?.toString() || ''
+      minimum_stock: material.minimum_stock?.toString() || ''
     });
     setIsEditDialogOpen(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.type || !formData.unit) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields (Name, Type, Unit)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -74,11 +81,11 @@ const RawMaterialsConfig = () => {
       if (merchantError) throw merchantError;
 
       const materialData = {
-        name: formData.name,
-        type: formData.type,
+        name: formData.name.trim(),
+        type: formData.type.trim(),
         unit: formData.unit,
         minimum_stock: parseInt(formData.minimum_stock) || 0,
-        current_stock: parseInt(formData.current_stock) || 0,
+        current_stock: 0,
         merchant_id: merchantId,
         required: 0,
         in_procurement: 0,
@@ -179,14 +186,15 @@ const RawMaterialsConfig = () => {
             id="name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Enter material name"
             required
           />
         </div>
         <div className="space-y-2">
-          <Label>Material Type</Label>
+          <Label>Material Type *</Label>
           <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
             <SelectTrigger>
-              <SelectValue placeholder="Select type" />
+              <SelectValue placeholder="Select or enter type" />
             </SelectTrigger>
             <SelectContent>
               {uniqueTypes.map(type => (
@@ -196,10 +204,17 @@ const RawMaterialsConfig = () => {
               ))}
             </SelectContent>
           </Select>
+          {!uniqueTypes.includes(formData.type) && formData.type && (
+            <Input
+              value={formData.type}
+              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+              placeholder="Enter custom material type"
+            />
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="unit">Unit *</Label>
           <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
@@ -216,22 +231,13 @@ const RawMaterialsConfig = () => {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="current_stock">Current Stock</Label>
-          <Input
-            id="current_stock"
-            type="number"
-            value={formData.current_stock}
-            onChange={(e) => setFormData(prev => ({ ...prev, current_stock: e.target.value }))}
-            min="0"
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="minimum_stock">Minimum Stock Level</Label>
           <Input
             id="minimum_stock"
             type="number"
             value={formData.minimum_stock}
             onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock: e.target.value }))}
+            placeholder="0"
             min="0"
           />
         </div>
@@ -347,7 +353,7 @@ const RawMaterialsConfig = () => {
           <DialogHeader>
             <DialogTitle className="text-foreground">Add New Raw Material</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Add a new raw material to your catalog
+              Add a new raw material to your catalog. You can assign suppliers later through the Users section.
             </DialogDescription>
           </DialogHeader>
           <MaterialForm />
