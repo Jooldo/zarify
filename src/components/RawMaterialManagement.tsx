@@ -31,40 +31,41 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="space-y-6">
-        <div className="bg-white border-b">
+    <div className="min-h-screen bg-background">
+      <div className="space-y-0">
+        {/* Fixed Header Section */}
+        <div className="bg-card border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between py-4">
+            <div className="flex items-center justify-between py-6">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
+                <h1 className="text-2xl font-semibold text-foreground">
                   Raw Material Management
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground mt-1">
                   Manage inventory, procurement, suppliers, and analytics
                 </p>
               </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-gray-100">
-                <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-white">
+              <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+                <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory
                 </TabsTrigger>
-                <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-white">
+                <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <ShoppingBag className="h-4 w-4" />
                   Procurement
                 </TabsTrigger>
-                <TabsTrigger value="rm-analytics" className="flex items-center gap-2 data-[state=active]:bg-white">
+                <TabsTrigger value="rm-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <BarChart3 className="h-4 w-4" />
                   Analytics
                 </TabsTrigger>
-                <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-white">
+                <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Users className="h-4 w-4" />
                   Suppliers
                 </TabsTrigger>
-                <TabsTrigger value="rm-config" className="flex items-center gap-2 data-[state=active]:bg-white">
+                <TabsTrigger value="rm-config" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Settings className="h-4 w-4" />
                   Config
                 </TabsTrigger>
@@ -73,13 +74,18 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="min-h-[600px]">
-            <Tabs value={activeTab} className="w-full">
-              <TabsContent value={activeTab} className="mt-0 animate-fade-in">
-                {renderActiveContent()}
-              </TabsContent>
-            </Tabs>
+        {/* Content Section with consistent layout */}
+        <div className="bg-background">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="min-h-[700px]">
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="mt-0 animate-fade-in">
+                  <div className="space-y-6">
+                    {renderActiveContent()}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
       </div>

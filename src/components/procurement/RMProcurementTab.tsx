@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -146,8 +147,8 @@ const RMProcurementTab = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div>Loading procurement requests...</div>
+      <div className="min-h-[400px] flex items-center justify-center bg-card rounded-lg">
+        <div className="text-muted-foreground">Loading procurement requests...</div>
       </div>
     );
   }
@@ -167,7 +168,7 @@ const RMProcurementTab = () => {
         raisedByOptions={filterOptions.raisedByOptions}
       />
 
-      <div className="min-h-[300px]">
+      <div className="bg-card rounded-lg border border-border min-h-[400px]">
         <ProcurementRequestsTable
           requests={filteredRequests}
           onViewRequest={handleViewRequest}

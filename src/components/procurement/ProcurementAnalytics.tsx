@@ -107,11 +107,11 @@ const ProcurementAnalytics = () => {
         activeSuppliers={analyticsData.activeSuppliers}
       />
 
-      {/* Filters */}
-      <Card>
+      {/* Filters Card */}
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>Analytics Filters</CardTitle>
-          <CardDescription>Filter analytics data by date range, supplier, and material</CardDescription>
+          <CardTitle className="text-foreground">Analytics Filters</CardTitle>
+          <CardDescription className="text-muted-foreground">Filter analytics data by date range, supplier, and material</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -169,73 +169,79 @@ const ProcurementAnalytics = () => {
         </CardContent>
       </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Volume Chart */}
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle>Monthly Procurement Volume</CardTitle>
-            <CardDescription>Procurement volume by month</CardDescription>
+            <CardTitle className="text-foreground">Monthly Procurement Volume</CardTitle>
+            <CardDescription className="text-muted-foreground">Procurement volume by month</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="volume" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="volume" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
         {/* Status Distribution */}
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle>Order Status Distribution</CardTitle>
-            <CardDescription>Current status of procurement requests</CardDescription>
+            <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
+            <CardDescription className="text-muted-foreground">Current status of procurement requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ status, count }) => `${status}: ${count}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ status, count }) => `${status}: ${count}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
         {/* Supplier Performance */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 bg-card border-border">
           <CardHeader>
-            <CardTitle>Supplier Performance</CardTitle>
-            <CardDescription>Order count and completion rate by supplier</CardDescription>
+            <CardTitle className="text-foreground">Supplier Performance</CardTitle>
+            <CardDescription className="text-muted-foreground">Order count and completion rate by supplier</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={supplierData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="totalOrders" fill="#8884d8" name="Total Orders" />
-                <Bar dataKey="completed" fill="#82ca9d" name="Completed Orders" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={supplierData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="totalOrders" fill="#8884d8" name="Total Orders" />
+                  <Bar dataKey="completed" fill="#82ca9d" name="Completed Orders" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>

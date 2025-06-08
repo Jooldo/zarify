@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -165,8 +166,8 @@ const RawMaterialsConfig = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div>Loading materials configuration...</div>
+      <div className="min-h-[400px] flex items-center justify-center bg-card rounded-lg border border-border">
+        <div className="text-muted-foreground">Loading materials configuration...</div>
       </div>
     );
   }
@@ -257,13 +258,13 @@ const RawMaterialsConfig = () => {
         supplierCount={suppliers.length}
       />
 
-      {/* Search and Add */}
-      <Card>
+      {/* Search and Add Card */}
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Raw Materials Configuration</CardTitle>
-              <CardDescription>Manage your raw material catalog and settings</CardDescription>
+              <CardTitle className="text-foreground">Raw Materials Configuration</CardTitle>
+              <CardDescription className="text-muted-foreground">Manage your raw material catalog and settings</CardDescription>
             </div>
             <Button onClick={handleAddMaterial} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -281,29 +282,29 @@ const RawMaterialsConfig = () => {
         </CardContent>
       </Card>
 
-      {/* Materials Table */}
-      <Card>
-        <CardContent>
-          <div className="min-h-[300px]">
+      {/* Materials Table Card */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-0">
+          <div className="min-h-[400px]">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Cost per Unit</TableHead>
-                  <TableHead>Min Stock</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-foreground">Material</TableHead>
+                  <TableHead className="text-foreground">Type</TableHead>
+                  <TableHead className="text-foreground">Unit</TableHead>
+                  <TableHead className="text-foreground">Cost per Unit</TableHead>
+                  <TableHead className="text-foreground">Min Stock</TableHead>
+                  <TableHead className="text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredMaterials.map((material) => (
-                  <TableRow key={material.id}>
+                  <TableRow key={material.id} className="border-border">
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="font-medium">{material.name}</div>
+                        <div className="font-medium text-foreground">{material.name}</div>
                         {material.description && (
-                          <div className="text-sm text-gray-500">{material.description.substring(0, 50)}...</div>
+                          <div className="text-sm text-muted-foreground">{material.description.substring(0, 50)}...</div>
                         )}
                       </div>
                     </TableCell>
@@ -312,9 +313,9 @@ const RawMaterialsConfig = () => {
                         <Badge variant="secondary">{material.type}</Badge>
                       )}
                     </TableCell>
-                    <TableCell>{material.unit || '-'}</TableCell>
-                    <TableCell>₹{material.cost_per_unit || 0}</TableCell>
-                    <TableCell>{material.minimum_stock || 0}</TableCell>
+                    <TableCell className="text-foreground">{material.unit || '-'}</TableCell>
+                    <TableCell className="text-foreground">₹{material.cost_per_unit || 0}</TableCell>
+                    <TableCell className="text-foreground">{material.minimum_stock || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
@@ -336,8 +337,8 @@ const RawMaterialsConfig = () => {
                   </TableRow>
                 ))}
                 {filteredMaterials.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                  <TableRow className="border-border">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? 'No materials found matching your search.' : 'No materials configured yet.'}
                     </TableCell>
                   </TableRow>
@@ -350,10 +351,10 @@ const RawMaterialsConfig = () => {
 
       {/* Add Material Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Add New Raw Material</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-foreground">Add New Raw Material</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Add a new raw material to your catalog
             </DialogDescription>
           </DialogHeader>
@@ -363,10 +364,10 @@ const RawMaterialsConfig = () => {
 
       {/* Edit Material Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Edit Raw Material</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-foreground">Edit Raw Material</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Update raw material information
             </DialogDescription>
           </DialogHeader>
