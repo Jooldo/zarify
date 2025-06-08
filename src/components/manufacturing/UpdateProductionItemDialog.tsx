@@ -4,9 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CheckCircle, AlertCircle, Package, Scale, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,32 +53,50 @@ interface UpdateProductionItemDialogProps {
 }
 
 const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: UpdateProductionItemDialogProps) => {
-  const [selectedStep, setSelectedStep] = useState<number>(1);
-  const [completedQuantity, setCompletedQuantity] = useState<number>(0);
-  const [assignedWeight, setAssignedWeight] = useState<number>(0);
-  const [receivedWeight, setReceivedWeight] = useState<number>(0);
-  const [qcPassed, setQcPassed] = useState<number>(0);
-  const [qcFailed, setQcFailed] = useState<number>(0);
   const [assignedWorker, setAssignedWorker] = useState<string>('');
+  const [stepData, setStepData] = useState<Record<number, {
+    completed_quantity: number;
+    assigned_weight: number;
+    received_weight: number;
+    qc_passed: number;
+    qc_failed: number;
+  }>>({});
   const { toast } = useToast();
 
   if (!item) return null;
 
-  const currentStepData = item.manufacturing_steps.find(step => step.step === selectedStep);
-  const maxCompletableQuantity = selectedStep === 1 ? item.quantity_required : 
-    item.manufacturing_steps[selectedStep - 2]?.completed_quantity || 0;
-
-  const handleStepChange = (stepNumber: string) => {
-    const stepNum = parseInt(stepNumber);
-    setSelectedStep(stepNum);
-    const stepData = item.manufacturing_steps.find(step => step.step === stepNum);
-    if (stepData) {
-      setCompletedQuantity(stepData.completed_quantity || 0);
-      setAssignedWeight(stepData.assigned_weight || 0);
-      setReceivedWeight(stepData.received_weight || 0);
-      setQcPassed(stepData.qc_passed || 0);
-      setQcFailed(stepData.qc_failed || 0);
+  // Initialize step data when item changes
+  React.useEffect(() => {
+    if (item) {
+      setAssignedWorker(item.assigned_worker || '');
+      const initialStepData: Record<number, any> = {};
+      item.manufacturing_steps.forEach(step => {
+        initialStepData[step.step] = {
+          completed_quantity: step.completed_quantity || 0,
+          assigned_weight: step.assigned_weight || 0,
+          received_weight: step.received_weight || 0,
+          qc_passed: step.qc_passed || 0,
+          qc_failed: step.qc_failed || 0,
+        };
+      });
+      setStepData(initialStepData);
     }
+  }, [item]);
+
+  const updateStepField = (stepNumber: number, field: string, value: number) => {
+    setStepData(prev => ({
+      ...prev,
+      [stepNumber]: {
+        ...prev[stepNumber],
+        [field]: value
+      }
+    }));
+  };
+
+  const getMaxCompletableQuantity = (stepNumber: number) => {
+    if (stepNumber === 1) return item.quantity_required;
+    const previousStep = item.manufacturing_steps.find(step => step.step === stepNumber - 1);
+    return previousStep?.completed_quantity || 0;
   };
 
   const generateChildTicket = (parentStep: number, failedQuantity: number) => {
@@ -92,62 +110,93 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
     };
   };
 
+  const getStepStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const handleUpdate = () => {
-    if (completedQuantity > maxCompletableQuantity) {
-      toast({
-        title: 'Invalid Quantity',
-        description: `Cannot complete more than ${maxCompletableQuantity} items for this step`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (qcPassed + qcFailed > completedQuantity) {
-      toast({
-        title: 'Invalid QC Numbers',
-        description: 'QC passed + failed cannot exceed completed quantity',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const updatedItem = { ...item };
     updatedItem.assigned_worker = assignedWorker || item.assigned_worker;
 
-    // Update the selected step
-    const stepIndex = updatedItem.manufacturing_steps.findIndex(step => step.step === selectedStep);
-    if (stepIndex !== -1) {
-      updatedItem.manufacturing_steps[stepIndex] = {
-        ...updatedItem.manufacturing_steps[stepIndex],
-        completed_quantity: completedQuantity,
-        assigned_weight: assignedWeight,
-        received_weight: receivedWeight,
-        qc_passed: qcPassed,
-        qc_failed: qcFailed,
-        status: completedQuantity > 0 ? 'In Progress' : 'Pending'
+    let hasErrors = false;
+    let newChildTickets: any[] = [];
+
+    // Validate and update all steps
+    updatedItem.manufacturing_steps = updatedItem.manufacturing_steps.map(step => {
+      const currentStepData = stepData[step.step] || {
+        completed_quantity: step.completed_quantity || 0,
+        assigned_weight: step.assigned_weight || 0,
+        received_weight: step.received_weight || 0,
+        qc_passed: step.qc_passed || 0,
+        qc_failed: step.qc_failed || 0,
       };
 
-      // Mark step as completed if all quantity is done and no QC failures
-      if (completedQuantity === maxCompletableQuantity && qcFailed === 0) {
-        updatedItem.manufacturing_steps[stepIndex].status = 'Completed';
-      }
-    }
+      const maxCompletable = getMaxCompletableQuantity(step.step);
 
-    // Generate child ticket for QC failed items
-    if (qcFailed > 0) {
-      const childTicket = generateChildTicket(selectedStep, qcFailed);
+      // Validation
+      if (currentStepData.completed_quantity > maxCompletable) {
+        toast({
+          title: 'Invalid Quantity',
+          description: `Step ${step.step}: Cannot complete more than ${maxCompletable} items`,
+          variant: 'destructive',
+        });
+        hasErrors = true;
+        return step;
+      }
+
+      if (currentStepData.qc_passed + currentStepData.qc_failed > currentStepData.completed_quantity) {
+        toast({
+          title: 'Invalid QC Numbers',
+          description: `Step ${step.step}: QC passed + failed cannot exceed completed quantity`,
+          variant: 'destructive',
+        });
+        hasErrors = true;
+        return step;
+      }
+
+      // Generate child ticket for QC failed items
+      if (currentStepData.qc_failed > 0) {
+        const childTicket = generateChildTicket(step.step, currentStepData.qc_failed);
+        newChildTickets.push(childTicket);
+      }
+
+      // Determine step status
+      let stepStatus = 'Pending';
+      if (currentStepData.completed_quantity > 0) {
+        stepStatus = 'In Progress';
+      }
+      if (currentStepData.completed_quantity === maxCompletable && currentStepData.qc_failed === 0) {
+        stepStatus = 'Completed';
+      }
+
+      return {
+        ...step,
+        completed_quantity: currentStepData.completed_quantity,
+        assigned_weight: currentStepData.assigned_weight,
+        received_weight: currentStepData.received_weight,
+        qc_passed: currentStepData.qc_passed,
+        qc_failed: currentStepData.qc_failed,
+        status: stepStatus
+      };
+    });
+
+    if (hasErrors) return;
+
+    // Add new child tickets
+    if (newChildTickets.length > 0) {
       if (!updatedItem.child_tickets) {
         updatedItem.child_tickets = [];
       }
-      updatedItem.child_tickets.push(childTicket);
-
-      // Add failed quantity back to previous step or raw materials
-      if (selectedStep > 1) {
-        const previousStepIndex = stepIndex - 1;
-        if (previousStepIndex >= 0) {
-          updatedItem.manufacturing_steps[previousStepIndex].completed_quantity -= qcFailed;
-        }
-      }
+      updatedItem.child_tickets.push(...newChildTickets);
     }
 
     // Update overall status and current step
@@ -174,29 +223,23 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
     
     toast({
       title: 'Production Updated',
-      description: `Step ${selectedStep} updated successfully${qcFailed > 0 ? '. Child ticket created for QC failures.' : ''}`,
+      description: `All steps updated successfully${newChildTickets.length > 0 ? `. ${newChildTickets.length} child ticket(s) created for QC failures.` : ''}`,
     });
-  };
-
-  const canWorkOnStep = (stepNumber: number) => {
-    if (stepNumber === 1) return true;
-    const previousStep = item.manufacturing_steps[stepNumber - 2];
-    return previousStep && previousStep.status === 'Completed';
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Package className="h-4 w-4" />
-            Update: {item.product_code}
+            Update Production: {item.product_code}
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           {/* Compact Product Info */}
-          <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded text-sm">
+          <div className="grid grid-cols-4 gap-3 p-3 bg-muted/50 rounded text-sm">
             <div>
               <span className="font-medium">Product:</span> {item.category} • {item.subcategory}
             </div>
@@ -206,154 +249,134 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
             <div>
               <span className="font-medium">Required:</span> {item.quantity_required}
             </div>
+            <div>
+              <span className="font-medium">Priority:</span>
+              <Badge className="ml-1" variant="outline">{item.priority}</Badge>
+            </div>
           </div>
 
-          {/* Worker and Step Selection */}
+          {/* Worker Assignment */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-sm">Worker</Label>
+              <Label className="text-sm">Assigned Worker</Label>
               <Input
-                value={assignedWorker || item.assigned_worker || ''}
+                value={assignedWorker}
                 onChange={(e) => setAssignedWorker(e.target.value)}
                 placeholder="Assign worker"
                 className="h-8"
               />
             </div>
-            <div>
-              <Label className="text-sm">Step</Label>
-              <Select value={selectedStep.toString()} onValueChange={handleStepChange}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {item.manufacturing_steps.map((step) => (
-                    <SelectItem 
-                      key={step.step} 
-                      value={step.step.toString()}
-                      disabled={!canWorkOnStep(step.step)}
-                    >
-                      Step {step.step}: {step.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          {/* Current Step Details */}
-          {currentStepData && (
-            <div className="border rounded p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm">Step {selectedStep}: {currentStepData.name}</h4>
-                <Badge variant="outline" className="text-xs">
-                  {currentStepData.status}
-                </Badge>
-              </div>
+          <Separator />
 
-              {/* Compact Form Grid */}
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div>
-                  <Label className="text-xs">Available</Label>
-                  <div className="font-medium text-blue-600">{maxCompletableQuantity}</div>
-                </div>
-                <div>
-                  <Label className="text-xs">Current</Label>
-                  <div className="font-medium">{currentStepData.completed_quantity}</div>
-                </div>
-                <div>
-                  <Label className="text-xs">Completed</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={maxCompletableQuantity}
-                    value={completedQuantity}
-                    onChange={(e) => setCompletedQuantity(parseInt(e.target.value) || 0)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Weight Tracking */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs flex items-center gap-1">
-                    <Scale className="h-3 w-3" />
-                    Assigned Weight (kg)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={assignedWeight}
-                    onChange={(e) => setAssignedWeight(parseFloat(e.target.value) || 0)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs flex items-center gap-1">
-                    <Scale className="h-3 w-3" />
-                    Received Weight (kg)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={receivedWeight}
-                    onChange={(e) => setReceivedWeight(parseFloat(e.target.value) || 0)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* QC Section */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3 text-green-600" />
-                    QC Passed
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={completedQuantity}
-                    value={qcPassed}
-                    onChange={(e) => setQcPassed(parseInt(e.target.value) || 0)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-red-600" />
-                    QC Failed
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={completedQuantity}
-                    value={qcFailed}
-                    onChange={(e) => setQcFailed(parseInt(e.target.value) || 0)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-              </div>
-
-              {qcFailed > 0 && (
-                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-                  <div className="flex items-center gap-1 text-amber-800">
-                    <Ticket className="h-3 w-3" />
-                    Child ticket will be created for {qcFailed} failed items
-                  </div>
-                </div>
-              )}
+          {/* Manufacturing Steps Table */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Manufacturing Steps Progress
+            </h4>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-16">Step</TableHead>
+                    <TableHead className="min-w-32">Step Name</TableHead>
+                    <TableHead className="w-20">Status</TableHead>
+                    <TableHead className="w-16">Max</TableHead>
+                    <TableHead className="w-20">Completed</TableHead>
+                    <TableHead className="w-24">Assigned Wt</TableHead>
+                    <TableHead className="w-24">Received Wt</TableHead>
+                    <TableHead className="w-20">QC Pass</TableHead>
+                    <TableHead className="w-20">QC Fail</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {item.manufacturing_steps.map((step) => {
+                    const currentData = stepData[step.step] || {
+                      completed_quantity: step.completed_quantity || 0,
+                      assigned_weight: step.assigned_weight || 0,
+                      received_weight: step.received_weight || 0,
+                      qc_passed: step.qc_passed || 0,
+                      qc_failed: step.qc_failed || 0,
+                    };
+                    const maxCompletable = getMaxCompletableQuantity(step.step);
+                    
+                    return (
+                      <TableRow key={step.step} className="text-sm">
+                        <TableCell className="font-medium">{step.step}</TableCell>
+                        <TableCell>{step.name}</TableCell>
+                        <TableCell>
+                          <Badge className={getStepStatusColor(step.status)} variant="outline">
+                            {step.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-blue-600 font-medium">{maxCompletable}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={maxCompletable}
+                            value={currentData.completed_quantity}
+                            onChange={(e) => updateStepField(step.step, 'completed_quantity', parseInt(e.target.value) || 0)}
+                            className="h-7 w-16 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={currentData.assigned_weight}
+                            onChange={(e) => updateStepField(step.step, 'assigned_weight', parseFloat(e.target.value) || 0)}
+                            className="h-7 w-20 text-xs"
+                            placeholder="kg"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={currentData.received_weight}
+                            onChange={(e) => updateStepField(step.step, 'received_weight', parseFloat(e.target.value) || 0)}
+                            className="h-7 w-20 text-xs"
+                            placeholder="kg"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={currentData.completed_quantity}
+                            value={currentData.qc_passed}
+                            onChange={(e) => updateStepField(step.step, 'qc_passed', parseInt(e.target.value) || 0)}
+                            className="h-7 w-16 text-xs"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={currentData.completed_quantity}
+                            value={currentData.qc_failed}
+                            onChange={(e) => updateStepField(step.step, 'qc_failed', parseInt(e.target.value) || 0)}
+                            className="h-7 w-16 text-xs"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-          )}
+          </div>
 
           {/* Child Tickets Display */}
           {item.child_tickets && item.child_tickets.length > 0 && (
             <div className="border rounded p-3">
               <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
                 <Ticket className="h-3 w-3" />
-                Child Tickets ({item.child_tickets.length})
+                Existing Child Tickets ({item.child_tickets.length})
               </h4>
               <div className="space-y-1">
                 {item.child_tickets.map((ticket) => (
@@ -375,7 +398,7 @@ const UpdateProductionItemDialog = ({ item, open, onOpenChange, onUpdate }: Upda
               Cancel
             </Button>
             <Button size="sm" onClick={handleUpdate}>
-              Update
+              Update All Steps
             </Button>
           </div>
         </div>
