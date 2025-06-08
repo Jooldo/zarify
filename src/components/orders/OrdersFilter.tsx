@@ -1,12 +1,14 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter } from 'lucide-react';
+import { Filter, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import FilterDialog from '@/components/ui/filter-dialog';
 import ActiveFiltersBar from '@/components/ui/active-filters-bar';
 
@@ -31,12 +33,16 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
     hasDeliveryDate: false,
     overdueDelivery: false,
     lowStock: false,
-    stockAvailable: false
+    stockAvailable: false,
+    expectedDeliveryFrom: null as Date | null,
+    expectedDeliveryTo: null as Date | null,
+    expectedDeliveryRange: ''
   });
 
   const orderStatusOptions = ['Created', 'In Progress', 'Ready', 'Delivered'];
   const suborderStatusOptions = ['Created', 'In Progress', 'Ready', 'Delivered'];
   const dateRangeOptions = ['Today', 'Last 7 days', 'Last 30 days', 'Last 90 days'];
+  const deliveryRangeOptions = ['Today', 'Next 7 days', 'Next 30 days', 'Past due'];
 
   const getActiveFilters = () => {
     const activeFilters = [];
@@ -52,6 +58,9 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
     if (filters.overdueDelivery) activeFilters.push({ key: 'overdueDelivery', label: 'Overdue Delivery', value: 'Yes' });
     if (filters.lowStock) activeFilters.push({ key: 'lowStock', label: 'Low Stock Items', value: 'Yes' });
     if (filters.stockAvailable) activeFilters.push({ key: 'stockAvailable', label: 'Stock Available', value: 'Yes' });
+    if (filters.expectedDeliveryRange) activeFilters.push({ key: 'expectedDeliveryRange', label: 'Expected Delivery', value: filters.expectedDeliveryRange });
+    if (filters.expectedDeliveryFrom) activeFilters.push({ key: 'expectedDeliveryFrom', label: 'Delivery From', value: format(filters.expectedDeliveryFrom, 'MMM dd, yyyy') });
+    if (filters.expectedDeliveryTo) activeFilters.push({ key: 'expectedDeliveryTo', label: 'Delivery To', value: format(filters.expectedDeliveryTo, 'MMM dd, yyyy') });
     return activeFilters;
   };
 
@@ -75,7 +84,10 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
       hasDeliveryDate: false,
       overdueDelivery: false,
       lowStock: false,
-      stockAvailable: false
+      stockAvailable: false,
+      expectedDeliveryFrom: null as Date | null,
+      expectedDeliveryTo: null as Date | null,
+      expectedDeliveryRange: ''
     };
     setFilters(clearedFilters);
     onFiltersChange(clearedFilters);
@@ -85,6 +97,8 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
     const newFilters = { ...filters };
     if (key === 'hasDeliveryDate' || key === 'overdueDelivery' || key === 'lowStock' || key === 'stockAvailable') {
       newFilters[key] = false;
+    } else if (key === 'expectedDeliveryFrom' || key === 'expectedDeliveryTo') {
+      newFilters[key] = null;
     } else {
       newFilters[key] = '';
     }
@@ -229,6 +243,59 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
                 value={filters.maxAmount}
                 onChange={(e) => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Expected Delivery Range</Label>
+            <Select value={filters.expectedDeliveryRange} onValueChange={(value) => setFilters(prev => ({ ...prev, expectedDeliveryRange: value === 'all' ? '' : value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="All delivery dates" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Delivery Dates</SelectItem>
+                {deliveryRangeOptions.map((range) => (
+                  <SelectItem key={range} value={range}>{range}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label>Custom Expected Delivery Range</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {filters.expectedDeliveryFrom ? format(filters.expectedDeliveryFrom, 'MMM dd, yyyy') : 'From date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={filters.expectedDeliveryFrom || undefined}
+                    onSelect={(date) => setFilters(prev => ({ ...prev, expectedDeliveryFrom: date || null }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {filters.expectedDeliveryTo ? format(filters.expectedDeliveryTo, 'MMM dd, yyyy') : 'To date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={filters.expectedDeliveryTo || undefined}
+                    onSelect={(date) => setFilters(prev => ({ ...prev, expectedDeliveryTo: date || null }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>

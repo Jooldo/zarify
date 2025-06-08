@@ -4,7 +4,7 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
-import OrdersStatsHeader from './orders/OrdersStatsHeader';
+import OrdersStatsHeader from './OrdersStatsHeader';
 
 interface OrderFilters {
   customer: string;
@@ -19,6 +19,9 @@ interface OrderFilters {
   overdueDelivery: boolean;
   lowStock: boolean;
   stockAvailable: boolean;
+  expectedDeliveryFrom: Date | null;
+  expectedDeliveryTo: Date | null;
+  expectedDeliveryRange: string;
 }
 
 const OrdersTab = () => {
@@ -38,7 +41,10 @@ const OrdersTab = () => {
     hasDeliveryDate: false,
     overdueDelivery: false,
     lowStock: false,
-    stockAvailable: false
+    stockAvailable: false,
+    expectedDeliveryFrom: null,
+    expectedDeliveryTo: null,
+    expectedDeliveryRange: ''
   });
 
   // Calculate order stats
@@ -183,6 +189,54 @@ const OrdersTab = () => {
     // Amount range filter
     if (filters.minAmount && item.totalOrderAmount < parseFloat(filters.minAmount)) return false;
     if (filters.maxAmount && item.totalOrderAmount > parseFloat(filters.maxAmount)) return false;
+
+    // Expected delivery date filters
+    if (filters.expectedDeliveryRange) {
+      if (!item.expectedDelivery) return false;
+      
+      const deliveryDate = new Date(item.expectedDelivery);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      deliveryDate.setHours(0, 0, 0, 0);
+      
+      const daysDiff = Math.floor((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      switch (filters.expectedDeliveryRange) {
+        case 'Today':
+          if (daysDiff !== 0) return false;
+          break;
+        case 'Next 7 days':
+          if (daysDiff < 0 || daysDiff > 7) return false;
+          break;
+        case 'Next 30 days':
+          if (daysDiff < 0 || daysDiff > 30) return false;
+          break;
+        case 'Past due':
+          if (daysDiff >= 0) return false;
+          break;
+      }
+    }
+
+    // Custom expected delivery date range
+    if (filters.expectedDeliveryFrom || filters.expectedDeliveryTo) {
+      if (!item.expectedDelivery) return false;
+      
+      const deliveryDate = new Date(item.expectedDelivery);
+      
+      if (filters.expectedDeliveryFrom) {
+        const fromDate = new Date(filters.expectedDeliveryFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        deliveryDate.setHours(0, 0, 0, 0);
+        if (deliveryDate < fromDate) return false;
+      }
+      
+      if (filters.expectedDeliveryTo) {
+        const toDate = new Date(filters.expectedDeliveryTo);
+        toDate.setHours(23, 59, 59, 999);
+        deliveryDate.setHours(0, 0, 0, 0);
+        if (deliveryDate > toDate) return false;
+      }
+    }
 
     // Quick filters
     if (filters.hasDeliveryDate && !item.expectedDelivery) return false;
