@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -70,27 +69,28 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsFilterOpen(true)}
-        className="h-8 px-3"
-      >
-        <Filter className="h-4 w-4 mr-1" />
-        Filter
-        {activeFilters.length > 0 && (
-          <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-xs">
-            {activeFilters.length}
-          </Badge>
-        )}
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsFilterOpen(true)}
+          className="h-8 px-3"
+        >
+          <Filter className="h-4 w-4 mr-1" />
+          Filter
+          {activeFilters.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-xs">
+              {activeFilters.length}
+            </Badge>
+          )}
+        </Button>
 
-      <ActiveFiltersBar
-        filters={activeFilters}
-        onRemoveFilter={handleRemoveFilter}
-        onClearAll={handleClearFilters}
-        totalResults={0}
-      />
+        <ActiveFiltersBar
+          filters={activeFilters}
+          onRemoveFilter={handleRemoveFilter}
+          onClearAll={handleClearFilters}
+        />
+      </div>
 
       <FilterDialog
         isOpen={isFilterOpen}

@@ -14,7 +14,7 @@ interface ActiveFiltersBarProps {
   filters: ActiveFilter[];
   onRemoveFilter: (key: string) => void;
   onClearAll: () => void;
-  totalResults: number;
+  totalResults?: number;
 }
 
 const ActiveFiltersBar = ({ filters, onRemoveFilter, onClearAll, totalResults }: ActiveFiltersBarProps) => {
@@ -41,7 +41,9 @@ const ActiveFiltersBar = ({ filters, onRemoveFilter, onClearAll, totalResults }:
           Clear All
         </Button>
       </div>
-      <span className="text-sm text-gray-600">{totalResults} results</span>
+      {totalResults !== undefined && (
+        <span className="text-sm text-gray-600">{totalResults} results</span>
+      )}
     </div>
   );
 };
