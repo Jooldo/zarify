@@ -63,7 +63,7 @@ const Index = () => {
   };
 
   const isUsersTab = () => {
-    const userTabs = ['customers', 'suppliers', 'workers'];
+    const userTabs = ['users', 'customers', 'suppliers', 'workers'];
     const isUserTab = userTabs.includes(activeTab);
     console.log('Checking if user tab:', activeTab, 'Result:', isUserTab);
     return isUserTab;
@@ -116,7 +116,7 @@ const Index = () => {
           {isUsersTab() && (
             <div className="px-4 sm:px-6 lg:px-8">
               <UsersTab 
-                activeTab={activeTab} 
+                activeTab={activeTab === 'users' ? 'customers' : activeTab} 
                 onTabChange={handleNavigateToTab} 
               />
             </div>
