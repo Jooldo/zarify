@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -337,19 +336,20 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent className="w-[300px] p-0">
                             <Command>
-                              <CommandInput placeholder="Search materials..." />
+                              <CommandInput placeholder="Search materials..." className="h-9" />
                               <CommandList>
                                 <CommandEmpty>No materials found.</CommandEmpty>
                                 <CommandGroup>
                                   {rawMaterials.map((material) => (
                                     <CommandItem
                                       key={material.id}
-                                      value={`${material.name} ${material.type}`}
-                                      onSelect={() => {
+                                      value={material.id}
+                                      onSelect={(currentValue) => {
+                                        console.log('Selected material:', material.name, 'ID:', material.id);
                                         updateItem(item.id, 'rawMaterialId', material.id);
-                                        updateItem(item.id, 'supplierId', '');
+                                        updateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
                                         toggleCombobox(item.id, false);
                                       }}
                                     >
@@ -359,7 +359,10 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                                           item.rawMaterialId === material.id ? "opacity-100" : "opacity-0"
                                         )}
                                       />
-                                      {material.name} ({material.type})
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{material.name}</span>
+                                        <span className="text-sm text-gray-500">({material.type})</span>
+                                      </div>
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
