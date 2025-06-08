@@ -21,14 +21,28 @@ export const useMaterialTypes = () => {
   const fetchMaterialTypes = async () => {
     try {
       setLoading(true);
+      
+      // Get the current user's merchant_id first
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        throw merchantError;
+      }
+
+      console.log('Fetching material types for merchant:', merchantId);
+
       const { data, error } = await supabase
         .from('material_types')
         .select('*')
+        .eq('merchant_id', merchantId)
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
 
+      console.log('Fetched material types:', data);
       setMaterialTypes(data || []);
     } catch (error) {
       console.error('Error fetching material types:', error);
@@ -52,6 +66,8 @@ export const useMaterialTypes = () => {
         throw new Error('Unable to get merchant ID');
       }
 
+      console.log('Creating material type:', { name, merchantId });
+
       const { data, error } = await supabase
         .from('material_types')
         .insert([{ 
@@ -63,6 +79,8 @@ export const useMaterialTypes = () => {
         .single();
 
       if (error) throw error;
+
+      console.log('Material type created:', data);
 
       toast({
         title: 'Success',

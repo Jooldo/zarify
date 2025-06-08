@@ -4,9 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { CreateRawMaterialData } from '@/hooks/useRawMaterials';
-import MaterialTypeSelector from './MaterialTypeSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -162,13 +162,13 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
             </div>
             
             <div>
-              <MaterialTypeSelector
+              <Label htmlFor="materialType" className="text-sm font-medium">Material Type *</Label>
+              <Input 
+                id="materialType" 
+                placeholder="Enter material type" 
                 value={formData.type}
-                onValueChange={(value) => {
-                  console.log('Material type selected:', value);
-                  handleInputChange('type', value);
-                }}
-                placeholder="Select or add material type"
+                onChange={(e) => handleInputChange('type', e.target.value)}
+                className="h-10 text-sm mt-2"
                 required
               />
             </div>
@@ -176,19 +176,18 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
 
           <div>
             <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
-            <select
-              value={formData.unit}
-              onChange={(e) => handleInputChange('unit', e.target.value)}
-              className="w-full h-10 px-3 mt-2 text-sm border border-gray-300 rounded-md"
-              required
-            >
-              <option value="">Select unit</option>
-              {availableUnits.map((unit) => (
-                <option key={unit.value} value={unit.value}>
-                  {unit.label}
-                </option>
-              ))}
-            </select>
+            <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
+              <SelectTrigger className="w-full h-10 text-sm mt-2">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-gray-500 mt-1">Use grams for weight-based materials</p>
           </div>
 
