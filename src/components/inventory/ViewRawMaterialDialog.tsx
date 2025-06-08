@@ -49,7 +49,7 @@ const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMateri
             </div>
             <div>
               <Label className="font-medium">Required:</Label>
-              <div className="text-lg">{material.required} {material.unit}</div>
+              <div className="text-lg">{material.required_quantity} {material.unit}</div>
             </div>
             <div>
               <Label className="font-medium">In Procurement:</Label>

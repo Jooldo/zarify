@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,10 @@ export interface RawMaterial {
   supplier?: {
     company_name: string;
   };
+  // Add computed properties
+  shortfall?: number;
+  required?: number;
+  description?: string;
 }
 
 export interface CreateRawMaterialData {
@@ -69,7 +74,16 @@ export const useRawMaterials = () => {
       if (error) throw error;
 
       console.log('Fetched raw materials:', data);
-      setRawMaterials(data || []);
+      
+      // Transform the data to match our interface and add computed properties
+      const transformedData: RawMaterial[] = (data || []).map(material => ({
+        ...material,
+        required_quantity: material.required || 0,
+        shortfall: Math.max(0, (material.required || 0) - (material.current_stock + material.in_procurement)),
+        required: material.required || 0,
+      }));
+
+      setRawMaterials(transformedData);
     } catch (error) {
       console.error('Error fetching raw materials:', error);
       toast({
@@ -99,7 +113,7 @@ export const useRawMaterials = () => {
         .insert([{ 
           ...data, 
           merchant_id: merchantId,
-          required_quantity: 0,
+          required: 0,
           in_procurement: 0,
           last_updated: new Date().toISOString()
         }])
