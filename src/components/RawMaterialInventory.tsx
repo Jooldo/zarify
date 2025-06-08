@@ -37,7 +37,9 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
       return shortfall === 0 && material.current_stock > material.minimum_stock;
     }).length;
 
-    return { critical, low, good };
+    const total = rawMaterials.length;
+
+    return { total, critical, low, good };
   }, [rawMaterials]);
 
   const handleRequestCreated = () => {
