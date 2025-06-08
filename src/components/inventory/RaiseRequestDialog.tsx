@@ -47,6 +47,12 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
   const isProcurementMode = mode === 'procurement';
   const selectedMaterial = selectedMaterialId ? rawMaterials.find(m => m.id === selectedMaterialId) : material;
 
+  console.log('RaiseRequestDialog render:');
+  console.log('- material prop:', material);
+  console.log('- selectedMaterialId:', selectedMaterialId);
+  console.log('- selectedMaterial:', selectedMaterial);
+  console.log('- rawMaterials count:', rawMaterials.length);
+
   const getDialogTitle = () => {
     if (isInventoryMode) {
       return 'Quick Stock Alert Request';
@@ -259,7 +265,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
             <div>
               <Label>Material</Label>
               <Input 
-                value={`${selectedMaterial.name} (${selectedMaterial.type})`} 
+                value={selectedMaterial ? `${selectedMaterial.name} (${selectedMaterial.type})` : ''} 
                 disabled 
                 className="bg-gray-50"
               />
