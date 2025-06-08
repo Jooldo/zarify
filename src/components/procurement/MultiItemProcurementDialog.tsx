@@ -6,8 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
@@ -38,6 +41,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   const [loading, setLoading] = useState(false);
   const [globalDeliveryDate, setGlobalDeliveryDate] = useState('');
   const [useGlobalDeliveryDate, setUseGlobalDeliveryDate] = useState(true);
+  const [openComboboxes, setOpenComboboxes] = useState<Record<string, boolean>>({});
   
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
@@ -95,6 +99,13 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
       parseInt(item.quantity) > 0 && 
       item.supplierId
     );
+  };
+
+  const toggleCombobox = (itemId: string, isOpen: boolean) => {
+    setOpenComboboxes(prev => ({
+      ...prev,
+      [itemId]: isOpen
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,12 +240,6 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
     }
   };
 
-  // Debug logs
-  console.log('Raw materials loading:', rawMaterialsLoading);
-  console.log('Raw materials count:', rawMaterials.length);
-  console.log('Suppliers loading:', suppliersLoading);
-  console.log('Suppliers count:', suppliers.length);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -289,6 +294,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
 
             {items.map((item, index) => {
               const filteredSuppliers = getFilteredSuppliersForMaterial(item.rawMaterialId);
+              const selectedMaterial = getRawMaterialById(item.rawMaterialId);
               
               return (
                 <div key={item.id} className="p-4 border rounded-lg space-y-4">
@@ -308,32 +314,59 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Raw Material Selection */}
+                    {/* Raw Material Selection with Combobox */}
                     <div>
                       <Label>Raw Material *</Label>
                       {rawMaterialsLoading ? (
                         <div className="text-sm text-gray-500">Loading materials...</div>
                       ) : (
-                        <Select 
-                          value={item.rawMaterialId}
-                          onValueChange={(value) => {
-                            console.log('Material selected:', value);
-                            updateItem(item.id, 'rawMaterialId', value);
-                            // Reset supplier when material changes
-                            updateItem(item.id, 'supplierId', '');
-                          }}
+                        <Popover 
+                          open={openComboboxes[item.id] || false} 
+                          onOpenChange={(open) => toggleCombobox(item.id, open)}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rawMaterials.map((material) => (
-                              <SelectItem key={material.id} value={material.id}>
-                                {material.name} ({material.type})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={openComboboxes[item.id] || false}
+                              className="w-full justify-between"
+                            >
+                              {selectedMaterial
+                                ? `${selectedMaterial.name} (${selectedMaterial.type})`
+                                : "Select material..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search materials..." />
+                              <CommandList>
+                                <CommandEmpty>No materials found.</CommandEmpty>
+                                <CommandGroup>
+                                  {rawMaterials.map((material) => (
+                                    <CommandItem
+                                      key={material.id}
+                                      value={`${material.name} ${material.type}`}
+                                      onSelect={() => {
+                                        updateItem(item.id, 'rawMaterialId', material.id);
+                                        updateItem(item.id, 'supplierId', '');
+                                        toggleCombobox(item.id, false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          item.rawMaterialId === material.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {material.name} ({material.type})
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       )}
                     </div>
 
@@ -349,9 +382,9 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                           min="1"
                           className="flex-1"
                         />
-                        {item.rawMaterialId && (
+                        {selectedMaterial && (
                           <Input
-                            value={getRawMaterialById(item.rawMaterialId)?.unit || ''}
+                            value={selectedMaterial.unit}
                             disabled
                             className="w-20 bg-gray-50"
                           />
