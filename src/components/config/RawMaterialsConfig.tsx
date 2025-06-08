@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -280,7 +281,6 @@ const RawMaterialsConfig = () => {
                   <TableHead className="text-foreground">Material</TableHead>
                   <TableHead className="text-foreground">Type</TableHead>
                   <TableHead className="text-foreground">Unit</TableHead>
-                  <TableHead className="text-foreground">Current Stock</TableHead>
                   <TableHead className="text-foreground">Min Stock</TableHead>
                   <TableHead className="text-foreground">Actions</TableHead>
                 </TableRow>
@@ -299,7 +299,6 @@ const RawMaterialsConfig = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-foreground">{material.unit || '-'}</TableCell>
-                    <TableCell className="text-foreground">{material.current_stock || 0}</TableCell>
                     <TableCell className="text-foreground">{material.minimum_stock || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -323,7 +322,7 @@ const RawMaterialsConfig = () => {
                 ))}
                 {filteredMaterials.length === 0 && (
                   <TableRow className="border-border">
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? 'No materials found matching your search.' : 'No materials configured yet.'}
                     </TableCell>
                   </TableRow>
