@@ -4,7 +4,7 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
-import OrdersStatsHeader from './OrdersStatsHeader';
+import OrdersStatsHeader from './orders/OrdersStatsHeader';
 
 interface OrderFilters {
   customer: string;
