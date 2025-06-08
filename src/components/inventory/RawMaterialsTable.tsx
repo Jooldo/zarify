@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit } from 'lucide-react';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
