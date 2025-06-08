@@ -38,8 +38,12 @@ const Index = () => {
         return "Finished Goods Configuration";
       case "fg-procurement":
         return "Finished Goods Procurement";
-      case "users":
-        return "Users";
+      case "customers":
+        return "Customers";
+      case "suppliers":
+        return "Suppliers";
+      case "workers":
+        return "Workers";
       case "activity":
         return "Activity Logs";
       default:
@@ -53,6 +57,10 @@ const Index = () => {
 
   const isFinishedGoodTab = () => {
     return ['fg-inventory', 'fg-config', 'fg-procurement'].includes(activeTab);
+  };
+
+  const isUsersTab = () => {
+    return ['customers', 'suppliers', 'workers'].includes(activeTab);
   };
 
   const pageTitle = getPageTitle();
@@ -91,8 +99,22 @@ const Index = () => {
             </Tabs>
           )}
 
+          {/* Users Management - Full width with its own layout */}
+          {isUsersTab() && (
+            <Tabs value={activeTab} className="w-full">
+              <TabsContent value={activeTab} className="space-y-0 mt-0">
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <UsersTab 
+                    activeTab={activeTab} 
+                    onTabChange={handleNavigateToTab} 
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
           {/* Other tabs with standard layout */}
-          {!isRawMaterialTab() && !isFinishedGoodTab() && (
+          {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {/* Header - only show if there's a title */}
               {pageTitle && (
@@ -111,10 +133,6 @@ const Index = () => {
 
                 <TabsContent value="orders" className="space-y-6 mt-0">
                   <OrdersTab />
-                </TabsContent>
-
-                <TabsContent value="users" className="space-y-6 mt-0">
-                  <UsersTab />
                 </TabsContent>
 
                 <TabsContent value="activity" className="space-y-6 mt-0">

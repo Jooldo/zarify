@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -14,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
+import { Building2, Edit, Trash2, Phone, Mail, MapPin, Search, Plus } from 'lucide-react';
 import SupplierHeader from '@/components/procurement/headers/SupplierHeader';
 
 const SupplierManagement = () => {
@@ -189,8 +188,8 @@ const SupplierManagement = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div>Loading suppliers...</div>
+      <div className="min-h-[400px] flex items-center justify-center bg-card rounded-lg border border-border">
+        <div className="text-muted-foreground">Loading suppliers...</div>
       </div>
     );
   }
@@ -312,130 +311,122 @@ const SupplierManagement = () => {
       />
 
       {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Search Suppliers</CardTitle>
-          <CardDescription>Find suppliers by name, contact person, or email</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search suppliers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
+            className="pl-10 h-8"
           />
-        </CardContent>
-      </Card>
+        </div>
+        <Button onClick={handleAddSupplier} size="sm" className="h-8 text-xs px-3">
+          <Plus className="h-3 w-3 mr-1" />
+          Add Supplier
+        </Button>
+      </div>
 
-      {/* Suppliers Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Suppliers List</CardTitle>
-          <CardDescription>Manage your supplier information and track performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="min-h-[300px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Materials</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Payment Terms</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSuppliers.map((supplier) => (
-                  <TableRow key={supplier.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">{supplier.company_name}</div>
-                        {supplier.contact_person && (
-                          <div className="text-sm text-gray-500">{supplier.contact_person}</div>
-                        )}
+      {/* Compact Suppliers Table */}
+      <div className="border rounded-md overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="h-8">
+              <TableHead className="h-8 px-2 text-xs font-medium">Company</TableHead>
+              <TableHead className="h-8 px-2 text-xs font-medium">Contact</TableHead>
+              <TableHead className="h-8 px-2 text-xs font-medium">Materials</TableHead>
+              <TableHead className="h-8 px-2 text-xs font-medium">WhatsApp</TableHead>
+              <TableHead className="h-8 px-2 text-xs font-medium">Payment</TableHead>
+              <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredSuppliers.map((supplier) => (
+              <TableRow key={supplier.id} className="h-10 hover:bg-gray-50">
+                <TableCell className="px-2 py-1 text-xs">
+                  <div className="space-y-0.5">
+                    <div className="font-medium truncate max-w-24">{supplier.company_name}</div>
+                    {supplier.contact_person && (
+                      <div className="text-xs text-gray-500 truncate max-w-24">{supplier.contact_person}</div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-2 py-1 text-xs">
+                  <div className="space-y-0.5">
+                    {supplier.email && (
+                      <div className="flex items-center gap-1 text-xs truncate max-w-28">
+                        <Mail className="h-2.5 w-2.5 flex-shrink-0" />
+                        <span className="truncate">{supplier.email}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {supplier.email && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Mail className="h-3 w-3" />
-                            {supplier.email}
-                          </div>
-                        )}
-                        {supplier.phone && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Phone className="h-3 w-3" />
-                            {supplier.phone}
-                          </div>
-                        )}
-                        {supplier.address && (
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                            <MapPin className="h-3 w-3" />
-                            {supplier.address.substring(0, 30)}...
-                          </div>
-                        )}
+                    )}
+                    {supplier.phone && (
+                      <div className="flex items-center gap-1 text-xs truncate max-w-28">
+                        <Phone className="h-2.5 w-2.5 flex-shrink-0" />
+                        <span className="truncate">{supplier.phone}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {supplier.materials_supplied?.slice(0, 2).map(materialId => {
-                          const material = rawMaterials.find(m => m.id === materialId);
-                          return material ? (
-                            <Badge key={materialId} variant="secondary" className="text-xs">
-                              {material.name}
-                            </Badge>
-                          ) : null;
-                        })}
-                        {supplier.materials_supplied?.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{supplier.materials_supplied.length - 2} more
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={supplier.whatsapp_enabled ? "default" : "secondary"}>
-                        {supplier.whatsapp_enabled ? "Enabled" : "Disabled"}
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-2 py-1 text-xs">
+                  <div className="flex flex-wrap gap-0.5">
+                    {supplier.materials_supplied?.slice(0, 2).map(materialId => {
+                      const material = rawMaterials.find(m => m.id === materialId);
+                      return material ? (
+                        <Badge key={materialId} variant="secondary" className="text-xs h-4 px-1">
+                          {material.name.substring(0, 8)}...
+                        </Badge>
+                      ) : null;
+                    })}
+                    {supplier.materials_supplied?.length > 2 && (
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        +{supplier.materials_supplied.length - 2}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {supplier.payment_terms || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditSupplier(supplier)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteSupplier(supplier.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredSuppliers.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      {searchTerm ? 'No suppliers found matching your search.' : 'No suppliers added yet.'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-2 py-1">
+                  <Badge 
+                    variant={supplier.whatsapp_enabled ? "default" : "secondary"} 
+                    className="text-xs h-4 px-1"
+                  >
+                    {supplier.whatsapp_enabled ? "Yes" : "No"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="px-2 py-1 text-xs truncate max-w-16">
+                  {supplier.payment_terms || "-"}
+                </TableCell>
+                <TableCell className="px-2 py-1">
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleEditSupplier(supplier)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                      onClick={() => handleDeleteSupplier(supplier.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredSuppliers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-xs text-gray-500">
+                  {searchTerm ? 'No suppliers found matching your search.' : 'No suppliers added yet.'}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Add Supplier Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
