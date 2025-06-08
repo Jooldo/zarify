@@ -25,12 +25,23 @@ const RawMaterialSelector = ({
   isOpen,
   onOpenChange
 }: RawMaterialSelectorProps) => {
+  console.log('RawMaterialSelector: selectedMaterialId =', selectedMaterialId);
+  console.log('RawMaterialSelector: rawMaterials =', rawMaterials);
+  
   const selectedMaterial = rawMaterials.find(material => material.id === selectedMaterialId);
+  console.log('RawMaterialSelector: selectedMaterial =', selectedMaterial);
 
   const handleSelect = (materialId: string) => {
     console.log('RawMaterialSelector: Selecting material with ID:', materialId);
     onMaterialSelect(materialId);
     onOpenChange(false);
+  };
+
+  const getDisplayText = () => {
+    if (selectedMaterial) {
+      return `${selectedMaterial.name} (${selectedMaterial.type})`;
+    }
+    return "Select material...";
   };
 
   return (
@@ -47,9 +58,7 @@ const RawMaterialSelector = ({
               aria-expanded={isOpen}
               className="w-full justify-between"
             >
-              {selectedMaterial
-                ? `${selectedMaterial.name} (${selectedMaterial.type})`
-                : "Select material..."}
+              {getDisplayText()}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>

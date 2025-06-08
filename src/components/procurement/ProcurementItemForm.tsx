@@ -48,8 +48,11 @@ const ProcurementItemForm = ({
   onRemoveItem,
   onToggleCombobox
 }: ProcurementItemFormProps) => {
+  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterialId=${item.rawMaterialId}`);
+  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterials=`, rawMaterials);
+  
   const selectedMaterial = rawMaterials.find(material => material.id === item.rawMaterialId);
-  console.log(`ProcurementItemForm Item ${index + 1}: rawMaterialId=${item.rawMaterialId}, selectedMaterial=`, selectedMaterial);
+  console.log(`ProcurementItemForm Item ${index + 1}: selectedMaterial=`, selectedMaterial);
 
   const getFilteredSuppliersForMaterial = (materialId: string) => {
     if (!materialId) return [];
