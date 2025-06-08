@@ -1,12 +1,13 @@
 
 import { useState } from 'react';
-import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Filter } from 'lucide-react';
+import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Filter, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface ProductionQueueItem {
   id: string;
@@ -22,14 +23,23 @@ interface ProductionQueueItem {
   assigned_worker?: string;
   order_numbers: string[];
   created_date: string;
+  current_step: number;
+  manufacturing_steps: {
+    step: number;
+    name: string;
+    status: 'Pending' | 'In Progress' | 'Completed';
+    completed_quantity: number;
+  }[];
 }
 
 const ProductionQueue = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [selectedItem, setSelectedItem] = useState<ProductionQueueItem | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Mock data - in real app this would come from useProductionQueue hook
+  // Mock data with manufacturing steps
   const queueItems: ProductionQueueItem[] = [
     {
       id: '1',
@@ -44,7 +54,15 @@ const ProductionQueue = () => {
       estimated_completion: '2024-01-15',
       assigned_worker: 'John Doe',
       order_numbers: ['ORD-001', 'ORD-003'],
-      created_date: '2024-01-10'
+      created_date: '2024-01-10',
+      current_step: 3,
+      manufacturing_steps: [
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 50 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 50 },
+        { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 20 },
+        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ]
     },
     {
       id: '2',
@@ -58,7 +76,15 @@ const ProductionQueue = () => {
       status: 'Queued',
       estimated_completion: '2024-01-18',
       order_numbers: ['ORD-002'],
-      created_date: '2024-01-11'
+      created_date: '2024-01-11',
+      current_step: 1,
+      manufacturing_steps: [
+        { step: 1, name: 'Material Preparation', status: 'Pending', completed_quantity: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
+        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
+        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ]
     },
     {
       id: '3',
@@ -73,7 +99,15 @@ const ProductionQueue = () => {
       estimated_completion: '2024-01-12',
       assigned_worker: 'Jane Smith',
       order_numbers: ['ORD-004'],
-      created_date: '2024-01-08'
+      created_date: '2024-01-08',
+      current_step: 5,
+      manufacturing_steps: [
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 25 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 25 },
+        { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 25 },
+        { step: 4, name: 'Finishing', status: 'Completed', completed_quantity: 25 },
+        { step: 5, name: 'Quality Control', status: 'Completed', completed_quantity: 25 }
+      ]
     },
     {
       id: '4',
@@ -87,7 +121,15 @@ const ProductionQueue = () => {
       status: 'On Hold',
       estimated_completion: '2024-01-20',
       order_numbers: ['ORD-005'],
-      created_date: '2024-01-12'
+      created_date: '2024-01-12',
+      current_step: 2,
+      manufacturing_steps: [
+        { step: 1, name: 'Material Preparation', status: 'Completed', completed_quantity: 15 },
+        { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 5 },
+        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
+        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ]
     }
   ];
 
@@ -132,6 +174,27 @@ const ProductionQueue = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStepStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleViewItem = (item: ProductionQueueItem) => {
+    setSelectedItem(item);
+  };
+
+  const handleAddToQueue = () => {
+    setShowAddDialog(true);
   };
 
   const filteredItems = queueItems.filter(item => {
@@ -213,8 +276,8 @@ const ProductionQueue = () => {
               <Package className="h-5 w-5" />
               Production Queue
             </CardTitle>
-            <Button>
-              <Package className="h-4 w-4 mr-2" />
+            <Button onClick={handleAddToQueue}>
+              <Plus className="h-4 w-4 mr-2" />
               Add to Queue
             </Button>
           </div>
@@ -265,6 +328,7 @@ const ProductionQueue = () => {
                 <TableRow>
                   <TableHead>Product Details</TableHead>
                   <TableHead>Quantity</TableHead>
+                  <TableHead>Manufacturing Steps</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned Worker</TableHead>
@@ -295,6 +359,23 @@ const ProductionQueue = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="space-y-1">
+                        {item.manufacturing_steps.map((step) => (
+                          <div key={step.step} className="flex items-center gap-2">
+                            <Badge 
+                              className={`${getStepStatusColor(step.status)} text-xs`}
+                              variant="outline"
+                            >
+                              Step {step.step}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {step.completed_quantity}/{item.quantity_required}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge className={getPriorityColor(item.priority)}>
                         {item.priority}
                       </Badge>
@@ -322,7 +403,11 @@ const ProductionQueue = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewItem(item)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         {item.status === 'Queued' && (
@@ -350,6 +435,73 @@ const ProductionQueue = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* View Item Dialog */}
+      <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Production Item Details</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Product Information</h4>
+                  <div className="space-y-1 text-sm">
+                    <p><strong>Product Code:</strong> {selectedItem.product_code}</p>
+                    <p><strong>Category:</strong> {selectedItem.category}</p>
+                    <p><strong>Subcategory:</strong> {selectedItem.subcategory}</p>
+                    <p><strong>Size:</strong> {selectedItem.size}</p>
+                    <p><strong>Priority:</strong> {selectedItem.priority}</p>
+                    <p><strong>Status:</strong> {selectedItem.status}</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Production Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <p><strong>Quantity Required:</strong> {selectedItem.quantity_required}</p>
+                    <p><strong>Quantity in Progress:</strong> {selectedItem.quantity_in_progress}</p>
+                    <p><strong>Assigned Worker:</strong> {selectedItem.assigned_worker || 'Unassigned'}</p>
+                    <p><strong>Est. Completion:</strong> {selectedItem.estimated_completion}</p>
+                    <p><strong>Created Date:</strong> {selectedItem.created_date}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-3">Manufacturing Steps Progress</h4>
+                <div className="space-y-3">
+                  {selectedItem.manufacturing_steps.map((step) => (
+                    <div key={step.step} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge className={getStepStatusColor(step.status)}>
+                          Step {step.step}
+                        </Badge>
+                        <span className="font-medium">{step.name}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {step.completed_quantity}/{selectedItem.quantity_required} completed
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Queue Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Item to Production Queue</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 text-center text-muted-foreground">
+            Add to Queue functionality would be implemented here with a form to select products and quantities.
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
