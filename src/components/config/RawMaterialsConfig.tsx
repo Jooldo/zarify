@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -15,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import ConfigHeader from '@/components/procurement/headers/ConfigHeader';
+import MaterialTypeSelector from '@/components/inventory/MaterialTypeSelector';
 
 const RawMaterialsConfig = () => {
   const { rawMaterials, loading, refetch } = useRawMaterials();
@@ -191,26 +191,12 @@ const RawMaterialsConfig = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label>Material Type *</Label>
-          <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select or enter type" />
-            </SelectTrigger>
-            <SelectContent>
-              {uniqueTypes.map(type => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!uniqueTypes.includes(formData.type) && formData.type && (
-            <Input
-              value={formData.type}
-              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-              placeholder="Enter custom material type"
-            />
-          )}
+          <MaterialTypeSelector
+            value={formData.type}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+            placeholder="Select or create material type"
+            required
+          />
         </div>
       </div>
 
@@ -253,13 +239,14 @@ const RawMaterialsConfig = () => {
 
   return (
     <div className="space-y-6">
+      
       <ConfigHeader 
         materialCount={rawMaterials.length}
         typeCount={uniqueTypes.length}
         supplierCount={suppliers.length}
       />
 
-      {/* Search and Add Card */}
+      
       <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -283,7 +270,7 @@ const RawMaterialsConfig = () => {
         </CardContent>
       </Card>
 
-      {/* Materials Table Card */}
+      
       <Card className="bg-card border-border">
         <CardContent className="p-0">
           <div className="min-h-[400px]">
