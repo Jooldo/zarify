@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertCircle, ShoppingCart, Trash2, FileText } from 'lucide-react';
+import { Eye, ShoppingCart, Trash2, FileText, AlertCircle } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -10,7 +10,6 @@ interface ProcurementRequestsTableProps {
   onViewRequest: (request: ProcurementRequest) => void;
   onDeleteRequest: (request: ProcurementRequest) => void;
   onGenerateBOM: (request: ProcurementRequest) => void;
-  onRaiseRequest?: () => void;
   onRaiseMultiItemRequest?: () => void;
 }
 
@@ -19,7 +18,6 @@ const ProcurementRequestsTable = ({
   onViewRequest,
   onDeleteRequest,
   onGenerateBOM,
-  onRaiseRequest, 
   onRaiseMultiItemRequest 
 }: ProcurementRequestsTableProps) => {
   const getStatusVariant = (status: string) => {
@@ -120,20 +118,12 @@ const ProcurementRequestsTable = ({
 
   return (
     <div className="space-y-4">
-      {(onRaiseRequest || onRaiseMultiItemRequest) && (
-        <div className="flex justify-end gap-2">
-          {onRaiseMultiItemRequest && (
-            <Button onClick={onRaiseMultiItemRequest} className="flex items-center gap-2" variant="outline">
-              <ShoppingCart className="h-4 w-4" />
-              Multi-Item Request
-            </Button>
-          )}
-          {onRaiseRequest && (
-            <Button onClick={onRaiseRequest} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Single Item Request
-            </Button>
-          )}
+      {onRaiseMultiItemRequest && (
+        <div className="flex justify-end">
+          <Button onClick={onRaiseMultiItemRequest} className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Raise Procurement Request
+          </Button>
         </div>
       )}
       
