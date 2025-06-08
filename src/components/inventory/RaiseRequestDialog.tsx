@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,14 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
-
-interface Supplier {
-  id: string;
-  company_name: string;
-  contact_person: string;
-  materials_supplied?: string[];
-}
 
 interface RaiseRequestDialogProps {
   isOpen: boolean;
@@ -27,27 +22,18 @@ interface RaiseRequestDialogProps {
   mode: 'inventory' | 'procurement';
 }
 
-// Dummy supplier data with proper UUIDs - for display only
-const DUMMY_SUPPLIERS: Supplier[] = [
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson', materials_supplied: [] },
-];
-
 const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, mode }: RaiseRequestDialogProps) => {
   // ALL HOOKS MUST BE DECLARED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const [quantity, setQuantity] = useState('');
   const [eta, setEta] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
+  const { suppliers } = useSuppliers();
 
   // Derived values
   const isInventoryMode = mode === 'inventory';
@@ -67,43 +53,13 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
     return 'Create a detailed procurement request with supplier and delivery information.';
   };
 
-  // Load suppliers when dialog opens
-  useEffect(() => {
-    if (isOpen && isProcurementMode) {
-      const fetchSuppliers = async () => {
-        try {
-          const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
-          if (merchantError) throw merchantError;
-
-          const { data, error } = await supabase
-            .from('suppliers')
-            .select('id, company_name, contact_person, materials_supplied')
-            .eq('merchant_id', merchantId);
-
-          if (error) {
-            console.log('Error fetching suppliers, using dummy data:', error);
-            setSuppliers(DUMMY_SUPPLIERS);
-          } else {
-            // Combine real suppliers with dummy data for display
-            setSuppliers([...(data || []), ...DUMMY_SUPPLIERS]);
-          }
-        } catch (error) {
-          console.error('Error fetching suppliers:', error);
-          setSuppliers(DUMMY_SUPPLIERS);
-        }
-      };
-
-      fetchSuppliers();
-    }
-  }, [isOpen, isProcurementMode]);
-
   // Filter suppliers based on selected material
   useEffect(() => {
     if (material && suppliers.length > 0) {
       const filtered = suppliers.filter(supplier => {
-        // If materials_supplied is null, undefined, or empty, show the supplier (legacy support)
+        // If materials_supplied is null, undefined, or empty, don't show the supplier for procurement mode
         if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
-          return true;
+          return false;
         }
         // Check if the material ID is in the supplier's materials_supplied array
         return supplier.materials_supplied.includes(material.id);
@@ -115,7 +71,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
         setSelectedSupplierId('');
       }
     } else {
-      setFilteredSuppliers(suppliers);
+      setFilteredSuppliers([]);
     }
   }, [material, suppliers, selectedSupplierId]);
 
@@ -139,15 +95,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
       if (isProcurementMode && selectedSupplierId) {
         const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
         if (selectedSupplier) {
-          // Check if this is a dummy supplier by checking if it's in our dummy list
-          const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === selectedSupplierId);
-          
-          if (!isDummySupplier) {
-            // Only set supplier_id for real suppliers from database
-            validSupplierId = selectedSupplierId;
-          }
-          
-          // Always add supplier info to notes for tracking
+          validSupplierId = selectedSupplierId;
           supplierNotes = `Supplier: ${selectedSupplier.company_name}`;
         }
       }
@@ -163,7 +111,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
           raw_material_id: material.id,
           quantity_requested: parseInt(quantity),
           unit: material.unit,
-          supplier_id: validSupplierId, // Only set if it's a real supplier
+          supplier_id: validSupplierId,
           eta: isProcurementMode ? (eta || null) : null,
           notes: finalNotes || null,
           status: 'Pending',
@@ -276,13 +224,13 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
           {isProcurementMode && (
             <>
               <div>
-                <Label htmlFor="supplier">Supplier</Label>
+                <Label htmlFor="supplier">Supplier *</Label>
                 <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
                   <SelectTrigger>
                     <SelectValue placeholder={
                       filteredSuppliers.length === 0 
                         ? "No suppliers configured for this material" 
-                        : "Select supplier (optional)"
+                        : "Select supplier"
                     } />
                   </SelectTrigger>
                   <SelectContent>
@@ -295,7 +243,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
                 </Select>
                 {filteredSuppliers.length === 0 && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    No suppliers have been configured to supply this material. You can still create the request.
+                    No suppliers have been configured to supply this material. Please configure suppliers first.
                   </p>
                 )}
               </div>
@@ -336,7 +284,7 @@ const RaiseRequestDialog = ({ isOpen, onOpenChange, material, onRequestCreated, 
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !quantity}
+              disabled={loading || !quantity || (isProcurementMode && filteredSuppliers.length > 0 && !selectedSupplierId)}
               className="flex-1"
             >
               {loading 

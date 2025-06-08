@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,14 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
-
-interface Supplier {
-  id: string;
-  company_name: string;
-  contact_person: string;
-  materials_supplied?: string[];
-}
 
 interface ProcurementItem {
   id: string;
@@ -36,20 +31,10 @@ interface MultiItemProcurementDialogProps {
   onRequestCreated: () => void;
 }
 
-// Dummy supplier data with proper UUIDs - for display only
-const DUMMY_SUPPLIERS: Supplier[] = [
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', company_name: 'Global Materials Inc', contact_person: 'John Smith', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480', company_name: 'Premium Supply Co', contact_person: 'Sarah Johnson', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d481', company_name: 'EcoFriendly Resources', contact_person: 'Mike Chen', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d482', company_name: 'Industrial Solutions Ltd', contact_person: 'Emily Davis', materials_supplied: [] },
-  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d483', company_name: 'Quality Raw Materials', contact_person: 'Robert Wilson', materials_supplied: [] },
-];
-
 const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: MultiItemProcurementDialogProps) => {
   const [items, setItems] = useState<ProcurementItem[]>([
     { id: '1', rawMaterialId: '', quantity: '', notes: '', supplierId: '', deliveryDate: '' }
   ]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const [globalDeliveryDate, setGlobalDeliveryDate] = useState('');
   const [useGlobalDeliveryDate, setUseGlobalDeliveryDate] = useState(true);
@@ -58,35 +43,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   const { logActivity } = useActivityLog();
   const { profile } = useUserProfile();
   const { rawMaterials } = useRawMaterials();
-
-  // Load suppliers when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      const fetchSuppliers = async () => {
-        try {
-          const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
-          if (merchantError) throw merchantError;
-
-          const { data, error } = await supabase
-            .from('suppliers')
-            .select('id, company_name, contact_person, materials_supplied')
-            .eq('merchant_id', merchantId);
-
-          if (error) {
-            console.log('Error fetching suppliers, using dummy data:', error);
-            setSuppliers(DUMMY_SUPPLIERS);
-          } else {
-            setSuppliers([...(data || []), ...DUMMY_SUPPLIERS]);
-          }
-        } catch (error) {
-          console.error('Error fetching suppliers:', error);
-          setSuppliers(DUMMY_SUPPLIERS);
-        }
-      };
-
-      fetchSuppliers();
-    }
-  }, [isOpen]);
+  const { suppliers } = useSuppliers();
 
   const addItem = () => {
     const newItem: ProcurementItem = {
@@ -121,12 +78,12 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
   };
 
   const getFilteredSuppliersForMaterial = (materialId: string) => {
-    if (!materialId) return suppliers;
+    if (!materialId) return [];
     
     return suppliers.filter(supplier => {
-      // If materials_supplied is null, undefined, or empty, show the supplier (legacy support)
+      // If materials_supplied is null, undefined, or empty, don't show the supplier
       if (!supplier.materials_supplied || supplier.materials_supplied.length === 0) {
-        return true;
+        return false;
       }
       // Check if the material ID is in the supplier's materials_supplied array
       return supplier.materials_supplied.includes(materialId);
@@ -168,10 +125,6 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
       for (const [supplierId, supplierItems] of Object.entries(itemsBySupplier)) {
         const supplier = getSupplierById(supplierId);
         const requestNumber = `REQ-${baseTimestamp}-${String(requestIndex + 1).padStart(3, '0')}`;
-        
-        // Determine if this is a real supplier or dummy
-        const isDummySupplier = DUMMY_SUPPLIERS.some(dummy => dummy.id === supplierId);
-        const validSupplierId = isDummySupplier ? null : supplierId;
 
         // Prepare supplier info for notes
         const supplierNotes = supplier ? `Supplier: ${supplier.company_name}` : '';
@@ -208,7 +161,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
             raw_material_id: primaryItem.rawMaterialId,
             quantity_requested: parseInt(primaryItem.quantity),
             unit: primaryMaterial.unit,
-            supplier_id: validSupplierId,
+            supplier_id: supplierId,
             eta: deliveryDate || null,
             notes: finalNotes || null,
             status: 'Pending',
