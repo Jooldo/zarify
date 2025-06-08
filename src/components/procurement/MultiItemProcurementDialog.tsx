@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -345,8 +346,8 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                                   {rawMaterials.map((material) => (
                                     <CommandItem
                                       key={material.id}
-                                      value={material.id}
-                                      onSelect={(currentValue) => {
+                                      value={`${material.name} ${material.type}`}
+                                      onSelect={() => {
                                         console.log('Selected material:', material.name, 'ID:', material.id);
                                         updateItem(item.id, 'rawMaterialId', material.id);
                                         updateItem(item.id, 'supplierId', ''); // Reset supplier when material changes
