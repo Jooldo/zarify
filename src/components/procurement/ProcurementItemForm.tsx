@@ -33,6 +33,7 @@ interface ProcurementItemFormProps {
   onUpdateItem: (id: string, field: keyof ProcurementItem, value: string) => void;
   onRemoveItem: (id: string) => void;
   onToggleCombobox: (itemId: string, isOpen: boolean) => void;
+  onSupplierAdded: () => void;
 }
 
 const ProcurementItemForm = ({
@@ -47,7 +48,8 @@ const ProcurementItemForm = ({
   openComboboxes,
   onUpdateItem,
   onRemoveItem,
-  onToggleCombobox
+  onToggleCombobox,
+  onSupplierAdded
 }: ProcurementItemFormProps) => {
   const [isAddSupplierDialogOpen, setIsAddSupplierDialogOpen] = useState(false);
   const selectedMaterial = rawMaterials.find(material => material.id === item.rawMaterialId);
@@ -74,10 +76,9 @@ const ProcurementItemForm = ({
     setIsAddSupplierDialogOpen(true);
   };
 
-  const handleSupplierAdded = () => {
-    // This will be handled by the parent component's supplier refetch
-    // For now, we'll just close the dialog
+  const handleSupplierAddedSuccess = () => {
     setIsAddSupplierDialogOpen(false);
+    onSupplierAdded(); // Trigger refetch of suppliers in parent component
   };
 
   return (
@@ -212,7 +213,7 @@ const ProcurementItemForm = ({
         isOpen={isAddSupplierDialogOpen}
         onOpenChange={setIsAddSupplierDialogOpen}
         preSelectedMaterial={selectedMaterial}
-        onSupplierAdded={handleSupplierAdded}
+        onSupplierAdded={handleSupplierAddedSuccess}
       />
     </>
   );

@@ -104,6 +104,10 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
     }));
   };
 
+  const handleSupplierAdded = () => {
+    refetchSuppliers();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid()) return;
@@ -285,6 +289,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
                 onToggleCombobox={toggleCombobox}
+                onSupplierAdded={handleSupplierAdded}
               />
             ))}
           </div>
