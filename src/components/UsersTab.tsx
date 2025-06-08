@@ -11,15 +11,23 @@ interface UsersTabProps {
 }
 
 const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
+  console.log('UsersTab rendered with activeTab:', activeTab);
+
   const renderActiveContent = () => {
+    console.log('Rendering content for tab:', activeTab);
+    
     switch (activeTab) {
       case 'customers':
+        console.log('Rendering CustomersSection');
         return <CustomersSection />;
       case 'suppliers':
+        console.log('Rendering SuppliersSection');
         return <SuppliersSection />;
       case 'workers':
+        console.log('Rendering WorkersSection');
         return <WorkersSection />;
       default:
+        console.log('Rendering default CustomersSection for tab:', activeTab);
         return <CustomersSection />;
     }
   };

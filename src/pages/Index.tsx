@@ -12,7 +12,10 @@ import FinishedGoodManagement from "@/components/FinishedGoodManagement";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  console.log('Index component rendered with activeTab:', activeTab);
+
   const handleNavigateToTab = (tab: string) => {
+    console.log('Navigating to tab:', tab);
     setActiveTab(tab);
   };
 
@@ -60,10 +63,20 @@ const Index = () => {
   };
 
   const isUsersTab = () => {
-    return ['customers', 'suppliers', 'workers'].includes(activeTab);
+    const userTabs = ['customers', 'suppliers', 'workers'];
+    const isUserTab = userTabs.includes(activeTab);
+    console.log('Checking if user tab:', activeTab, 'Result:', isUserTab);
+    return isUserTab;
   };
 
   const pageTitle = getPageTitle();
+
+  console.log('Rendering with conditions:', {
+    isRawMaterialTab: isRawMaterialTab(),
+    isFinishedGoodTab: isFinishedGoodTab(),
+    isUsersTab: isUsersTab(),
+    activeTab
+  });
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -101,16 +114,12 @@ const Index = () => {
 
           {/* Users Management - Full width with its own layout */}
           {isUsersTab() && (
-            <Tabs value={activeTab} className="w-full">
-              <TabsContent value={activeTab} className="space-y-0 mt-0">
-                <div className="px-4 sm:px-6 lg:px-8">
-                  <UsersTab 
-                    activeTab={activeTab} 
-                    onTabChange={handleNavigateToTab} 
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div className="px-4 sm:px-6 lg:px-8">
+              <UsersTab 
+                activeTab={activeTab} 
+                onTabChange={handleNavigateToTab} 
+              />
+            </div>
           )}
 
           {/* Other tabs with standard layout */}
