@@ -49,7 +49,8 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
         setSearchTerm={setSearchTerm}
         typeFilter={filterType}
         setTypeFilter={setFilterType}
-        onRefresh={refetch}
+        statusFilter={filterStatus}
+        setStatusFilter={setFilterStatus}
       />
       
       <RawMaterialsTable 

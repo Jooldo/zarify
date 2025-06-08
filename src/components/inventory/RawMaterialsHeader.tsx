@@ -9,7 +9,8 @@ interface RawMaterialsHeaderProps {
   setSearchTerm: (term: string) => void;
   typeFilter: string;
   setTypeFilter: (type: string) => void;
-  onRefresh: () => void;
+  statusFilter: string;
+  setStatusFilter: (status: string) => void;
 }
 
 const RawMaterialsHeader = ({ 
@@ -17,17 +18,27 @@ const RawMaterialsHeader = ({
   setSearchTerm, 
   typeFilter, 
   setTypeFilter,
-  onRefresh
+  statusFilter,
+  setStatusFilter
 }: RawMaterialsHeaderProps) => {
   const materialTypes = ["all", "Chain", "Kunda", "Ghungroo", "Thread", "Beads"];
+  const statusOptions = [
+    "All",
+    "Low Stock",
+    "In Stock", 
+    "High Shortfall",
+    "Procurement Needed",
+    "High Requirement"
+  ];
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+    <div className="flex flex-col gap-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
         <Package2 className="h-5 w-5" />
         Raw Materials Inventory
       </h3>
-      <div className="flex flex-col sm:flex-row gap-3 flex-1">
+      
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
@@ -37,6 +48,7 @@ const RawMaterialsHeader = ({
             className="pl-10 h-8"
           />
         </div>
+        
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-40 h-8">
             <SelectValue placeholder="Type" />
@@ -49,14 +61,19 @@ const RawMaterialsHeader = ({
             ))}
           </SelectContent>
         </Select>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onRefresh}
-          className="h-8"
-        >
-          Refresh
-        </Button>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-48 h-8">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
