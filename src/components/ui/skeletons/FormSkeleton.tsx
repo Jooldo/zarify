@@ -13,18 +13,28 @@ const FormSkeleton = ({
   buttonsCount = 2 
 }: FormSkeletonProps) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 p-1">
       {Array.from({ length: fields }).map((_, index) => (
         <div key={index} className="space-y-2">
-          <Skeleton className="w-24 h-4" />
-          <Skeleton className="w-full h-8" />
+          <Skeleton 
+            className="w-24 h-4 animate-shimmer" 
+            style={{ animationDelay: `${index * 150}ms` }}
+          />
+          <Skeleton 
+            className="w-full h-10 animate-shimmer" 
+            style={{ animationDelay: `${index * 150 + 75}ms` }}
+          />
         </div>
       ))}
       
       {showButtons && (
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-3 pt-6">
           {Array.from({ length: buttonsCount }).map((_, index) => (
-            <Skeleton key={index} className="w-20 h-8" />
+            <Skeleton 
+              key={index} 
+              className="w-24 h-10 animate-shimmer" 
+              style={{ animationDelay: `${fields * 150 + index * 200}ms` }}
+            />
           ))}
         </div>
       )}

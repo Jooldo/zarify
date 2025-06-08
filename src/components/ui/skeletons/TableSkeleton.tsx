@@ -18,22 +18,26 @@ const TableSkeleton = ({
   const widths = columnWidths.length === columns ? columnWidths : defaultWidths;
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="border rounded-md overflow-hidden bg-white">
       <div className="w-full">
         {showHeader && (
-          <div className="border-b bg-muted/50">
-            <div className="flex h-8 items-center px-2 gap-2">
+          <div className="border-b bg-muted/50 animate-pulse">
+            <div className="flex h-10 items-center px-4 gap-4">
               {Array.from({ length: columns }).map((_, i) => (
-                <Skeleton key={i} className={`h-3 ${widths[i]}`} />
+                <Skeleton key={i} className={`h-4 ${widths[i]} animate-shimmer`} />
               ))}
             </div>
           </div>
         )}
         <div className="divide-y">
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <div key={rowIndex} className="flex h-8 items-center px-2 gap-2 hover:bg-muted/50">
+            <div key={rowIndex} className="flex h-12 items-center px-4 gap-4 hover:bg-muted/50">
               {Array.from({ length: columns }).map((_, colIndex) => (
-                <Skeleton key={colIndex} className={`h-3 ${widths[colIndex]}`} />
+                <Skeleton 
+                  key={colIndex} 
+                  className={`h-4 ${widths[colIndex]} animate-shimmer`}
+                  style={{ animationDelay: `${(rowIndex * 100) + (colIndex * 50)}ms` }}
+                />
               ))}
             </div>
           ))}
