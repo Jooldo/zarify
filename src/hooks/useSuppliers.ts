@@ -14,6 +14,9 @@ export interface Supplier {
   created_at: string;
   updated_at: string;
   materials_supplied?: string[];
+  whatsapp_enabled?: boolean;
+  whatsapp_number?: string;
+  payment_terms?: string;
 }
 
 export const useSuppliers = () => {
