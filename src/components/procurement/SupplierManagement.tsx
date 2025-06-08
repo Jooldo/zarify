@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Building2, Edit, Trash2, Phone, Mail, MapPin, Search, Plus } from 'lucide-react';
 import SupplierHeader from '@/components/procurement/headers/SupplierHeader';
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 
 const SupplierManagement = () => {
   const { suppliers, loading, refetch } = useSuppliers();
@@ -188,8 +189,28 @@ const SupplierManagement = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center bg-card rounded-lg border border-border">
-        <div className="text-muted-foreground">Loading suppliers...</div>
+      <div className="space-y-6">
+        <div className="bg-card border-b border-border">
+          <div className="flex items-center justify-between py-6">
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-muted rounded-md animate-pulse" />
+              <div className="h-4 w-64 bg-muted rounded-md animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <div className="h-8 w-full bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
+        </div>
+
+        <TableSkeleton 
+          rows={10} 
+          columns={6}
+          columnWidths={['w-24', 'w-28', 'w-24', 'w-16', 'w-16', 'w-20']}
+        />
       </div>
     );
   }

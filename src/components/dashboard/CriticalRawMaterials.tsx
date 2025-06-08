@@ -1,8 +1,8 @@
-
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
+import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 interface CriticalRawMaterialsProps {
   onNavigateToProcurement?: () => void;
@@ -13,11 +13,13 @@ const CriticalRawMaterials = ({ onNavigateToProcurement }: CriticalRawMaterialsP
 
   if (loading) {
     return (
-      <Card className="h-64">
-        <CardContent className="flex items-center justify-center h-full">
-          <div className="text-gray-500 text-sm">Loading materials...</div>
-        </CardContent>
-      </Card>
+      <CardSkeleton 
+        showHeader={true}
+        headerHeight="h-6"
+        contentHeight="h-64"
+        showFooter={true}
+        footerHeight="h-10"
+      />
     );
   }
 

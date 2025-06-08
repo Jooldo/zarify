@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Users, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 
 interface Customer {
   id: string;
@@ -79,7 +79,21 @@ const CustomersSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="text-center py-4 text-sm">Loading customers...</div>;
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-sm">
+            <div className="h-8 w-full bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
+        </div>
+        <TableSkeleton 
+          rows={8} 
+          columns={6}
+          columnWidths={['w-24', 'w-20', 'w-32', 'w-32', 'w-16', 'w-20']}
+        />
+      </div>
+    );
   }
 
   return (

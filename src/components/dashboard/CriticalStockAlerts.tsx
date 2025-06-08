@@ -1,8 +1,8 @@
-
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Package } from 'lucide-react';
+import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const CriticalStockAlerts = () => {
   const { rawMaterials, loading: rawLoading } = useRawMaterials();
@@ -10,11 +10,12 @@ const CriticalStockAlerts = () => {
 
   if (rawLoading || finishedLoading) {
     return (
-      <Card className="h-32">
-        <CardContent className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-gray-500">Loading alerts...</div>
-        </CardContent>
-      </Card>
+      <CardSkeleton 
+        showHeader={true}
+        headerHeight="h-6"
+        contentHeight="h-32"
+        showFooter={false}
+      />
     );
   }
 

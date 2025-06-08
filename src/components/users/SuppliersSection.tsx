@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import { useRawMaterials } from '@/hooks/useRawMaterials';
 import AddSupplierForm from './AddSupplierForm';
 import EditSupplierForm from './EditSupplierForm';
 import ViewSupplierDialog from './ViewSupplierDialog';
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 
 interface Supplier {
   id: string;
@@ -132,7 +132,21 @@ const SuppliersSection = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="text-center py-4 text-sm">Loading suppliers...</div>;
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-sm">
+            <div className="h-7 w-full bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="h-7 w-24 bg-muted rounded-md animate-pulse" />
+        </div>
+        <TableSkeleton 
+          rows={8} 
+          columns={7}
+          columnWidths={['w-20', 'w-16', 'w-16', 'w-24', 'w-12', 'w-16', 'w-16']}
+        />
+      </div>
+    );
   }
 
   return (

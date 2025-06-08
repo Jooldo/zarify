@@ -1,8 +1,7 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit } from 'lucide-react';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
@@ -10,6 +9,7 @@ import RaiseRequestDialog from './RaiseRequestDialog';
 import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -90,9 +90,13 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="text-lg">Loading raw materials...</div>
-      </div>
+      <TableSkeleton 
+        rows={8} 
+        columns={10}
+        columnWidths={[
+          'w-32', 'w-16', 'w-12', 'w-20', 'w-16', 'w-20', 'w-20', 'w-16', 'w-16', 'w-24'
+        ]}
+      />
     );
   }
 
