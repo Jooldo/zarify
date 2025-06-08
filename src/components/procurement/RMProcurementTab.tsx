@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -8,6 +7,7 @@ import DeleteRequestDialog from '@/components/procurement/DeleteRequestDialog';
 import MultiItemProcurementDialog from '@/components/procurement/MultiItemProcurementDialog';
 import BOMLegacyGenerationDialog from '@/components/procurement/BOMLegacyGenerationDialog';
 import ProcurementFilters from '@/components/procurement/ProcurementFilters';
+import ProcurementHeader from '@/components/procurement/headers/ProcurementHeader';
 
 const RMProcurementTab = () => {
   const { requests, loading, refetch, updateRequestStatus, deleteRequest } = useProcurementRequests();
@@ -28,6 +28,14 @@ const RMProcurementTab = () => {
     dateFrom: '',
     dateTo: ''
   });
+
+  // Calculate request stats
+  const requestStats = useMemo(() => {
+    const total = requests.length;
+    const pending = requests.filter(req => req.status === 'Pending').length;
+    const completed = requests.filter(req => req.status === 'Received').length;
+    return { total, pending, completed };
+  }, [requests]);
 
   // Extract filter options from data
   const filterOptions = useMemo(() => {
@@ -137,11 +145,20 @@ const RMProcurementTab = () => {
   };
 
   if (loading) {
-    return <div>Loading procurement requests...</div>;
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div>Loading procurement requests...</div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
+      <ProcurementHeader 
+        onRaiseMultiItemRequest={() => setIsMultiItemDialogOpen(true)}
+        requestStats={requestStats}
+      />
+
       <ProcurementFilters
         filters={filters}
         onFiltersChange={setFilters}
@@ -150,13 +167,15 @@ const RMProcurementTab = () => {
         raisedByOptions={filterOptions.raisedByOptions}
       />
 
-      <ProcurementRequestsTable
-        requests={filteredRequests}
-        onViewRequest={handleViewRequest}
-        onDeleteRequest={handleDeleteRequest}
-        onGenerateBOM={handleGenerateBOM}
-        onRaiseMultiItemRequest={() => setIsMultiItemDialogOpen(true)}
-      />
+      <div className="min-h-[300px]">
+        <ProcurementRequestsTable
+          requests={filteredRequests}
+          onViewRequest={handleViewRequest}
+          onDeleteRequest={handleDeleteRequest}
+          onGenerateBOM={handleGenerateBOM}
+          onRaiseMultiItemRequest={() => setIsMultiItemDialogOpen(true)}
+        />
+      </div>
 
       <ViewRequestDialog
         isOpen={isViewDialogOpen}

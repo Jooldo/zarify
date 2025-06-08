@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, P
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import { Badge } from "@/components/ui/badge";
+import AnalyticsHeader from '@/components/procurement/headers/AnalyticsHeader';
 
 const ProcurementAnalytics = () => {
   const { requests } = useProcurementRequests();
@@ -30,6 +30,23 @@ const ProcurementAnalytics = () => {
       return true;
     });
   }, [requests, dateFrom, dateTo, selectedSupplier, selectedMaterial]);
+
+  // Calculate analytics data
+  const analyticsData = useMemo(() => {
+    const totalRequests = filteredRequests.length;
+    const totalValue = filteredRequests.reduce((sum, req) => {
+      const material = rawMaterials.find(m => m.id === req.raw_material_id);
+      return sum + (req.quantity_requested * (material?.cost_per_unit || 0));
+    }, 0);
+    const avgLeadTime = filteredRequests.filter(r => r.eta).length > 0 ? 
+      filteredRequests.filter(r => r.eta).reduce((sum, req) => {
+        const leadTime = Math.abs(new Date(req.eta).getTime() - new Date(req.date_requested).getTime()) / (1000 * 60 * 60 * 24);
+        return sum + leadTime;
+      }, 0) / filteredRequests.filter(r => r.eta).length : 0;
+    const activeSuppliers = suppliers.length;
+
+    return { totalRequests, totalValue, avgLeadTime, activeSuppliers };
+  }, [filteredRequests, rawMaterials, suppliers]);
 
   // Monthly procurement volume data
   const monthlyData = useMemo(() => {
@@ -81,19 +98,15 @@ const ProcurementAnalytics = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-  const totalRequests = filteredRequests.length;
-  const totalValue = filteredRequests.reduce((sum, req) => {
-    const material = rawMaterials.find(m => m.id === req.raw_material_id);
-    return sum + (req.quantity_requested * (material?.cost_per_unit || 0));
-  }, 0);
-  const avgLeadTime = filteredRequests.filter(r => r.eta).length > 0 ? 
-    filteredRequests.filter(r => r.eta).reduce((sum, req) => {
-      const leadTime = Math.abs(new Date(req.eta).getTime() - new Date(req.date_requested).getTime()) / (1000 * 60 * 60 * 24);
-      return sum + leadTime;
-    }, 0) / filteredRequests.filter(r => r.eta).length : 0;
-
   return (
     <div className="space-y-6">
+      <AnalyticsHeader 
+        totalRequests={analyticsData.totalRequests}
+        totalValue={analyticsData.totalValue}
+        avgLeadTime={analyticsData.avgLeadTime}
+        activeSuppliers={analyticsData.activeSuppliers}
+      />
+
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -156,44 +169,8 @@ const ProcurementAnalytics = () => {
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalRequests}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{totalValue.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Lead Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgLeadTime.toFixed(1)} days</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Suppliers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{suppliers.length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
         {/* Monthly Volume Chart */}
         <Card>
           <CardHeader>
