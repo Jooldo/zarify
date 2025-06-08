@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -8,25 +7,55 @@ import ProcurementRequestsTable from '../inventory/ProcurementRequestsTable';
 import ViewRequestDialog from '../inventory/ViewRequestDialog';
 import RaiseRequestDialog from '../inventory/RaiseRequestDialog';
 import MultiItemProcurementDialog from './MultiItemProcurementDialog';
+import BOMLegacyGenerationDialog from './BOMLegacyGenerationDialog';
+import DeleteRequestDialog from './DeleteRequestDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 import type { RawMaterial } from '@/hooks/useRawMaterials';
 
 const RMProcurementTab = () => {
-  const { requests, loading, updateRequestStatus, refetch } = useProcurementRequests();
+  const { requests, loading, updateRequestStatus, refetch, deleteRequest } = useProcurementRequests();
   const { rawMaterials } = useRawMaterials();
   const [selectedRequest, setSelectedRequest] = useState<ProcurementRequest | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [raiseRequestOpen, setRaiseRequestOpen] = useState(false);
   const [multiItemDialogOpen, setMultiItemDialogOpen] = useState(false);
+  const [bomDialogOpen, setBomDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [materialForRequest, setMaterialForRequest] = useState<string>('');
   const [activeTab, setActiveTab] = useState("requests");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleViewRequest = (request: ProcurementRequest) => {
     setSelectedRequest(request);
     setViewDialogOpen(true);
+  };
+
+  const handleDeleteRequest = (request: ProcurementRequest) => {
+    setSelectedRequest(request);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleGenerateBOM = (request: ProcurementRequest) => {
+    setSelectedRequest(request);
+    setBomDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedRequest) return;
+    
+    setDeleteLoading(true);
+    try {
+      await deleteRequest(selectedRequest.id);
+      setDeleteDialogOpen(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      // Error handling is done in the hook
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleUpdateRequestStatus = async (requestId: string, newStatus: string) => {
@@ -89,6 +118,8 @@ const RMProcurementTab = () => {
               <ProcurementRequestsTable 
                 requests={requests} 
                 onViewRequest={handleViewRequest}
+                onDeleteRequest={handleDeleteRequest}
+                onGenerateBOM={handleGenerateBOM}
                 onRaiseRequest={handleRaiseRequest}
                 onRaiseMultiItemRequest={handleRaiseMultiItemRequest}
               />
@@ -131,6 +162,20 @@ const RMProcurementTab = () => {
         selectedRequest={selectedRequest}
         onUpdateRequestStatus={handleUpdateRequestStatus}
         onRequestUpdated={handleRequestUpdated}
+      />
+
+      <BOMLegacyGenerationDialog
+        isOpen={bomDialogOpen}
+        onOpenChange={setBomDialogOpen}
+        request={selectedRequest}
+      />
+
+      <DeleteRequestDialog
+        isOpen={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        request={selectedRequest}
+        onConfirmDelete={handleConfirmDelete}
+        loading={deleteLoading}
       />
 
       <MultiItemProcurementDialog

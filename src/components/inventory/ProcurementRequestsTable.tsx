@@ -1,21 +1,24 @@
-
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertCircle, ShoppingCart } from 'lucide-react';
+import { Eye, Plus, AlertCircle, ShoppingCart, Trash2, FileText } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
 interface ProcurementRequestsTableProps {
   requests: ProcurementRequest[];
   onViewRequest: (request: ProcurementRequest) => void;
+  onDeleteRequest: (request: ProcurementRequest) => void;
+  onGenerateBOM: (request: ProcurementRequest) => void;
   onRaiseRequest?: () => void;
   onRaiseMultiItemRequest?: () => void;
 }
 
 const ProcurementRequestsTable = ({ 
   requests, 
-  onViewRequest, 
+  onViewRequest,
+  onDeleteRequest,
+  onGenerateBOM,
   onRaiseRequest, 
   onRaiseMultiItemRequest 
 }: ProcurementRequestsTableProps) => {
@@ -102,6 +105,19 @@ const ProcurementRequestsTable = ({
     );
   };
 
+  const getTotalQuantity = (request: ProcurementRequest) => {
+    const origin = getRequestOrigin(request.notes);
+    
+    if (origin === 'multi-item') {
+      const materials = parseMultiItemMaterials(request.notes);
+      if (materials && materials.length > 0) {
+        return materials.reduce((total, material) => total + material.quantity, 0);
+      }
+    }
+    
+    return request.quantity_requested;
+  };
+
   return (
     <div className="space-y-4">
       {(onRaiseRequest || onRaiseMultiItemRequest) && (
@@ -127,13 +143,13 @@ const ProcurementRequestsTable = ({
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Request ID</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Material & Type</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Quantity</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Total Quantity</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Origin</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">ETA</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Raised By</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Action</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -154,7 +170,9 @@ const ProcurementRequestsTable = ({
                   <TableCell className="py-1 px-2 text-xs">
                     {getMaterialDisplayText(request)}
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">{request.quantity_requested} {request.unit}</TableCell>
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {getTotalQuantity(request)} {request.unit}
+                  </TableCell>
                   <TableCell className="py-1 px-2">
                     <Badge 
                       variant={
@@ -178,14 +196,32 @@ const ProcurementRequestsTable = ({
                   <TableCell className="py-1 px-2 text-xs">{request.eta ? new Date(request.eta).toLocaleDateString() : '-'}</TableCell>
                   <TableCell className="py-1 px-2 text-xs">{request.raised_by || '-'}</TableCell>
                   <TableCell className="py-1 px-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-6 w-6 p-0"
-                      onClick={() => onViewRequest(request)}
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => onViewRequest(request)}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => onGenerateBOM(request)}
+                      >
+                        <FileText className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => onDeleteRequest(request)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

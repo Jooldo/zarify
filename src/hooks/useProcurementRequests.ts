@@ -213,9 +213,52 @@ export const useProcurementRequests = () => {
     }
   };
 
+  const deleteRequest = async (requestId: string) => {
+    try {
+      console.log('Deleting procurement request:', requestId);
+      
+      // Get the request details before deleting for logging
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      // Delete the procurement request
+      const { error: deleteError } = await supabase
+        .from('procurement_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (deleteError) throw deleteError;
+
+      // Log the deletion activity
+      await logActivity(
+        'Request Deleted',
+        'Procurement Request',
+        requestId,
+        `Procurement request ${request.request_number} was deleted`
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Procurement request deleted successfully',
+      });
+
+      // Refresh requests
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error deleting procurement request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete procurement request',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
   }, []);
 
-  return { requests, loading, refetch: fetchRequests, updateRequestStatus };
+  return { requests, loading, refetch: fetchRequests, updateRequestStatus, deleteRequest };
 };
