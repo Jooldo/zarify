@@ -1,4 +1,5 @@
 
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,16 @@ export interface ProductConfig {
   updated_at?: string;
   threshold?: number;
   product_config_materials?: ProductConfigMaterial[];
+}
+
+// Interface for creating product configs (only includes database fields)
+interface CreateProductConfigData {
+  product_code: string;
+  category: string;
+  subcategory: string;
+  size_value: number;
+  weight_range?: string;
+  is_active?: boolean;
 }
 
 export const useProductConfigs = () => {
@@ -61,7 +72,7 @@ export const useProductConfigs = () => {
   });
 
   const createProductConfigMutation = useMutation({
-    mutationFn: async (configData: Partial<ProductConfig>) => {
+    mutationFn: async (configData: CreateProductConfigData) => {
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
@@ -126,12 +137,17 @@ export const useProductConfigs = () => {
     return productConfigs.find(config => config.product_code === productCode);
   };
 
-  const createProductConfig = (configData: Partial<ProductConfig>) => {
+  const createProductConfig = (configData: CreateProductConfigData) => {
     return createProductConfigMutation.mutate(configData);
   };
 
-  const deleteProductConfig = (configId: string) => {
-    return deleteProductConfigMutation.mutate(configId);
+  const deleteProductConfig = async (configId: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      deleteProductConfigMutation.mutate(configId, {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(error),
+      });
+    });
   };
 
   return {
@@ -145,3 +161,4 @@ export const useProductConfigs = () => {
     refetch,
   };
 };
+
