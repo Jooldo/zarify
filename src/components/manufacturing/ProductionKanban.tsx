@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -98,6 +99,7 @@ const ProductionKanban = () => {
   const [taskDetailsDialogOpen, setTaskDetailsDialogOpen] = useState(false);
   
   const { tasksByStep, isLoading, createTask, moveTask, updateTask } = useProductionTasks();
+  const { createStepHistory } = useProductionStepHistory();
   const { findProductConfigByCode } = useProductConfigs();
   const { toast } = useToast();
   
@@ -192,12 +194,21 @@ const ProductionKanban = () => {
       return;
     }
 
-    // Move task for other steps
+    // Move task for other steps and create step history
     if (activeTask) {
       console.log('Moving task to different step');
       moveTask({
         taskId: activeTask.id,
         toStep: overStepId as ProductionTask['current_step'],
+      });
+
+      // Create step history entry for the transition
+      createStepHistory({
+        production_task_id: activeTask.id,
+        step_name: overStepId.charAt(0).toUpperCase() + overStepId.slice(1),
+        start_date: new Date().toISOString(),
+        status: 'Progress',
+        merchant_id: activeTask.merchant_id,
       });
     }
   };
@@ -216,16 +227,23 @@ const ProductionKanban = () => {
     if (!activeTask) return;
 
     let toStep: ProductionTask['current_step'] = 'jhalai';
+    let stepName = 'Jhalai';
+    
     if (activeTask.current_step === 'pending') {
       toStep = 'jhalai';
+      stepName = 'Jhalai';
     } else if (activeTask.current_step === 'jhalai') {
       toStep = 'quellai';
+      stepName = 'Quellai';
     } else if (activeTask.current_step === 'quellai') {
       toStep = 'meena';
+      stepName = 'Meena';
     } else if (activeTask.current_step === 'meena') {
       toStep = 'vibrator';
+      stepName = 'Vibrator';
     } else if (activeTask.current_step === 'vibrator') {
       toStep = 'quality-check';
+      stepName = 'Quality Check';
     }
     
     moveTask({
@@ -240,6 +258,18 @@ const ProductionKanban = () => {
         status: 'Progress'
       }
     });
+
+    // Create step history entry for the assignment
+    createStepHistory({
+      production_task_id: assignment.taskId,
+      step_name: stepName,
+      assigned_worker_id: assignment.workerId,
+      assigned_worker_name: assignment.workerName,
+      start_date: new Date().toISOString(),
+      status: 'Progress',
+      remarks: assignment.remarks,
+      merchant_id: activeTask.merchant_id,
+    });
     
     setTaskToAssign(null);
   };
@@ -253,6 +283,9 @@ const ProductionKanban = () => {
   }) => {
     console.log('Updating task status:', { taskId, newStatus, additionalData });
     
+    const task = Object.values(tasksByStep).flat().find(t => t.id === taskId);
+    if (!task) return;
+
     const updates: Partial<ProductionTask> = {
       status: newStatus as any,
       ...(additionalData?.weight !== undefined && { received_weight: additionalData.weight }),
@@ -262,6 +295,39 @@ const ProductionKanban = () => {
     };
 
     updateTask({ id: taskId, updates });
+
+    // Update step history when status changes to completed
+    if (newStatus === 'Completed' && additionalData?.completedWeight && additionalData?.completedQuantity) {
+      createStepHistory({
+        production_task_id: taskId,
+        step_name: task.current_step.charAt(0).toUpperCase() + task.current_step.slice(1),
+        assigned_worker_id: task.assigned_worker_id,
+        assigned_worker_name: task.assigned_worker_name,
+        start_date: task.started_at || new Date().toISOString(),
+        completed_date: new Date().toISOString(),
+        input_weight: task.received_weight,
+        output_weight: additionalData.completedWeight,
+        input_quantity: task.received_quantity || task.quantity,
+        output_quantity: additionalData.completedQuantity,
+        status: 'Completed',
+        merchant_id: task.merchant_id,
+      });
+    } else if (newStatus === 'Partially Completed' && additionalData?.completedWeight && additionalData?.completedQuantity) {
+      createStepHistory({
+        production_task_id: taskId,
+        step_name: task.current_step.charAt(0).toUpperCase() + task.current_step.slice(1),
+        assigned_worker_id: task.assigned_worker_id,
+        assigned_worker_name: task.assigned_worker_name,
+        start_date: task.started_at || new Date().toISOString(),
+        completed_date: new Date().toISOString(),
+        input_weight: task.received_weight,
+        output_weight: additionalData.completedWeight,
+        input_quantity: task.received_quantity || task.quantity,
+        output_quantity: additionalData.completedQuantity,
+        status: 'Partially Completed',
+        merchant_id: task.merchant_id,
+      });
+    }
 
     // Handle child task creation for partially completed items
     if (additionalData?.createChildTask) {
