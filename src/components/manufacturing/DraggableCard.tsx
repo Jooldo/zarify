@@ -69,6 +69,11 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleViewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTaskClick(task);
+  };
+
   const renderPendingCard = () => (
     <Card 
       ref={setNodeRef}
@@ -76,7 +81,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
       {...attributes}
       {...listeners}
       className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing"
-      onClick={() => onTaskClick(task)}
     >
       <CardContent className="p-3 space-y-3">
         <div className="flex items-start justify-between">
@@ -84,7 +88,12 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 w-6 p-0"
+            onClick={handleViewClick}
+          >
             <Eye className="h-3 w-3" />
           </Button>
         </div>
@@ -123,7 +132,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
       {...attributes}
       {...listeners}
       className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-green-500 active:cursor-grabbing"
-      onClick={() => onTaskClick(task)}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between">
@@ -131,7 +139,12 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 w-6 p-0"
+            onClick={handleViewClick}
+          >
             <Eye className="h-3 w-3" />
           </Button>
         </div>
@@ -173,7 +186,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
       {...attributes}
       {...listeners}
       className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing"
-      onClick={() => onTaskClick(task)}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between">
@@ -181,7 +193,12 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 w-6 p-0"
+            onClick={handleViewClick}
+          >
             <Eye className="h-3 w-3" />
           </Button>
         </div>

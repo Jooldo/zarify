@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,7 @@ import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import AddProductionItemDialog from './AddProductionItemDialog';
 import AssignmentDialog from './AssignmentDialog';
 import DraggableCard from './DraggableCard';
+import TaskDetailsDialog from './TaskDetailsDialog';
 
 interface ProductionTask {
   id: string;
@@ -195,6 +195,7 @@ const ProductionKanban = () => {
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [taskToAssign, setTaskToAssign] = useState<ProductionTask | null>(null);
+  const [taskDetailsDialogOpen, setTaskDetailsDialogOpen] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -206,6 +207,7 @@ const ProductionKanban = () => {
 
   const handleTaskClick = (task: ProductionTask) => {
     setSelectedTask(task);
+    setTaskDetailsDialogOpen(true);
   };
 
   const handleAddItem = (newItem: {
@@ -362,6 +364,12 @@ const ProductionKanban = () => {
         onOpenChange={setAssignmentDialogOpen}
         task={taskToAssign}
         onAssign={handleAssignment}
+      />
+
+      <TaskDetailsDialog
+        open={taskDetailsDialogOpen}
+        onOpenChange={setTaskDetailsDialogOpen}
+        task={selectedTask}
       />
     </div>
   );
