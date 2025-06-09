@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -29,6 +28,10 @@ interface ProductionTask {
   status?: string;
   receivedWeight?: number;
   receivedQuantity?: number;
+  completedWeight?: number;
+  completedQuantity?: number;
+  parentTaskId?: string;
+  isChildTask?: boolean;
 }
 
 const PROCESS_STEPS = [
@@ -329,26 +332,75 @@ const ProductionKanban = () => {
     setTaskToAssign(null);
   };
 
-  const handleStatusUpdate = (taskId: string, newStatus: string, additionalData?: { weight?: number; quantity?: number }) => {
+  const handleStatusUpdate = (taskId: string, newStatus: string, additionalData?: { 
+    weight?: number; 
+    quantity?: number;
+    completedWeight?: number;
+    completedQuantity?: number;
+    createChildTask?: boolean;
+  }) => {
     console.log('Updating task status:', { taskId, newStatus, additionalData });
     
     setTasks(prev => {
       const newTasks = { ...prev };
+      let updatedTask: ProductionTask | undefined;
+      let stepId: string | undefined;
       
       // Find the task in the current step
-      for (const stepId in newTasks) {
-        const taskIndex = newTasks[stepId]?.findIndex(t => t.id === taskId);
+      for (const currentStepId in newTasks) {
+        const taskIndex = newTasks[currentStepId]?.findIndex(t => t.id === taskId);
         if (taskIndex !== -1) {
           // Update the task with new status and additional data
-          newTasks[stepId][taskIndex] = {
-            ...newTasks[stepId][taskIndex],
+          stepId = currentStepId;
+          updatedTask = {
+            ...newTasks[currentStepId][taskIndex],
             status: newStatus,
-            ...(additionalData && { 
-              receivedWeight: additionalData.weight,
-              receivedQuantity: additionalData.quantity 
-            })
+            ...(additionalData?.weight !== undefined && { receivedWeight: additionalData.weight }),
+            ...(additionalData?.quantity !== undefined && { receivedQuantity: additionalData.quantity }),
+            ...(additionalData?.completedWeight !== undefined && { completedWeight: additionalData.completedWeight }),
+            ...(additionalData?.completedQuantity !== undefined && { completedQuantity: additionalData.completedQuantity })
           };
+          newTasks[currentStepId][taskIndex] = updatedTask;
           break;
+        }
+      }
+      
+      // Handle child task creation for partially completed items
+      if (additionalData?.createChildTask && updatedTask && stepId) {
+        const completedWeight = additionalData.completedWeight || 0;
+        const completedQuantity = additionalData.completedQuantity || 0;
+        const receivedWeight = updatedTask.receivedWeight || 0;
+        const receivedQuantity = updatedTask.receivedQuantity || 0;
+        
+        // Create child task with remaining work
+        if (receivedWeight > completedWeight || receivedQuantity > completedQuantity) {
+          const remainingWeight = receivedWeight - completedWeight;
+          const remainingQuantity = receivedQuantity - completedQuantity;
+          
+          const childTask: ProductionTask = {
+            id: `child-${updatedTask.id}-${Date.now()}`,
+            productCode: updatedTask.productCode,
+            category: updatedTask.category,
+            subcategory: updatedTask.subcategory,
+            quantity: remainingQuantity,
+            orderNumber: updatedTask.orderNumber,
+            customerName: updatedTask.customerName,
+            priority: updatedTask.priority,
+            expectedDate: updatedTask.expectedDate,
+            createdAt: new Date(),
+            notes: `Remaining work from partially completed task #${updatedTask.id}`,
+            status: 'Progress',
+            receivedWeight: remainingWeight,
+            receivedQuantity: remainingQuantity,
+            parentTaskId: updatedTask.id,
+            isChildTask: true
+          };
+          
+          // Add to pending queue
+          if (!newTasks['pending']) newTasks['pending'] = [];
+          newTasks['pending'].push(childTask);
+          
+          console.log('Created child task for remaining work:', childTask);
         }
       }
       

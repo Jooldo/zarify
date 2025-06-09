@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, User, Calendar, Clock, FileText, ArrowRight } from 'lucide-react';
+import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,6 +26,12 @@ interface ProductionTask {
   expectedDate?: Date;
   createdAt?: Date;
   status?: string;
+  receivedWeight?: number;
+  receivedQuantity?: number;
+  completedWeight?: number;
+  completedQuantity?: number;
+  parentTaskId?: string;
+  isChildTask?: boolean;
 }
 
 interface TaskDetailsDialogProps {
@@ -33,7 +39,13 @@ interface TaskDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   task: ProductionTask | null;
   stepId?: string;
-  onStatusUpdate?: (taskId: string, newStatus: string, additionalData?: { weight?: number; quantity?: number }) => void;
+  onStatusUpdate?: (taskId: string, newStatus: string, additionalData?: { 
+    weight?: number; 
+    quantity?: number;
+    completedWeight?: number;
+    completedQuantity?: number;
+    createChildTask?: boolean;
+  }) => void;
 }
 
 const JHALAI_STATUSES = [
@@ -78,7 +90,10 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
   const [selectedStatus, setSelectedStatus] = useState('');
   const [weight, setWeight] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [completedWeight, setCompletedWeight] = useState('');
+  const [completedQuantity, setCompletedQuantity] = useState('');
   const [showWeightQuantityForm, setShowWeightQuantityForm] = useState(false);
+  const [showPartialCompletionForm, setShowPartialCompletionForm] = useState(false);
   const { toast } = useToast();
 
   if (!task) return null;
@@ -90,13 +105,24 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     setSelectedStatus(newStatus);
     if (newStatus === 'Received') {
       setShowWeightQuantityForm(true);
+      setShowPartialCompletionForm(false);
+    } else if (newStatus === 'Partially Completed') {
+      setShowPartialCompletionForm(true);
+      setShowWeightQuantityForm(false);
     } else {
       setShowWeightQuantityForm(false);
+      setShowPartialCompletionForm(false);
       handleStatusUpdate(newStatus);
     }
   };
 
-  const handleStatusUpdate = (status: string, additionalData?: { weight?: number; quantity?: number }) => {
+  const handleStatusUpdate = (status: string, additionalData?: { 
+    weight?: number; 
+    quantity?: number;
+    completedWeight?: number;
+    completedQuantity?: number;
+    createChildTask?: boolean;
+  }) => {
     if (!onStatusUpdate) return;
 
     onStatusUpdate(task.id, status, additionalData);
@@ -110,7 +136,10 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     setSelectedStatus('');
     setWeight('');
     setQuantity('');
+    setCompletedWeight('');
+    setCompletedQuantity('');
     setShowWeightQuantityForm(false);
+    setShowPartialCompletionForm(false);
     onOpenChange(false);
   };
 
@@ -130,6 +159,37 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     });
   };
 
+  const handlePartialCompletionSubmit = () => {
+    if (!completedWeight || !completedQuantity) {
+      toast({
+        title: 'Error',
+        description: 'Please enter both completed weight and quantity',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const completedWeightNum = parseFloat(completedWeight);
+    const completedQuantityNum = parseInt(completedQuantity);
+    const receivedWeightNum = task.receivedWeight || 0;
+    const receivedQuantityNum = task.receivedQuantity || 0;
+
+    if (completedWeightNum > receivedWeightNum || completedQuantityNum > receivedQuantityNum) {
+      toast({
+        title: 'Error',
+        description: 'Completed amount cannot exceed received amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    handleStatusUpdate('Partially Completed', {
+      completedWeight: completedWeightNum,
+      completedQuantity: completedQuantityNum,
+      createChildTask: true
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -137,6 +197,11 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             Production Task Details
+            {task.isChildTask && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                Remaining Work
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
         
@@ -148,6 +213,12 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                 <h3 className="font-semibold text-lg text-blue-900">{task.category}</h3>
                 <p className="text-blue-700">{task.subcategory}</p>
                 <p className="text-sm text-blue-600 font-mono mt-1">{task.productCode}</p>
+                {task.parentTaskId && (
+                  <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Remaining from parent task
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <Badge className={`mb-2 ${getPriorityColor(task.priority)}`}>
@@ -165,6 +236,64 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
               </div>
             </div>
           </div>
+
+          {/* Received Details */}
+          {(task.receivedWeight || task.receivedQuantity) && (
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Weight className="h-5 w-5 text-green-600" />
+                <h4 className="font-semibold text-lg text-green-800">Received Details</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-white rounded border border-green-200">
+                  <p className="text-sm text-green-600">Weight Received</p>
+                  <p className="text-2xl font-bold text-green-800">{task.receivedWeight} kg</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded border border-green-200">
+                  <p className="text-sm text-green-600">Quantity Received</p>
+                  <p className="text-2xl font-bold text-green-800">{task.receivedQuantity} pcs</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Completed Details */}
+          {(task.completedWeight || task.completedQuantity) && (
+            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Package className="h-5 w-5 text-emerald-600" />
+                <h4 className="font-semibold text-lg text-emerald-800">Quality Checked & Completed</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-white rounded border border-emerald-200">
+                  <p className="text-sm text-emerald-600">Weight Completed</p>
+                  <p className="text-2xl font-bold text-emerald-800">{task.completedWeight} kg</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded border border-emerald-200">
+                  <p className="text-sm text-emerald-600">Quantity Completed</p>
+                  <p className="text-2xl font-bold text-emerald-800">{task.completedQuantity} pcs</p>
+                </div>
+              </div>
+              {task.receivedWeight && task.receivedQuantity && (
+                <div className="mt-3 pt-3 border-t border-emerald-200">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-emerald-600">Remaining Weight:</p>
+                      <p className="font-medium text-emerald-800">
+                        {(task.receivedWeight - (task.completedWeight || 0)).toFixed(2)} kg
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-emerald-600">Remaining Quantity:</p>
+                      <p className="font-medium text-emerald-800">
+                        {(task.receivedQuantity - (task.completedQuantity || 0))} pcs
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Status Update Section for Jhalai */}
           {isJhalaiStep && onStatusUpdate && (
@@ -200,6 +329,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                         <Label>Weight (kg)</Label>
                         <Input
                           type="number"
+                          step="0.01"
                           placeholder="Enter weight"
                           value={weight}
                           onChange={(e) => setWeight(e.target.value)}
@@ -223,6 +353,64 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                         variant="outline" 
                         onClick={() => {
                           setShowWeightQuantityForm(false);
+                          setSelectedStatus('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Partial Completion Form */}
+                {showPartialCompletionForm && (
+                  <div className="space-y-3 p-3 bg-white rounded border">
+                    <h5 className="font-medium text-green-800">Quality Checked & Completed</h5>
+                    <p className="text-sm text-gray-600">
+                      Enter the weight and quantity that has successfully passed quality check.
+                      Remaining work will be created as a new task.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Completed Weight (kg)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter completed weight"
+                          value={completedWeight}
+                          onChange={(e) => setCompletedWeight(e.target.value)}
+                          max={task.receivedWeight || undefined}
+                        />
+                        {task.receivedWeight && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Max: {task.receivedWeight} kg
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label>Completed Quantity (pieces)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter completed quantity"
+                          value={completedQuantity}
+                          onChange={(e) => setCompletedQuantity(e.target.value)}
+                          max={task.receivedQuantity || undefined}
+                        />
+                        {task.receivedQuantity && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Max: {task.receivedQuantity} pcs
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handlePartialCompletionSubmit} className="flex-1">
+                        Confirm Partial Completion
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowPartialCompletionForm(false);
                           setSelectedStatus('');
                         }}
                       >

@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Eye, Calendar } from 'lucide-react';
+import { Clock, User, Package, Eye, Calendar, Weight, Hash } from 'lucide-react';
 
 interface ProductionTask {
   id: string;
@@ -21,6 +21,13 @@ interface ProductionTask {
   notes?: string;
   expectedDate?: Date;
   createdAt?: Date;
+  status?: string;
+  receivedWeight?: number;
+  receivedQuantity?: number;
+  completedWeight?: number;
+  completedQuantity?: number;
+  parentTaskId?: string;
+  isChildTask?: boolean;
 }
 
 interface DraggableCardProps {
@@ -74,19 +81,29 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
     onTaskClick(task);
   };
 
+  // Define card border style based on whether it's a child task
+  const cardBorderClass = task.isChildTask 
+    ? "cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-orange-500 border border-orange-300 bg-orange-50 active:cursor-grabbing"
+    : "cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing";
+    
   const renderPendingCard = () => (
     <Card 
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing"
+      className={cardBorderClass}
     >
       <CardContent className="p-3 space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
+            {task.isChildTask && (
+              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 mt-1">
+                Remaining Work
+              </Badge>
+            )}
           </div>
           <Button 
             variant="ghost" 
@@ -103,6 +120,23 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
             <span className="text-xs text-muted-foreground">Quantity:</span>
             <span className="text-sm font-medium">{task.quantity}</span>
           </div>
+          
+          {task.receivedWeight && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Weight:</span>
+              <div className="flex items-center gap-1">
+                <Weight className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs">{task.receivedWeight} kg</span>
+              </div>
+            </div>
+          )}
+          
+          {task.parentTaskId && (
+            <div className="flex items-center gap-1 text-xs text-orange-600 mt-1">
+              <Hash className="h-3 w-3" />
+              <span>From partial completion</span>
+            </div>
+          )}
           
           {task.createdAt && (
             <div className="flex items-center justify-between">
@@ -131,13 +165,18 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-green-500 active:cursor-grabbing"
+      className={cardBorderClass}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
+            {task.isChildTask && (
+              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 mt-1">
+                Remaining Work
+              </Badge>
+            )}
           </div>
           <Button 
             variant="ghost" 
@@ -152,6 +191,9 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
         <div className="space-y-1">
           <p className="text-xs font-medium">{task.productCode}</p>
           <p className="text-xs text-muted-foreground">Qty: {task.quantity} pcs</p>
+          {task.receivedWeight && (
+            <p className="text-xs text-muted-foreground">Weight: {task.receivedWeight} kg</p>
+          )}
         </div>
         
         {task.assignedWorker && (
@@ -172,9 +214,17 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
           </div>
         )}
         
-        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-          In Progress
-        </Badge>
+        {task.status && (
+          <Badge variant="outline" className={`text-xs ${
+            task.status === 'Received' ? 'bg-green-50 text-green-700' :
+            task.status === 'QC' ? 'bg-orange-50 text-orange-700' :
+            task.status === 'Partially Completed' ? 'bg-yellow-50 text-yellow-700' :
+            task.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
+            'bg-blue-50 text-blue-700'
+          }`}>
+            {task.status}
+          </Badge>
+        )}
       </CardContent>
     </Card>
   );
@@ -185,13 +235,18 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing"
+      className={cardBorderClass}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <p className="font-medium text-sm">{task.category}</p>
             <p className="text-xs text-muted-foreground">{task.subcategory}</p>
+            {task.isChildTask && (
+              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 mt-1">
+                Remaining Work
+              </Badge>
+            )}
           </div>
           <Button 
             variant="ghost" 
@@ -206,6 +261,9 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
         <div className="space-y-1">
           <p className="text-xs font-medium">{task.productCode}</p>
           <p className="text-xs text-muted-foreground">Qty: {task.quantity}</p>
+          {task.receivedWeight && (
+            <p className="text-xs text-muted-foreground">Weight: {task.receivedWeight} kg</p>
+          )}
         </div>
         
         <div className="flex items-center justify-between">
@@ -232,8 +290,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
         )}
         
         <div className="border-t pt-2">
-          <p className="text-xs text-muted-foreground">{task.orderNumber}</p>
-          <p className="text-xs text-muted-foreground truncate">{task.customerName}</p>
           {task.expectedDate && (
             <p className="text-xs text-muted-foreground">
               Due: {task.expectedDate.toLocaleDateString()}
