@@ -9,6 +9,7 @@ import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash, Cal
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
+import ManufacturingStepHistory from './ManufacturingStepHistory';
 
 interface ProductionTask {
   id: string;
@@ -210,7 +211,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -224,6 +225,11 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Manufacturing Step History - Show at top for processing steps */}
+          {isProcessingStep && (
+            <ManufacturingStepHistory task={task} currentStep={stepId} />
+          )}
+
           {/* Header Section */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-start justify-between mb-3">
