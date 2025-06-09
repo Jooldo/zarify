@@ -1,11 +1,14 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Eye, MoreHorizontal, Calendar } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import AddProductionItemDialog from './AddProductionItemDialog';
+import AssignmentDialog from './AssignmentDialog';
+import DraggableCard from './DraggableCard';
 
 interface ProductionTask {
   id: string;
@@ -35,7 +38,7 @@ const PROCESS_STEPS = [
 ];
 
 // Mock data for demonstration
-const mockTasks: { [key: string]: ProductionTask[] } = {
+const initialMockTasks: { [key: string]: ProductionTask[] } = {
   pending: [
     {
       id: '1',
@@ -74,7 +77,8 @@ const mockTasks: { [key: string]: ProductionTask[] } = {
       priority: 'Urgent',
       assignedWorker: 'Rajesh Kumar',
       startedAt: new Date(),
-      estimatedTime: 120
+      estimatedTime: 120,
+      expectedDate: new Date('2024-12-12')
     }
   ],
   quellai: [
@@ -124,27 +128,21 @@ const mockTasks: { [key: string]: ProductionTask[] } = {
   ]
 };
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'Urgent': return 'bg-red-100 text-red-800';
-    case 'High': return 'bg-orange-100 text-orange-800';
-    case 'Medium': return 'bg-yellow-100 text-yellow-800';
-    case 'Low': return 'bg-green-100 text-green-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const formatTimeElapsed = (startedAt: Date) => {
-  const now = new Date();
-  const elapsed = Math.floor((now.getTime() - startedAt.getTime()) / 60000);
-  if (elapsed < 60) return `${elapsed}m`;
-  return `${Math.floor(elapsed / 60)}h ${elapsed % 60}m`;
-};
-
 const ProductionKanban = () => {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
-  const [tasks, setTasks] = useState(mockTasks);
+  const [tasks, setTasks] = useState(initialMockTasks);
+  const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [taskToAssign, setTaskToAssign] = useState<ProductionTask | null>(null);
   
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
   const handleTaskClick = (task: ProductionTask) => {
     setSelectedTask(task);
   };
@@ -157,8 +155,8 @@ const ProductionKanban = () => {
     const newTask: ProductionTask = {
       id: `new-${Date.now()}`,
       productCode: newItem.productCode,
-      category: 'RCC Pipe', // Default category - could be fetched from product config
-      subcategory: 'Standard', // Default subcategory - could be fetched from product config
+      category: 'RCC Pipe',
+      subcategory: 'Standard',
       quantity: newItem.quantity,
       orderNumber: `OD${String(Date.now()).slice(-6)}`,
       customerName: 'Production Request',
@@ -173,107 +171,72 @@ const ProductionKanban = () => {
     }));
   };
 
-  const renderPendingCard = (task: ProductionTask) => (
-    <Card 
-      key={task.id} 
-      className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-      onClick={() => handleTaskClick(task)}
-    >
-      <CardContent className="p-3 space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="font-medium text-sm">{task.category}</p>
-            <p className="text-xs text-muted-foreground">{task.subcategory}</p>
-          </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <Eye className="h-3 w-3" />
-          </Button>
-        </div>
-        
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Quantity:</span>
-            <span className="text-sm font-medium">{task.quantity}</span>
-          </div>
-          
-          {task.createdAt && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Created:</span>
-              <span className="text-xs">{task.createdAt.toLocaleDateString()}</span>
-            </div>
-          )}
-          
-          {task.expectedDate && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Expected:</span>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs">{task.expectedDate.toLocaleDateString()}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = active.data.current?.task;
+    setActiveTask(task);
+  };
 
-  const renderRegularCard = (task: ProductionTask) => (
-    <Card 
-      key={task.id} 
-      className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-      onClick={() => handleTaskClick(task)}
-    >
-      <CardContent className="p-3 space-y-2">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="font-medium text-sm">{task.category}</p>
-            <p className="text-xs text-muted-foreground">{task.subcategory}</p>
-          </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <Eye className="h-3 w-3" />
-          </Button>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xs font-medium">{task.productCode}</p>
-          <p className="text-xs text-muted-foreground">Qty: {task.quantity}</p>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-            {task.priority}
-          </Badge>
-          {task.assignedWorker && (
-            <div className="flex items-center gap-1">
-              <User className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                {task.assignedWorker.split(' ')[0]}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        {task.startedAt && (
-          <div className="flex items-center gap-1 mt-2">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
-              {formatTimeElapsed(task.startedAt)}
-            </span>
-          </div>
-        )}
-        
-        <div className="border-t pt-2">
-          <p className="text-xs text-muted-foreground">{task.orderNumber}</p>
-          <p className="text-xs text-muted-foreground truncate">{task.customerName}</p>
-          {task.expectedDate && (
-            <p className="text-xs text-muted-foreground">
-              Due: {task.expectedDate.toLocaleDateString()}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const activeTask = active.data.current?.task;
+    const activeStepId = active.data.current?.stepId;
+    const overStepId = over.id as string;
+
+    // If dropping in the same step, do nothing
+    if (activeStepId === overStepId) return;
+
+    // Special handling for Pending → Jalhai
+    if (activeStepId === 'pending' && overStepId === 'jhalai') {
+      setTaskToAssign(activeTask);
+      setAssignmentDialogOpen(true);
+      return;
+    }
+
+    // Move task for other steps
+    if (activeTask) {
+      moveTask(activeTask.id, activeStepId, overStepId);
+    }
+  };
+
+  const moveTask = (taskId: string, fromStep: string, toStep: string, updatedTask?: Partial<ProductionTask>) => {
+    setTasks(prev => {
+      const newTasks = { ...prev };
+      
+      // Find and remove task from source step
+      const taskIndex = newTasks[fromStep]?.findIndex(t => t.id === taskId);
+      if (taskIndex === -1) return prev;
+      
+      const [task] = newTasks[fromStep].splice(taskIndex, 1);
+      
+      // Add task to destination step with any updates
+      if (!newTasks[toStep]) newTasks[toStep] = [];
+      newTasks[toStep].push({ ...task, ...updatedTask });
+      
+      return newTasks;
+    });
+  };
+
+  const handleAssignment = (assignment: {
+    taskId: string;
+    workerId: string;
+    workerName: string;
+    expectedDate: Date;
+    remarks?: string;
+  }) => {
+    moveTask(assignment.taskId, 'pending', 'jhalai', {
+      assignedWorker: assignment.workerName,
+      expectedDate: assignment.expectedDate,
+      startedAt: new Date(),
+      notes: assignment.remarks,
+    });
+    
+    setTaskToAssign(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -285,40 +248,76 @@ const ProductionKanban = () => {
         <AddProductionItemDialog onAddItem={handleAddItem} />
       </div>
 
-      <div className="space-y-6">
-        {PROCESS_STEPS.map(step => (
-          <div key={step.id} className="space-y-4">
-            <div className={`p-4 rounded-lg ${step.color} border`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg">{step.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {tasks[step.id]?.length || 0} tasks in progress
-                  </p>
+      <DndContext 
+        sensors={sensors} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="space-y-6">
+          {PROCESS_STEPS.map(step => (
+            <div key={step.id} className="space-y-4">
+              <div className={`p-4 rounded-lg ${step.color} border`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg">{step.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {tasks[step.id]?.length || 0} tasks in progress
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-sm">
+                    {tasks[step.id]?.length || 0}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-sm">
-                  {tasks[step.id]?.length || 0}
-                </Badge>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[120px]">
-              {tasks[step.id]?.map(task => 
-                step.id === 'pending' ? renderPendingCard(task) : renderRegularCard(task)
-              )}
               
-              {/* Empty state */}
-              {(!tasks[step.id] || tasks[step.id].length === 0) && (
-                <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">No tasks in {step.name}</p>
-                  <p className="text-xs text-gray-400 mt-1">Tasks will appear here when assigned to this step</p>
+              <SortableContext items={tasks[step.id]?.map(t => t.id) || []} strategy={verticalListSortingStrategy}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[120px] relative">
+                  {/* Drop zone overlay */}
+                  <div 
+                    id={step.id}
+                    className="absolute inset-0 pointer-events-none"
+                  />
+                  
+                  {tasks[step.id]?.map(task => (
+                    <DraggableCard 
+                      key={task.id}
+                      task={task}
+                      stepId={step.id}
+                      onTaskClick={handleTaskClick}
+                    />
+                  ))}
+                  
+                  {/* Empty state */}
+                  {(!tasks[step.id] || tasks[step.id].length === 0) && (
+                    <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500">No tasks in {step.name}</p>
+                      <p className="text-xs text-gray-400 mt-1">Tasks will appear here when assigned to this step</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </SortableContext>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+
+        <DragOverlay>
+          {activeTask ? (
+            <DraggableCard 
+              task={activeTask} 
+              stepId="overlay"
+              onTaskClick={() => {}}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <AssignmentDialog 
+        open={assignmentDialogOpen}
+        onOpenChange={setAssignmentDialogOpen}
+        task={taskToAssign}
+        onAssign={handleAssignment}
+      />
     </div>
   );
 };
