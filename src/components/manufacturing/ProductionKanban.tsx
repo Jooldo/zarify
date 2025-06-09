@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -273,9 +274,10 @@ const ProductionKanban = () => {
       return;
     }
 
-    // Special handling for Pending → Jalhai
-    if (activeStepId === 'pending' && overStepId === 'jhalai') {
-      console.log('Opening assignment dialog for Pending → Jhalai');
+    // Special handling for transitions that require assignment
+    if ((activeStepId === 'pending' && overStepId === 'jhalai') ||
+        (activeStepId === 'jhalai' && overStepId === 'quellai')) {
+      console.log('Opening assignment dialog for step transition');
       setTaskToAssign(activeTask);
       setAssignmentDialogOpen(true);
       return;
@@ -321,7 +323,25 @@ const ProductionKanban = () => {
   }) => {
     console.log('Handling assignment:', assignment);
     
-    moveTask(assignment.taskId, 'pending', 'jhalai', {
+    // Determine which step to move to based on current assignment
+    const activeTask = taskToAssign;
+    let fromStep = 'pending';
+    let toStep = 'jhalai';
+    
+    // Find current step of the task
+    for (const stepId in tasks) {
+      if (tasks[stepId]?.find(t => t.id === assignment.taskId)) {
+        fromStep = stepId;
+        if (stepId === 'pending') {
+          toStep = 'jhalai';
+        } else if (stepId === 'jhalai') {
+          toStep = 'quellai';
+        }
+        break;
+      }
+    }
+    
+    moveTask(assignment.taskId, fromStep, toStep, {
       assignedWorker: assignment.workerName,
       expectedDate: assignment.expectedDate,
       startedAt: new Date(),

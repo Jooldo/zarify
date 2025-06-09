@@ -48,7 +48,7 @@ interface TaskDetailsDialogProps {
   }) => void;
 }
 
-const JHALAI_STATUSES = [
+const STEP_STATUSES = [
   { value: 'Progress', label: 'In Progress' },
   { value: 'Received', label: 'Received' },
   { value: 'QC', label: 'Quality Check' },
@@ -121,7 +121,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
 
   if (!task) return null;
 
-  const isJhalaiStep = stepId === 'jhalai';
+  const isProcessingStep = stepId === 'jhalai' || stepId === 'quellai';
   const currentStatus = task.status || 'Progress';
 
   const handleStatusChange = (newStatus: string) => {
@@ -247,7 +247,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                 <Badge className={`mb-2 ${getPriorityColor(task.priority)}`}>
                   {task.priority} Priority
                 </Badge>
-                {isJhalaiStep && (
+                {isProcessingStep && (
                   <Badge className={`block mb-2 ${getStatusColor(currentStatus)}`}>
                     {currentStatus}
                   </Badge>
@@ -333,12 +333,12 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
             </div>
           )}
 
-          {/* Status Update Section for Jhalai */}
-          {isJhalaiStep && onStatusUpdate && (
+          {/* Status Update Section for Processing Steps */}
+          {isProcessingStep && onStatusUpdate && (
             <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
               <h4 className="font-semibold text-lg flex items-center gap-2 text-green-800">
                 <ArrowRight className="h-4 w-4" />
-                Update Status
+                Update Status ({stepId === 'jhalai' ? 'Jhalai' : 'Quellai'})
               </h4>
               
               <div className="space-y-3">
@@ -349,7 +349,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                       <SelectValue placeholder="Select new status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {JHALAI_STATUSES.map(status => (
+                      {STEP_STATUSES.map(status => (
                         <SelectItem key={status.value} value={status.value}>
                           {status.label}
                         </SelectItem>
