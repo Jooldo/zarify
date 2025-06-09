@@ -39,6 +39,8 @@ export interface Order {
   order_items: OrderItem[];
 }
 
+type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +75,7 @@ export const useOrders = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
       const { error } = await supabase
         .from('orders')
@@ -102,7 +104,7 @@ export const useOrders = () => {
     }
   };
 
-  const updateOrderItemStatus = async (itemId: string, status: string) => {
+  const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
     try {
       const { error } = await supabase
         .from('order_items')
