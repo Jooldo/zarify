@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -20,6 +19,11 @@ const PROCESS_STEPS = [
   { id: 'vibrator', name: 'Vibrator', color: 'bg-green-100' },
   { id: 'quality-check', name: 'Quality Check', color: 'bg-orange-100' },
   { id: 'completed', name: 'Completed', color: 'bg-emerald-100' }
+];
+
+// Valid production steps for type checking
+const VALID_PRODUCTION_STEPS: ProductionTask['current_step'][] = [
+  'pending', 'jhalai', 'quellai', 'meena', 'vibrator', 'quality-check', 'completed'
 ];
 
 // Droppable step component
@@ -156,6 +160,12 @@ const ProductionKanban = () => {
       return;
     }
 
+    // Validate that overStepId is a valid production step
+    if (!VALID_PRODUCTION_STEPS.includes(overStepId as ProductionTask['current_step'])) {
+      console.log('Invalid drop target step:', overStepId);
+      return;
+    }
+
     // Special handling for transitions that require assignment
     if ((activeStepId === 'pending' && overStepId === 'jhalai') ||
         (activeStepId === 'jhalai' && overStepId === 'quellai') ||
@@ -173,7 +183,7 @@ const ProductionKanban = () => {
       console.log('Moving task to different step');
       moveTask({
         taskId: activeTask.id,
-        toStep: overStepId,
+        toStep: overStepId as ProductionTask['current_step'],
       });
     }
   };
@@ -191,7 +201,7 @@ const ProductionKanban = () => {
     const activeTask = taskToAssign;
     if (!activeTask) return;
 
-    let toStep = 'jhalai';
+    let toStep: ProductionTask['current_step'] = 'jhalai';
     if (activeTask.current_step === 'pending') {
       toStep = 'jhalai';
     } else if (activeTask.current_step === 'jhalai') {
