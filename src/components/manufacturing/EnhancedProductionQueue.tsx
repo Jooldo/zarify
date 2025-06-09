@@ -113,11 +113,7 @@ const EnhancedProductionQueue = () => {
         created_at: order.created_at,
         current_step: 1, // Default to first step
         manufacturing_steps: [
-          { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
-          { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
-          { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-          { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-          { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+          { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 }
         ]
       }));
 
@@ -243,11 +239,7 @@ const EnhancedProductionQueue = () => {
       created_at: newOrder.created_at,
       current_step: 1,
       manufacturing_steps: [
-        { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
-        { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
-        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+        { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 }
       ]
     };
     
