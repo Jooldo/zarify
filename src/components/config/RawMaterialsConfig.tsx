@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useMaterialTypes } from '@/hooks/useMaterialTypes';
@@ -6,16 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import ConfigHeader from '@/components/procurement/headers/ConfigHeader';
-import MaterialTypeSelector from '@/components/inventory/MaterialTypeSelector';
 import RawMaterialsConfigFilter from '@/components/config/RawMaterialsConfigFilter';
+import MaterialForm from '@/components/config/MaterialForm';
+
+interface MaterialFormData {
+  name: string;
+  type: string;
+  unit: string;
+  minimum_stock: string;
+}
 
 const RawMaterialsConfig = () => {
   const { rawMaterials, loading, refetch } = useRawMaterials();
@@ -30,7 +37,7 @@ const RawMaterialsConfig = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MaterialFormData>({
     name: '',
     type: '',
     unit: '',
@@ -73,21 +80,21 @@ const RawMaterialsConfig = () => {
 
   const filteredMaterials = applyFilters(rawMaterials, filters);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       name: '',
       type: '',
       unit: '',
       minimum_stock: ''
     });
-  };
+  }, []);
 
-  const handleAddMaterial = () => {
+  const handleAddMaterial = useCallback(() => {
     resetForm();
     setIsAddDialogOpen(true);
-  };
+  }, [resetForm]);
 
-  const handleEditMaterial = (material) => {
+  const handleEditMaterial = useCallback((material) => {
     setSelectedMaterial(material);
     setFormData({
       name: material.name || '',
@@ -96,9 +103,13 @@ const RawMaterialsConfig = () => {
       minimum_stock: material.minimum_stock?.toString() || ''
     });
     setIsEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const handleFormDataChange = useCallback((newFormData: MaterialFormData) => {
+    setFormData(newFormData);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.type || !formData.unit) {
@@ -209,66 +220,6 @@ const RawMaterialsConfig = () => {
       </div>
     );
   }
-
-  const MaterialForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Material Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="Enter material name"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <MaterialTypeSelector
-            value={formData.type}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
-            placeholder="Select or create material type"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="unit">Unit *</Label>
-          <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select unit" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="grams">Grams (g)</SelectItem>
-              <SelectItem value="pieces">Pieces</SelectItem>
-              <SelectItem value="meters">Meters (m)</SelectItem>
-              <SelectItem value="rolls">Rolls</SelectItem>
-              <SelectItem value="kg">Kilograms (kg)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="minimum_stock">Minimum Stock Level</Label>
-          <Input
-            id="minimum_stock"
-            type="number"
-            value={formData.minimum_stock}
-            onChange={(e) => setFormData(prev => ({ ...prev, minimum_stock: e.target.value }))}
-            placeholder="0"
-            min="0"
-          />
-        </div>
-      </div>
-
-      <DialogFooter>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : selectedMaterial ? 'Update Material' : 'Add Material'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
 
   return (
     <div className="space-y-6">
@@ -383,7 +334,13 @@ const RawMaterialsConfig = () => {
               Add a new raw material to your catalog. You can assign suppliers later through the Users section.
             </DialogDescription>
           </DialogHeader>
-          <MaterialForm />
+          <MaterialForm
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            isEditing={false}
+          />
         </DialogContent>
       </Dialog>
 
@@ -396,7 +353,13 @@ const RawMaterialsConfig = () => {
               Update raw material information
             </DialogDescription>
           </DialogHeader>
-          <MaterialForm />
+          <MaterialForm
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            isEditing={true}
+          />
         </DialogContent>
       </Dialog>
     </div>
