@@ -1,10 +1,9 @@
 
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
 import FGManufacturingTab from './manufacturing/FGManufacturingTab';
-import EnhancedProductionQueue from './manufacturing/EnhancedProductionQueue';
 import FGAnalytics from './analytics/FGAnalytics';
 import FGWorkers from './workers/FGWorkers';
 
@@ -14,37 +13,76 @@ interface FinishedGoodManagementProps {
 }
 
 const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManagementProps) => {
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case 'fg-inventory':
+        return <FinishedGoodsInventory />;
+      case 'fg-manufacturing':
+        return <FGManufacturingTab />;
+      case 'fg-analytics':
+        return <FGAnalytics />;
+      case 'fg-workers':
+        return <FGWorkers />;
+      case 'fg-config':
+        return <FinishedGoodsConfig />;
+      default:
+        return <FinishedGoodsInventory />;
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="fg-inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="fg-config">Configuration</TabsTrigger>
-          <TabsTrigger value="fg-manufacturing">Manufacturing</TabsTrigger>
-          <TabsTrigger value="fg-analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="fg-workers">Workers</TabsTrigger>
-        </TabsList>
+    <div className="min-h-screen bg-background">
+      {/* Fixed Header Section */}
+      <div className="bg-card border-b border-border">
+        <div className="flex items-center justify-between py-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Finished Good Management
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage inventory, manufacturing, analytics, workforce, and configuration
+            </p>
+          </div>
+        </div>
 
-        <TabsContent value="fg-inventory" className="space-y-6 mt-6">
-          <FinishedGoodsInventory />
-        </TabsContent>
+        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+            <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Package className="h-4 w-4" />
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Factory className="h-4 w-4" />
+              Manufacturing
+            </TabsTrigger>
+            <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Users className="h-4 w-4" />
+              Workers
+            </TabsTrigger>
+            <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Wrench className="h-4 w-4" />
+              Config
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-        <TabsContent value="fg-config" className="space-y-6 mt-6">
-          <FinishedGoodsConfig />
-        </TabsContent>
-
-        <TabsContent value="fg-manufacturing" className="space-y-6 mt-6">
-          <FGManufacturingTab />
-        </TabsContent>
-
-        <TabsContent value="fg-analytics" className="space-y-6 mt-6">
-          <FGAnalytics />
-        </TabsContent>
-
-        <TabsContent value="fg-workers" className="space-y-6 mt-6">
-          <FGWorkers />
-        </TabsContent>
-      </Tabs>
+      {/* Content Section */}
+      <div className="bg-background py-6">
+        <div className="min-h-[700px]">
+          <Tabs value={activeTab} className="w-full">
+            <TabsContent value={activeTab} className="mt-0 animate-fade-in">
+              <div className="space-y-6">
+                {renderActiveContent()}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
