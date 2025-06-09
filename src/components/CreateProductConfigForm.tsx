@@ -142,12 +142,10 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       const productConfigData = {
         category,
         subcategory: product,
-        sizeValue,
-        weightInGrams,
-        threshold: threshold ? parseInt(threshold) : 0,
-        isActive,
-        productCode,
-        rawMaterials
+        size_value: parseFloat(sizeValue),
+        weight_range: `${weightInGrams}g`,
+        is_active: isActive,
+        product_code: productCode
       };
 
       if (onSubmit) {
