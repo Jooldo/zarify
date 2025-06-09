@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -25,6 +26,9 @@ interface ProductionTask {
   notes?: string;
   expectedDate?: Date;
   createdAt?: Date;
+  status?: string;
+  receivedWeight?: number;
+  receivedQuantity?: number;
 }
 
 const PROCESS_STEPS = [
@@ -132,7 +136,7 @@ const initialMockTasks: { [key: string]: ProductionTask[] } = {
 const DroppableStep = ({ step, tasks, onTaskClick }: { 
   step: { id: string; name: string; color: string }, 
   tasks: ProductionTask[], 
-  onTaskClick: (task: ProductionTask) => void 
+  onTaskClick: (task: ProductionTask, stepId: string) => void 
 }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: step.id,
@@ -170,7 +174,7 @@ const DroppableStep = ({ step, tasks, onTaskClick }: {
                 key={task.id}
                 task={task}
                 stepId={step.id}
-                onTaskClick={onTaskClick}
+                onTaskClick={(task) => onTaskClick(task, step.id)}
               />
             ))}
             
@@ -191,6 +195,7 @@ const DroppableStep = ({ step, tasks, onTaskClick }: {
 
 const ProductionKanban = () => {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
+  const [selectedStepId, setSelectedStepId] = useState<string>('');
   const [tasks, setTasks] = useState(initialMockTasks);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -205,8 +210,9 @@ const ProductionKanban = () => {
     })
   );
 
-  const handleTaskClick = (task: ProductionTask) => {
+  const handleTaskClick = (task: ProductionTask, stepId: string) => {
     setSelectedTask(task);
+    setSelectedStepId(stepId);
     setTaskDetailsDialogOpen(true);
   };
 
@@ -317,9 +323,37 @@ const ProductionKanban = () => {
       expectedDate: assignment.expectedDate,
       startedAt: new Date(),
       notes: assignment.remarks,
+      status: 'Progress'
     });
     
     setTaskToAssign(null);
+  };
+
+  const handleStatusUpdate = (taskId: string, newStatus: string, additionalData?: { weight?: number; quantity?: number }) => {
+    console.log('Updating task status:', { taskId, newStatus, additionalData });
+    
+    setTasks(prev => {
+      const newTasks = { ...prev };
+      
+      // Find the task in the current step
+      for (const stepId in newTasks) {
+        const taskIndex = newTasks[stepId]?.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+          // Update the task with new status and additional data
+          newTasks[stepId][taskIndex] = {
+            ...newTasks[stepId][taskIndex],
+            status: newStatus,
+            ...(additionalData && { 
+              receivedWeight: additionalData.weight,
+              receivedQuantity: additionalData.quantity 
+            })
+          };
+          break;
+        }
+      }
+      
+      return newTasks;
+    });
   };
 
   return (
@@ -370,6 +404,8 @@ const ProductionKanban = () => {
         open={taskDetailsDialogOpen}
         onOpenChange={setTaskDetailsDialogOpen}
         task={selectedTask}
+        stepId={selectedStepId}
+        onStatusUpdate={handleStatusUpdate}
       />
     </div>
   );

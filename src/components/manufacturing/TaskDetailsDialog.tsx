@@ -1,9 +1,14 @@
 
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, User, Calendar, Clock, FileText, Building2, Hash } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, User, Calendar, Clock, FileText, Building2, Hash, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductionTask {
   id: string;
@@ -20,13 +25,24 @@ interface ProductionTask {
   notes?: string;
   expectedDate?: Date;
   createdAt?: Date;
+  status?: string;
 }
 
 interface TaskDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: ProductionTask | null;
+  stepId?: string;
+  onStatusUpdate?: (taskId: string, newStatus: string, additionalData?: { weight?: number; quantity?: number }) => void;
 }
+
+const JHALAI_STATUSES = [
+  { value: 'Progress', label: 'In Progress' },
+  { value: 'Received', label: 'Received' },
+  { value: 'QC', label: 'Quality Check' },
+  { value: 'Partially Completed', label: 'Partially Completed' },
+  { value: 'Completed', label: 'Completed' }
+];
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
@@ -35,6 +51,17 @@ const getPriorityColor = (priority: string) => {
     case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'Low': return 'bg-green-100 text-green-800 border-green-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'Progress': return 'bg-blue-100 text-blue-800';
+    case 'Received': return 'bg-green-100 text-green-800';
+    case 'QC': return 'bg-orange-100 text-orange-800';
+    case 'Partially Completed': return 'bg-yellow-100 text-yellow-800';
+    case 'Completed': return 'bg-emerald-100 text-emerald-800';
+    default: return 'bg-gray-100 text-gray-800';
   }
 };
 
@@ -47,8 +74,61 @@ const formatTimeElapsed = (startedAt: Date) => {
   return `${hours} hours ${minutes} minutes`;
 };
 
-const TaskDetailsDialog = ({ open, onOpenChange, task }: TaskDetailsDialogProps) => {
+const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }: TaskDetailsDialogProps) => {
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [weight, setWeight] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [showWeightQuantityForm, setShowWeightQuantityForm] = useState(false);
+  const { toast } = useToast();
+
   if (!task) return null;
+
+  const isJhalaiStep = stepId === 'jhalai';
+  const currentStatus = task.status || 'Progress';
+
+  const handleStatusChange = (newStatus: string) => {
+    setSelectedStatus(newStatus);
+    if (newStatus === 'Received') {
+      setShowWeightQuantityForm(true);
+    } else {
+      setShowWeightQuantityForm(false);
+      handleStatusUpdate(newStatus);
+    }
+  };
+
+  const handleStatusUpdate = (status: string, additionalData?: { weight?: number; quantity?: number }) => {
+    if (!onStatusUpdate) return;
+
+    onStatusUpdate(task.id, status, additionalData);
+    
+    toast({
+      title: 'Status Updated',
+      description: `Task status updated to ${status}`,
+    });
+
+    // Reset form
+    setSelectedStatus('');
+    setWeight('');
+    setQuantity('');
+    setShowWeightQuantityForm(false);
+    onOpenChange(false);
+  };
+
+  const handleReceivedSubmit = () => {
+    if (!weight || !quantity) {
+      toast({
+        title: 'Error',
+        description: 'Please enter both weight and quantity',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    handleStatusUpdate('Received', {
+      weight: parseFloat(weight),
+      quantity: parseInt(quantity)
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,6 +153,11 @@ const TaskDetailsDialog = ({ open, onOpenChange, task }: TaskDetailsDialogProps)
                 <Badge className={`mb-2 ${getPriorityColor(task.priority)}`}>
                   {task.priority} Priority
                 </Badge>
+                {isJhalaiStep && (
+                  <Badge className={`block mb-2 ${getStatusColor(currentStatus)}`}>
+                    {currentStatus}
+                  </Badge>
+                )}
                 <div className="text-right">
                   <span className="text-2xl font-bold text-blue-900">{task.quantity}</span>
                   <span className="text-sm text-blue-600 ml-1">pieces</span>
@@ -80,6 +165,75 @@ const TaskDetailsDialog = ({ open, onOpenChange, task }: TaskDetailsDialogProps)
               </div>
             </div>
           </div>
+
+          {/* Status Update Section for Jhalai */}
+          {isJhalaiStep && onStatusUpdate && (
+            <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <h4 className="font-semibold text-lg flex items-center gap-2 text-green-800">
+                <ArrowRight className="h-4 w-4" />
+                Update Status
+              </h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label className="font-medium">New Status</Label>
+                  <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select new status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JHALAI_STATUSES.map(status => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Weight and Quantity Form for Received Status */}
+                {showWeightQuantityForm && (
+                  <div className="space-y-3 p-3 bg-white rounded border">
+                    <h5 className="font-medium text-green-800">Received Details</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Weight (kg)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter weight"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Quantity (pieces)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter quantity"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleReceivedSubmit} className="flex-1">
+                        Confirm Received
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowWeightQuantityForm(false);
+                          setSelectedStatus('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
