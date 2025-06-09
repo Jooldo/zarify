@@ -4,9 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Edit, Eye, Clock, CheckCircle, Package, Truck } from 'lucide-react';
+import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText } from 'lucide-react';
 import OrderDetails from '@/components/OrderDetails';
 import EditOrderDialog from './EditOrderDialog';
+import CreateInvoiceDialog from './CreateInvoiceDialog';
+import { useInvoices } from '@/hooks/useInvoices';
 
 interface OrdersTableRowProps {
   item: {
@@ -36,11 +38,14 @@ interface OrdersTableRowProps {
 
 const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate, onFinishedGoodsUpdate }: OrdersTableRowProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
+  const { getInvoiceByOrderId } = useInvoices();
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
 
   // Find the correct order by order_number instead of id
   const order = orders.find(o => o.order_number === item.orderId);
+  const existingInvoice = order ? getInvoiceByOrderId(order.id) : null;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -133,17 +138,55 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
             >
               <Edit className="h-3 w-3" />
             </Button>
+            
+            {/* Invoice Actions */}
+            {order && (
+              <>
+                {existingInvoice ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 w-6 p-0"
+                    title="View Invoice"
+                  >
+                    <FileText className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 w-6 p-0"
+                    onClick={() => setIsCreateInvoiceDialogOpen(true)}
+                    title="Create Invoice"
+                  >
+                    <Receipt className="h-3 w-3" />
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </TableCell>
       </TableRow>
 
       {order && (
-        <EditOrderDialog
-          isOpen={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
-          order={order}
-          onOrderUpdate={onOrderUpdate}
-        />
+        <>
+          <EditOrderDialog
+            isOpen={isEditDialogOpen}
+            onClose={() => setIsEditDialogOpen(false)}
+            order={order}
+            onOrderUpdate={onOrderUpdate}
+          />
+          
+          <CreateInvoiceDialog
+            isOpen={isCreateInvoiceDialogOpen}
+            onClose={() => setIsCreateInvoiceDialogOpen(false)}
+            order={order}
+            onInvoiceCreated={() => {
+              onOrderUpdate();
+              // Additional refresh for invoices if needed
+            }}
+          />
+        </>
       )}
     </>
   );

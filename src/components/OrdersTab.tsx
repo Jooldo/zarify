@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
+import { useInvoices } from '@/hooks/useInvoices';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
@@ -28,6 +29,7 @@ const OrdersTab = () => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
+  const { refetch: refetchInvoices } = useInvoices();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<OrderFilters>({
     customer: '',
@@ -118,6 +120,11 @@ const OrdersTab = () => {
   const getStockAvailable = (productCode: string) => {
     const finishedGood = finishedGoods.find(item => item.product_code === productCode);
     return finishedGood ? finishedGood.current_stock : 0;
+  };
+
+  const handleOrderUpdate = () => {
+    refetch();
+    refetchInvoices();
   };
 
   const flattenedOrders = orders.flatMap(order => 
@@ -266,7 +273,7 @@ const OrdersTab = () => {
       <OrdersHeader 
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm}
-        onOrderCreated={refetch}
+        onOrderCreated={handleOrderUpdate}
         onFiltersChange={setFilters}
         customers={customerNames}
         categories={categories}
@@ -279,7 +286,7 @@ const OrdersTab = () => {
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}
-        onOrderUpdate={refetch}
+        onOrderUpdate={handleOrderUpdate}
         onFinishedGoodsUpdate={refetchFinishedGoods}
       />
 
