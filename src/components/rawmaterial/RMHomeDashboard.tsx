@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useMaterialTypes } from '@/hooks/useMaterialTypes';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, LineChart, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, LineChart, Line, Pie } from 'recharts';
 
 interface RMHomeDashboardProps {
   onNavigateToTab?: (tab: string) => void;
