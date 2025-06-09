@@ -527,6 +527,192 @@ export type Database = {
           },
         ]
       }
+      production_step_history: {
+        Row: {
+          assigned_worker_id: string | null
+          assigned_worker_name: string | null
+          completed_date: string | null
+          created_at: string | null
+          id: string
+          input_quantity: number | null
+          input_weight: number | null
+          merchant_id: string
+          output_quantity: number | null
+          output_weight: number | null
+          production_task_id: string
+          remarks: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["production_task_status"] | null
+          step_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          assigned_worker_name?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          id?: string
+          input_quantity?: number | null
+          input_weight?: number | null
+          merchant_id: string
+          output_quantity?: number | null
+          output_weight?: number | null
+          production_task_id: string
+          remarks?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["production_task_status"] | null
+          step_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          assigned_worker_name?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          id?: string
+          input_quantity?: number | null
+          input_weight?: number | null
+          merchant_id?: string
+          output_quantity?: number | null
+          output_weight?: number | null
+          production_task_id?: string
+          remarks?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["production_task_status"] | null
+          step_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_step_history_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_step_history_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_step_history_production_task_id_fkey"
+            columns: ["production_task_id"]
+            isOneToOne: false
+            referencedRelation: "production_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_tasks: {
+        Row: {
+          assigned_worker_id: string | null
+          assigned_worker_name: string | null
+          completed_quantity: number | null
+          completed_weight: number | null
+          created_at: string | null
+          current_step: Database["public"]["Enums"]["production_step"]
+          customer_name: string
+          estimated_time: number | null
+          expected_date: string | null
+          id: string
+          is_child_task: boolean | null
+          merchant_id: string
+          notes: string | null
+          order_number: string
+          parent_task_id: string | null
+          priority: Database["public"]["Enums"]["production_priority"]
+          product_config_id: string
+          quantity: number
+          received_quantity: number | null
+          received_weight: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["production_task_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          assigned_worker_name?: string | null
+          completed_quantity?: number | null
+          completed_weight?: number | null
+          created_at?: string | null
+          current_step?: Database["public"]["Enums"]["production_step"]
+          customer_name: string
+          estimated_time?: number | null
+          expected_date?: string | null
+          id?: string
+          is_child_task?: boolean | null
+          merchant_id: string
+          notes?: string | null
+          order_number: string
+          parent_task_id?: string | null
+          priority?: Database["public"]["Enums"]["production_priority"]
+          product_config_id: string
+          quantity: number
+          received_quantity?: number | null
+          received_weight?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["production_task_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          assigned_worker_name?: string | null
+          completed_quantity?: number | null
+          completed_weight?: number | null
+          created_at?: string | null
+          current_step?: Database["public"]["Enums"]["production_step"]
+          customer_name?: string
+          estimated_time?: number | null
+          expected_date?: string | null
+          id?: string
+          is_child_task?: boolean | null
+          merchant_id?: string
+          notes?: string | null
+          order_number?: string
+          parent_task_id?: string | null
+          priority?: Database["public"]["Enums"]["production_priority"]
+          product_config_id?: string
+          quantity?: number
+          received_quantity?: number | null
+          received_weight?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["production_task_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_tasks_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tasks_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "production_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tasks_product_config_id_fkey"
+            columns: ["product_config_id"]
+            isOneToOne: false
+            referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -917,6 +1103,22 @@ export type Database = {
     Enums: {
       order_status: "Created" | "In Progress" | "Ready" | "Delivered"
       procurement_status: "None" | "Pending" | "Approved" | "Received"
+      production_priority: "Low" | "Medium" | "High" | "Urgent"
+      production_step:
+        | "pending"
+        | "jhalai"
+        | "quellai"
+        | "meena"
+        | "vibrator"
+        | "quality-check"
+        | "completed"
+      production_task_status:
+        | "Created"
+        | "Progress"
+        | "QC"
+        | "Partially Completed"
+        | "Completed"
+        | "Received"
       user_role: "admin" | "worker"
       worker_status: "Active" | "On Leave"
     }
@@ -1036,6 +1238,24 @@ export const Constants = {
     Enums: {
       order_status: ["Created", "In Progress", "Ready", "Delivered"],
       procurement_status: ["None", "Pending", "Approved", "Received"],
+      production_priority: ["Low", "Medium", "High", "Urgent"],
+      production_step: [
+        "pending",
+        "jhalai",
+        "quellai",
+        "meena",
+        "vibrator",
+        "quality-check",
+        "completed",
+      ],
+      production_task_status: [
+        "Created",
+        "Progress",
+        "QC",
+        "Partially Completed",
+        "Completed",
+        "Received",
+      ],
       user_role: ["admin", "worker"],
       worker_status: ["Active", "On Leave"],
     },

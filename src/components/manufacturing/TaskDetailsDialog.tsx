@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -10,30 +11,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import ManufacturingStepHistory from './ManufacturingStepHistory';
-
-interface ProductionTask {
-  id: string;
-  productCode: string;
-  category: string;
-  subcategory: string;
-  quantity: number;
-  orderNumber: string;
-  customerName: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  assignedWorker?: string;
-  estimatedTime?: number;
-  startedAt?: Date;
-  notes?: string;
-  expectedDate?: Date;
-  createdAt?: Date;
-  status?: string;
-  receivedWeight?: number;
-  receivedQuantity?: number;
-  completedWeight?: number;
-  completedQuantity?: number;
-  parentTaskId?: string;
-  isChildTask?: boolean;
-}
+import { ProductionTask } from '@/hooks/useProductionTasks';
 
 interface TaskDetailsDialogProps {
   open: boolean;
@@ -76,9 +54,10 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const formatTimeElapsed = (startedAt: Date) => {
+const formatTimeElapsed = (startedAt: string) => {
   const now = new Date();
-  const elapsed = Math.floor((now.getTime() - startedAt.getTime()) / 60000);
+  const started = new Date(startedAt);
+  const elapsed = Math.floor((now.getTime() - started.getTime()) / 60000);
   if (elapsed < 60) return `${elapsed} minutes`;
   const hours = Math.floor(elapsed / 60);
   const minutes = elapsed % 60;
@@ -101,8 +80,9 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     if (task && productConfigs.length > 0) {
       // Find the product configuration for this task
       const productConfig = productConfigs.find(config => 
-        config.product_code === task.productCode ||
-        (config.category === task.category && config.subcategory === task.subcategory)
+        config.id === task.product_config_id ||
+        config.product_code === task.product_configs?.product_code ||
+        (config.category === task.product_configs?.category && config.subcategory === task.product_configs?.subcategory)
       );
 
       if (productConfig && productConfig.product_config_materials) {
@@ -193,8 +173,8 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
 
     const completedWeightNum = parseFloat(completedWeight);
     const completedQuantityNum = parseInt(completedQuantity);
-    const receivedWeightNum = task.receivedWeight || totalWeightFromMaterials || 0;
-    const receivedQuantityNum = task.receivedQuantity || task.quantity || 0;
+    const receivedWeightNum = task.received_weight || totalWeightFromMaterials || 0;
+    const receivedQuantityNum = task.received_quantity || task.quantity || 0;
 
     if (completedWeightNum > receivedWeightNum || completedQuantityNum > receivedQuantityNum) {
       toast({
@@ -215,10 +195,14 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
   // Get the assigned weight for Jhalai step
   const getAssignedWeight = () => {
     if (stepId === 'jhalai') {
-      return task.receivedWeight || totalWeightFromMaterials || 0;
+      return task.received_weight || totalWeightFromMaterials || 0;
     }
-    return task.receivedWeight || 0;
+    return task.received_weight || 0;
   };
+
+  const productCode = task.product_configs?.product_code || 'Unknown';
+  const category = task.product_configs?.category || task.customer_name;
+  const subcategory = task.product_configs?.subcategory || 'Production Request';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -227,7 +211,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             {stepId === 'jhalai' ? 'Jhalai' : stepId === 'quellai' ? 'Quellai' : 'Production'} Task Details
-            {task.isChildTask && (
+            {task.is_child_task && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                 Remaining Work
               </Badge>
@@ -245,10 +229,10 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-semibold text-lg text-blue-900">{task.category}</h3>
-                <p className="text-blue-700">{task.subcategory}</p>
-                <p className="text-sm text-blue-600 font-mono mt-1">{task.productCode}</p>
-                {task.parentTaskId && (
+                <h3 className="font-semibold text-lg text-blue-900">{category}</h3>
+                <p className="text-blue-700">{subcategory}</p>
+                <p className="text-sm text-blue-600 font-mono mt-1">{productCode}</p>
+                {task.parent_task_id && (
                   <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                     <Hash className="h-3 w-3" />
                     Remaining from parent task
@@ -303,7 +287,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
           )}
 
           {/* Completed Details */}
-          {(task.completedWeight || task.completedQuantity) && (
+          {(task.completed_weight || task.completed_quantity) && (
             <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
               <div className="flex items-center gap-2 mb-3">
                 <Package className="h-5 w-5 text-emerald-600" />
@@ -312,11 +296,11 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-white rounded border border-emerald-200">
                   <p className="text-sm text-emerald-600">Final Weight</p>
-                  <p className="text-2xl font-bold text-emerald-800">{task.completedWeight} kg</p>
+                  <p className="text-2xl font-bold text-emerald-800">{task.completed_weight} kg</p>
                 </div>
                 <div className="text-center p-3 bg-white rounded border border-emerald-200">
                   <p className="text-sm text-emerald-600">Pieces Produced</p>
-                  <p className="text-2xl font-bold text-emerald-800">{task.completedQuantity} pcs</p>
+                  <p className="text-2xl font-bold text-emerald-800">{task.completed_quantity} pcs</p>
                 </div>
               </div>
             </div>
@@ -454,22 +438,22 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
             </h4>
             
             <div className="space-y-3">
-              {task.createdAt && (
+              {task.created_at && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Calendar className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-sm text-gray-600">Created</p>
-                    <p className="font-medium">{format(task.createdAt, 'PPP')}</p>
+                    <p className="font-medium">{format(new Date(task.created_at), 'PPP')}</p>
                   </div>
                 </div>
               )}
               
-              {task.expectedDate && (
+              {task.expected_date && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Calendar className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-sm text-gray-600">Expected Delivery</p>
-                    <p className="font-medium">{format(task.expectedDate, 'PPP')}</p>
+                    <p className="font-medium">{format(new Date(task.expected_date), 'PPP')}</p>
                   </div>
                 </div>
               )}
@@ -477,7 +461,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
           </div>
 
           {/* Assignment Information */}
-          {(task.assignedWorker || task.startedAt) && (
+          {(task.assigned_worker_name || task.started_at) && (
             <div className="space-y-4">
               <h4 className="font-semibold text-lg flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -485,22 +469,22 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
               </h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {task.assignedWorker && (
+                {task.assigned_worker_name && (
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
                     <User className="h-4 w-4 text-green-600" />
                     <div>
                       <p className="text-sm text-green-600">Assigned Worker</p>
-                      <p className="font-medium text-green-800">{task.assignedWorker}</p>
+                      <p className="font-medium text-green-800">{task.assigned_worker_name}</p>
                     </div>
                   </div>
                 )}
                 
-                {task.startedAt && (
+                {task.started_at && (
                   <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <div>
                       <p className="text-sm text-blue-600">Time Elapsed</p>
-                      <p className="font-medium text-blue-800">{formatTimeElapsed(task.startedAt)}</p>
+                      <p className="font-medium text-blue-800">{formatTimeElapsed(task.started_at)}</p>
                     </div>
                   </div>
                 )}

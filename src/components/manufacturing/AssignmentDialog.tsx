@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Package, User, Clock, Warehouse, Weight, ChevronDown, ChevronUp, AlertTriangle, ArrowRight } from 'lucide-react';
+import { CalendarIcon, Package, User, Clock, Weight, ChevronDown, ChevronUp, AlertTriangle, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -14,29 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
-interface ProductionTask {
-  id: string;
-  productCode: string;
-  category: string;
-  subcategory: string;
-  quantity: number;
-  orderNumber: string;
-  customerName: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  createdAt?: Date;
-  expectedDate?: Date;
-  assignedWorker?: string;
-  startedAt?: Date;
-  notes?: string;
-  status?: string;
-  receivedWeight?: number;
-  receivedQuantity?: number;
-  completedWeight?: number;
-  completedQuantity?: number;
-  parentTaskId?: string;
-  isChildTask?: boolean;
-}
+import { ProductionTask } from '@/hooks/useProductionTasks';
+import { useWorkers } from '@/hooks/useWorkers';
+import { useProductionStepHistory } from '@/hooks/useProductionStepHistory';
 
 interface AssignmentDialogProps {
   open: boolean;
@@ -50,44 +30,6 @@ interface AssignmentDialogProps {
     remarks?: string;
   }) => void;
 }
-
-// Mock workers data
-const mockWorkers = [
-  { id: '1', name: 'Rajesh Kumar', specialization: 'Jhalai Expert' },
-  { id: '2', name: 'Suresh Patel', specialization: 'General Worker' },
-  { id: '3', name: 'Anil Sharma', specialization: 'Senior Operator' },
-  { id: '4', name: 'Vinod Singh', specialization: 'Jhalai Specialist' },
-  { id: '5', name: 'Ramesh Gupta', specialization: 'Quellai Expert' },
-  { id: '6', name: 'Deepak Singh', specialization: 'Finishing Specialist' },
-];
-
-// Mock previous steps data for demonstration
-const mockPreviousSteps = [
-  {
-    stepName: 'Raw Materials',
-    status: 'Completed',
-    assignedWorker: 'System',
-    startDate: new Date('2024-12-08'),
-    completedDate: new Date('2024-12-08'),
-    inputWeight: 0,
-    outputWeight: 65.5,
-    inputQuantity: 0,
-    outputQuantity: 50,
-    remarks: 'Materials prepared according to specification'
-  },
-  {
-    stepName: 'Jhalai',
-    status: 'Completed',
-    assignedWorker: 'Rajesh Kumar',
-    startDate: new Date('2024-12-09'),
-    completedDate: new Date('2024-12-09'),
-    inputWeight: 65.5,
-    outputWeight: 63.2,
-    inputQuantity: 50,
-    outputQuantity: 50,
-    remarks: 'Standard jhalai process completed successfully'
-  }
-];
 
 const getNextStepName = (currentStep: string) => {
   const stepSequence = ['pending', 'jhalai', 'quellai', 'meena', 'vibrator', 'quality-check', 'completed'];
@@ -110,6 +52,8 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
   const [remarks, setRemarks] = useState('');
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
   const { toast } = useToast();
+  const { workers } = useWorkers();
+  const { stepHistory } = useProductionStepHistory(task?.id);
 
   // Set default expected date to 3 days from now
   useState(() => {
@@ -120,11 +64,11 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
 
   if (!task) return null;
 
-  const nextStepName = getNextStepName('jhalai'); // This would be dynamic based on current step
-  const latestStep = mockPreviousSteps[mockPreviousSteps.length - 1];
-  const hasQuantityReduction = latestStep && latestStep.inputQuantity > latestStep.outputQuantity;
-  const hasWeightLoss = latestStep && latestStep.inputWeight > latestStep.outputWeight;
-  const weightLossPercentage = latestStep ? calculateLossPercentage(latestStep.inputWeight, latestStep.outputWeight) : 0;
+  const nextStepName = getNextStepName(task.current_step);
+  const latestStep = stepHistory[stepHistory.length - 1];
+  const hasQuantityReduction = latestStep && latestStep.input_quantity && latestStep.output_quantity && latestStep.input_quantity > latestStep.output_quantity;
+  const hasWeightLoss = latestStep && latestStep.input_weight && latestStep.output_weight && latestStep.input_weight > latestStep.output_weight;
+  const weightLossPercentage = latestStep && latestStep.input_weight && latestStep.output_weight ? calculateLossPercentage(latestStep.input_weight, latestStep.output_weight) : 0;
 
   const handleAssign = () => {
     if (!selectedWorker) {
@@ -145,7 +89,7 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
       return;
     }
 
-    const worker = mockWorkers.find(w => w.id === selectedWorker);
+    const worker = workers.find(w => w.id === selectedWorker);
     if (!worker) return;
 
     onAssign({
@@ -167,6 +111,10 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
     });
   };
 
+  const productCode = task.product_configs?.product_code || 'Unknown';
+  const category = task.product_configs?.category || task.customer_name;
+  const subcategory = task.product_configs?.subcategory || 'Production Request';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -184,9 +132,9 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-semibold text-blue-900">{task.category}</h3>
-                <p className="text-sm text-blue-700">{task.subcategory}</p>
-                <p className="text-xs text-blue-600 font-mono mt-1">{task.productCode}</p>
+                <h3 className="font-semibold text-blue-900">{category}</h3>
+                <p className="text-sm text-blue-700">{subcategory}</p>
+                <p className="text-xs text-blue-600 font-mono mt-1">{productCode}</p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-blue-900">{task.quantity}</div>
@@ -197,11 +145,11 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-blue-600 font-medium">Order:</span>
-                <p className="font-mono">{task.orderNumber}</p>
+                <p className="font-mono">{task.order_number}</p>
               </div>
               <div>
                 <span className="text-blue-600 font-medium">Customer:</span>
-                <p>{task.customerName}</p>
+                <p>{task.customer_name}</p>
               </div>
             </div>
           </div>
@@ -211,13 +159,13 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <div className="flex items-center gap-2 mb-3">
                 <Package className="h-5 w-5 text-green-600" />
-                <h4 className="font-semibold text-green-800">Received from {latestStep.stepName}</h4>
+                <h4 className="font-semibold text-green-800">Received from {latestStep.step_name}</h4>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-white rounded border border-green-200">
                   <p className="text-sm text-green-600">Output Weight</p>
-                  <p className="text-2xl font-bold text-green-800">{latestStep.outputWeight} kg</p>
+                  <p className="text-2xl font-bold text-green-800">{latestStep.output_weight || 0} kg</p>
                   {hasWeightLoss && (
                     <p className="text-xs text-orange-600 mt-1">
                       -{weightLossPercentage.toFixed(1)}% loss
@@ -226,7 +174,7 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
                 </div>
                 <div className="text-center p-3 bg-white rounded border border-green-200">
                   <p className="text-sm text-green-600">Output Quantity</p>
-                  <p className="text-2xl font-bold text-green-800">{latestStep.outputQuantity} pcs</p>
+                  <p className="text-2xl font-bold text-green-800">{latestStep.output_quantity || 0} pcs</p>
                   {hasQuantityReduction && (
                     <p className="text-xs text-orange-600 mt-1">Reduced quantity</p>
                   )}
@@ -251,7 +199,7 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
                 <Button variant="outline" className="w-full justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Manufacturing Timeline ({mockPreviousSteps.length} steps completed)
+                    Manufacturing Timeline ({stepHistory.length} steps completed)
                   </div>
                   {isTimelineExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
@@ -271,28 +219,28 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
                     </div>
                   </div>
                   
-                  {mockPreviousSteps.map((step, index) => {
-                    const loss = calculateLossPercentage(step.inputWeight, step.outputWeight);
+                  {stepHistory.map((step, index) => {
+                    const loss = step.input_weight && step.output_weight ? calculateLossPercentage(step.input_weight, step.output_weight) : 0;
                     return (
                       <div key={index} className="p-3 border-b last:border-b-0 hover:bg-gray-50">
                         <div className="grid grid-cols-7 gap-4 text-sm">
-                          <div className="font-medium">{step.stepName}</div>
-                          <div className="text-gray-600">{step.assignedWorker}</div>
+                          <div className="font-medium">{step.step_name}</div>
+                          <div className="text-gray-600">{step.assigned_worker_name || '–'}</div>
                           <div>
                             <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                              {step.status}
+                              {step.status || 'Completed'}
                             </Badge>
                           </div>
-                          <div>{step.inputWeight || '–'}</div>
+                          <div>{step.input_weight || '–'}</div>
                           <div className="flex items-center gap-1">
-                            {step.outputWeight}
+                            {step.output_weight || '–'}
                             {loss > 0 && (
                               <span className="text-xs text-orange-600">(-{loss.toFixed(1)}%)</span>
                             )}
                           </div>
-                          <div>{step.outputQuantity} pcs</div>
+                          <div>{step.output_quantity || '–'} pcs</div>
                           <div className="text-xs text-gray-500">
-                            {step.completedDate?.toLocaleDateString()}
+                            {step.completed_date ? new Date(step.completed_date).toLocaleDateString() : '–'}
                           </div>
                         </div>
                         {step.remarks && (
@@ -327,11 +275,11 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
                     <SelectValue placeholder="Choose a worker for this step" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockWorkers.map(worker => (
+                    {workers.map(worker => (
                       <SelectItem key={worker.id} value={worker.id}>
                         <div>
                           <div className="font-medium">{worker.name}</div>
-                          <div className="text-xs text-gray-500">{worker.specialization}</div>
+                          <div className="text-xs text-gray-500">{worker.role || 'Worker'}</div>
                         </div>
                       </SelectItem>
                     ))}

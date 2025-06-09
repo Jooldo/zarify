@@ -1,39 +1,16 @@
 
 import { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package } from 'lucide-react';
-import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import AddProductionItemDialog from './AddProductionItemDialog';
 import AssignmentDialog from './AssignmentDialog';
 import DraggableCard from './DraggableCard';
 import TaskDetailsDialog from './TaskDetailsDialog';
-
-interface ProductionTask {
-  id: string;
-  productCode: string;
-  category: string;
-  subcategory: string;
-  quantity: number;
-  orderNumber: string;
-  customerName: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  assignedWorker?: string;
-  estimatedTime?: number;
-  startedAt?: Date;
-  notes?: string;
-  expectedDate?: Date;
-  createdAt?: Date;
-  status?: string;
-  receivedWeight?: number;
-  receivedQuantity?: number;
-  completedWeight?: number;
-  completedQuantity?: number;
-  parentTaskId?: string;
-  isChildTask?: boolean;
-}
+import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
+import { useProductionStepHistory } from '@/hooks/useProductionStepHistory';
 
 const PROCESS_STEPS = [
   { id: 'pending', name: 'Pending', color: 'bg-gray-100' },
@@ -44,97 +21,6 @@ const PROCESS_STEPS = [
   { id: 'quality-check', name: 'Quality Check', color: 'bg-orange-100' },
   { id: 'completed', name: 'Completed', color: 'bg-emerald-100' }
 ];
-
-// Mock data for demonstration
-const initialMockTasks: { [key: string]: ProductionTask[] } = {
-  pending: [
-    {
-      id: '1',
-      productCode: 'RCC-12-SM',
-      category: 'RCC Pipe',
-      subcategory: 'Standard',
-      quantity: 50,
-      orderNumber: 'OD000123',
-      customerName: 'ABC Construction',
-      priority: 'High',
-      createdAt: new Date('2024-12-08'),
-      expectedDate: new Date('2024-12-15')
-    },
-    {
-      id: '2', 
-      productCode: 'RCC-18-HD',
-      category: 'RCC Pipe',
-      subcategory: 'Heavy Duty',
-      quantity: 25,
-      orderNumber: 'OD000124',
-      customerName: 'XYZ Builders',
-      priority: 'Medium',
-      createdAt: new Date('2024-12-09'),
-      expectedDate: new Date('2024-12-20')
-    }
-  ],
-  jhalai: [
-    {
-      id: '3',
-      productCode: 'RCC-15-ST',
-      category: 'RCC Pipe',
-      subcategory: 'Standard',
-      quantity: 30,
-      orderNumber: 'OD000121',
-      customerName: 'PQR Infrastructure',
-      priority: 'Urgent',
-      assignedWorker: 'Rajesh Kumar',
-      startedAt: new Date(),
-      estimatedTime: 120,
-      expectedDate: new Date('2024-12-12')
-    }
-  ],
-  quellai: [
-    {
-      id: '4',
-      productCode: 'RCC-20-HD',
-      category: 'RCC Pipe', 
-      subcategory: 'Heavy Duty',
-      quantity: 40,
-      orderNumber: 'OD000120',
-      customerName: 'MNO Contractors',
-      priority: 'High',
-      assignedWorker: 'Suresh Patel',
-      startedAt: new Date(Date.now() - 3600000),
-      estimatedTime: 180
-    }
-  ],
-  meena: [],
-  vibrator: [
-    {
-      id: '5',
-      productCode: 'RCC-12-ST',
-      category: 'RCC Pipe',
-      subcategory: 'Standard', 
-      quantity: 60,
-      orderNumber: 'OD000119',
-      customerName: 'LMN Builders',
-      priority: 'Medium',
-      assignedWorker: 'Anil Sharma',
-      startedAt: new Date(Date.now() - 7200000),
-      estimatedTime: 90
-    }
-  ],
-  'quality-check': [],
-  completed: [
-    {
-      id: '6',
-      productCode: 'RCC-18-ST',
-      category: 'RCC Pipe',
-      subcategory: 'Standard',
-      quantity: 35,
-      orderNumber: 'OD000118',
-      customerName: 'DEF Construction',
-      priority: 'Low',
-      assignedWorker: 'Vinod Singh'
-    }
-  ]
-};
 
 // Droppable step component
 const DroppableStep = ({ step, tasks, onTaskClick }: { 
@@ -200,11 +86,12 @@ const DroppableStep = ({ step, tasks, onTaskClick }: {
 const ProductionKanban = () => {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string>('');
-  const [tasks, setTasks] = useState(initialMockTasks);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [taskToAssign, setTaskToAssign] = useState<ProductionTask | null>(null);
   const [taskDetailsDialogOpen, setTaskDetailsDialogOpen] = useState(false);
+  
+  const { tasksByStep, isLoading, createTask, moveTask, updateTask } = useProductionTasks();
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -225,23 +112,18 @@ const ProductionKanban = () => {
     quantity: number;
     expectedDate: Date;
   }) => {
-    const newTask: ProductionTask = {
-      id: `new-${Date.now()}`,
-      productCode: newItem.productCode,
-      category: 'RCC Pipe',
-      subcategory: 'Standard',
+    // Find the product config by product code
+    // This should be enhanced to actually find the product config
+    createTask({
+      product_config_id: 'temp-id', // This should be the actual product config ID
+      order_number: `OD${String(Date.now()).slice(-6)}`,
+      customer_name: 'Production Request',
       quantity: newItem.quantity,
-      orderNumber: `OD${String(Date.now()).slice(-6)}`,
-      customerName: 'Production Request',
       priority: 'Medium',
-      expectedDate: newItem.expectedDate,
-      createdAt: new Date(),
-    };
-
-    setTasks(prev => ({
-      ...prev,
-      pending: [...(prev.pending || []), newTask]
-    }));
+      expected_date: newItem.expectedDate.toISOString().split('T')[0],
+      current_step: 'pending',
+      status: 'Created',
+    });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -276,7 +158,10 @@ const ProductionKanban = () => {
 
     // Special handling for transitions that require assignment
     if ((activeStepId === 'pending' && overStepId === 'jhalai') ||
-        (activeStepId === 'jhalai' && overStepId === 'quellai')) {
+        (activeStepId === 'jhalai' && overStepId === 'quellai') ||
+        (activeStepId === 'quellai' && overStepId === 'meena') ||
+        (activeStepId === 'meena' && overStepId === 'vibrator') ||
+        (activeStepId === 'vibrator' && overStepId === 'quality-check')) {
       console.log('Opening assignment dialog for step transition');
       setTaskToAssign(activeTask);
       setAssignmentDialogOpen(true);
@@ -286,32 +171,11 @@ const ProductionKanban = () => {
     // Move task for other steps
     if (activeTask) {
       console.log('Moving task to different step');
-      moveTask(activeTask.id, activeStepId, overStepId);
+      moveTask({
+        taskId: activeTask.id,
+        toStep: overStepId,
+      });
     }
-  };
-
-  const moveTask = (taskId: string, fromStep: string, toStep: string, updatedTask?: Partial<ProductionTask>) => {
-    console.log('Moving task:', { taskId, fromStep, toStep, updatedTask });
-    
-    setTasks(prev => {
-      const newTasks = { ...prev };
-      
-      // Find and remove task from source step
-      const taskIndex = newTasks[fromStep]?.findIndex(t => t.id === taskId);
-      if (taskIndex === -1) {
-        console.log('Task not found in source step');
-        return prev;
-      }
-      
-      const [task] = newTasks[fromStep].splice(taskIndex, 1);
-      
-      // Add task to destination step with any updates
-      if (!newTasks[toStep]) newTasks[toStep] = [];
-      newTasks[toStep].push({ ...task, ...updatedTask });
-      
-      console.log('Task moved successfully');
-      return newTasks;
-    });
   };
 
   const handleAssignment = (assignment: {
@@ -323,30 +187,34 @@ const ProductionKanban = () => {
   }) => {
     console.log('Handling assignment:', assignment);
     
-    // Determine which step to move to based on current assignment
+    // Determine which step to move to based on current task
     const activeTask = taskToAssign;
-    let fromStep = 'pending';
+    if (!activeTask) return;
+
     let toStep = 'jhalai';
-    
-    // Find current step of the task
-    for (const stepId in tasks) {
-      if (tasks[stepId]?.find(t => t.id === assignment.taskId)) {
-        fromStep = stepId;
-        if (stepId === 'pending') {
-          toStep = 'jhalai';
-        } else if (stepId === 'jhalai') {
-          toStep = 'quellai';
-        }
-        break;
-      }
+    if (activeTask.current_step === 'pending') {
+      toStep = 'jhalai';
+    } else if (activeTask.current_step === 'jhalai') {
+      toStep = 'quellai';
+    } else if (activeTask.current_step === 'quellai') {
+      toStep = 'meena';
+    } else if (activeTask.current_step === 'meena') {
+      toStep = 'vibrator';
+    } else if (activeTask.current_step === 'vibrator') {
+      toStep = 'quality-check';
     }
     
-    moveTask(assignment.taskId, fromStep, toStep, {
-      assignedWorker: assignment.workerName,
-      expectedDate: assignment.expectedDate,
-      startedAt: new Date(),
-      notes: assignment.remarks,
-      status: 'Progress'
+    moveTask({
+      taskId: assignment.taskId,
+      toStep,
+      additionalUpdates: {
+        assigned_worker_id: assignment.workerId,
+        assigned_worker_name: assignment.workerName,
+        expected_date: assignment.expectedDate.toISOString().split('T')[0],
+        started_at: new Date().toISOString(),
+        notes: assignment.remarks,
+        status: 'Progress'
+      }
     });
     
     setTaskToAssign(null);
@@ -361,72 +229,55 @@ const ProductionKanban = () => {
   }) => {
     console.log('Updating task status:', { taskId, newStatus, additionalData });
     
-    setTasks(prev => {
-      const newTasks = { ...prev };
-      let updatedTask: ProductionTask | undefined;
-      let stepId: string | undefined;
-      
-      // Find the task in the current step
-      for (const currentStepId in newTasks) {
-        const taskIndex = newTasks[currentStepId]?.findIndex(t => t.id === taskId);
-        if (taskIndex !== -1) {
-          // Update the task with new status and additional data
-          stepId = currentStepId;
-          updatedTask = {
-            ...newTasks[currentStepId][taskIndex],
-            status: newStatus,
-            ...(additionalData?.weight !== undefined && { receivedWeight: additionalData.weight }),
-            ...(additionalData?.quantity !== undefined && { receivedQuantity: additionalData.quantity }),
-            ...(additionalData?.completedWeight !== undefined && { completedWeight: additionalData.completedWeight }),
-            ...(additionalData?.completedQuantity !== undefined && { completedQuantity: additionalData.completedQuantity })
-          };
-          newTasks[currentStepId][taskIndex] = updatedTask;
-          break;
-        }
-      }
-      
-      // Handle child task creation for partially completed items
-      if (additionalData?.createChildTask && updatedTask && stepId) {
-        const completedWeight = additionalData.completedWeight || 0;
-        const completedQuantity = additionalData.completedQuantity || 0;
-        const receivedWeight = updatedTask.receivedWeight || 0;
-        const receivedQuantity = updatedTask.receivedQuantity || 0;
+    const updates: Partial<ProductionTask> = {
+      status: newStatus as any,
+      ...(additionalData?.weight !== undefined && { received_weight: additionalData.weight }),
+      ...(additionalData?.quantity !== undefined && { received_quantity: additionalData.quantity }),
+      ...(additionalData?.completedWeight !== undefined && { completed_weight: additionalData.completedWeight }),
+      ...(additionalData?.completedQuantity !== undefined && { completed_quantity: additionalData.completedQuantity })
+    };
+
+    updateTask({ id: taskId, updates });
+
+    // Handle child task creation for partially completed items
+    if (additionalData?.createChildTask) {
+      const originalTask = Object.values(tasksByStep).flat().find(t => t.id === taskId);
+      if (originalTask && additionalData.completedWeight && additionalData.completedQuantity) {
+        const completedWeight = additionalData.completedWeight;
+        const completedQuantity = additionalData.completedQuantity;
+        const receivedWeight = originalTask.received_weight || 0;
+        const receivedQuantity = originalTask.received_quantity || originalTask.quantity || 0;
         
         // Create child task with remaining work
         if (receivedWeight > completedWeight || receivedQuantity > completedQuantity) {
           const remainingWeight = receivedWeight - completedWeight;
           const remainingQuantity = receivedQuantity - completedQuantity;
           
-          const childTask: ProductionTask = {
-            id: `child-${updatedTask.id}-${Date.now()}`,
-            productCode: updatedTask.productCode,
-            category: updatedTask.category,
-            subcategory: updatedTask.subcategory,
+          createTask({
+            product_config_id: originalTask.product_config_id,
+            order_number: originalTask.order_number,
+            customer_name: originalTask.customer_name,
             quantity: remainingQuantity,
-            orderNumber: updatedTask.orderNumber,
-            customerName: updatedTask.customerName,
-            priority: updatedTask.priority,
-            expectedDate: updatedTask.expectedDate,
-            createdAt: new Date(),
-            notes: `Remaining work from partially completed task #${updatedTask.id}`,
+            priority: originalTask.priority,
+            expected_date: originalTask.expected_date,
+            notes: `Remaining work from partially completed task #${originalTask.id}`,
             status: 'Progress',
-            receivedWeight: remainingWeight,
-            receivedQuantity: remainingQuantity,
-            parentTaskId: updatedTask.id,
-            isChildTask: true
-          };
+            received_weight: remainingWeight,
+            received_quantity: remainingQuantity,
+            parent_task_id: originalTask.id,
+            is_child_task: true,
+            current_step: 'pending'
+          });
           
-          // Add to pending queue
-          if (!newTasks['pending']) newTasks['pending'] = [];
-          newTasks['pending'].push(childTask);
-          
-          console.log('Created child task for remaining work:', childTask);
+          console.log('Created child task for remaining work');
         }
       }
-      
-      return newTasks;
-    });
+    }
   };
+
+  if (isLoading) {
+    return <div>Loading production tasks...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -448,7 +299,7 @@ const ProductionKanban = () => {
             <DroppableStep
               key={step.id}
               step={step}
-              tasks={tasks[step.id] || []}
+              tasks={tasksByStep[step.id] || []}
               onTaskClick={handleTaskClick}
             />
           ))}
