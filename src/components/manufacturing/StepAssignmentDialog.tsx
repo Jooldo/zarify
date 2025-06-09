@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Worker {
   id: string;
@@ -61,21 +62,61 @@ const StepAssignmentDialog = ({
   const [materialAllocations, setMaterialAllocations] = useState<MaterialAllocation[]>([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const { toast } = useToast();
   const { productConfigs } = useProductConfigs();
 
-  // Mock data - replace with actual API calls
-  const workers: Worker[] = [
-    { id: '1', name: 'John Doe' },
-    { id: '2', name: 'Jane Smith' },
-    { id: '3', name: 'Mike Johnson' }
-  ];
+  // Fetch workers from database
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workers')
+          .select('id, name')
+          .eq('status', 'Active');
+        
+        if (error) throw error;
+        setWorkers(data || []);
+      } catch (error) {
+        console.error('Error fetching workers:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load workers',
+          variant: 'destructive',
+        });
+      }
+    };
 
-  const rawMaterials: RawMaterial[] = [
-    { id: '1', name: 'Silver Wire', unit: 'kg', current_stock: 50 },
-    { id: '2', name: 'Gold Plating', unit: 'kg', current_stock: 25 },
-    { id: '3', name: 'Copper Base', unit: 'kg', current_stock: 100 }
-  ];
+    if (open) {
+      fetchWorkers();
+    }
+  }, [open, toast]);
+
+  // Fetch raw materials from database
+  useEffect(() => {
+    const fetchRawMaterials = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('raw_materials')
+          .select('id, name, unit, current_stock');
+        
+        if (error) throw error;
+        setRawMaterials(data || []);
+      } catch (error) {
+        console.error('Error fetching raw materials:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load raw materials',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    if (open) {
+      fetchRawMaterials();
+    }
+  }, [open, toast]);
 
   // Auto-fetch materials for Step 1
   useEffect(() => {
@@ -118,7 +159,7 @@ const StepAssignmentDialog = ({
       // For other steps, start with empty materials (manual selection)
       setMaterialAllocations([]);
     }
-  }, [open, stepNumber, productCode, quantityRequired, productConfigs, toast]);
+  }, [open, stepNumber, productCode, quantityRequired, productConfigs, rawMaterials, toast]);
 
   const addMaterialAllocation = () => {
     setMaterialAllocations([...materialAllocations, {
@@ -138,7 +179,7 @@ const StepAssignmentDialog = ({
     setMaterialAllocations(updated);
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!selectedWorker || !deliveryDate || materialAllocations.length === 0) {
       toast({
         title: 'Missing Information',
@@ -180,23 +221,66 @@ const StepAssignmentDialog = ({
       return;
     }
 
-    // Here you would make API calls to create the assignment and material allocations
-    console.log('Creating assignment:', {
-      productionItemId,
-      stepNumber,
-      workerId: selectedWorker,
-      deliveryDate,
-      materialAllocations,
-      notes
-    });
+    setLoading(true);
+    
+    try {
+      // Create the step assignment
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('production_step_assignments')
+        .insert({
+          production_order_id: productionItemId,
+          step_number: stepNumber,
+          step_name: stepName,
+          worker_id: selectedWorker,
+          expected_delivery_date: format(deliveryDate, 'yyyy-MM-dd'),
+          notes: notes
+        })
+        .select()
+        .single();
 
-    toast({
-      title: 'Assignment Created',
-      description: `Step ${stepNumber} assigned to worker with delivery date ${format(deliveryDate, 'PPP')}`,
-    });
+      if (assignmentError) throw assignmentError;
 
-    onAssignmentComplete();
-    onOpenChange(false);
+      // Create material allocations
+      const materialAllocationPromises = materialAllocations.map(allocation => 
+        supabase
+          .from('production_material_allocations')
+          .insert({
+            production_step_assignment_id: assignment.id,
+            raw_material_id: allocation.raw_material_id,
+            allocated_quantity: allocation.allocated_weight,
+            unit: allocation.unit
+          })
+      );
+
+      await Promise.all(materialAllocationPromises);
+
+      // Create a log entry
+      await supabase
+        .from('production_logs')
+        .insert({
+          production_order_id: productionItemId,
+          production_step_assignment_id: assignment.id,
+          log_type: 'assignment',
+          message: `Step ${stepNumber} assigned to worker ${workers.find(w => w.id === selectedWorker)?.name}`,
+        });
+
+      toast({
+        title: 'Assignment Created',
+        description: `Step ${stepNumber} assigned to worker with delivery date ${format(deliveryDate, 'PPP')}`,
+      });
+
+      onAssignmentComplete();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create assignment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetDialog = () => {
@@ -418,7 +502,7 @@ const StepAssignmentDialog = ({
               Cancel
             </Button>
             <Button onClick={handleAssign} disabled={loading}>
-              Assign Step
+              {loading ? 'Creating...' : 'Assign Step'}
             </Button>
           </div>
         </div>

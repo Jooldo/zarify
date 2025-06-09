@@ -527,6 +527,317 @@ export type Database = {
           },
         ]
       }
+      production_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_type: string
+          logged_by: string | null
+          merchant_id: string
+          message: string
+          new_value: string | null
+          old_value: string | null
+          production_order_id: string | null
+          production_step_assignment_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_type: string
+          logged_by?: string | null
+          merchant_id: string
+          message: string
+          new_value?: string | null
+          old_value?: string | null
+          production_order_id?: string | null
+          production_step_assignment_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_type?: string
+          logged_by?: string | null
+          merchant_id?: string
+          message?: string
+          new_value?: string | null
+          old_value?: string | null
+          production_order_id?: string | null
+          production_step_assignment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_logs_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_logs_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_logs_production_step_assignment_id_fkey"
+            columns: ["production_step_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "production_step_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_material_allocations: {
+        Row: {
+          allocated_quantity: number
+          allocation_date: string
+          created_at: string
+          id: string
+          merchant_id: string
+          notes: string | null
+          production_step_assignment_id: string
+          raw_material_id: string
+          status: string
+          unit: string
+          updated_at: string
+          used_quantity: number | null
+        }
+        Insert: {
+          allocated_quantity: number
+          allocation_date?: string
+          created_at?: string
+          id?: string
+          merchant_id: string
+          notes?: string | null
+          production_step_assignment_id: string
+          raw_material_id: string
+          status?: string
+          unit: string
+          updated_at?: string
+          used_quantity?: number | null
+        }
+        Update: {
+          allocated_quantity?: number
+          allocation_date?: string
+          created_at?: string
+          id?: string
+          merchant_id?: string
+          notes?: string | null
+          production_step_assignment_id?: string
+          raw_material_id?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+          used_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_material_allocatio_production_step_assignment_i_fkey"
+            columns: ["production_step_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "production_step_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_material_allocations_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_material_allocations_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_orders: {
+        Row: {
+          actual_completion_date: string | null
+          created_at: string
+          created_by: string | null
+          expected_completion_date: string | null
+          id: string
+          merchant_id: string
+          notes: string | null
+          order_number: string
+          priority: string | null
+          product_config_id: string
+          quantity_required: number
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          merchant_id: string
+          notes?: string | null
+          order_number: string
+          priority?: string | null
+          product_config_id: string
+          quantity_required: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          merchant_id?: string
+          notes?: string | null
+          order_number?: string
+          priority?: string | null
+          product_config_id?: string
+          quantity_required?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_product_config_id_fkey"
+            columns: ["product_config_id"]
+            isOneToOne: false
+            referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_step_assignments: {
+        Row: {
+          actual_completion_date: string | null
+          assigned_by: string | null
+          assigned_date: string
+          created_at: string
+          expected_delivery_date: string | null
+          id: string
+          merchant_id: string
+          notes: string | null
+          production_order_id: string
+          status: string
+          step_name: string
+          step_number: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          assigned_by?: string | null
+          assigned_date?: string
+          created_at?: string
+          expected_delivery_date?: string | null
+          id?: string
+          merchant_id: string
+          notes?: string | null
+          production_order_id: string
+          status?: string
+          step_name: string
+          step_number: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          assigned_by?: string | null
+          assigned_date?: string
+          created_at?: string
+          expected_delivery_date?: string | null
+          id?: string
+          merchant_id?: string
+          notes?: string | null
+          production_order_id?: string
+          status?: string
+          step_name?: string
+          step_number?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_step_assignments_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_step_assignments_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_step_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_steps: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          is_active: boolean
+          merchant_id: string
+          step_name: string
+          step_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id: string
+          step_name: string
+          step_number: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id?: string
+          step_name?: string
+          step_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_steps_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
