@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActivityLog } from './useActivityLog';
@@ -30,6 +32,7 @@ export const useProcurementRequests = () => {
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
   const { sendWhatsAppNotification } = useWhatsAppNotifications();
+  const queryClient = useQueryClient();
 
   const fetchRequests = async () => {
     try {
@@ -164,8 +167,10 @@ export const useProcurementRequests = () => {
         description: `Request status updated to ${newStatus}`,
       });
 
-      // Refresh requests
+      // Auto refresh related data
       await fetchRequests();
+      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
     } catch (error) {
       console.error('Error updating request status:', error);
       toast({
@@ -207,8 +212,10 @@ export const useProcurementRequests = () => {
         description: 'Procurement request deleted successfully',
       });
 
-      // Refresh requests
+      // Auto refresh related data
       await fetchRequests();
+      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
     } catch (error) {
       console.error('Error deleting procurement request:', error);
       toast({

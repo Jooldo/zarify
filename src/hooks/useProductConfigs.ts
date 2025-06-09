@@ -1,5 +1,4 @@
 
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +91,7 @@ export const useProductConfigs = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       toast({
         title: 'Success',
         description: 'Product configuration created successfully',
@@ -118,6 +118,7 @@ export const useProductConfigs = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       toast({
         title: 'Success',
         description: 'Product configuration deleted successfully',
@@ -161,4 +162,3 @@ export const useProductConfigs = () => {
     refetch,
   };
 };
-

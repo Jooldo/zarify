@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ const EditFinishedGoodDialog = ({ isOpen, onOpenChange, product, onProductUpdate
     in_manufacturing: 0,
   });
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (product && isOpen) {
@@ -58,7 +60,11 @@ const EditFinishedGoodDialog = ({ isOpen, onOpenChange, product, onProductUpdate
         description: 'Finished good updated successfully',
       });
 
-      onProductUpdated();
+      // Auto refresh related data
+      await onProductUpdated();
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating finished good:', error);

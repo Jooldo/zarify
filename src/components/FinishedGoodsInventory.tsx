@@ -1,4 +1,6 @@
+
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
@@ -20,6 +22,7 @@ const FinishedGoodsInventory = () => {
   const [filters, setFilters] = useState({});
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
+  const queryClient = useQueryClient();
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
 
@@ -91,10 +94,22 @@ const FinishedGoodsInventory = () => {
   const handleRefresh = async () => {
     console.log('Manual refresh triggered for finished goods');
     await refetch();
+    // Invalidate related queries to ensure all data is fresh
+    queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['product-configs'] });
   };
 
-  const handleTagOperationComplete = () => {
-    refetch();
+  const handleTagOperationComplete = async () => {
+    await refetch();
+    queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    queryClient.invalidateQueries({ queryKey: ['inventory-tags'] });
+  };
+
+  const handleProductUpdate = async () => {
+    await refetch();
+    queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
   };
 
   const categories = [...new Set(finishedGoods.map(product => product.product_config?.category).filter(Boolean))];
@@ -171,7 +186,7 @@ const FinishedGoodsInventory = () => {
         isOpen={isStockUpdateDialogOpen}
         onOpenChange={setIsStockUpdateDialogOpen}
         product={selectedProduct}
-        onProductUpdated={refetch}
+        onProductUpdated={handleProductUpdate}
       />
     </div>
   );

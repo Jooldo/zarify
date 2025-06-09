@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,6 +37,7 @@ export const useInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const fetchInvoices = async () => {
     try {
@@ -134,7 +136,11 @@ export const useInvoices = () => {
         description: `Invoice ${invoiceNumber} created successfully`,
       });
 
-      fetchInvoices();
+      // Auto refresh related data
+      await fetchInvoices();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      
       return invoice;
     } catch (error) {
       console.error('Error creating invoice:', error);
@@ -161,7 +167,10 @@ export const useInvoices = () => {
         description: 'Invoice updated successfully',
       });
 
-      fetchInvoices();
+      // Auto refresh related data
+      await fetchInvoices();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     } catch (error) {
       console.error('Error updating invoice:', error);
       toast({

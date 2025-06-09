@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,6 +43,7 @@ export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const fetchOrders = async () => {
     try {
@@ -71,9 +73,73 @@ export const useOrders = () => {
     }
   };
 
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status, updated_date: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Order status updated successfully',
+      });
+
+      // Auto refresh related data
+      await fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order status',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updateOrderItemStatus = async (itemId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('order_items')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Order item status updated successfully',
+      });
+
+      // Auto refresh related data
+      await fetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    } catch (error) {
+      console.error('Error updating order item status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order item status',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  return { orders, loading, refetch: fetchOrders };
+  return { 
+    orders, 
+    loading, 
+    refetch: fetchOrders, 
+    updateOrderStatus, 
+    updateOrderItemStatus 
+  };
 };

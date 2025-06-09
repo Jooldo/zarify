@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
-  const { getInvoiceByOrderId } = useInvoices();
+  const { getInvoiceByOrderId, refetch: refetchInvoices } = useInvoices();
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
 
@@ -85,6 +86,17 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
     </Badge>
   );
 
+  const handleOrderUpdate = async () => {
+    await onOrderUpdate();
+    await refetchInvoices(); // Refresh invoices when order updates
+  };
+
+  const handleInvoiceCreated = async () => {
+    await onOrderUpdate();
+    await refetchInvoices();
+    setIsCreateInvoiceDialogOpen(false);
+  };
+
   return (
     <>
       <TableRow className="h-10 hover:bg-gray-50">
@@ -126,7 +138,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
                   </DialogHeader>
                   <OrderDetails 
                     order={order} 
-                    onOrderUpdate={onOrderUpdate}
+                    onOrderUpdate={handleOrderUpdate}
                   />
                 </DialogContent>
               </Dialog>
@@ -176,7 +188,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
             isOpen={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
             order={order}
-            onOrderUpdate={onOrderUpdate}
+            onOrderUpdate={handleOrderUpdate}
           />
           
           {!existingInvoice && (
@@ -184,10 +196,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
               isOpen={isCreateInvoiceDialogOpen}
               onClose={() => setIsCreateInvoiceDialogOpen(false)}
               order={order}
-              onInvoiceCreated={() => {
-                onOrderUpdate();
-                setIsCreateInvoiceDialogOpen(false);
-              }}
+              onInvoiceCreated={handleInvoiceCreated}
             />
           )}
           
