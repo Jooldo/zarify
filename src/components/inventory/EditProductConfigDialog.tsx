@@ -92,11 +92,12 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
     if (!config) return '';
     
     const categoryCode = config.category.slice(0, 3).toUpperCase();
-    const subcategoryCode = config.subcategory.replace(/\s+/g, '').slice(0, 3).toUpperCase();
+    const subcategoryCode = config.subcategory.replace(/\s+/g, '').toUpperCase(); // Use entire subcategory name
+    const sizeCode = config.size_value ? `${config.size_value}IN` : ''; // Add size in inches
     // Extract weight from weight_range (e.g., "35.5g" -> "35.5G")
     const weightCode = config.weight_range ? config.weight_range.replace('g', 'G') : '';
     
-    return `${categoryCode}-${subcategoryCode}${weightCode ? '-' + weightCode : ''}`;
+    return `${categoryCode}-${subcategoryCode}${sizeCode ? '-' + sizeCode : ''}${weightCode ? '-' + weightCode : ''}`;
   };
 
   const addRawMaterial = () => {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,13 +61,14 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   }, [initialData, isUpdate]);
 
   const generateProductCode = () => {
-    if (!category || !product) return '';
+    if (!category || !product || !sizeValue) return '';
     
     const categoryCode = category.slice(0, 3).toUpperCase();
-    const productCode = product.replace(/\s+/g, '').slice(0, 3).toUpperCase();
+    const productCode = product.replace(/\s+/g, '').toUpperCase(); // Use entire subcategory name
+    const sizeCode = sizeValue ? `${sizeValue}IN` : ''; // Add size in inches
     const weightCode = weightInGrams ? weightInGrams + 'G' : '';
     
-    return `${categoryCode}-${productCode}${weightCode ? '-' + weightCode : ''}`;
+    return `${categoryCode}-${productCode}${sizeCode ? '-' + sizeCode : ''}${weightCode ? '-' + weightCode : ''}`;
   };
 
   // Check for duplicate product code whenever the generated code changes
@@ -82,7 +82,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     };
 
     checkDuplicate();
-  }, [category, product, weightInGrams, checkProductCodeExists, isUpdate]);
+  }, [category, product, weightInGrams, checkProductCodeExists, isUpdate, sizeValue]);
 
   const addMaterial = () => {
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
