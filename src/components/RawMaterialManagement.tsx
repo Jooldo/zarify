@@ -1,10 +1,10 @@
 
-import { Package, Settings, ShoppingBag, BarChart3, Users } from 'lucide-react';
+import { Package, Settings, ShoppingBag, Home, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RawMaterialInventory from './RawMaterialInventory';
 import RawMaterialsConfig from './config/RawMaterialsConfig';
 import RMProcurementTab from './procurement/RMProcurementTab';
-import ProcurementAnalytics from './procurement/ProcurementAnalytics';
+import RMHomeDashboard from './rawmaterial/RMHomeDashboard';
 import SupplierManagement from './procurement/SupplierManagement';
 
 interface RawMaterialManagementProps {
@@ -19,14 +19,14 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
         return <RawMaterialInventory onRequestCreated={() => {}} />;
       case 'rm-procurement':
         return <RMProcurementTab />;
-      case 'rm-analytics':
-        return <ProcurementAnalytics />;
+      case 'rm-home':
+        return <RMHomeDashboard onNavigateToTab={onTabChange} />;
       case 'rm-suppliers':
         return <SupplierManagement />;
       case 'rm-config':
         return <RawMaterialsConfig />;
       default:
-        return <RawMaterialInventory onRequestCreated={() => {}} />;
+        return <RMHomeDashboard onNavigateToTab={onTabChange} />;
     }
   };
 
@@ -47,6 +47,10 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+            <TabsTrigger value="rm-home" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Home className="h-4 w-4" />
+              Home
+            </TabsTrigger>
             <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Package className="h-4 w-4" />
               Inventory
@@ -54,10 +58,6 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
             <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
               <ShoppingBag className="h-4 w-4" />
               Procurement
-            </TabsTrigger>
-            <TabsTrigger value="rm-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
             </TabsTrigger>
             <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Users className="h-4 w-4" />

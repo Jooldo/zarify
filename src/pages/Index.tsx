@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -25,14 +26,14 @@ const Index = () => {
         return "";
       case "orders":
         return "Orders";
+      case "rm-home":
+        return "Raw Material Home";
       case "rm-inventory":
         return "Raw Material Inventory";
       case "rm-config":
         return "Raw Material Configuration";
       case "rm-procurement":
         return "Raw Material Procurement";
-      case "rm-analytics":
-        return "Procurement Analytics";
       case "rm-suppliers":
         return "Supplier Management";
       case "fg-inventory":
@@ -59,7 +60,7 @@ const Index = () => {
   };
 
   const isRawMaterialTab = () => {
-    return ['rm-inventory', 'rm-config', 'rm-procurement', 'rm-analytics', 'rm-suppliers'].includes(activeTab);
+    return ['rm-home', 'rm-inventory', 'rm-config', 'rm-procurement', 'rm-suppliers'].includes(activeTab);
   };
 
   const isFinishedGoodTab = () => {
