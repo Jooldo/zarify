@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, User, Calendar, Package, AlertTriangle, Expand } from 'lucide-react';
+import { Plus, User, Package, AlertTriangle, Expand, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -265,7 +265,7 @@ const KanbanBoard = () => {
               )}
             </div>
 
-            <div className="space-y-4 overflow-y-auto max-h-[500px]">
+            <div className="space-y-3 overflow-y-auto max-h-[500px]">
               {column.items.map((item) => (
                 <Card
                   key={item.id}
@@ -273,9 +273,9 @@ const KanbanBoard = () => {
                   draggable
                   onDragStart={(e) => handleDragStart(e, item, column.id)}
                 >
-                  <CardHeader className="pb-2">
+                  <CardHeader className="pb-2 px-3 pt-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className={expandedColumn === column.id ? "text-base font-medium" : "text-sm font-medium"}>
+                      <CardTitle className="text-sm font-medium">
                         {item.product_code}
                       </CardTitle>
                       <Badge className={getPriorityColor(item.priority)}>
@@ -284,69 +284,29 @@ const KanbanBoard = () => {
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="space-y-3">
-                    <div className={expandedColumn === column.id ? "text-sm text-muted-foreground" : "text-xs text-muted-foreground"}>
-                      <div>{item.category} • {item.subcategory}</div>
-                      <div>Size: {item.size}</div>
-                      <div>Order: {item.order_number}</div>
+                  <CardContent className="px-3 pb-3 space-y-2">
+                    <div className="text-xs text-muted-foreground">
+                      {item.category} • {item.subcategory}
                     </div>
 
-                    <div className={`flex items-center justify-between ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
-                      <div className="flex items-center gap-1">
-                        <Package className="h-3 w-3" />
-                        <span>{item.quantity_required} pcs</span>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      {item.assigned_worker && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span>{item.assigned_worker}</span>
+                        </div>
+                      )}
+                      
                       {item.total_weight && (
-                        <div className="font-medium">
+                        <div className="text-xs font-medium">
                           {item.total_weight.toFixed(1)}g
                         </div>
                       )}
                     </div>
 
-                    {item.assigned_worker && (
-                      <div className={`flex items-center gap-1 text-muted-foreground ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
-                        <User className="h-3 w-3" />
-                        <span>{item.assigned_worker}</span>
-                      </div>
-                    )}
-
-                    {item.delivery_date && (
-                      <div className={`flex items-center gap-1 text-muted-foreground ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(item.delivery_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-
-                    {item.materials.length > 0 && (
-                      <div className="space-y-1">
-                        <div className={`font-medium ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>Materials:</div>
-                        <div className="space-y-1">
-                          {item.materials.map((material, index) => (
-                            <div key={index} className={`text-muted-foreground flex justify-between ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
-                              <span>{material.name}</span>
-                              <span>{material.allocated_weight}{material.unit}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {expandedColumn === column.id && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <div className="text-xs text-muted-foreground mb-2">Progress Status:</div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '45%' }}></div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">45% Complete</div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-2">
-                      <Button variant="outline" size="sm" className={expandedColumn === column.id ? 'text-sm' : 'text-xs'}>
-                        View Details
-                      </Button>
-                      <Button variant="ghost" size="sm" className={expandedColumn === column.id ? 'text-sm' : 'text-xs'}>
-                        Update
+                    <div className="flex items-center justify-end pt-1">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Eye className="h-3 w-3" />
                       </Button>
                     </div>
                   </CardContent>
@@ -356,7 +316,7 @@ const KanbanBoard = () => {
               {column.items.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className={expandedColumn === column.id ? 'text-sm' : 'text-sm'}>No items in {column.title}</p>
+                  <p className="text-sm">No items in {column.title}</p>
                 </div>
               )}
             </div>
