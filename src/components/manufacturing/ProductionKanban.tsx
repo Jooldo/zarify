@@ -285,26 +285,34 @@ const ProductionKanban = () => {
         <AddProductionItemDialog onAddItem={handleAddItem} />
       </div>
 
-      <div className="grid grid-cols-7 gap-4 min-h-[600px]">
+      <div className="space-y-6">
         {PROCESS_STEPS.map(step => (
-          <div key={step.id} className="space-y-3">
-            <div className={`p-3 rounded-lg ${step.color}`}>
-              <h3 className="font-semibold text-sm">{step.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                {tasks[step.id]?.length || 0} tasks
-              </p>
+          <div key={step.id} className="space-y-4">
+            <div className={`p-4 rounded-lg ${step.color} border`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg">{step.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {tasks[step.id]?.length || 0} tasks in progress
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-sm">
+                  {tasks[step.id]?.length || 0}
+                </Badge>
+              </div>
             </div>
             
-            <div className="space-y-2 min-h-[500px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[120px]">
               {tasks[step.id]?.map(task => 
                 step.id === 'pending' ? renderPendingCard(task) : renderRegularCard(task)
               )}
               
               {/* Empty state */}
               {(!tasks[step.id] || tasks[step.id].length === 0) && (
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-                  <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No tasks</p>
+                <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">No tasks in {step.name}</p>
+                  <p className="text-xs text-gray-400 mt-1">Tasks will appear here when assigned to this step</p>
                 </div>
               )}
             </div>
