@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,6 +72,17 @@ const EnhancedProductionQueue = () => {
   const [updateItem, setUpdateItem] = useState<ProductionQueueItem | null>(null);
   const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignmentDialog, setAssignmentDialog] = useState<{
+    open: boolean;
+    itemId: string;
+    stepNumber: number;
+    stepName: string;
+  }>({
+    open: false,
+    itemId: '',
+    stepNumber: 0,
+    stepName: ''
+  });
   const { profile } = useUserProfile();
   const { toast } = useToast();
 
@@ -248,28 +258,40 @@ const EnhancedProductionQueue = () => {
     setQueueItems(items => [newItem, ...items]);
   };
 
-  // Mock function to simulate step assignment
-  const handleStepAssignment = (itemId: string, stepNumber: number) => {
+  // Open assignment dialog
+  const handleOpenAssignmentDialog = (itemId: string, stepNumber: number, stepName: string) => {
+    setAssignmentDialog({
+      open: true,
+      itemId,
+      stepNumber,
+      stepName
+    });
+  };
+
+  // Handle step assignment after dialog submission
+  const handleStepAssignment = (assignmentData: {
+    workerName: string;
+    deliveryDate: string;
+    totalWeight: number;
+    materials: { name: string; allocated_weight: number; unit: string; }[];
+  }) => {
     setQueueItems(items => 
       items.map(item => {
-        if (item.id === itemId) {
+        if (item.id === assignmentDialog.itemId) {
           return {
             ...item,
             manufacturing_steps: item.manufacturing_steps.map(step => {
-              if (step.step === stepNumber) {
+              if (step.step === assignmentDialog.stepNumber) {
                 return {
                   ...step,
                   status: 'In Progress' as const,
                   assignment: {
                     id: 'mock-assignment-id',
-                    worker_name: 'John Doe',
-                    delivery_date: '2024-01-20',
+                    worker_name: assignmentData.workerName,
+                    delivery_date: assignmentData.deliveryDate,
                     status: 'Assigned',
-                    materials: [
-                      { name: 'Silver Wire', allocated_weight: 25.5, unit: 'kg' },
-                      { name: 'Base Metal', allocated_weight: 15.0, unit: 'kg' }
-                    ],
-                    total_weight_assigned: 40.5
+                    materials: assignmentData.materials,
+                    total_weight_assigned: assignmentData.totalWeight
                   }
                 };
               }
@@ -281,9 +303,11 @@ const EnhancedProductionQueue = () => {
       })
     );
     
+    setAssignmentDialog({ open: false, itemId: '', stepNumber: 0, stepName: '' });
+    
     toast({
       title: 'Step Assigned',
-      description: `Step ${stepNumber} has been assigned successfully.`,
+      description: `Step ${assignmentDialog.stepNumber} has been assigned successfully.`,
     });
   };
 
@@ -464,92 +488,126 @@ const EnhancedProductionQueue = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium flex items-center gap-2">
-                          {item.product_code}
-                          {item.child_tickets && item.child_tickets.length > 0 && (
-                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600">
-                              {item.child_tickets.length} rework
-                            </Badge>
+                {filteredItems.map((item) => {
+                  const currentStep = item.manufacturing_steps.find(step => step.step === item.current_step);
+                  const isStepAssigned = currentStep?.assignment;
+                  
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium flex items-center gap-2">
+                            {item.product_code}
+                            {item.child_tickets && item.child_tickets.length > 0 && (
+                              <Badge variant="outline" className="text-xs bg-red-50 text-red-600">
+                                {item.child_tickets.length} rework
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.category} • {item.subcategory} • {item.size}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Order: {item.order_number}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.quantity_required} required</div>
+                          {item.quantity_in_progress > 0 && (
+                            <div className="text-sm text-muted-foreground">
+                              {item.quantity_in_progress} in progress
+                            </div>
                           )}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.category} • {item.subcategory} • {item.size}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Order: {item.order_number}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{item.quantity_required} required</div>
-                        {item.quantity_in_progress > 0 && (
-                          <div className="text-sm text-muted-foreground">
-                            {item.quantity_in_progress} in progress
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Overall Progress</span>
+                            <span>{getOverallProgress(item)}%</span>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Overall Progress</span>
-                          <span>{getOverallProgress(item)}%</span>
+                          <Progress value={getOverallProgress(item)} className="h-2" />
+                          <div className="flex gap-1">
+                            {item.manufacturing_steps.map((step) => (
+                              <div
+                                key={step.step}
+                                className={`h-2 w-4 rounded-sm ${
+                                  step.status === 'Completed'
+                                    ? 'bg-green-500'
+                                    : step.status === 'In Progress'
+                                    ? 'bg-yellow-500'
+                                    : 'bg-gray-200'
+                                }`}
+                                title={`Step ${step.step}: ${step.name} (${step.status})`}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <Progress value={getOverallProgress(item)} className="h-2" />
-                        <div className="flex gap-1">
-                          {item.manufacturing_steps.map((step) => (
-                            <div
-                              key={step.step}
-                              className={`h-2 w-4 rounded-sm ${
-                                step.status === 'Completed'
-                                  ? 'bg-green-500'
-                                  : step.status === 'In Progress'
-                                  ? 'bg-yellow-500'
-                                  : 'bg-gray-200'
-                              }`}
-                              title={`Step ${step.step}: ${step.name} (${step.status})`}
-                            />
-                          ))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge className={getStepStatusColor(item.manufacturing_steps[item.current_step - 1]?.status || 'Pending')}>
+                            Step {item.current_step}
+                          </Badge>
+                          <div className="text-xs text-muted-foreground">
+                            {item.manufacturing_steps[item.current_step - 1]?.name}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge className={getStepStatusColor(item.manufacturing_steps[item.current_step - 1]?.status || 'Pending')}>
-                          Step {item.current_step}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getPriorityColor(item.priority)}>
+                          {item.priority}
                         </Badge>
-                        <div className="text-xs text-muted-foreground">
-                          {item.manufacturing_steps[item.current_step - 1]?.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusColor(item.status)} flex items-center gap-1 w-fit`}>
+                          {getStatusIcon(item.status)}
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleUpdateItem(item)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Step Assignment/Update Button */}
+                          {currentStep && (
+                            <>
+                              {!isStepAssigned ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenAssignmentDialog(item.id, currentStep.step, currentStep.name)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  Assign
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateItem(item)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                  Update
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPriorityColor(item.priority)}>
-                        {item.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${getStatusColor(item.status)} flex items-center gap-1 w-fit`}>
-                        {getStatusIcon(item.status)}
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleUpdateItem(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -569,8 +627,17 @@ const EnhancedProductionQueue = () => {
         open={!!updateItem}
         onOpenChange={(open) => !open && setUpdateItem(null)}
         onUpdate={handleUpdateComplete}
-        onStepAssignment={handleStepAssignment}
+        onStepAssignment={() => {}} // Not used anymore since we handle it differently
         onReceiptQC={handleReceiptQC}
+      />
+
+      {/* Step Assignment Dialog */}
+      <StepAssignmentDialog
+        open={assignmentDialog.open}
+        onOpenChange={(open) => setAssignmentDialog(prev => ({ ...prev, open }))}
+        onAssign={handleStepAssignment}
+        stepNumber={assignmentDialog.stepNumber}
+        stepName={assignmentDialog.stepName}
       />
     </div>
   );
