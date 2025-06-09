@@ -391,7 +391,7 @@ const EnhancedProductionQueue = () => {
         open={updateDialog.open}
         onOpenChange={(open) => setUpdateDialog(prev => ({ ...prev, open }))}
         item={updateDialog.item}
-        onItemUpdated={handleItemUpdated}
+        onUpdate={handleItemUpdated}
       />
     </div>
   );
