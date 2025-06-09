@@ -34,7 +34,7 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
         </TabsContent>
 
         <TabsContent value="fg-manufacturing" className="space-y-6 mt-6">
-          <EnhancedProductionQueue />
+          <FGManufacturingTab />
         </TabsContent>
 
         <TabsContent value="fg-analytics" className="space-y-6 mt-6">

@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
-import { Factory, Calendar, Users, Wrench, Package, BarChart3 } from 'lucide-react';
+import { Factory, Calendar, Users, Wrench, Package, BarChart3, Kanban } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductionQueue from './ProductionQueue';
+import KanbanBoard from './KanbanBoard';
 
 const FGManufacturingTab = () => {
   const [activeSubTab, setActiveSubTab] = useState('queue');
@@ -19,10 +19,14 @@ const FGManufacturingTab = () => {
         </p>
         
         <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-muted h-12">
+          <TabsList className="grid w-full grid-cols-7 bg-muted h-12">
             <TabsTrigger value="queue" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Production Queue
+            </TabsTrigger>
+            <TabsTrigger value="kanban" className="flex items-center gap-2">
+              <Kanban className="h-4 w-4" />
+              Kanban Board
             </TabsTrigger>
             <TabsTrigger value="schedule" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -48,6 +52,10 @@ const FGManufacturingTab = () => {
           
           <TabsContent value="queue" className="mt-6">
             <ProductionQueue />
+          </TabsContent>
+          
+          <TabsContent value="kanban" className="mt-6">
+            <KanbanBoard />
           </TabsContent>
           
           <TabsContent value="schedule" className="mt-6">
