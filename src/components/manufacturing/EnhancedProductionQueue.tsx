@@ -186,12 +186,23 @@ const EnhancedProductionQueue = () => {
   };
 
   const handleAssignStep = (item: ProductionItem, stepNumber: number, stepName: string) => {
+    console.log('DEBUG: handleAssignStep called with:', {
+      itemId: item.id,
+      productCode: item.product_code,
+      category: item.category,
+      subcategory: item.subcategory,
+      size: item.size,
+      quantityRequired: item.quantity_required,
+      stepNumber,
+      stepName
+    });
+    
     setStepAssignmentDialog({
       open: true,
       productionItemId: item.id,
       stepNumber,
       stepName,
-      productionItem: item
+      productionItem: item // Make sure the full item is passed
     });
   };
 
