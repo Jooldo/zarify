@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, User, Calendar, Clock, FileText, Building2, Hash, ArrowRight } from 'lucide-react';
+import { Package, User, Calendar, Clock, FileText, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -235,62 +235,33 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
             </div>
           )}
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Order Information */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <Hash className="h-4 w-4" />
-                Order Information
-              </h4>
-              
-              <div className="space-y-3">
+          {/* Timeline Information */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Timeline
+            </h4>
+            
+            <div className="space-y-3">
+              {task.createdAt && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FileText className="h-4 w-4 text-gray-600" />
+                  <Calendar className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Order Number</p>
-                    <p className="font-medium">{task.orderNumber}</p>
+                    <p className="text-sm text-gray-600">Created</p>
+                    <p className="font-medium">{format(task.createdAt, 'PPP')}</p>
                   </div>
                 </div>
-                
+              )}
+              
+              {task.expectedDate && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Building2 className="h-4 w-4 text-gray-600" />
+                  <Calendar className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Customer</p>
-                    <p className="font-medium">{task.customerName}</p>
+                    <p className="text-sm text-gray-600">Expected Delivery</p>
+                    <p className="font-medium">{format(task.expectedDate, 'PPP')}</p>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Timeline Information */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Timeline
-              </h4>
-              
-              <div className="space-y-3">
-                {task.createdAt && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Calendar className="h-4 w-4 text-gray-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Created</p>
-                      <p className="font-medium">{format(task.createdAt, 'PPP')}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {task.expectedDate && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Calendar className="h-4 w-4 text-gray-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Expected Delivery</p>
-                      <p className="font-medium">{format(task.expectedDate, 'PPP')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
