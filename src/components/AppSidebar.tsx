@@ -14,9 +14,9 @@ import {
   Box,
   Wrench,
   ShoppingBag,
-  TrendingUp,
   Building2,
-  Factory
+  Factory,
+  Home
 } from "lucide-react";
 
 import {
@@ -68,6 +68,11 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       icon: Layers,
       subItems: [
         {
+          title: "Home",
+          value: "rm-home",
+          icon: Home,
+        },
+        {
           title: "RM Inventory",
           value: "rm-inventory",
           icon: Package,
@@ -76,11 +81,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "RM Procurement",
           value: "rm-procurement",
           icon: ShoppingBag,
-        },
-        {
-          title: "Analytics",
-          value: "rm-analytics",
-          icon: TrendingUp,
         },
         {
           title: "Suppliers",
