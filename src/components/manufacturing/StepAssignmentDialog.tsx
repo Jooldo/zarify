@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,6 @@ interface RawMaterial {
 interface MaterialAllocation {
   raw_material_id: string;
   allocated_weight: number;
-  assigned_weight: number;
   unit: string;
   material_name?: string;
   required_quantity?: number;
@@ -97,7 +96,6 @@ const StepAssignmentDialog = ({
           return {
             raw_material_id: material.raw_material_id,
             allocated_weight: totalRequired,
-            assigned_weight: totalRequired,
             unit: material.unit,
             material_name: material.raw_material?.name || rawMaterial?.name || 'Unknown Material',
             required_quantity: totalRequired,
@@ -126,7 +124,6 @@ const StepAssignmentDialog = ({
     setMaterialAllocations([...materialAllocations, {
       raw_material_id: '',
       allocated_weight: 0,
-      assigned_weight: 0,
       unit: 'kg'
     }]);
   };
@@ -153,7 +150,7 @@ const StepAssignmentDialog = ({
 
     // Validate material allocations
     const invalidAllocations = materialAllocations.some(
-      allocation => !allocation.raw_material_id || allocation.allocated_weight <= 0 || allocation.assigned_weight <= 0
+      allocation => !allocation.raw_material_id || allocation.allocated_weight <= 0
     );
 
     if (invalidAllocations) {
@@ -167,12 +164,12 @@ const StepAssignmentDialog = ({
 
     // Check for stock shortages
     const stockShortages = materialAllocations.filter(
-      allocation => allocation.current_stock && allocation.assigned_weight > allocation.current_stock
+      allocation => allocation.current_stock && allocation.allocated_weight > allocation.current_stock
     );
 
     if (stockShortages.length > 0) {
       const shortageDetails = stockShortages.map(s => 
-        `${s.material_name}: need ${s.assigned_weight}${s.unit}, have ${s.current_stock}${s.unit}`
+        `${s.material_name}: need ${s.allocated_weight}${s.unit}, have ${s.current_stock}${s.unit}`
       ).join(', ');
       
       toast({
@@ -218,7 +215,6 @@ const StepAssignmentDialog = ({
 
   const isStep1 = stepNumber === 1;
   const totalMaterialsRequired = materialAllocations.reduce((sum, allocation) => sum + allocation.allocated_weight, 0);
-  const totalAssignedWeight = materialAllocations.reduce((sum, allocation) => sum + allocation.assigned_weight, 0);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -301,10 +297,9 @@ const StepAssignmentDialog = ({
             {/* Summary for Step 1 */}
             {isStep1 && materialAllocations.length > 0 && (
               <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><span className="font-medium">Materials:</span> {materialAllocations.length}</div>
-                  <div><span className="font-medium">Required:</span> {totalMaterialsRequired.toFixed(2)}kg</div>
-                  <div><span className="font-medium">Assigned:</span> {totalAssignedWeight.toFixed(2)}kg</div>
+                  <div><span className="font-medium">Total Required:</span> {totalMaterialsRequired.toFixed(2)}kg</div>
                 </div>
               </div>
             )}
@@ -320,20 +315,19 @@ const StepAssignmentDialog = ({
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="py-2 text-xs font-medium">Raw Material & Stock</TableHead>
-                          <TableHead className="py-2 w-28 text-xs font-medium">Required</TableHead>
-                          <TableHead className="py-2 w-28 text-xs font-medium">Assigned</TableHead>
-                          {!isStep1 && <TableHead className="py-2 w-16 text-xs font-medium">Actions</TableHead>}
+                          <TableHead className="py-1 text-xs font-medium">Raw Material & Stock</TableHead>
+                          <TableHead className="py-1 w-32 text-xs font-medium">Required Quantity</TableHead>
+                          {!isStep1 && <TableHead className="py-1 w-16 text-xs font-medium">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {materialAllocations.map((allocation, index) => (
                           <TableRow key={index} className="hover:bg-muted/30">
-                            <TableCell className="py-1">
+                            <TableCell className="py-1 text-xs">
                               {isStep1 ? (
                                 <div className="space-y-1">
-                                  <div className="font-medium text-xs">{allocation.material_name}</div>
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="font-medium">{allocation.material_name}</div>
+                                  <div className="text-muted-foreground">
                                     Stock: {allocation.current_stock !== undefined ? `${allocation.current_stock}${allocation.unit}` : 'N/A'}
                                   </div>
                                 </div>
@@ -342,7 +336,7 @@ const StepAssignmentDialog = ({
                                   value={allocation.raw_material_id}
                                   onValueChange={(value) => updateMaterialAllocation(index, 'raw_material_id', value)}
                                 >
-                                  <SelectTrigger className="w-full h-7 text-xs">
+                                  <SelectTrigger className="w-full h-6 text-xs">
                                     <SelectValue placeholder="Select material" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -367,35 +361,9 @@ const StepAssignmentDialog = ({
                                   onChange={(e) => updateMaterialAllocation(index, 'allocated_weight', parseFloat(e.target.value) || 0)}
                                   placeholder=""
                                   readOnly={isStep1}
-                                  className={cn("w-16 h-6 text-xs", isStep1 && 'bg-muted')}
+                                  className={cn("w-20 h-6 text-xs", isStep1 && 'bg-muted')}
                                 />
                                 <span className="text-xs text-muted-foreground">{allocation.unit}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-1">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={allocation.assigned_weight > 0 ? allocation.assigned_weight.toString() : ''}
-                                    onChange={(e) => updateMaterialAllocation(index, 'assigned_weight', parseFloat(e.target.value) || 0)}
-                                    placeholder=""
-                                    className={cn(
-                                      "w-16 h-6 text-xs",
-                                      allocation.current_stock && allocation.assigned_weight > allocation.current_stock
-                                        ? 'border-red-500 focus:border-red-500'
-                                        : ''
-                                    )}
-                                  />
-                                  <span className="text-xs text-muted-foreground">{allocation.unit}</span>
-                                </div>
-                                {allocation.current_stock && allocation.assigned_weight > allocation.current_stock && (
-                                  <div className="flex items-center gap-1 text-xs text-red-600">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    <span className="text-xs">Exceeds by {(allocation.assigned_weight - allocation.current_stock).toFixed(2)}{allocation.unit}</span>
-                                  </div>
-                                )}
                               </div>
                             </TableCell>
                             {!isStep1 && (
