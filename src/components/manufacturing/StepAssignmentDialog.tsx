@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Worker {
   id: string;
@@ -315,128 +315,108 @@ const StepAssignmentDialog = ({
               </div>
             ) : (
               <div className="space-y-4">
-                {materialAllocations.map((allocation, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-4">
-                    {/* Material Name */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Raw Material</Label>
-                      {isStep1 ? (
-                        <div className="flex items-center justify-between p-3 border border-input bg-muted rounded-md">
-                          <span className="font-medium">
-                            {allocation.material_name}
-                          </span>
-                          {allocation.current_stock !== undefined && (
-                            <span className="text-sm text-muted-foreground">
-                              Stock: {allocation.current_stock} {allocation.unit}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <Select
-                          value={allocation.raw_material_id}
-                          onValueChange={(value) => updateMaterialAllocation(index, 'raw_material_id', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rawMaterials.map(material => (
-                              <SelectItem key={material.id} value={material.id}>
-                                {material.name} (Stock: {material.current_stock} {material.unit})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-
-                    {/* Weight Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm">
-                          Required Weight
-                          {isStep1 && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              (Calculated)
-                            </span>
-                          )}
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={allocation.allocated_weight}
-                          onChange={(e) => updateMaterialAllocation(index, 'allocated_weight', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          readOnly={isStep1}
-                          className={isStep1 ? 'bg-muted' : ''}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Assigned Weight</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={allocation.assigned_weight}
-                          onChange={(e) => updateMaterialAllocation(index, 'assigned_weight', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className={
-                            allocation.current_stock && allocation.assigned_weight > allocation.current_stock
-                              ? 'border-red-500 focus:border-red-500'
-                              : ''
-                          }
-                        />
-                        {allocation.current_stock && allocation.assigned_weight > allocation.current_stock && (
-                          <div className="flex items-center gap-1 text-xs text-red-600">
-                            <AlertTriangle className="h-3 w-3" />
-                            Exceeds stock by {(allocation.assigned_weight - allocation.current_stock).toFixed(2)}{allocation.unit}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Unit</Label>
-                        {isStep1 ? (
-                          <div className="flex items-center h-10 px-3 py-2 border border-input bg-muted rounded-md">
-                            <span className="text-sm">{allocation.unit}</span>
-                          </div>
-                        ) : (
-                          <Select
-                            value={allocation.unit}
-                            onValueChange={(value) => updateMaterialAllocation(index, 'unit', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="kg">kg</SelectItem>
-                              <SelectItem value="g">g</SelectItem>
-                              <SelectItem value="pieces">pieces</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Actions</Label>
-                        <div className="flex items-center h-10">
-                          {!isStep1 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeMaterialAllocation(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                {materialAllocations.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Raw Material</TableHead>
+                          <TableHead>Required Weight</TableHead>
+                          <TableHead>Assigned Weight</TableHead>
+                          <TableHead>Stock Available</TableHead>
+                          {!isStep1 && <TableHead>Actions</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {materialAllocations.map((allocation, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {isStep1 ? (
+                                <div className="font-medium">
+                                  {allocation.material_name}
+                                </div>
+                              ) : (
+                                <Select
+                                  value={allocation.raw_material_id}
+                                  onValueChange={(value) => updateMaterialAllocation(index, 'raw_material_id', value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select material" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {rawMaterials.map(material => (
+                                      <SelectItem key={material.id} value={material.id}>
+                                        {material.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={allocation.allocated_weight || ''}
+                                  onChange={(e) => updateMaterialAllocation(index, 'allocated_weight', parseFloat(e.target.value) || 0)}
+                                  placeholder="0.00"
+                                  readOnly={isStep1}
+                                  className={cn("w-20", isStep1 && 'bg-muted')}
+                                />
+                                <span className="text-sm text-muted-foreground">{allocation.unit}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={allocation.assigned_weight || ''}
+                                  onChange={(e) => updateMaterialAllocation(index, 'assigned_weight', parseFloat(e.target.value) || 0)}
+                                  placeholder="0.00"
+                                  className={cn(
+                                    "w-20",
+                                    allocation.current_stock && allocation.assigned_weight > allocation.current_stock
+                                      ? 'border-red-500 focus:border-red-500'
+                                      : ''
+                                  )}
+                                />
+                                <span className="text-sm text-muted-foreground">{allocation.unit}</span>
+                              </div>
+                              {allocation.current_stock && allocation.assigned_weight > allocation.current_stock && (
+                                <div className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Exceeds by {(allocation.assigned_weight - allocation.current_stock).toFixed(2)}{allocation.unit}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">
+                                  {allocation.current_stock !== undefined ? allocation.current_stock : '-'}
+                                </span>
+                                <span className="text-sm text-muted-foreground">{allocation.unit}</span>
+                              </div>
+                            </TableCell>
+                            {!isStep1 && (
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeMaterialAllocation(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                ))}
-
-                {materialAllocations.length === 0 && !loading && (
+                ) : (
                   <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                     {isStep1 
                       ? "No materials found for this product configuration." 
