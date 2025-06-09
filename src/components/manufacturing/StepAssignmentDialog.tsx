@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -72,13 +71,13 @@ const StepAssignmentDialog = ({
   // Fetch workers from database
   useEffect(() => {
     const fetchWorkers = async () => {
-      if (!profile?.merchant_id) return;
+      if (!profile?.merchantId) return;
       
       try {
         const { data, error } = await supabase
           .from('workers')
           .select('id, name')
-          .eq('merchant_id', profile.merchant_id)
+          .eq('merchant_id', profile.merchantId)
           .eq('status', 'Active');
         
         if (error) throw error;
@@ -96,18 +95,18 @@ const StepAssignmentDialog = ({
     if (open) {
       fetchWorkers();
     }
-  }, [open, toast, profile?.merchant_id]);
+  }, [open, toast, profile?.merchantId]);
 
   // Fetch raw materials from database
   useEffect(() => {
     const fetchRawMaterials = async () => {
-      if (!profile?.merchant_id) return;
+      if (!profile?.merchantId) return;
       
       try {
         const { data, error } = await supabase
           .from('raw_materials')
           .select('id, name, unit, current_stock')
-          .eq('merchant_id', profile.merchant_id);
+          .eq('merchant_id', profile.merchantId);
         
         if (error) throw error;
         setRawMaterials(data || []);
@@ -124,7 +123,7 @@ const StepAssignmentDialog = ({
     if (open) {
       fetchRawMaterials();
     }
-  }, [open, toast, profile?.merchant_id]);
+  }, [open, toast, profile?.merchantId]);
 
   // Auto-fetch materials for Step 1
   useEffect(() => {
@@ -197,7 +196,7 @@ const StepAssignmentDialog = ({
       return;
     }
 
-    if (!profile?.merchant_id) {
+    if (!profile?.merchantId) {
       toast({
         title: 'Error',
         description: 'Unable to get merchant information.',
@@ -245,7 +244,7 @@ const StepAssignmentDialog = ({
       const { data: assignment, error: assignmentError } = await supabase
         .from('production_step_assignments')
         .insert({
-          merchant_id: profile.merchant_id,
+          merchant_id: profile.merchantId,
           production_order_id: productionItemId,
           step_number: stepNumber,
           step_name: stepName,
@@ -263,7 +262,7 @@ const StepAssignmentDialog = ({
         supabase
           .from('production_material_allocations')
           .insert({
-            merchant_id: profile.merchant_id,
+            merchant_id: profile.merchantId,
             production_step_assignment_id: assignment.id,
             raw_material_id: allocation.raw_material_id,
             allocated_quantity: allocation.allocated_weight,
@@ -277,7 +276,7 @@ const StepAssignmentDialog = ({
       await supabase
         .from('production_logs')
         .insert({
-          merchant_id: profile.merchant_id,
+          merchant_id: profile.merchantId,
           production_order_id: productionItemId,
           production_step_assignment_id: assignment.id,
           log_type: 'assignment',
