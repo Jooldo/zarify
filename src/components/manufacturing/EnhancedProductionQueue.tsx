@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -186,7 +187,8 @@ const EnhancedProductionQueue = () => {
   };
 
   const handleAssignStep = (item: ProductionItem, stepNumber: number, stepName: string) => {
-    console.log('DEBUG: handleAssignStep called with:', {
+    console.log('DEBUG: handleAssignStep called with full item:', {
+      item: item,
       itemId: item.id,
       productCode: item.product_code,
       category: item.category,
@@ -202,7 +204,7 @@ const EnhancedProductionQueue = () => {
       productionItemId: item.id,
       stepNumber,
       stepName,
-      productionItem: item // Make sure the full item is passed
+      productionItem: item
     });
   };
 
@@ -366,15 +368,30 @@ const EnhancedProductionQueue = () => {
                         {item.manufacturing_steps
                           .filter(step => step.status === 'Pending')
                           .slice(0, 1)
-                          .map(step => (
-                            <DropdownMenuItem 
-                              key={step.step}
-                              onClick={() => handleAssignStep(item, step.step, step.name)}
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              Assign Step {step.step}
-                            </DropdownMenuItem>
-                          ))
+                          .map(step => {
+                            console.log('DEBUG: Creating dropdown item for step assignment:', {
+                              itemId: item.id,
+                              productCode: item.product_code,
+                              stepNumber: step.step,
+                              stepName: step.name
+                            });
+                            return (
+                              <DropdownMenuItem 
+                                key={step.step}
+                                onClick={() => {
+                                  console.log('DEBUG: Dropdown item clicked, calling handleAssignStep with:', {
+                                    item: item,
+                                    stepNumber: step.step,
+                                    stepName: step.name
+                                  });
+                                  handleAssignStep(item, step.step, step.name);
+                                }}
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Assign Step {step.step}
+                              </DropdownMenuItem>
+                            );
+                          })
                         }
                       </DropdownMenuContent>
                     </DropdownMenu>
