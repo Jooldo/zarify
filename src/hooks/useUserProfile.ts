@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface UserProfile {
+  id: string;
   firstName: string;
   lastName: string;
   merchantName: string;
@@ -34,6 +35,7 @@ export const useUserProfile = () => {
 
       if (profileData && profileData.merchant) {
         setProfile({
+          id: user.user.id,
           firstName: profileData.first_name || '',
           lastName: profileData.last_name || '',
           merchantName: profileData.merchant.name || '',
