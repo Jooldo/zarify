@@ -58,8 +58,8 @@ const StepAssignmentDialog = ({
   const [notes, setNotes] = useState('');
   const [quantityToProduce, setQuantityToProduce] = useState('');
   const { toast } = useToast();
-  const { productConfigs } = useProductConfigs();
-  const { rawMaterials } = useRawMaterials();
+  const { productConfigs, loading: configsLoading } = useProductConfigs();
+  const { rawMaterials, loading: materialsLoading } = useRawMaterials();
 
   // Mock data - replace with actual API calls
   const workers: Worker[] = [
@@ -70,16 +70,26 @@ const StepAssignmentDialog = ({
 
   // Find the correct product configuration for this production item - only by product_code
   const getProductConfig = () => {
-    if (!productionItem || !productConfigs.length) return null;
+    if (!productionItem || !productConfigs.length) {
+      console.log('DEBUG: No production item or configs available:', {
+        hasProductionItem: !!productionItem,
+        productConfigsLength: productConfigs.length,
+        configsLoading,
+        productionItem
+      });
+      return null;
+    }
     
-    console.log('Searching for product config by product_code only:', {
+    console.log('DEBUG: Searching for product config by product_code only:', {
       targetProductCode: productionItem.product_code,
       availableConfigs: productConfigs.map(c => ({
         id: c.id,
         product_code: c.product_code,
         category: c.category,
         subcategory: c.subcategory,
-        size_value: c.size_value
+        size_value: c.size_value,
+        hasProductConfigMaterials: !!c.product_config_materials,
+        materialsCount: c.product_config_materials?.length || 0
       }))
     });
     
@@ -87,9 +97,16 @@ const StepAssignmentDialog = ({
     const config = productConfigs.find(config => config.product_code === productionItem.product_code);
     
     if (config) {
-      console.log('Found config by product_code:', config);
+      console.log('DEBUG: Found config by product_code:', {
+        configId: config.id,
+        productCode: config.product_code,
+        hasProductConfigMaterials: !!config.product_config_materials,
+        materialsCount: config.product_config_materials?.length || 0,
+        materials: config.product_config_materials
+      });
     } else {
-      console.log('No matching config found for product_code:', productionItem.product_code);
+      console.log('DEBUG: No matching config found for product_code:', productionItem.product_code);
+      console.log('DEBUG: Available product codes:', productConfigs.map(c => c.product_code));
     }
     
     return config;
@@ -97,14 +114,41 @@ const StepAssignmentDialog = ({
 
   // Fetch required materials for step 1
   useEffect(() => {
-    if (stepNumber === 1 && open && productionItem) {
+    console.log('DEBUG: useEffect triggered for materials:', {
+      stepNumber,
+      open,
+      hasProductionItem: !!productionItem,
+      configsLoading,
+      materialsLoading,
+      productConfigsLength: productConfigs.length,
+      rawMaterialsLength: rawMaterials.length
+    });
+
+    if (stepNumber === 1 && open && productionItem && !configsLoading && !materialsLoading) {
       const productConfig = getProductConfig();
       
+      console.log('DEBUG: Product config result:', {
+        found: !!productConfig,
+        config: productConfig,
+        hasMaterials: !!productConfig?.product_config_materials,
+        materialsCount: productConfig?.product_config_materials?.length || 0
+      });
+      
       if (productConfig?.product_config_materials) {
-        console.log('Found product config materials:', productConfig.product_config_materials);
+        console.log('DEBUG: Processing product config materials:', {
+          materials: productConfig.product_config_materials,
+          rawMaterialsCount: rawMaterials.length
+        });
         
         const materials = productConfig.product_config_materials.map(configMaterial => {
           const rawMaterial = rawMaterials.find(rm => rm.id === configMaterial.raw_material_id);
+          console.log('DEBUG: Mapping material:', {
+            configMaterialId: configMaterial.raw_material_id,
+            foundRawMaterial: !!rawMaterial,
+            rawMaterialName: rawMaterial?.name,
+            quantityRequired: configMaterial.quantity_required
+          });
+          
           return {
             raw_material_id: configMaterial.raw_material_id,
             raw_material_name: rawMaterial?.name || 'Unknown Material',
@@ -115,16 +159,16 @@ const StepAssignmentDialog = ({
           };
         });
         
-        console.log('Mapped materials:', materials);
+        console.log('DEBUG: Final mapped materials:', materials);
         setMaterialAllocations(materials);
       } else {
-        console.log('No product config or materials found for product_code:', productionItem.product_code);
+        console.log('DEBUG: No product config or materials found for product_code:', productionItem.product_code);
         setMaterialAllocations([]);
       }
     } else if (stepNumber !== 1) {
       setMaterialAllocations([]);
     }
-  }, [stepNumber, open, productionItem, productConfigs, rawMaterials]);
+  }, [stepNumber, open, productionItem, productConfigs, rawMaterials, configsLoading, materialsLoading]);
 
   // Update allocated weights when quantity changes
   useEffect(() => {
@@ -244,6 +288,19 @@ const StepAssignmentDialog = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Debug Information */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="p-3 bg-gray-100 rounded text-xs">
+              <div className="font-bold mb-2">Debug Info:</div>
+              <div>Configs Loading: {configsLoading.toString()}</div>
+              <div>Materials Loading: {materialsLoading.toString()}</div>
+              <div>Product Configs Count: {productConfigs.length}</div>
+              <div>Raw Materials Count: {rawMaterials.length}</div>
+              <div>Product Config Found: {(!!productConfig).toString()}</div>
+              <div>Material Allocations Count: {materialAllocations.length}</div>
+            </div>
+          )}
+
           {/* Worker Selection and Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -308,7 +365,11 @@ const StepAssignmentDialog = ({
                 Materials required for production (automatically calculated based on quantity)
               </p>
 
-              {!productConfig && (
+              {configsLoading || materialsLoading ? (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  Loading product configuration and materials...
+                </div>
+              ) : !productConfig ? (
                 <div className="text-center py-8 text-red-600 border-2 border-dashed border-red-200 rounded-lg">
                   <div className="font-medium">No product configuration found for this item.</div>
                   <div className="text-sm mt-1">Product Code: {productionItem?.product_code}</div>
@@ -316,9 +377,7 @@ const StepAssignmentDialog = ({
                     Please check the product setup in Configuration → Product Configuration
                   </div>
                 </div>
-              )}
-
-              {productConfig && materialAllocations.length > 0 ? (
+              ) : materialAllocations.length > 0 ? (
                 <div className="space-y-3">
                   {materialAllocations.map((allocation, index) => (
                     <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 border rounded-lg">
@@ -362,7 +421,7 @@ const StepAssignmentDialog = ({
                     </div>
                   ))}
                 </div>
-              ) : productConfig && (
+              ) : (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                   {quantityToProduce ? "No raw materials configured for this product" : "Enter quantity to see required materials"}
                 </div>
