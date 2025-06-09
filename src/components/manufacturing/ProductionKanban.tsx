@@ -10,6 +10,8 @@ import DraggableCard from './DraggableCard';
 import TaskDetailsDialog from './TaskDetailsDialog';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useProductionStepHistory } from '@/hooks/useProductionStepHistory';
+import { useProductConfigs } from '@/hooks/useProductConfigs';
+import { useToast } from '@/hooks/use-toast';
 
 const PROCESS_STEPS = [
   { id: 'pending', name: 'Pending', color: 'bg-gray-100' },
@@ -96,6 +98,8 @@ const ProductionKanban = () => {
   const [taskDetailsDialogOpen, setTaskDetailsDialogOpen] = useState(false);
   
   const { tasksByStep, isLoading, createTask, moveTask, updateTask } = useProductionTasks();
+  const { findProductConfigByCode } = useProductConfigs();
+  const { toast } = useToast();
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -117,9 +121,19 @@ const ProductionKanban = () => {
     expectedDate: Date;
   }) => {
     // Find the product config by product code
-    // This should be enhanced to actually find the product config
+    const productConfig = findProductConfigByCode(newItem.productCode);
+    
+    if (!productConfig) {
+      toast({
+        title: 'Error',
+        description: `Product configuration not found for code: ${newItem.productCode}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     createTask({
-      product_config_id: 'temp-id', // This should be the actual product config ID
+      product_config_id: productConfig.id,
       order_number: `OD${String(Date.now()).slice(-6)}`,
       customer_name: 'Production Request',
       quantity: newItem.quantity,
