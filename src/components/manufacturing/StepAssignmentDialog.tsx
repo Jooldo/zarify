@@ -73,22 +73,8 @@ const StepAssignmentDialog = ({
   const getProductConfig = () => {
     if (!productionItem || !productConfigs.length) return null;
     
-    // Try to find exact match by product_code
-    let config = productConfigs.find(config => config.product_code === productionItem.product_code);
-    
-    // If not found by product_code, try matching by category, subcategory, and size
-    if (!config) {
-      const sizeValue = parseFloat(productionItem.size.replace('"', ''));
-      config = productConfigs.find(config => 
-        config.category === productionItem.category &&
-        config.subcategory === productionItem.subcategory &&
-        Math.abs(config.size_value - sizeValue) < 0.01 // Account for floating point precision
-      );
-    }
-    
-    console.log('Looking for product config:', {
+    console.log('Searching for product config:', {
       productionItem,
-      foundConfig: config,
       availableConfigs: productConfigs.map(c => ({
         id: c.id,
         product_code: c.product_code,
@@ -97,6 +83,50 @@ const StepAssignmentDialog = ({
         size_value: c.size_value
       }))
     });
+    
+    // Try to find exact match by product_code first
+    let config = productConfigs.find(config => config.product_code === productionItem.product_code);
+    
+    if (config) {
+      console.log('Found config by product_code:', config);
+      return config;
+    }
+    
+    // If not found by product_code, try matching by category, subcategory, and size
+    // Parse size more robustly
+    let sizeValue = 0;
+    const sizeStr = productionItem.size.toString();
+    
+    // Try to extract numeric value from size string (handles cases like '10"', '10', '10.5"', etc.)
+    const sizeMatch = sizeStr.match(/(\d+(?:\.\d+)?)/);
+    if (sizeMatch) {
+      sizeValue = parseFloat(sizeMatch[1]);
+    }
+    
+    console.log('Parsed size value:', sizeValue, 'from:', productionItem.size);
+    
+    config = productConfigs.find(config => {
+      const categoryMatch = config.category === productionItem.category;
+      const subcategoryMatch = config.subcategory === productionItem.subcategory;
+      const sizeMatch = Math.abs(config.size_value - sizeValue) < 0.01; // Account for floating point precision
+      
+      console.log('Checking config:', {
+        configId: config.id,
+        categoryMatch,
+        subcategoryMatch,
+        sizeMatch,
+        configSize: config.size_value,
+        targetSize: sizeValue
+      });
+      
+      return categoryMatch && subcategoryMatch && sizeMatch;
+    });
+    
+    if (config) {
+      console.log('Found config by attributes:', config);
+    } else {
+      console.log('No matching config found');
+    }
     
     return config;
   };
@@ -316,7 +346,14 @@ const StepAssignmentDialog = ({
 
               {!productConfig && (
                 <div className="text-center py-8 text-red-600 border-2 border-dashed border-red-200 rounded-lg">
-                  No product configuration found for this item. Please check the product setup.
+                  <div className="font-medium">No product configuration found for this item.</div>
+                  <div className="text-sm mt-1">Product: {productionItem?.product_code}</div>
+                  <div className="text-sm">Category: {productionItem?.category}</div>
+                  <div className="text-sm">Subcategory: {productionItem?.subcategory}</div>
+                  <div className="text-sm">Size: {productionItem?.size}</div>
+                  <div className="text-xs mt-2 text-muted-foreground">
+                    Please check the product setup in Configuration → Product Configuration
+                  </div>
                 </div>
               )}
 
