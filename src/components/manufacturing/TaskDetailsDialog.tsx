@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +10,7 @@ import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash, Cal
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 import ManufacturingStepHistory from './ManufacturingStepHistory';
 import { ProductionTask } from '@/hooks/useProductionTasks';
 
@@ -76,6 +76,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
   const [totalWeightFromMaterials, setTotalWeightFromMaterials] = useState<number | null>(null);
   const { toast } = useToast();
   const { productConfigs } = useProductConfigs();
+  const { rawMaterials } = useRawMaterials();
 
   useEffect(() => {
     if (task && productConfigs.length > 0) {
@@ -212,6 +213,12 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     (config.category === task.product_configs?.category && config.subcategory === task.product_configs?.subcategory)
   );
 
+  // Helper function to get raw material name by ID
+  const getRawMaterialName = (materialId: string) => {
+    const material = rawMaterials.find(rm => rm.id === materialId);
+    return material ? material.name : `Material #${materialId.slice(-6)}`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -285,7 +292,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                     {productConfig.product_config_materials.map((material, index) => (
                       <TableRow key={material.id || index} className="hover:bg-gray-50">
                         <TableCell className="font-medium">
-                          Material #{material.raw_material_id.slice(-6)}
+                          {getRawMaterialName(material.raw_material_id)}
                         </TableCell>
                         <TableCell className="text-center">
                           {material.quantity_required}
