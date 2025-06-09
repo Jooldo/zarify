@@ -1,6 +1,8 @@
+
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Package, Warehouse, Calendar, Target } from 'lucide-react';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface ProductConfig {
   id: string;
@@ -29,6 +31,8 @@ interface ViewProductConfigDialogProps {
 }
 
 const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
+  const { rawMaterials } = useRawMaterials();
+
   // Display size_value directly as inches (no conversion needed)
   const sizeValueInInches = config.size_value?.toFixed(2) || config.size_value;
 
@@ -43,6 +47,23 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
     const weightCode = config.weight_range ? config.weight_range.replace('g', 'G') : '';
     
     return `${categoryCode}-${subcategoryCode}${sizeCode ? '-' + sizeCode : ''}${weightCode ? '-' + weightCode : ''}`;
+  };
+
+  // Helper function to get material name and type
+  const getMaterialInfo = (materialId: string, materialData?: { name: string; type: string }) => {
+    // First try to use the nested raw_material data
+    if (materialData) {
+      return { name: materialData.name, type: materialData.type };
+    }
+    
+    // Fallback to finding it in the rawMaterials array
+    const material = rawMaterials.find(m => m.id === materialId);
+    if (material) {
+      return { name: material.name, type: material.type };
+    }
+    
+    // Last fallback
+    return { name: 'Unknown Material', type: 'Unknown' };
   };
 
   return (
@@ -148,28 +169,45 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
           </div>
           
           <div className="space-y-1.5">
-            {config.product_config_materials.map((material, index) => (
-              <div key={index} className="p-2 bg-gray-50 rounded border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-3 w-3 text-gray-500" />
-                    <span className="text-sm font-semibold text-gray-900">
-                      {material.raw_material?.name || 'Unknown Material'}
-                    </span>
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {material.raw_material?.type || 'N/A'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <Warehouse className="h-3 w-3 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-900">
-                      {material.quantity_required} {material.unit}
-                    </span>
+            {config.product_config_materials.map((material, index) => {
+              const materialInfo = getMaterialInfo(material.raw_material_id, material.raw_material);
+              
+              return (
+                <div key={index} className="p-2 bg-gray-50 rounded border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-3 w-3 text-gray-500" />
+                      <span className="text-sm font-semibold text-gray-900">
+                        {materialInfo.name}
+                      </span>
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        {materialInfo.type}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Warehouse className="h-3 w-3 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {material.quantity_required} {material.unit}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* No Raw Materials Message */}
+      {(!config.product_config_materials || config.product_config_materials.length === 0) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 pt-2 border-t">
+            <Package className="h-3 w-3 text-gray-700" />
+            <Label className="text-sm font-semibold text-gray-900">Raw Materials Required</Label>
+          </div>
+          <div className="text-center py-4 text-gray-500">
+            No raw materials have been configured for this product.
           </div>
         </div>
       )}
