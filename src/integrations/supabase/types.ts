@@ -617,6 +617,7 @@ export type Database = {
           product_code: string
           size_value: number
           subcategory: string
+          threshold: number | null
           updated_at: string | null
           weight_range: string | null
         }
@@ -629,6 +630,7 @@ export type Database = {
           product_code: string
           size_value: number
           subcategory: string
+          threshold?: number | null
           updated_at?: string | null
           weight_range?: string | null
         }
@@ -641,6 +643,7 @@ export type Database = {
           product_code?: string
           size_value?: number
           subcategory?: string
+          threshold?: number | null
           updated_at?: string | null
           weight_range?: string | null
         }
