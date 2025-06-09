@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -128,6 +128,67 @@ const initialMockTasks: { [key: string]: ProductionTask[] } = {
   ]
 };
 
+// Droppable step component
+const DroppableStep = ({ step, tasks, onTaskClick }: { 
+  step: { id: string; name: string; color: string }, 
+  tasks: ProductionTask[], 
+  onTaskClick: (task: ProductionTask) => void 
+}) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: step.id,
+  });
+
+  const style = {
+    backgroundColor: isOver ? 'rgba(59, 130, 246, 0.1)' : undefined,
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`p-4 rounded-lg ${step.color} border`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">{step.name}</h3>
+            <p className="text-sm text-muted-foreground">
+              {tasks.length || 0} tasks in progress
+            </p>
+          </div>
+          <Badge variant="outline" className="text-sm">
+            {tasks.length || 0}
+          </Badge>
+        </div>
+      </div>
+      
+      <div 
+        ref={setNodeRef}
+        style={style}
+        className="min-h-[120px] relative"
+      >
+        <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tasks.map(task => (
+              <DraggableCard 
+                key={task.id}
+                task={task}
+                stepId={step.id}
+                onTaskClick={onTaskClick}
+              />
+            ))}
+            
+            {/* Empty state */}
+            {tasks.length === 0 && (
+              <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">No tasks in {step.name}</p>
+                <p className="text-xs text-gray-400 mt-1">Tasks will appear here when assigned to this step</p>
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </div>
+    </div>
+  );
+};
+
 const ProductionKanban = () => {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
   const [tasks, setTasks] = useState(initialMockTasks);
@@ -175,23 +236,35 @@ const ProductionKanban = () => {
     const { active } = event;
     const task = active.data.current?.task;
     setActiveTask(task);
+    console.log('Drag started:', { taskId: active.id, task });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
 
-    if (!over) return;
+    console.log('Drag ended:', { active: active.id, over: over?.id });
+
+    if (!over) {
+      console.log('No drop target');
+      return;
+    }
 
     const activeTask = active.data.current?.task;
     const activeStepId = active.data.current?.stepId;
     const overStepId = over.id as string;
 
+    console.log('Drop details:', { activeTask, activeStepId, overStepId });
+
     // If dropping in the same step, do nothing
-    if (activeStepId === overStepId) return;
+    if (activeStepId === overStepId) {
+      console.log('Dropped in same step, no action needed');
+      return;
+    }
 
     // Special handling for Pending → Jalhai
     if (activeStepId === 'pending' && overStepId === 'jhalai') {
+      console.log('Opening assignment dialog for Pending → Jhalai');
       setTaskToAssign(activeTask);
       setAssignmentDialogOpen(true);
       return;
@@ -199,17 +272,23 @@ const ProductionKanban = () => {
 
     // Move task for other steps
     if (activeTask) {
+      console.log('Moving task to different step');
       moveTask(activeTask.id, activeStepId, overStepId);
     }
   };
 
   const moveTask = (taskId: string, fromStep: string, toStep: string, updatedTask?: Partial<ProductionTask>) => {
+    console.log('Moving task:', { taskId, fromStep, toStep, updatedTask });
+    
     setTasks(prev => {
       const newTasks = { ...prev };
       
       // Find and remove task from source step
       const taskIndex = newTasks[fromStep]?.findIndex(t => t.id === taskId);
-      if (taskIndex === -1) return prev;
+      if (taskIndex === -1) {
+        console.log('Task not found in source step');
+        return prev;
+      }
       
       const [task] = newTasks[fromStep].splice(taskIndex, 1);
       
@@ -217,6 +296,7 @@ const ProductionKanban = () => {
       if (!newTasks[toStep]) newTasks[toStep] = [];
       newTasks[toStep].push({ ...task, ...updatedTask });
       
+      console.log('Task moved successfully');
       return newTasks;
     });
   };
@@ -228,6 +308,8 @@ const ProductionKanban = () => {
     expectedDate: Date;
     remarks?: string;
   }) => {
+    console.log('Handling assignment:', assignment);
+    
     moveTask(assignment.taskId, 'pending', 'jhalai', {
       assignedWorker: assignment.workerName,
       expectedDate: assignment.expectedDate,
@@ -255,49 +337,12 @@ const ProductionKanban = () => {
       >
         <div className="space-y-6">
           {PROCESS_STEPS.map(step => (
-            <div key={step.id} className="space-y-4">
-              <div className={`p-4 rounded-lg ${step.color} border`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{step.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {tasks[step.id]?.length || 0} tasks in progress
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-sm">
-                    {tasks[step.id]?.length || 0}
-                  </Badge>
-                </div>
-              </div>
-              
-              <SortableContext items={tasks[step.id]?.map(t => t.id) || []} strategy={verticalListSortingStrategy}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-[120px] relative">
-                  {/* Drop zone overlay */}
-                  <div 
-                    id={step.id}
-                    className="absolute inset-0 pointer-events-none"
-                  />
-                  
-                  {tasks[step.id]?.map(task => (
-                    <DraggableCard 
-                      key={task.id}
-                      task={task}
-                      stepId={step.id}
-                      onTaskClick={handleTaskClick}
-                    />
-                  ))}
-                  
-                  {/* Empty state */}
-                  {(!tasks[step.id] || tasks[step.id].length === 0) && (
-                    <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500">No tasks in {step.name}</p>
-                      <p className="text-xs text-gray-400 mt-1">Tasks will appear here when assigned to this step</p>
-                    </div>
-                  )}
-                </div>
-              </SortableContext>
-            </div>
+            <DroppableStep
+              key={step.id}
+              step={step}
+              tasks={tasks[step.id] || []}
+              onTaskClick={handleTaskClick}
+            />
           ))}
         </div>
 
