@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -22,6 +21,18 @@ interface ProductConfig {
   product_code: string;
   is_active: boolean;
   threshold?: number;
+  product_config_materials?: Array<{
+    id: string;
+    raw_material_id: string;
+    quantity_required: number;
+    unit: string;
+    raw_materials?: {
+      id: string;
+      name: string;
+      type: string;
+      unit: string;
+    };
+  }>;
 }
 
 interface RawMaterialRequirement {
@@ -57,37 +68,24 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
     if (config && isOpen) {
       setIsActive(config.is_active);
       setThreshold(config.threshold?.toString() || '');
-      fetchConfigMaterials();
+      loadConfigMaterials();
     }
   }, [config, isOpen]);
 
-  const fetchConfigMaterials = async () => {
-    if (!config) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('product_config_materials')
-        .select('id, raw_material_id, quantity_required, unit')
-        .eq('product_config_id', config.id);
-
-      if (error) throw error;
-
-      const materialsData = data?.map(item => ({
-        id: item.id,
-        material: item.raw_material_id,
-        quantity: item.quantity_required,
-        unit: item.unit
-      })) || [];
-
-      setRawMaterials(materialsData.length > 0 ? materialsData : [{ material: '', quantity: 0, unit: 'grams' }]);
-    } catch (error) {
-      console.error('Error fetching config materials:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load existing raw materials',
-        variant: 'destructive',
-      });
+  const loadConfigMaterials = () => {
+    if (!config || !config.product_config_materials) {
+      setRawMaterials([{ material: '', quantity: 0, unit: 'grams' }]);
+      return;
     }
+
+    const materialsData = config.product_config_materials.map(item => ({
+      id: item.id,
+      material: item.raw_material_id,
+      quantity: item.quantity_required,
+      unit: item.unit
+    }));
+
+    setRawMaterials(materialsData.length > 0 ? materialsData : [{ material: '', quantity: 0, unit: 'grams' }]);
   };
 
   const generateProductCode = () => {

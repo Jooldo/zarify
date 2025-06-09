@@ -11,6 +11,12 @@ export interface ProductConfigMaterial {
   unit: string;
   merchant_id: string;
   created_at?: string;
+  raw_materials?: {
+    id: string;
+    name: string;
+    type: string;
+    unit: string;
+  };
 }
 
 export interface ProductConfig {
@@ -56,7 +62,13 @@ export const useProductConfigs = () => {
             quantity_required,
             unit,
             merchant_id,
-            created_at
+            created_at,
+            raw_materials (
+              id,
+              name,
+              type,
+              unit
+            )
           )
         `)
         .eq('is_active', true)

@@ -1,7 +1,6 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Package, Warehouse, Calendar } from 'lucide-react';
+import { Package, Warehouse, Calendar, Target } from 'lucide-react';
 
 interface ProductConfig {
   id: string;
@@ -13,6 +12,7 @@ interface ProductConfig {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  threshold?: number;
   product_config_materials?: {
     raw_material_id: string;
     quantity_required: number;
@@ -83,6 +83,17 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
           )}
         </div>
       </div>
+
+      {/* Threshold Section */}
+      {config.threshold !== undefined && config.threshold !== null && (
+        <div className="p-2 bg-orange-50 rounded border border-orange-200">
+          <div className="flex items-center gap-1.5">
+            <Target className="h-3 w-3 text-orange-600" />
+            <Label className="text-xs font-medium text-orange-700">Stock Threshold:</Label>
+            <span className="text-sm font-semibold text-orange-900">{config.threshold} units</span>
+          </div>
+        </div>
+      )}
 
       {/* Timestamps */}
       <div className="grid grid-cols-2 gap-3 pt-2 border-t">
