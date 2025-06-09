@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Package, User, Clock, Warehouse } from 'lucide-react';
+import { CalendarIcon, Package, User, Clock, Warehouse, Weight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +89,19 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
     setExpectedDate(defaultDate);
   });
 
+  // Calculate total weight of raw materials
+  const calculateTotalWeight = () => {
+    return mockRawMaterials.reduce((total, material) => {
+      // Assuming weight per unit (mock data)
+      const weightPerUnit = material.name === 'Cement' ? 1 : // 1 kg per kg
+                           material.name === 'Steel Bars' ? 0.5 : // 0.5 kg per piece
+                           material.name === 'Sand' ? 1 : 0; // 1 kg per kg
+      return total + (material.requiredQty * weightPerUnit);
+    }, 0);
+  };
+
+  const totalWeight = calculateTotalWeight();
+
   const handleAssign = () => {
     if (!task) return;
 
@@ -167,6 +180,20 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
             </div>
           </div>
 
+          {/* Total Weight Summary */}
+          <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Weight className="h-5 w-5 text-orange-600" />
+              <Label className="font-semibold text-orange-800">Total Raw Materials Weight</Label>
+            </div>
+            <div className="text-2xl font-bold text-orange-900">
+              {totalWeight.toFixed(2)} kg
+            </div>
+            <p className="text-sm text-orange-700 mt-1">
+              Combined weight of all required raw materials
+            </p>
+          </div>
+
           {/* Raw Materials Required */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -177,6 +204,11 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
             <div className="space-y-2">
               {mockRawMaterials.map((material, index) => {
                 const status = getStockStatus(material.requiredQty, material.currentStock);
+                const weightPerUnit = material.name === 'Cement' ? 1 : 
+                                     material.name === 'Steel Bars' ? 0.5 : 
+                                     material.name === 'Sand' ? 1 : 0;
+                const materialWeight = material.requiredQty * weightPerUnit;
+                
                 return (
                   <div key={index} className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
@@ -186,6 +218,9 @@ const AssignmentDialog = ({ open, onOpenChange, task, onAssign }: AssignmentDial
                           <span className="font-medium">{material.name}</span>
                           <div className="text-sm text-gray-600">
                             Required: {material.requiredQty} {material.unit}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Weight: {materialWeight.toFixed(2)} kg
                           </div>
                         </div>
                       </div>
