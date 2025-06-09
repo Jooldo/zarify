@@ -40,6 +40,9 @@ interface ProductionQueueItem {
       delivery_date: string;
       status: string;
       materials: { name: string; allocated_weight: number; unit: string; }[];
+      total_weight_assigned?: number;
+      received_weight?: number;
+      received_quantity?: number;
     };
     qc_logs?: {
       received_weight: number;
@@ -249,6 +252,78 @@ const EnhancedProductionQueue = () => {
     };
     
     setQueueItems(items => [newItem, ...items]);
+  };
+
+  // Mock function to simulate step assignment
+  const handleStepAssignment = (itemId: string, stepNumber: number) => {
+    setQueueItems(items => 
+      items.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            manufacturing_steps: item.manufacturing_steps.map(step => {
+              if (step.step === stepNumber) {
+                return {
+                  ...step,
+                  status: 'In Progress' as const,
+                  assignment: {
+                    id: 'mock-assignment-id',
+                    worker_name: 'John Doe',
+                    delivery_date: '2024-01-20',
+                    status: 'Assigned',
+                    materials: [
+                      { name: 'Silver Wire', allocated_weight: 25.5, unit: 'kg' },
+                      { name: 'Base Metal', allocated_weight: 15.0, unit: 'kg' }
+                    ],
+                    total_weight_assigned: 40.5
+                  }
+                };
+              }
+              return step;
+            })
+          };
+        }
+        return item;
+      })
+    );
+    
+    toast({
+      title: 'Step Assigned',
+      description: `Step ${stepNumber} has been assigned successfully.`,
+    });
+  };
+
+  // Mock function to handle receipt and QC submission
+  const handleReceiptQC = (itemId: string, stepNumber: number, receivedWeight: number, receivedQuantity: number) => {
+    setQueueItems(items => 
+      items.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            manufacturing_steps: item.manufacturing_steps.map(step => {
+              if (step.step === stepNumber && step.assignment) {
+                return {
+                  ...step,
+                  assignment: {
+                    ...step.assignment,
+                    received_weight: receivedWeight,
+                    received_quantity: receivedQuantity,
+                    status: 'Received'
+                  }
+                };
+              }
+              return step;
+            })
+          };
+        }
+        return item;
+      })
+    );
+    
+    toast({
+      title: 'Receipt Recorded',
+      description: `Step ${stepNumber} receipt and QC data recorded successfully.`,
+    });
   };
 
   const filteredItems = queueItems.filter(item => {
@@ -500,6 +575,8 @@ const EnhancedProductionQueue = () => {
         open={!!updateItem}
         onOpenChange={(open) => !open && setUpdateItem(null)}
         onUpdate={handleUpdateComplete}
+        onStepAssignment={handleStepAssignment}
+        onReceiptQC={handleReceiptQC}
       />
     </div>
   );
