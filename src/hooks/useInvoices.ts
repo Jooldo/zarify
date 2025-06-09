@@ -63,17 +63,31 @@ export const useInvoices = () => {
       console.log('Creating invoice with data:', invoiceData);
       console.log('Invoice items:', items);
 
+      // Get current user's merchant ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('merchant_id')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (profileError || !profile?.merchant_id) {
+        throw new Error('Unable to get merchant information');
+      }
+
+      const merchantId = profile.merchant_id;
+
       // Get next invoice number
       const { data: invoiceNumber, error: numberError } = await supabase
         .rpc('get_next_invoice_number');
 
       if (numberError) throw numberError;
 
-      // Create invoice with required fields
+      // Create invoice with required fields including merchant_id
       const invoiceToInsert = {
         invoice_number: invoiceNumber,
         order_id: invoiceData.order_id!,
         customer_id: invoiceData.customer_id!,
+        merchant_id: merchantId,
         invoice_date: invoiceData.invoice_date!,
         due_date: invoiceData.due_date || null,
         subtotal: invoiceData.subtotal!,
@@ -96,11 +110,12 @@ export const useInvoices = () => {
 
       console.log('Created invoice:', invoice);
 
-      // Create invoice items with required fields
+      // Create invoice items with required fields including merchant_id
       const invoiceItemsToInsert = items.map(item => ({
         invoice_id: invoice.id,
         order_item_id: item.order_item_id!,
         product_config_id: item.product_config_id!,
+        merchant_id: merchantId,
         quantity: item.quantity!,
         unit_price: item.unit_price!,
         total_price: item.total_price!,
@@ -132,6 +147,32 @@ export const useInvoices = () => {
     }
   };
 
+  const updateInvoice = async (invoiceId: string, updates: Partial<Invoice>) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update(updates)
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Invoice updated successfully',
+      });
+
+      fetchInvoices();
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update invoice',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   const getInvoiceByOrderId = (orderId: string) => {
     return invoices.find(invoice => invoice.order_id === orderId);
   };
@@ -144,6 +185,7 @@ export const useInvoices = () => {
     invoices,
     loading,
     createInvoice,
+    updateInvoice,
     getInvoiceByOrderId,
     refetch: fetchInvoices,
   };

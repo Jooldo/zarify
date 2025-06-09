@@ -28,8 +28,25 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Allow editing of unit prices
+  const [editableItems, setEditableItems] = useState(
+    order.order_items.map(item => ({
+      ...item,
+      unit_price: item.unit_price,
+      total_price: item.unit_price * item.quantity
+    }))
+  );
 
-  const subtotal = order.total_amount;
+  const handleItemPriceChange = (itemId: string, newUnitPrice: number) => {
+    setEditableItems(prev => prev.map(item => 
+      item.id === itemId 
+        ? { ...item, unit_price: newUnitPrice, total_price: newUnitPrice * item.quantity }
+        : item
+    ));
+  };
+
+  const subtotal = editableItems.reduce((sum, item) => sum + item.total_price, 0);
   const totalAmount = subtotal + taxAmount - discountAmount;
 
   const handleSubmit = async () => {
@@ -53,7 +70,7 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
 
       console.log('Invoice data to create:', invoiceData);
 
-      const invoiceItems = order.order_items.map(item => ({
+      const invoiceItems = editableItems.map(item => ({
         order_item_id: item.id,
         product_config_id: item.product_config_id || item.product_config?.id,
         quantity: item.quantity,
@@ -75,7 +92,7 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Invoice - Order {order.order_number}</DialogTitle>
         </DialogHeader>
@@ -90,21 +107,35 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
             </div>
           </div>
 
-          {/* Order Items */}
+          {/* Order Items with Editable Prices */}
           <div className="space-y-2">
-            <h3 className="font-medium">Order Items</h3>
-            <div className="bg-gray-50 p-3 rounded-md space-y-2">
-              {order.order_items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <div>
+            <h3 className="font-medium">Order Items (Edit prices if needed)</h3>
+            <div className="bg-gray-50 p-3 rounded-md space-y-3">
+              {editableItems.map((item) => (
+                <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded border">
+                  <div className="flex-1">
                     <p className="font-medium">{item.product_config?.product_code || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
                       {item.product_config?.category || 'N/A'} - {item.product_config?.subcategory || 'N/A'}
                     </p>
+                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                   </div>
-                  <div className="text-right">
-                    <p>{item.quantity} × ₹{item.unit_price}</p>
-                    <p className="font-medium">₹{item.total_price}</p>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-right">
+                      <Label htmlFor={`price-${item.id}`} className="text-xs">Unit Price (₹)</Label>
+                      <Input
+                        id={`price-${item.id}`}
+                        type="number"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => handleItemPriceChange(item.id, parseFloat(e.target.value) || 0)}
+                        className="w-24 text-right"
+                      />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Total</p>
+                      <p className="font-medium">₹{item.total_price.toFixed(2)}</p>
+                    </div>
                   </div>
                 </div>
               ))}
