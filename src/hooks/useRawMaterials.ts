@@ -5,32 +5,18 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface RawMaterial {
   id: string;
-  merchant_id: string;
   name: string;
   type: string;
+  unit: string;
   current_stock: number;
   minimum_stock: number;
-  unit: string;
-  cost_per_unit?: number;
-  supplier_id?: string;
   required: number;
   in_procurement: number;
-  last_updated: string;
-  created_at: string;
-  supplier?: {
-    company_name: string;
-  };
-  // Add computed properties
-  shortfall?: number;
-  description?: string;
-}
-
-export interface CreateRawMaterialData {
-  name: string;
-  type: string;
-  current_stock: number;
-  minimum_stock: number;
-  unit: string;
+  shortfall: number;
+  supplier_name?: string;
+  supplier_id?: string;
+  last_updated?: string;
+  cost_per_unit?: number;
 }
 
 export const useRawMaterials = () => {
@@ -40,9 +26,9 @@ export const useRawMaterials = () => {
 
   const fetchRawMaterials = async () => {
     try {
-      setLoading(true);
-
-      // Get the current user's merchant_id first
+      console.log('Fetching raw materials data...');
+      
+      // First, get the merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
@@ -51,37 +37,105 @@ export const useRawMaterials = () => {
         throw merchantError;
       }
 
-      if (!merchantId) {
-        console.log('No merchant ID found for user');
-        setRawMaterials([]);
-        return;
-      }
+      console.log('Merchant ID:', merchantId);
 
-      console.log('Fetching raw materials for merchant:', merchantId);
-
-      const { data, error } = await supabase
+      // Fetch all raw materials with their suppliers
+      const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
         .from('raw_materials')
         .select(`
           *,
-          supplier:supplier_id (
-            company_name
-          )
+          supplier:suppliers(company_name)
         `)
         .eq('merchant_id', merchantId)
         .order('name');
 
-      if (error) throw error;
+      if (rawMaterialsError) {
+        console.error('Error fetching raw materials:', rawMaterialsError);
+        throw rawMaterialsError;
+      }
 
-      console.log('Fetched raw materials:', data);
-      
-      // Transform the data to match our interface and add computed properties
-      const transformedData: RawMaterial[] = (data || []).map(material => ({
-        ...material,
-        required: material.required || 0,
-        shortfall: Math.max(0, (material.required || 0) - (material.current_stock + material.in_procurement)),
-      }));
+      console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
-      setRawMaterials(transformedData);
+      // Fetch all order items with status 'Created' or 'In Progress'
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          product_config_id,
+          quantity,
+          status
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['Created', 'In Progress']);
+
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+        throw orderItemsError;
+      }
+
+      console.log('Pending order items fetched:', orderItemsData?.length || 0, 'items');
+
+      // Fetch product config materials to map finished goods to raw materials
+      const { data: productConfigMaterials, error: pcmError } = await supabase
+        .from('product_config_materials')
+        .select(`
+          product_config_id,
+          raw_material_id,
+          quantity_required
+        `)
+        .eq('merchant_id', merchantId);
+
+      if (pcmError) {
+        console.error('Error fetching product config materials:', pcmError);
+        throw pcmError;
+      }
+
+      console.log('Product config materials fetched:', productConfigMaterials?.length || 0, 'items');
+
+      // Calculate required quantities for each raw material
+      const materialRequirements = rawMaterialsData?.map(material => {
+        let totalRequired = 0;
+
+        // Find all product configs that use this raw material
+        const configsUsingMaterial = productConfigMaterials?.filter(
+          pcm => pcm.raw_material_id === material.id
+        ) || [];
+
+        // For each config, calculate how much is needed based on pending orders
+        configsUsingMaterial.forEach(config => {
+          const ordersForConfig = orderItemsData?.filter(
+            order => order.product_config_id === config.product_config_id &&
+                    (order.status === 'Created' || order.status === 'In Progress')
+          ) || [];
+
+          const totalOrderQuantity = ordersForConfig.reduce((sum, order) => sum + order.quantity, 0);
+          const materialNeeded = totalOrderQuantity * config.quantity_required;
+          totalRequired += materialNeeded;
+        });
+
+        console.log(`Material ${material.name}: total_required=${totalRequired}, current_stock=${material.current_stock}, in_procurement=${material.in_procurement}`);
+
+        const shortfall = Math.max(0, totalRequired - (material.current_stock + material.in_procurement));
+
+        return {
+          id: material.id,
+          name: material.name,
+          type: material.type,
+          unit: material.unit,
+          current_stock: material.current_stock || 0,
+          minimum_stock: material.minimum_stock || 0,
+          required: totalRequired,
+          in_procurement: material.in_procurement || 0,
+          shortfall,
+          supplier_name: material.supplier?.company_name,
+          supplier_id: material.supplier_id,
+          last_updated: material.last_updated,
+          cost_per_unit: material.cost_per_unit
+        };
+      }) || [];
+
+      console.log('Final raw materials with requirements:', materialRequirements);
+
+      setRawMaterials(materialRequirements);
     } catch (error) {
       console.error('Error fetching raw materials:', error);
       toast({
@@ -94,60 +148,9 @@ export const useRawMaterials = () => {
     }
   };
 
-  const createRawMaterial = async (data: CreateRawMaterialData) => {
-    try {
-      // Get the current user's merchant_id
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
-
-      if (merchantError || !merchantId) {
-        throw new Error('Unable to get merchant ID');
-      }
-
-      console.log('Creating raw material:', { ...data, merchantId });
-
-      const { data: newMaterial, error } = await supabase
-        .from('raw_materials')
-        .insert([{ 
-          ...data, 
-          merchant_id: merchantId,
-          required: 0,
-          in_procurement: 0,
-          last_updated: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      console.log('Raw material created:', newMaterial);
-
-      toast({
-        title: 'Success',
-        description: 'Raw material created successfully',
-      });
-
-      fetchRawMaterials();
-      return newMaterial;
-    } catch (error) {
-      console.error('Error creating raw material:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create raw material',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
   useEffect(() => {
     fetchRawMaterials();
   }, []);
 
-  return {
-    rawMaterials,
-    loading,
-    refetch: fetchRawMaterials,
-    createRawMaterial,
-  };
+  return { rawMaterials, loading, refetch: fetchRawMaterials };
 };
