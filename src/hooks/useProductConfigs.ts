@@ -36,6 +36,7 @@ interface CreateProductConfigData {
   size_value: number;
   weight_range?: string;
   is_active?: boolean;
+  threshold?: number;
 }
 
 export const useProductConfigs = () => {

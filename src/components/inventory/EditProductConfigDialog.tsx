@@ -21,6 +21,7 @@ interface ProductConfig {
   weight_range: string | null;
   product_code: string;
   is_active: boolean;
+  threshold?: number;
 }
 
 interface RawMaterialRequirement {
@@ -40,6 +41,7 @@ interface EditProductConfigDialogProps {
 
 const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }: EditProductConfigDialogProps) => {
   const [isActive, setIsActive] = useState(true);
+  const [threshold, setThreshold] = useState('');
   const [rawMaterials, setRawMaterials] = useState<Array<{
     id?: string;
     material: string;
@@ -54,6 +56,7 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
   useEffect(() => {
     if (config && isOpen) {
       setIsActive(config.is_active);
+      setThreshold(config.threshold?.toString() || '');
       fetchConfigMaterials();
     }
   }, [config, isOpen]);
@@ -79,6 +82,11 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
       setRawMaterials(materialsData.length > 0 ? materialsData : [{ material: '', quantity: 0, unit: 'grams' }]);
     } catch (error) {
       console.error('Error fetching config materials:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load existing raw materials',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -129,10 +137,13 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
 
     setLoading(true);
     try {
-      // Update product config (only is_active can be changed)
+      // Update product config (is_active and threshold can be changed)
       const { error: configError } = await supabase
         .from('product_configs')
-        .update({ is_active: isActive })
+        .update({ 
+          is_active: isActive,
+          threshold: threshold ? parseInt(threshold) : null
+        })
         .eq('id', config.id);
 
       if (configError) throw configError;
@@ -268,17 +279,30 @@ const EditProductConfigDialog = ({ config, isOpen, onClose, onUpdate, onDelete }
             </div>
           </div>
 
-          {/* Active status */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={isActive}
-              onCheckedChange={setIsActive}
-              className="scale-75"
-            />
-            <Label className="text-xs">Active</Label>
-            <Badge variant={isActive ? "default" : "secondary"} className="text-xs h-4 px-1">
-              {isActive ? "Active" : "Inactive"}
-            </Badge>
+          {/* Editable fields */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Stock Threshold</Label>
+              <Input
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder="10"
+                className="h-7 text-xs"
+                min="0"
+              />
+            </div>
+            <div className="flex items-center space-x-2 pt-4">
+              <Switch
+                checked={isActive}
+                onCheckedChange={setIsActive}
+                className="scale-75"
+              />
+              <Label className="text-xs">Active</Label>
+              <Badge variant={isActive ? "default" : "secondary"} className="text-xs h-4 px-1">
+                {isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
           </div>
 
           {/* Raw Materials Section */}
