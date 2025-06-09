@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, User, Calendar, Package, AlertTriangle } from 'lucide-react';
+import { Plus, User, Calendar, Package, AlertTriangle, Expand } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -39,10 +38,10 @@ const KanbanBoard = () => {
     { id: 'vibrator', title: 'Vibrator', items: [], color: 'bg-purple-50 border-purple-200' }
   ]);
   const [loading, setLoading] = useState(true);
+  const [expandedColumn, setExpandedColumn] = useState<string | null>(null);
   const { profile } = useUserProfile();
   const { toast } = useToast();
 
-  // Mock data for demonstration - in a real app, this would come from your database
   useEffect(() => {
     const loadKanbanData = async () => {
       try {
@@ -123,6 +122,36 @@ const KanbanBoard = () => {
     loadKanbanData();
   }, [profile?.merchantId]);
 
+  const toggleExpand = (columnId: string) => {
+    setExpandedColumn(expandedColumn === columnId ? null : columnId);
+  };
+
+  const getGridClasses = () => {
+    if (!expandedColumn) {
+      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6';
+    }
+    return 'flex gap-6';
+  };
+
+  const getColumnClasses = (columnId: string) => {
+    if (!expandedColumn) {
+      return 'min-h-[600px] rounded-lg border-2 border-dashed p-4';
+    }
+    
+    if (expandedColumn === columnId) {
+      return 'min-h-[600px] rounded-lg border-2 border-dashed p-6 flex-1 max-w-[60%] transition-all duration-300';
+    }
+    
+    return 'min-h-[600px] rounded-lg border-2 border-dashed p-3 w-48 transition-all duration-300';
+  };
+
+  const getCardClasses = (columnId: string) => {
+    if (expandedColumn === columnId) {
+      return 'cursor-move hover:shadow-md transition-shadow bg-white mb-4';
+    }
+    return 'cursor-move hover:shadow-md transition-shadow bg-white';
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'High':
@@ -197,34 +226,56 @@ const KanbanBoard = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={getGridClasses()}>
         {columns.map((column) => (
           <div
             key={column.id}
-            className={`min-h-[600px] rounded-lg border-2 border-dashed p-4 ${column.color}`}
+            className={`${getColumnClasses(column.id)} ${column.color}`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, column.id)}
           >
             <div className="mb-4">
-              <h3 className="font-semibold text-lg flex items-center justify-between">
-                {column.title}
-                <Badge variant="secondary" className="ml-2">
-                  {column.items.length}
-                </Badge>
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  {column.title}
+                  <Badge variant="secondary">
+                    {column.items.length}
+                  </Badge>
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleExpand(column.id)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Expand className={`h-4 w-4 transition-transform ${expandedColumn === column.id ? 'rotate-45' : ''}`} />
+                </Button>
+              </div>
+              
+              {expandedColumn === column.id && (
+                <div className="text-sm text-muted-foreground mb-4 p-3 bg-white/50 rounded-lg">
+                  <h4 className="font-medium mb-2">Step Details:</h4>
+                  <div className="space-y-1 text-xs">
+                    <p>• Total Items: {column.items.length}</p>
+                    <p>• Active Workers: {new Set(column.items.map(item => item.assigned_worker).filter(Boolean)).size}</p>
+                    <p>• High Priority: {column.items.filter(item => item.priority === 'High').length}</p>
+                    <p>• Total Weight: {column.items.reduce((sum, item) => sum + (item.total_weight || 0), 0).toFixed(1)}g</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto max-h-[500px]">
               {column.items.map((item) => (
                 <Card
                   key={item.id}
-                  className="cursor-move hover:shadow-md transition-shadow bg-white"
+                  className={getCardClasses(column.id)}
                   draggable
                   onDragStart={(e) => handleDragStart(e, item, column.id)}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className={expandedColumn === column.id ? "text-base font-medium" : "text-sm font-medium"}>
                         {item.product_code}
                       </CardTitle>
                       <Badge className={getPriorityColor(item.priority)}>
@@ -234,13 +285,13 @@ const KanbanBoard = () => {
                   </CardHeader>
                   
                   <CardContent className="space-y-3">
-                    <div className="text-xs text-muted-foreground">
+                    <div className={expandedColumn === column.id ? "text-sm text-muted-foreground" : "text-xs text-muted-foreground"}>
                       <div>{item.category} • {item.subcategory}</div>
                       <div>Size: {item.size}</div>
                       <div>Order: {item.order_number}</div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs">
+                    <div className={`flex items-center justify-between ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
                       <div className="flex items-center gap-1">
                         <Package className="h-3 w-3" />
                         <span>{item.quantity_required} pcs</span>
@@ -253,14 +304,14 @@ const KanbanBoard = () => {
                     </div>
 
                     {item.assigned_worker && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className={`flex items-center gap-1 text-muted-foreground ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
                         <User className="h-3 w-3" />
                         <span>{item.assigned_worker}</span>
                       </div>
                     )}
 
                     {item.delivery_date && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className={`flex items-center gap-1 text-muted-foreground ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(item.delivery_date).toLocaleDateString()}</span>
                       </div>
@@ -268,10 +319,10 @@ const KanbanBoard = () => {
 
                     {item.materials.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-xs font-medium">Materials:</div>
+                        <div className={`font-medium ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>Materials:</div>
                         <div className="space-y-1">
                           {item.materials.map((material, index) => (
-                            <div key={index} className="text-xs text-muted-foreground flex justify-between">
+                            <div key={index} className={`text-muted-foreground flex justify-between ${expandedColumn === column.id ? 'text-sm' : 'text-xs'}`}>
                               <span>{material.name}</span>
                               <span>{material.allocated_weight}{material.unit}</span>
                             </div>
@@ -280,11 +331,21 @@ const KanbanBoard = () => {
                       </div>
                     )}
 
+                    {expandedColumn === column.id && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="text-xs text-muted-foreground mb-2">Progress Status:</div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">45% Complete</div>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="text-xs">
+                      <Button variant="outline" size="sm" className={expandedColumn === column.id ? 'text-sm' : 'text-xs'}>
                         View Details
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-xs">
+                      <Button variant="ghost" size="sm" className={expandedColumn === column.id ? 'text-sm' : 'text-xs'}>
                         Update
                       </Button>
                     </div>
@@ -295,7 +356,7 @@ const KanbanBoard = () => {
               {column.items.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No items in {column.title}</p>
+                  <p className={expandedColumn === column.id ? 'text-sm' : 'text-sm'}>No items in {column.title}</p>
                 </div>
               )}
             </div>
@@ -310,6 +371,7 @@ const KanbanBoard = () => {
             <p className="font-medium">Kanban Board Usage:</p>
             <ul className="mt-1 space-y-1 text-xs">
               <li>• Drag and drop items between columns to update their manufacturing step</li>
+              <li>• Click the expand icon to get detailed view of any manufacturing step</li>
               <li>• Each column represents a manufacturing stage: Jhalai → Qullais → Meena → Vibrator</li>
               <li>• Items show material allocations, assigned workers, and delivery dates</li>
               <li>• Priority levels help identify urgent items that need attention</li>
