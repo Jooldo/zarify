@@ -320,19 +320,19 @@ const StepAssignmentDialog = ({
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="py-3">Raw Material & Stock</TableHead>
-                          <TableHead className="py-3 w-32">Required</TableHead>
-                          <TableHead className="py-3 w-32">Assigned</TableHead>
-                          {!isStep1 && <TableHead className="py-3 w-20">Actions</TableHead>}
+                          <TableHead className="py-2 text-xs font-medium">Raw Material & Stock</TableHead>
+                          <TableHead className="py-2 w-28 text-xs font-medium">Required</TableHead>
+                          <TableHead className="py-2 w-28 text-xs font-medium">Assigned</TableHead>
+                          {!isStep1 && <TableHead className="py-2 w-16 text-xs font-medium">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {materialAllocations.map((allocation, index) => (
                           <TableRow key={index} className="hover:bg-muted/30">
-                            <TableCell className="py-2">
+                            <TableCell className="py-1">
                               {isStep1 ? (
                                 <div className="space-y-1">
-                                  <div className="font-medium text-sm">{allocation.material_name}</div>
+                                  <div className="font-medium text-xs">{allocation.material_name}</div>
                                   <div className="text-xs text-muted-foreground">
                                     Stock: {allocation.current_stock !== undefined ? `${allocation.current_stock}${allocation.unit}` : 'N/A'}
                                   </div>
@@ -342,14 +342,14 @@ const StepAssignmentDialog = ({
                                   value={allocation.raw_material_id}
                                   onValueChange={(value) => updateMaterialAllocation(index, 'raw_material_id', value)}
                                 >
-                                  <SelectTrigger className="w-full">
+                                  <SelectTrigger className="w-full h-7 text-xs">
                                     <SelectValue placeholder="Select material" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {rawMaterials.map(material => (
                                       <SelectItem key={material.id} value={material.id}>
                                         <div>
-                                          <div>{material.name}</div>
+                                          <div className="text-xs">{material.name}</div>
                                           <div className="text-xs text-muted-foreground">Stock: {material.current_stock}{material.unit}</div>
                                         </div>
                                       </SelectItem>
@@ -358,31 +358,31 @@ const StepAssignmentDialog = ({
                                 </Select>
                               )}
                             </TableCell>
-                            <TableCell className="py-2">
+                            <TableCell className="py-1">
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
                                   step="0.01"
-                                  value={allocation.allocated_weight && allocation.allocated_weight !== 0 ? allocation.allocated_weight.toString() : ''}
+                                  value={allocation.allocated_weight > 0 ? allocation.allocated_weight.toString() : ''}
                                   onChange={(e) => updateMaterialAllocation(index, 'allocated_weight', parseFloat(e.target.value) || 0)}
-                                  placeholder="0.00"
+                                  placeholder=""
                                   readOnly={isStep1}
-                                  className={cn("w-20 h-8 text-xs", isStep1 && 'bg-muted')}
+                                  className={cn("w-16 h-6 text-xs", isStep1 && 'bg-muted')}
                                 />
                                 <span className="text-xs text-muted-foreground">{allocation.unit}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="py-2">
+                            <TableCell className="py-1">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1">
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={allocation.assigned_weight && allocation.assigned_weight !== 0 ? allocation.assigned_weight.toString() : ''}
+                                    value={allocation.assigned_weight > 0 ? allocation.assigned_weight.toString() : ''}
                                     onChange={(e) => updateMaterialAllocation(index, 'assigned_weight', parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
+                                    placeholder=""
                                     className={cn(
-                                      "w-20 h-8 text-xs",
+                                      "w-16 h-6 text-xs",
                                       allocation.current_stock && allocation.assigned_weight > allocation.current_stock
                                         ? 'border-red-500 focus:border-red-500'
                                         : ''
@@ -393,18 +393,18 @@ const StepAssignmentDialog = ({
                                 {allocation.current_stock && allocation.assigned_weight > allocation.current_stock && (
                                   <div className="flex items-center gap-1 text-xs text-red-600">
                                     <AlertTriangle className="h-3 w-3" />
-                                    Exceeds by {(allocation.assigned_weight - allocation.current_stock).toFixed(2)}{allocation.unit}
+                                    <span className="text-xs">Exceeds by {(allocation.assigned_weight - allocation.current_stock).toFixed(2)}{allocation.unit}</span>
                                   </div>
                                 )}
                               </div>
                             </TableCell>
                             {!isStep1 && (
-                              <TableCell className="py-2">
+                              <TableCell className="py-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => removeMaterialAllocation(index)}
-                                  className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                                  className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
