@@ -1,527 +1,144 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Trash2, Package } from 'lucide-react';
-import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User, Calendar, Scale } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { useProductConfigs } from '@/hooks/useProductConfigs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserProfile } from '@/hooks/useUserProfile';
-
-interface Worker {
-  id: string;
-  name: string;
-}
-
-interface RawMaterial {
-  id: string;
-  name: string;
-  unit: string;
-  current_stock: number;
-}
-
-interface MaterialAllocation {
-  raw_material_id: string;
-  allocated_weight: number;
-  unit: string;
-  material_name?: string;
-  required_quantity?: number;
-  current_stock?: number;
-}
 
 interface StepAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productionItemId: string;
+  onAssign: (assignmentData: {
+    workerName: string;
+    deliveryDate: string;
+    totalWeight: number;
+    materials: { name: string; allocated_weight: number; unit: string; }[];
+  }) => void;
   stepNumber: number;
   stepName: string;
-  productCode: string;
-  quantityRequired: number;
-  onAssignmentComplete: () => void;
 }
 
 const StepAssignmentDialog = ({
   open,
   onOpenChange,
-  productionItemId,
+  onAssign,
   stepNumber,
-  stepName,
-  productCode,
-  quantityRequired,
-  onAssignmentComplete
+  stepName
 }: StepAssignmentDialogProps) => {
-  const [selectedWorker, setSelectedWorker] = useState<string>('');
-  const [deliveryDate, setDeliveryDate] = useState<Date>();
-  const [materialAllocations, setMaterialAllocations] = useState<MaterialAllocation[]>([]);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [workerName, setWorkerName] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [totalWeight, setTotalWeight] = useState('');
   const { toast } = useToast();
-  const { productConfigs } = useProductConfigs();
-  const { profile } = useUserProfile();
 
-  // Fetch workers from database
-  useEffect(() => {
-    const fetchWorkers = async () => {
-      if (!profile?.merchantId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('workers')
-          .select('id, name')
-          .eq('merchant_id', profile.merchantId)
-          .eq('status', 'Active');
-        
-        if (error) throw error;
-        setWorkers(data || []);
-      } catch (error) {
-        console.error('Error fetching workers:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load workers',
-          variant: 'destructive',
-        });
-      }
-    };
-
-    if (open) {
-      fetchWorkers();
-    }
-  }, [open, toast, profile?.merchantId]);
-
-  // Fetch raw materials from database
-  useEffect(() => {
-    const fetchRawMaterials = async () => {
-      if (!profile?.merchantId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('raw_materials')
-          .select('id, name, unit, current_stock')
-          .eq('merchant_id', profile.merchantId);
-        
-        if (error) throw error;
-        setRawMaterials(data || []);
-      } catch (error) {
-        console.error('Error fetching raw materials:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load raw materials',
-          variant: 'destructive',
-        });
-      }
-    };
-
-    if (open) {
-      fetchRawMaterials();
-    }
-  }, [open, toast, profile?.merchantId]);
-
-  // Auto-fetch materials for Step 1
-  useEffect(() => {
-    if (open && stepNumber === 1 && productCode) {
-      setLoading(true);
-      console.log('Fetching materials for product code:', productCode);
-      
-      // Find the product configuration
-      const productConfig = productConfigs.find(config => config.product_code === productCode);
-      
-      if (productConfig && productConfig.product_config_materials) {
-        console.log('Found product config:', productConfig);
-        
-        const autoMaterials: MaterialAllocation[] = productConfig.product_config_materials.map(material => {
-          const totalRequired = material.quantity_required * quantityRequired;
-          const rawMaterial = rawMaterials.find(rm => rm.id === material.raw_material_id);
-          
-          return {
-            raw_material_id: material.raw_material_id,
-            allocated_weight: totalRequired,
-            unit: material.unit,
-            material_name: material.raw_material?.name || rawMaterial?.name || 'Unknown Material',
-            required_quantity: totalRequired,
-            current_stock: rawMaterial?.current_stock || 0
-          };
-        });
-        
-        console.log('Auto-populated materials:', autoMaterials);
-        setMaterialAllocations(autoMaterials);
-      } else {
-        console.warn('No product configuration found for:', productCode);
-        toast({
-          title: 'Configuration Not Found',
-          description: `No raw material configuration found for product ${productCode}`,
-          variant: 'destructive',
-        });
-      }
-      setLoading(false);
-    } else if (open && stepNumber !== 1) {
-      // For other steps, start with empty materials (manual selection)
-      setMaterialAllocations([]);
-    }
-  }, [open, stepNumber, productCode, quantityRequired, productConfigs, rawMaterials, toast]);
-
-  const addMaterialAllocation = () => {
-    setMaterialAllocations([...materialAllocations, {
-      raw_material_id: '',
-      allocated_weight: 0,
-      unit: 'kg'
-    }]);
-  };
-
-  const removeMaterialAllocation = (index: number) => {
-    setMaterialAllocations(materialAllocations.filter((_, i) => i !== index));
-  };
-
-  const updateMaterialAllocation = (index: number, field: keyof MaterialAllocation, value: any) => {
-    const updated = [...materialAllocations];
-    updated[index] = { ...updated[index], [field]: value };
-    setMaterialAllocations(updated);
-  };
-
-  const handleAssign = async () => {
-    if (!selectedWorker || !deliveryDate || materialAllocations.length === 0) {
+  const handleSubmit = () => {
+    if (!workerName || !deliveryDate || !totalWeight) {
       toast({
         title: 'Missing Information',
-        description: 'Please fill in all required fields and add at least one material allocation.',
+        description: 'Please fill in all required fields.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (!profile?.merchantId) {
-      toast({
-        title: 'Error',
-        description: 'Unable to get merchant information.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    const materials = [
+      { name: 'Silver Wire', allocated_weight: parseFloat(totalWeight) * 0.6, unit: 'kg' },
+      { name: 'Base Metal', allocated_weight: parseFloat(totalWeight) * 0.4, unit: 'kg' }
+    ];
 
-    // Validate material allocations
-    const invalidAllocations = materialAllocations.some(
-      allocation => !allocation.raw_material_id || allocation.allocated_weight <= 0
-    );
+    onAssign({
+      workerName,
+      deliveryDate,
+      totalWeight: parseFloat(totalWeight),
+      materials
+    });
 
-    if (invalidAllocations) {
-      toast({
-        title: 'Invalid Material Allocations',
-        description: 'Please ensure all material allocations have valid materials and weights.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check for stock shortages
-    const stockShortages = materialAllocations.filter(
-      allocation => allocation.current_stock && allocation.allocated_weight > allocation.current_stock
-    );
-
-    if (stockShortages.length > 0) {
-      const shortageDetails = stockShortages.map(s => 
-        `${s.material_name}: need ${s.allocated_weight}${s.unit}, have ${s.current_stock}${s.unit}`
-      ).join(', ');
-      
-      toast({
-        title: 'Stock Shortage Warning',
-        description: `Insufficient stock for: ${shortageDetails}`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      // Create the step assignment
-      const { data: assignment, error: assignmentError } = await supabase
-        .from('production_step_assignments')
-        .insert({
-          merchant_id: profile.merchantId,
-          production_order_id: productionItemId,
-          step_number: stepNumber,
-          step_name: stepName,
-          worker_id: selectedWorker,
-          expected_delivery_date: format(deliveryDate, 'yyyy-MM-dd'),
-          notes: notes
-        })
-        .select()
-        .single();
-
-      if (assignmentError) throw assignmentError;
-
-      // Create material allocations
-      const materialAllocationPromises = materialAllocations.map(allocation => 
-        supabase
-          .from('production_material_allocations')
-          .insert({
-            merchant_id: profile.merchantId,
-            production_step_assignment_id: assignment.id,
-            raw_material_id: allocation.raw_material_id,
-            allocated_quantity: allocation.allocated_weight,
-            unit: allocation.unit
-          })
-      );
-
-      await Promise.all(materialAllocationPromises);
-
-      // Create a log entry
-      await supabase
-        .from('production_logs')
-        .insert({
-          merchant_id: profile.merchantId,
-          production_order_id: productionItemId,
-          production_step_assignment_id: assignment.id,
-          log_type: 'assignment',
-          message: `Step ${stepNumber} assigned to worker ${workers.find(w => w.id === selectedWorker)?.name}`,
-        });
-
-      toast({
-        title: 'Assignment Created',
-        description: `Step ${stepNumber} assigned to worker with delivery date ${format(deliveryDate, 'PPP')}`,
-      });
-
-      onAssignmentComplete();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating assignment:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create assignment. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Reset form
+    setWorkerName('');
+    setDeliveryDate('');
+    setTotalWeight('');
   };
-
-  const resetDialog = () => {
-    setSelectedWorker('');
-    setDeliveryDate(undefined);
-    setMaterialAllocations([]);
-    setNotes('');
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      resetDialog();
-    }
-    onOpenChange(newOpen);
-  };
-
-  const isStep1 = stepNumber === 1;
-  const totalMaterialsRequired = materialAllocations.reduce((sum, allocation) => sum + allocation.allocated_weight, 0);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Assign Step {stepNumber}: {stepName}</DialogTitle>
-          {isStep1 && (
-            <div className="text-sm text-muted-foreground">
-              Product: {productCode} • Quantity: {quantityRequired} units
-            </div>
-          )}
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Assign Step {stepNumber}: {stepName}
+          </DialogTitle>
         </DialogHeader>
+        
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Assignment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="worker-name">Worker Name *</Label>
+                <Select value={workerName} onValueChange={setWorkerName}>
+                  <SelectTrigger id="worker-name">
+                    <SelectValue placeholder="Select a worker" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="John Doe">John Doe</SelectItem>
+                    <SelectItem value="Jane Smith">Jane Smith</SelectItem>
+                    <SelectItem value="Mike Johnson">Mike Johnson</SelectItem>
+                    <SelectItem value="Sarah Wilson">Sarah Wilson</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className="space-y-6">
-          {/* Worker Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Assign Worker</Label>
-              <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select worker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workers.map(worker => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="delivery-date" className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Expected Delivery Date *
+                </Label>
+                <Input
+                  id="delivery-date"
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>Delivery Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !deliveryDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deliveryDate ? format(deliveryDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={deliveryDate}
-                    onSelect={setDeliveryDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
+              <div>
+                <Label htmlFor="total-weight" className="flex items-center gap-1">
+                  <Scale className="h-3 w-3" />
+                  Total Weight (kg) *
+                </Label>
+                <Input
+                  id="total-weight"
+                  type="number"
+                  step="0.1"
+                  placeholder="0.0"
+                  value={totalWeight}
+                  onChange={(e) => setTotalWeight(e.target.value)}
+                />
+              </div>
 
-          {/* Material Allocations */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-medium flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Material Allocations
-                {isStep1 && (
-                  <span className="text-sm text-muted-foreground font-normal">
-                    (Auto-populated from product configuration)
-                  </span>
-                )}
-              </Label>
-              {!isStep1 && (
-                <Button onClick={addMaterialAllocation} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Material
-                </Button>
-              )}
-            </div>
-
-            {/* Summary for Step 1 */}
-            {isStep1 && materialAllocations.length > 0 && (
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="font-medium">Materials:</span> {materialAllocations.length}</div>
-                  <div><span className="font-medium">Total Required:</span> {totalMaterialsRequired.toFixed(2)}kg</div>
+              {totalWeight && (
+                <div className="p-3 bg-muted/50 rounded text-sm">
+                  <div className="font-medium mb-2">Material Distribution:</div>
+                  <div className="space-y-1">
+                    <div>• Silver Wire: {(parseFloat(totalWeight) * 0.6).toFixed(1)} kg</div>
+                    <div>• Base Metal: {(parseFloat(totalWeight) * 0.4).toFixed(1)} kg</div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </CardContent>
+          </Card>
 
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading materials configuration...
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {materialAllocations.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="py-1 text-xs font-medium">Raw Material & Stock</TableHead>
-                          <TableHead className="py-1 w-32 text-xs font-medium">Required Quantity</TableHead>
-                          <TableHead className="py-1 w-32 text-xs font-medium">Assigned Quantity</TableHead>
-                          {!isStep1 && <TableHead className="py-1 w-16 text-xs font-medium">Actions</TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {materialAllocations.map((allocation, index) => (
-                          <TableRow key={index} className="hover:bg-muted/30">
-                            <TableCell className="py-1 text-xs">
-                              {isStep1 ? (
-                                <div className="space-y-1">
-                                  <div className="font-medium">{allocation.material_name}</div>
-                                  <div className="text-muted-foreground">
-                                    Stock: {allocation.current_stock !== undefined ? `${allocation.current_stock}${allocation.unit}` : 'N/A'}
-                                  </div>
-                                </div>
-                              ) : (
-                                <Select
-                                  value={allocation.raw_material_id}
-                                  onValueChange={(value) => updateMaterialAllocation(index, 'raw_material_id', value)}
-                                >
-                                  <SelectTrigger className="w-full h-6 text-xs">
-                                    <SelectValue placeholder="Select material" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {rawMaterials.map(material => (
-                                      <SelectItem key={material.id} value={material.id}>
-                                        <div>
-                                          <div className="text-xs">{material.name}</div>
-                                          <div className="text-xs text-muted-foreground">Stock: {material.current_stock}{material.unit}</div>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </TableCell>
-                            <TableCell className="py-1">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs">{allocation.required_quantity || allocation.allocated_weight}</span>
-                                <span className="text-xs text-muted-foreground">{allocation.unit}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-1">
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={allocation.allocated_weight > 0 ? allocation.allocated_weight.toString() : ''}
-                                  onChange={(e) => updateMaterialAllocation(index, 'allocated_weight', parseFloat(e.target.value) || 0)}
-                                  placeholder=""
-                                  readOnly={isStep1}
-                                  className={cn("w-20 h-6 text-xs", isStep1 && 'bg-muted')}
-                                />
-                                <span className="text-xs text-muted-foreground">{allocation.unit}</span>
-                              </div>
-                            </TableCell>
-                            {!isStep1 && (
-                              <TableCell className="py-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeMaterialAllocation(index)}
-                                  className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    {isStep1 
-                      ? "No materials found for this product configuration." 
-                      : "No materials allocated. Click 'Add Material' to start."
-                    }
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label>Notes (Optional)</Label>
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional instructions or notes..."
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAssign} disabled={loading}>
-              {loading ? 'Creating...' : 'Assign Step'}
+            <Button onClick={handleSubmit}>
+              Assign Step
             </Button>
           </div>
         </div>

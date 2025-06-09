@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import EnhancedUpdateProductionItemDialog from './EnhancedUpdateProductionItemDialog';
 import AddToQueueDialog from './AddToQueueDialog';
+import StepAssignmentDialog from './StepAssignmentDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
