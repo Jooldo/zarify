@@ -34,6 +34,13 @@ interface StepAssignmentDialogProps {
   productionItemId: string;
   stepNumber: number;
   stepName: string;
+  productionItem?: {
+    product_code: string;
+    category: string;
+    subcategory: string;
+    size: string;
+    quantity_required: number;
+  };
   onAssignmentComplete: () => void;
 }
 
@@ -43,6 +50,7 @@ const StepAssignmentDialog = ({
   productionItemId,
   stepNumber,
   stepName,
+  productionItem,
   onAssignmentComplete
 }: StepAssignmentDialogProps) => {
   const [selectedWorker, setSelectedWorker] = useState<string>('');
@@ -61,15 +69,46 @@ const StepAssignmentDialog = ({
     { id: '3', name: 'Mike Johnson' }
   ];
 
+  // Find the correct product configuration for this production item
+  const getProductConfig = () => {
+    if (!productionItem || !productConfigs.length) return null;
+    
+    // Try to find exact match by product_code
+    let config = productConfigs.find(config => config.product_code === productionItem.product_code);
+    
+    // If not found by product_code, try matching by category, subcategory, and size
+    if (!config) {
+      const sizeValue = parseFloat(productionItem.size.replace('"', ''));
+      config = productConfigs.find(config => 
+        config.category === productionItem.category &&
+        config.subcategory === productionItem.subcategory &&
+        Math.abs(config.size_value - sizeValue) < 0.01 // Account for floating point precision
+      );
+    }
+    
+    console.log('Looking for product config:', {
+      productionItem,
+      foundConfig: config,
+      availableConfigs: productConfigs.map(c => ({
+        id: c.id,
+        product_code: c.product_code,
+        category: c.category,
+        subcategory: c.subcategory,
+        size_value: c.size_value
+      }))
+    });
+    
+    return config;
+  };
+
   // Fetch required materials for step 1
   useEffect(() => {
-    if (stepNumber === 1 && open && productionItemId) {
-      // Find the product config based on production item
-      // In a real app, you'd get this from the production item data
-      // For now, we'll use the first config as an example
-      const productConfig = productConfigs[0];
+    if (stepNumber === 1 && open && productionItem) {
+      const productConfig = getProductConfig();
       
       if (productConfig?.product_config_materials) {
+        console.log('Found product config materials:', productConfig.product_config_materials);
+        
         const materials = productConfig.product_config_materials.map(configMaterial => {
           const rawMaterial = rawMaterials.find(rm => rm.id === configMaterial.raw_material_id);
           return {
@@ -81,12 +120,17 @@ const StepAssignmentDialog = ({
             current_stock: rawMaterial?.current_stock || 0
           };
         });
+        
+        console.log('Mapped materials:', materials);
         setMaterialAllocations(materials);
+      } else {
+        console.log('No product config or materials found for:', productionItem);
+        setMaterialAllocations([]);
       }
     } else if (stepNumber !== 1) {
       setMaterialAllocations([]);
     }
-  }, [stepNumber, open, productionItemId, productConfigs, rawMaterials]);
+  }, [stepNumber, open, productionItem, productConfigs, rawMaterials]);
 
   // Update allocated weights when quantity changes
   useEffect(() => {
@@ -96,9 +140,20 @@ const StepAssignmentDialog = ({
         ...allocation,
         allocated_weight: allocation.quantity_required * quantity
       }));
+      console.log('Updated allocations based on quantity:', {
+        quantity,
+        updatedAllocations
+      });
       setMaterialAllocations(updatedAllocations);
     }
   }, [quantityToProduce]);
+
+  // Initialize quantity from production item
+  useEffect(() => {
+    if (open && productionItem && !quantityToProduce) {
+      setQuantityToProduce(productionItem.quantity_required.toString());
+    }
+  }, [open, productionItem]);
 
   const updateMaterialAllocation = (index: number, allocated_weight: number) => {
     const updated = [...materialAllocations];
@@ -180,11 +235,18 @@ const StepAssignmentDialog = ({
     }
   }, [open]);
 
+  const productConfig = getProductConfig();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Assign Step {stepNumber}: {stepName}</DialogTitle>
+          {productionItem && (
+            <p className="text-sm text-muted-foreground">
+              Product: {productionItem.product_code} | {productionItem.category} - {productionItem.subcategory} | {productionItem.size}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
@@ -252,7 +314,13 @@ const StepAssignmentDialog = ({
                 Materials required for production (automatically calculated based on quantity)
               </p>
 
-              {materialAllocations.length > 0 ? (
+              {!productConfig && (
+                <div className="text-center py-8 text-red-600 border-2 border-dashed border-red-200 rounded-lg">
+                  No product configuration found for this item. Please check the product setup.
+                </div>
+              )}
+
+              {productConfig && materialAllocations.length > 0 ? (
                 <div className="space-y-3">
                   {materialAllocations.map((allocation, index) => (
                     <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 border rounded-lg">
@@ -296,9 +364,9 @@ const StepAssignmentDialog = ({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : productConfig && (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                  {quantityToProduce ? "Loading required materials..." : "Enter quantity to see required materials"}
+                  {quantityToProduce ? "No raw materials configured for this product" : "Enter quantity to see required materials"}
                 </div>
               )}
             </div>
