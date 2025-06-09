@@ -10,7 +10,9 @@ export interface OrderItem {
   unit_price: number;
   total_price: number;
   status: 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+  product_config_id: string;
   product_config: {
+    id: string;
     product_code: string;
     category: string;
     subcategory: string;
@@ -27,7 +29,9 @@ export interface Order {
   updated_date: string;
   expected_delivery?: string;
   status: 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+  customer_id: string;
   customer: {
+    id: string;
     name: string;
     phone?: string;
   };
@@ -45,10 +49,10 @@ export const useOrders = () => {
         .from('orders')
         .select(`
           *,
-          customer:customers(name, phone),
+          customer:customers(id, name, phone),
           order_items(
             *,
-            product_config:product_configs(product_code, category, subcategory, size_value, weight_range)
+            product_config:product_configs(id, product_code, category, subcategory, size_value, weight_range)
           )
         `)
         .order('created_date', { ascending: false });

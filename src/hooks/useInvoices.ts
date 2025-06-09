@@ -60,33 +60,57 @@ export const useInvoices = () => {
 
   const createInvoice = async (invoiceData: Partial<Invoice>, items: Partial<InvoiceItem>[]) => {
     try {
+      console.log('Creating invoice with data:', invoiceData);
+      console.log('Invoice items:', items);
+
       // Get next invoice number
       const { data: invoiceNumber, error: numberError } = await supabase
         .rpc('get_next_invoice_number');
 
       if (numberError) throw numberError;
 
-      // Create invoice
+      // Create invoice with required fields
+      const invoiceToInsert = {
+        invoice_number: invoiceNumber,
+        order_id: invoiceData.order_id!,
+        customer_id: invoiceData.customer_id!,
+        invoice_date: invoiceData.invoice_date!,
+        due_date: invoiceData.due_date || null,
+        subtotal: invoiceData.subtotal!,
+        tax_amount: invoiceData.tax_amount!,
+        discount_amount: invoiceData.discount_amount!,
+        total_amount: invoiceData.total_amount!,
+        notes: invoiceData.notes || null,
+        status: invoiceData.status || 'Draft',
+      };
+
+      console.log('Inserting invoice:', invoiceToInsert);
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({
-          ...invoiceData,
-          invoice_number: invoiceNumber,
-        })
+        .insert(invoiceToInsert)
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
 
-      // Create invoice items
-      const invoiceItems = items.map(item => ({
-        ...item,
+      console.log('Created invoice:', invoice);
+
+      // Create invoice items with required fields
+      const invoiceItemsToInsert = items.map(item => ({
         invoice_id: invoice.id,
+        order_item_id: item.order_item_id!,
+        product_config_id: item.product_config_id!,
+        quantity: item.quantity!,
+        unit_price: item.unit_price!,
+        total_price: item.total_price!,
       }));
+
+      console.log('Inserting invoice items:', invoiceItemsToInsert);
 
       const { error: itemsError } = await supabase
         .from('invoice_items')
-        .insert(invoiceItems);
+        .insert(invoiceItemsToInsert);
 
       if (itemsError) throw itemsError;
 

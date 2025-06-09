@@ -35,11 +35,14 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      console.log('Order object:', order);
+      console.log('Customer object:', order.customer);
+
       const invoiceData = {
         order_id: order.id,
-        customer_id: order.customer.id,
+        customer_id: order.customer_id || order.customer?.id,
         invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
-        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
+        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         subtotal,
         tax_amount: taxAmount,
         discount_amount: discountAmount,
@@ -48,13 +51,17 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
         status: 'Draft',
       };
 
+      console.log('Invoice data to create:', invoiceData);
+
       const invoiceItems = order.order_items.map(item => ({
         order_item_id: item.id,
-        product_config_id: item.product_config.id,
+        product_config_id: item.product_config_id || item.product_config?.id,
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,
       }));
+
+      console.log('Invoice items to create:', invoiceItems);
 
       await createInvoice(invoiceData, invoiceItems);
       onInvoiceCreated?.();
@@ -78,8 +85,8 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
           <div className="space-y-2">
             <h3 className="font-medium">Customer Information</h3>
             <div className="bg-gray-50 p-3 rounded-md">
-              <p><strong>Name:</strong> {order.customer.name}</p>
-              {order.customer.phone && <p><strong>Phone:</strong> {order.customer.phone}</p>}
+              <p><strong>Name:</strong> {order.customer?.name || 'N/A'}</p>
+              {order.customer?.phone && <p><strong>Phone:</strong> {order.customer.phone}</p>}
             </div>
           </div>
 
@@ -90,9 +97,9 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
               {order.order_items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium">{item.product_config.product_code}</p>
+                    <p className="font-medium">{item.product_config?.product_code || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
-                      {item.product_config.category} - {item.product_config.subcategory}
+                      {item.product_config?.category || 'N/A'} - {item.product_config?.subcategory || 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
