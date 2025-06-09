@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Eye, MoreHorizontal } from 'lucide-react';
+import { Clock, User, Package, Eye, MoreHorizontal, Calendar } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import AddProductionItemDialog from './AddProductionItemDialog';
 
@@ -21,6 +21,7 @@ interface ProductionTask {
   startedAt?: Date;
   notes?: string;
   expectedDate?: Date;
+  createdAt?: Date;
 }
 
 const PROCESS_STEPS = [
@@ -44,7 +45,9 @@ const mockTasks: { [key: string]: ProductionTask[] } = {
       quantity: 50,
       orderNumber: 'OD000123',
       customerName: 'ABC Construction',
-      priority: 'High'
+      priority: 'High',
+      createdAt: new Date('2024-12-08'),
+      expectedDate: new Date('2024-12-15')
     },
     {
       id: '2', 
@@ -54,7 +57,9 @@ const mockTasks: { [key: string]: ProductionTask[] } = {
       quantity: 25,
       orderNumber: 'OD000124',
       customerName: 'XYZ Builders',
-      priority: 'Medium'
+      priority: 'Medium',
+      createdAt: new Date('2024-12-09'),
+      expectedDate: new Date('2024-12-20')
     }
   ],
   jhalai: [
@@ -159,6 +164,7 @@ const ProductionKanban = () => {
       customerName: 'Production Request',
       priority: 'Medium',
       expectedDate: newItem.expectedDate,
+      createdAt: new Date(),
     };
 
     setTasks(prev => ({
@@ -166,6 +172,108 @@ const ProductionKanban = () => {
       pending: [...(prev.pending || []), newTask]
     }));
   };
+
+  const renderPendingCard = (task: ProductionTask) => (
+    <Card 
+      key={task.id} 
+      className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+      onClick={() => handleTaskClick(task)}
+    >
+      <CardContent className="p-3 space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <p className="font-medium text-sm">{task.category}</p>
+            <p className="text-xs text-muted-foreground">{task.subcategory}</p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+            <Eye className="h-3 w-3" />
+          </Button>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Quantity:</span>
+            <span className="text-sm font-medium">{task.quantity}</span>
+          </div>
+          
+          {task.createdAt && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Created:</span>
+              <span className="text-xs">{task.createdAt.toLocaleDateString()}</span>
+            </div>
+          )}
+          
+          {task.expectedDate && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Expected:</span>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs">{task.expectedDate.toLocaleDateString()}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderRegularCard = (task: ProductionTask) => (
+    <Card 
+      key={task.id} 
+      className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+      onClick={() => handleTaskClick(task)}
+    >
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <p className="font-medium text-sm">{task.category}</p>
+            <p className="text-xs text-muted-foreground">{task.subcategory}</p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+            <Eye className="h-3 w-3" />
+          </Button>
+        </div>
+        
+        <div className="space-y-1">
+          <p className="text-xs font-medium">{task.productCode}</p>
+          <p className="text-xs text-muted-foreground">Qty: {task.quantity}</p>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
+            {task.priority}
+          </Badge>
+          {task.assignedWorker && (
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+                {task.assignedWorker.split(' ')[0]}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {task.startedAt && (
+          <div className="flex items-center gap-1 mt-2">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              {formatTimeElapsed(task.startedAt)}
+            </span>
+          </div>
+        )}
+        
+        <div className="border-t pt-2">
+          <p className="text-xs text-muted-foreground">{task.orderNumber}</p>
+          <p className="text-xs text-muted-foreground truncate">{task.customerName}</p>
+          {task.expectedDate && (
+            <p className="text-xs text-muted-foreground">
+              Due: {task.expectedDate.toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
@@ -188,63 +296,9 @@ const ProductionKanban = () => {
             </div>
             
             <div className="space-y-2 min-h-[500px]">
-              {tasks[step.id]?.map(task => (
-                <Card 
-                  key={task.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-                  onClick={() => handleTaskClick(task)}
-                >
-                  <CardContent className="p-3 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <p className="font-medium text-sm">{task.category}</p>
-                        <p className="text-xs text-muted-foreground">{task.subcategory}</p>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium">{task.productCode}</p>
-                      <p className="text-xs text-muted-foreground">Qty: {task.quantity}</p>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </Badge>
-                      {task.assignedWorker && (
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                            {task.assignedWorker.split(' ')[0]}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {task.startedAt && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeElapsed(task.startedAt)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div className="border-t pt-2">
-                      <p className="text-xs text-muted-foreground">{task.orderNumber}</p>
-                      <p className="text-xs text-muted-foreground truncate">{task.customerName}</p>
-                      {task.expectedDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Due: {task.expectedDate.toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {tasks[step.id]?.map(task => 
+                step.id === 'pending' ? renderPendingCard(task) : renderRegularCard(task)
+              )}
               
               {/* Empty state */}
               {(!tasks[step.id] || tasks[step.id].length === 0) && (
