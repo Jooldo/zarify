@@ -63,12 +63,12 @@ const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMateri
             </div>
             <div>
               <Label className="font-medium">Supplier:</Label>
-              <div className="text-lg">{material.supplier?.company_name || 'N/A'}</div>
+              <div className="text-lg">{material.supplier_name || 'N/A'}</div>
             </div>
             <div>
               <Label className="font-medium">Last Updated:</Label>
               <div className="text-sm text-gray-600">
-                {new Date(material.last_updated).toLocaleDateString()}
+                {material.last_updated ? new Date(material.last_updated).toLocaleDateString() : 'N/A'}
               </div>
             </div>
           </div>

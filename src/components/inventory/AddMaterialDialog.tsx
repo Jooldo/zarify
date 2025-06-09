@@ -6,12 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
-import { CreateRawMaterialData } from '@/hooks/useRawMaterials';
+import { CreateRawMaterialData, useRawMaterials } from '@/hooks/useRawMaterials';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AddMaterialDialogProps {
-  onAddMaterial: (data: CreateRawMaterialData) => Promise<void>;
+  onAddMaterial?: (data: CreateRawMaterialData) => Promise<void>;
   isFloating?: boolean;
 }
 
@@ -27,6 +27,7 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
     unit: '',
   });
   const { toast } = useToast();
+  const { addRawMaterial } = useRawMaterials();
 
   const availableUnits = [
     { value: "grams", label: "Grams (g)" },
@@ -83,7 +84,14 @@ const AddMaterialDialog = ({ onAddMaterial, isFloating = false }: AddMaterialDia
       }
 
       console.log('Submitting material data:', formData);
-      await onAddMaterial(formData);
+      
+      // Use the provided callback or the hook's method
+      if (onAddMaterial) {
+        await onAddMaterial(formData);
+      } else {
+        await addRawMaterial(formData);
+      }
+      
       setFormData({
         name: '',
         type: '',

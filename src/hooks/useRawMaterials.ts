@@ -19,6 +19,14 @@ export interface RawMaterial {
   cost_per_unit?: number;
 }
 
+export interface CreateRawMaterialData {
+  name: string;
+  type: string;
+  current_stock: number;
+  minimum_stock: number;
+  unit: string;
+}
+
 export const useRawMaterials = () => {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,9 +156,32 @@ export const useRawMaterials = () => {
     }
   };
 
+  const addRawMaterial = async (data: CreateRawMaterialData) => {
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { error } = await supabase
+        .from('raw_materials')
+        .insert({
+          ...data,
+          merchant_id: merchantId
+        });
+
+      if (error) throw error;
+
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error('Error adding raw material:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchRawMaterials();
   }, []);
 
-  return { rawMaterials, loading, refetch: fetchRawMaterials };
+  return { rawMaterials, loading, refetch: fetchRawMaterials, addRawMaterial };
 };
