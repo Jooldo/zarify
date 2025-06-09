@@ -1,14 +1,14 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash } from 'lucide-react';
+import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useProductConfigs } from '@/hooks/useProductConfigs';
 
 interface ProductionTask {
   id: string;
@@ -94,7 +94,30 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
   const [completedQuantity, setCompletedQuantity] = useState('');
   const [showWeightQuantityForm, setShowWeightQuantityForm] = useState(false);
   const [showPartialCompletionForm, setShowPartialCompletionForm] = useState(false);
+  const [totalWeightFromMaterials, setTotalWeightFromMaterials] = useState<number | null>(null);
   const { toast } = useToast();
+  const { productConfigs } = useProductConfigs();
+
+  useEffect(() => {
+    if (task && productConfigs.length > 0) {
+      // Find the product configuration for this task
+      const productConfig = productConfigs.find(config => 
+        config.product_code === task.productCode ||
+        (config.category === task.category && config.subcategory === task.subcategory)
+      );
+
+      if (productConfig && productConfig.product_config_materials) {
+        // Calculate total weight from raw materials for the quantity in this task
+        const totalMaterialWeight = productConfig.product_config_materials.reduce((total, material) => {
+          return total + (material.quantity_required * task.quantity);
+        }, 0);
+        
+        setTotalWeightFromMaterials(totalMaterialWeight);
+      } else {
+        setTotalWeightFromMaterials(null);
+      }
+    }
+  }, [task, productConfigs]);
 
   if (!task) return null;
 
@@ -236,6 +259,21 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
               </div>
             </div>
           </div>
+
+          {/* Total Weight from Raw Materials */}
+          {totalWeightFromMaterials !== null && (
+            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="h-5 w-5 text-purple-600" />
+                <h4 className="font-semibold text-lg text-purple-800">Material Weight Calculation</h4>
+              </div>
+              <div className="text-center p-3 bg-white rounded border border-purple-200">
+                <p className="text-sm text-purple-600">Total Weight from Raw Materials</p>
+                <p className="text-2xl font-bold text-purple-800">{totalWeightFromMaterials.toFixed(2)} kg</p>
+                <p className="text-xs text-purple-500 mt-1">Based on {task.quantity} pieces</p>
+              </div>
+            </div>
+          )}
 
           {/* Received Details */}
           {(task.receivedWeight || task.receivedQuantity) && (
