@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Package, TrendingUp, AlertTriangle, CheckCircle, Clock, Plus, FileText, History, Download, Users, Calendar } from 'lucide-react';
+import { Package, TrendingUp, AlertTriangle, CheckCircle, Clock, Plus, FileText, History, Download, Users, Calendar, BarChart3, PieChart, TrendingDown, Activity } from 'lucide-react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useMaterialTypes } from '@/hooks/useMaterialTypes';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, LineChart, Line } from 'recharts';
 
 interface RMHomeDashboardProps {
   onNavigateToTab?: (tab: string) => void;
@@ -30,7 +32,13 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
     const totalMaterials = rawMaterials.length;
     const lowStockMaterials = rawMaterials.filter(m => m.current_stock <= m.minimum_stock);
     const criticalStockMaterials = rawMaterials.filter(m => m.current_stock === 0);
+    const healthyStockMaterials = rawMaterials.filter(m => m.current_stock > m.minimum_stock);
     
+    // Calculate total value
+    const totalValue = rawMaterials.reduce((sum, material) => {
+      return sum + (material.current_stock * (material.cost_per_unit || 0));
+    }, 0);
+
     // Breakdown by type
     const typeBreakdown = rawMaterials.reduce((acc, material) => {
       const type = material.type;
@@ -38,15 +46,25 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
       return acc;
     }, {} as Record<string, number>);
 
+    // Stock health distribution for pie chart
+    const stockHealthData = [
+      { name: 'Healthy Stock', value: healthyStockMaterials.length, color: '#10b981' },
+      { name: 'Low Stock', value: lowStockMaterials.length, color: '#f59e0b' },
+      { name: 'Critical Stock', value: criticalStockMaterials.length, color: '#ef4444' },
+    ].filter(item => item.value > 0);
+
     return {
       totalMaterials,
       lowStockMaterials,
       criticalStockMaterials,
-      typeBreakdown
+      healthyStockMaterials,
+      typeBreakdown,
+      totalValue,
+      stockHealthData
     };
   }, [rawMaterials]);
 
-  // Calculate procurement metrics
+  // Calculate procurement metrics and timeline data
   const procurementMetrics = useMemo(() => {
     const openRequests = requests.filter(r => r.status === 'Pending' || r.status === 'Approved');
     const pendingDeliveries = requests.filter(r => r.status === 'Approved' && r.eta);
@@ -58,12 +76,66 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
       return requestDate >= sevenDaysAgo;
     });
 
+    // Generate procurement timeline data for last 30 days
+    const timelineData = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayRequests = requests.filter(r => {
+        const requestDate = new Date(r.date_requested).toISOString().split('T')[0];
+        return requestDate === dateStr;
+      });
+
+      timelineData.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        fullDate: dateStr,
+        created: dayRequests.filter(r => r.status === 'Pending').length,
+        approved: dayRequests.filter(r => r.status === 'Approved').length,
+        received: dayRequests.filter(r => r.status === 'Received').length,
+        total: dayRequests.length
+      });
+    }
+
+    // Status distribution for chart
+    const statusData = [
+      { name: 'Pending', value: requests.filter(r => r.status === 'Pending').length, color: '#f59e0b' },
+      { name: 'Approved', value: requests.filter(r => r.status === 'Approved').length, color: '#3b82f6' },
+      { name: 'Received', value: requests.filter(r => r.status === 'Received').length, color: '#10b981' }
+    ].filter(item => item.value > 0);
+
     return {
       openRequests: openRequests.length,
       pendingDeliveries,
-      recentlyReceived: recentlyReceived.length
+      recentlyReceived: recentlyReceived.length,
+      timelineData,
+      statusData
     };
   }, [requests]);
+
+  // Activity timeline data
+  const activityTimelineData = useMemo(() => {
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayLogs = logs.filter(log => {
+        const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+        return logDate === dateStr && (log.entity_type === 'Raw Material' || log.entity_type === 'Procurement Request');
+      });
+
+      last7Days.push({
+        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        activities: dayLogs.length,
+        stockUpdates: dayLogs.filter(l => l.action === 'Stock Updated').length,
+        requests: dayLogs.filter(l => l.action === 'Request Created').length
+      });
+    }
+    return last7Days;
+  }, [logs]);
 
   // Get recent activity (filtered)
   const recentActivity = useMemo(() => {
@@ -86,6 +158,15 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const getActivityIcon = (action: string) => {
     switch (action) {
       case 'Stock Updated':
@@ -99,6 +180,15 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
     }
   };
 
+  const chartConfig = {
+    created: { label: "Created", color: "#f59e0b" },
+    approved: { label: "Approved", color: "#3b82f6" },
+    received: { label: "Received", color: "#10b981" },
+    activities: { label: "Activities", color: "#6366f1" },
+    stockUpdates: { label: "Stock Updates", color: "#10b981" },
+    requests: { label: "Requests", color: "#f59e0b" }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -108,7 +198,7 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
           Raw Material Management - Home
         </h3>
         <p className="text-muted-foreground">
-          Central hub providing quick insights across inventory, procurement, and stock health.
+          Central hub providing comprehensive insights across inventory, procurement, and stock health with real-time analytics.
         </p>
       </div>
 
@@ -158,116 +248,172 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
         </CardContent>
       </Card>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Inventory Snapshot */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Inventory Snapshot
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {inventoryMetrics.totalMaterials}
-                </div>
-                <div className="text-sm text-blue-600">Total Materials</div>
+      {/* Key Metrics Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Materials</p>
+                <p className="text-2xl font-bold">{inventoryMetrics.totalMaterials}</p>
               </div>
-              <div className="text-center p-3 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">
-                  {inventoryMetrics.lowStockMaterials.length}
-                </div>
-                <div className="text-sm text-red-600">Low Stock</div>
-              </div>
-            </div>
-            
-            {inventoryMetrics.criticalStockMaterials.length > 0 && (
-              <div className="p-3 bg-red-100 border border-red-300 rounded-lg">
-                <div className="flex items-center gap-2 text-red-700 font-medium">
-                  <AlertTriangle className="h-4 w-4" />
-                  Critical Stock Alert
-                </div>
-                <div className="text-sm text-red-600 mt-1">
-                  {inventoryMetrics.criticalStockMaterials.length} materials are out of stock
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Breakdown by Type:</div>
-              {Object.entries(inventoryMetrics.typeBreakdown).map(([type, count]) => (
-                <div key={type} className="flex justify-between items-center">
-                  <span className="text-sm">{type}</span>
-                  <Badge variant="outline">{count}</Badge>
-                </div>
-              ))}
+              <Package className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Procurement Overview */}
-        <Card className="lg:col-span-1">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Inventory Value</p>
+                <p className="text-2xl font-bold">{formatCurrency(inventoryMetrics.totalValue)}</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Open Requests</p>
+                <p className="text-2xl font-bold">{procurementMetrics.openRequests}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Low Stock Items</p>
+                <p className="text-2xl font-bold text-red-600">{inventoryMetrics.lowStockMaterials.length}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Procurement Timeline */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Procurement Overview
+              Procurement Timeline (30 Days)
             </CardTitle>
+            <CardDescription>Daily procurement request activity</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                <div>
-                  <div className="text-lg font-bold text-yellow-700">
-                    {procurementMetrics.openRequests}
-                  </div>
-                  <div className="text-sm text-yellow-600">Open Requests</div>
-                </div>
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <div className="text-lg font-bold text-blue-700">
-                    {procurementMetrics.pendingDeliveries.length}
-                  </div>
-                  <div className="text-sm text-blue-600">Pending Deliveries</div>
-                </div>
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <div>
-                  <div className="text-lg font-bold text-green-700">
-                    {procurementMetrics.recentlyReceived}
-                  </div>
-                  <div className="text-sm text-green-600">Recently Received</div>
-                </div>
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={procurementMetrics.timelineData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="created" 
+                    stackId="1"
+                    stroke={chartConfig.created.color}
+                    fill={chartConfig.created.color}
+                    fillOpacity={0.6}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="approved" 
+                    stackId="1"
+                    stroke={chartConfig.approved.color}
+                    fill={chartConfig.approved.color}
+                    fillOpacity={0.6}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="received" 
+                    stackId="1"
+                    stroke={chartConfig.received.color}
+                    fill={chartConfig.received.color}
+                    fillOpacity={0.6}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-            {procurementMetrics.pendingDeliveries.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Upcoming Deliveries:</div>
-                <div className="space-y-1 max-h-24 overflow-y-auto">
-                  {procurementMetrics.pendingDeliveries.slice(0, 3).map((delivery) => (
-                    <div key={delivery.id} className="text-xs p-2 bg-blue-50 rounded">
-                      <div className="font-medium">{delivery.raw_material?.name}</div>
-                      <div className="text-blue-600">ETA: {formatDate(delivery.eta!)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* Stock Health Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="h-5 w-5" />
+              Stock Health Distribution
+            </CardTitle>
+            <CardDescription>Overview of current stock status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={inventoryMetrics.stockHealthData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={120}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {inventoryMetrics.stockHealthData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Activity Timeline and Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Weekly Activity Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Weekly Activity Trend
+            </CardTitle>
+            <CardDescription>Daily activities for the past 7 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activityTimelineData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="stockUpdates" stackId="a" fill={chartConfig.stockUpdates.color} />
+                  <Bar dataKey="requests" stackId="a" fill={chartConfig.requests.color} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
         {/* Recent Activity Feed */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
@@ -276,7 +422,7 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
             <CardDescription>Last 10 activities</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
+            <div className="space-y-3 max-h-[250px] overflow-y-auto">
               {recentActivity.length === 0 ? (
                 <div className="text-center text-muted-foreground text-sm py-4">
                   No recent activity found
@@ -299,6 +445,120 @@ const RMHomeDashboard = ({ onNavigateToTab }: RMHomeDashboardProps) => {
                   </div>
                 ))
               )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Critical Stock Alerts */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Critical Stock Alerts
+            </CardTitle>
+            <CardDescription>
+              {inventoryMetrics.criticalStockMaterials.length > 10 
+                ? `Showing 10 of ${inventoryMetrics.criticalStockMaterials.length} critical items`
+                : `${inventoryMetrics.criticalStockMaterials.length} critical items`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {inventoryMetrics.criticalStockMaterials.length === 0 ? (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                No critical stock alerts
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {inventoryMetrics.criticalStockMaterials.slice(0, 10).map((material) => (
+                  <div key={material.id} className="flex items-center justify-between p-2 bg-red-50 rounded">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{material.name}</div>
+                      <div className="text-xs text-red-600">Out of stock</div>
+                    </div>
+                    <Badge variant="destructive">Critical</Badge>
+                  </div>
+                ))}
+                {inventoryMetrics.criticalStockMaterials.length > 10 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => onNavigateToTab?.('rm-inventory')}
+                  >
+                    View All {inventoryMetrics.criticalStockMaterials.length} Items
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Deliveries */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Upcoming Deliveries
+            </CardTitle>
+            <CardDescription>
+              {procurementMetrics.pendingDeliveries.length > 10 
+                ? `Showing 10 of ${procurementMetrics.pendingDeliveries.length} deliveries`
+                : `${procurementMetrics.pendingDeliveries.length} deliveries`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {procurementMetrics.pendingDeliveries.length === 0 ? (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                No pending deliveries
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {procurementMetrics.pendingDeliveries.slice(0, 10).map((delivery) => (
+                  <div key={delivery.id} className="p-2 bg-blue-50 rounded">
+                    <div className="font-medium text-sm">{delivery.raw_material?.name}</div>
+                    <div className="text-xs text-blue-600">
+                      ETA: {formatDate(delivery.eta!)} • Qty: {delivery.quantity_requested} {delivery.unit}
+                    </div>
+                  </div>
+                ))}
+                {procurementMetrics.pendingDeliveries.length > 10 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => onNavigateToTab?.('rm-procurement')}
+                  >
+                    View All {procurementMetrics.pendingDeliveries.length} Deliveries
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Material Type Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Type Breakdown
+            </CardTitle>
+            <CardDescription>Materials by category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {Object.entries(inventoryMetrics.typeBreakdown).map(([type, count]) => (
+                <div key={type} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm font-medium">{type}</span>
+                  <Badge variant="outline">{count} items</Badge>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
