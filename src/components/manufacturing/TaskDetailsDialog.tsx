@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -219,6 +220,18 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
     return material ? material.name : `Material #${materialId.slice(-6)}`;
   };
 
+  // Helper function to get raw material current stock by ID
+  const getRawMaterialStock = (materialId: string) => {
+    const material = rawMaterials.find(rm => rm.id === materialId);
+    return material ? material.current_stock : 0;
+  };
+
+  // Helper function to get raw material unit by ID
+  const getRawMaterialUnit = (materialId: string) => {
+    const material = rawMaterials.find(rm => rm.id === materialId);
+    return material ? material.unit : '';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -283,28 +296,32 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                   <TableHeader>
                     <TableRow className="bg-gray-50">
                       <TableHead className="font-semibold">Material</TableHead>
-                      <TableHead className="font-semibold text-center">Qty per Unit</TableHead>
-                      <TableHead className="font-semibold text-center">Unit</TableHead>
                       <TableHead className="font-semibold text-center">Total Required</TableHead>
+                      <TableHead className="font-semibold text-center">Current Stock</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productConfig.product_config_materials.map((material, index) => (
-                      <TableRow key={material.id || index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">
-                          {getRawMaterialName(material.raw_material_id)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {material.quantity_required}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {material.unit}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold">
-                          {(material.quantity_required * task.quantity).toFixed(2)} {material.unit}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {productConfig.product_config_materials.map((material, index) => {
+                      const totalRequired = material.quantity_required * task.quantity;
+                      const currentStock = getRawMaterialStock(material.raw_material_id);
+                      const unit = getRawMaterialUnit(material.raw_material_id);
+                      
+                      return (
+                        <TableRow key={material.id || index} className="hover:bg-gray-50">
+                          <TableCell className="font-medium">
+                            {getRawMaterialName(material.raw_material_id)}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {totalRequired.toFixed(2)} {unit}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={currentStock < totalRequired ? 'text-red-600 font-semibold' : 'text-green-600'}>
+                              {currentStock} {unit}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
