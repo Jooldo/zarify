@@ -55,6 +55,10 @@ export interface ProductionStepHistory {
   updated_at?: string;
 }
 
+type CreateProductionTask = Omit<ProductionTask, 'id' | 'created_at' | 'updated_at' | 'product_configs'> & {
+  merchant_id: string;
+};
+
 export const useProductionTasks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,10 +97,32 @@ export const useProductionTasks = () => {
   }, {} as Record<string, ProductionTask[]>);
 
   const createTaskMutation = useMutation({
-    mutationFn: async (newTask: Partial<ProductionTask>) => {
+    mutationFn: async (newTask: Partial<CreateProductionTask>) => {
+      // Get user's merchant_id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('merchant_id')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile?.merchant_id) {
+        throw new Error('User merchant not found');
+      }
+
+      const taskData: CreateProductionTask = {
+        merchant_id: profile.merchant_id,
+        product_config_id: newTask.product_config_id!,
+        order_number: newTask.order_number!,
+        customer_name: newTask.customer_name!,
+        quantity: newTask.quantity!,
+        priority: newTask.priority || 'Medium',
+        current_step: newTask.current_step || 'pending',
+        ...newTask,
+      };
+
       const { data, error } = await supabase
         .from('production_tasks')
-        .insert([newTask])
+        .insert([taskData])
         .select()
         .single();
 
@@ -156,7 +182,7 @@ export const useProductionTasks = () => {
       additionalUpdates = {}
     }: {
       taskId: string;
-      toStep: string;
+      toStep: ProductionTask['current_step'];
       additionalUpdates?: Partial<ProductionTask>;
     }) => {
       const { data, error } = await supabase

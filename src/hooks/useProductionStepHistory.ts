@@ -30,7 +30,7 @@ export const useProductionStepHistory = (taskId?: string) => {
   });
 
   const createStepHistoryMutation = useMutation({
-    mutationFn: async (stepHistory: Partial<ProductionStepHistory>) => {
+    mutationFn: async (stepHistory: Omit<ProductionStepHistory, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('production_step_history')
         .insert([stepHistory])
