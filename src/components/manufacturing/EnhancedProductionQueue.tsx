@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import EnhancedUpdateProductionItemDialog from './EnhancedUpdateProductionItemDialog';
 import AddToQueueDialog from './AddToQueueDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductionQueueItem {
   id: string;
+  order_number: string;
   product_code: string;
   category: string;
   subcategory: string;
@@ -19,11 +24,11 @@ interface ProductionQueueItem {
   quantity_required: number;
   quantity_in_progress: number;
   priority: 'High' | 'Medium' | 'Low';
-  status: 'Queued' | 'In Progress' | 'Completed' | 'On Hold';
-  estimated_completion: string;
+  status: 'Created' | 'In Progress' | 'Completed' | 'On Hold';
+  expected_completion_date: string;
   assigned_worker?: string;
   order_numbers: string[];
-  created_date: string;
+  created_at: string;
   current_step: number;
   manufacturing_steps: {
     step: number;
@@ -62,87 +67,78 @@ const EnhancedProductionQueue = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [updateItem, setUpdateItem] = useState<ProductionQueueItem | null>(null);
+  const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { profile } = useUserProfile();
+  const { toast } = useToast();
 
-  // Enhanced mock data with assignments and QC logs
-  const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([
-    {
-      id: '1',
-      product_code: 'ANK-001-2.50',
-      category: 'Traditional',
-      subcategory: 'Silver',
-      size: '2.50m',
-      quantity_required: 50,
-      quantity_in_progress: 20,
-      priority: 'High',
-      status: 'In Progress',
-      estimated_completion: '2024-01-15',
-      assigned_worker: 'John Doe',
-      order_numbers: ['ORD-001', 'ORD-003'],
-      created_date: '2024-01-10',
-      current_step: 2,
-      manufacturing_steps: [
-        {
-          step: 1,
-          name: 'Jalhai',
-          status: 'Completed',
-          completed_quantity: 50,
-          assignment: {
-            id: 'assign-1',
-            worker_name: 'John Doe',
-            delivery_date: '2024-01-12',
-            status: 'Completed',
-            materials: [
-              { name: 'Silver Wire', allocated_weight: 125.5, unit: 'kg' },
-              { name: 'Copper Base', allocated_weight: 50.0, unit: 'kg' }
-            ]
-          },
-          qc_logs: [
-            {
-              received_weight: 175.0,
-              received_pieces: 50,
-              qc_passed_pieces: 48,
-              qc_failed_pieces: 2,
-              qc_passed_weight: 168.5,
-              qc_failed_weight: 6.5
-            }
-          ]
-        },
-        {
-          step: 2,
-          name: 'Cutting & Shaping',
-          status: 'In Progress',
-          completed_quantity: 20,
-          assignment: {
-            id: 'assign-2',
-            worker_name: 'Jane Smith',
-            delivery_date: '2024-01-14',
-            status: 'In Progress',
-            materials: [
-              { name: 'Processed Silver', allocated_weight: 168.5, unit: 'kg' }
-            ]
-          }
-        },
-        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-      ],
-      child_tickets: [
-        {
-          id: 'CT-12345678-1-001',
-          parent_step: 1,
-          quantity: 2,
-          failed_weight: 6.5,
-          reason: 'QC Failed - Material defects',
-          status: 'Open',
-          created_at: '2024-01-12'
-        }
-      ]
+  // Fetch production orders from database
+  const fetchProductionOrders = async () => {
+    if (!profile?.merchantId) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('production_orders')
+        .select(`
+          *,
+          product_configs (
+            product_code,
+            category,
+            subcategory,
+            size_value
+          )
+        `)
+        .eq('merchant_id', profile.merchantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform the data to match the expected interface
+      const transformedData: ProductionQueueItem[] = data.map(order => ({
+        id: order.id,
+        order_number: order.order_number,
+        product_code: order.product_configs?.product_code || 'Unknown',
+        category: order.product_configs?.category || 'Unknown',
+        subcategory: order.product_configs?.subcategory || 'Unknown',
+        size: `${order.product_configs?.size_value || 0}"`,
+        quantity_required: order.quantity_required,
+        quantity_in_progress: 0, // This would come from step assignments
+        priority: order.priority as 'High' | 'Medium' | 'Low',
+        status: order.status as 'Created' | 'In Progress' | 'Completed' | 'On Hold',
+        expected_completion_date: order.expected_completion_date,
+        order_numbers: [order.order_number],
+        created_at: order.created_at,
+        current_step: 1, // Default to first step
+        manufacturing_steps: [
+          { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
+          { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
+          { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
+          { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+          { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+        ]
+      }));
+
+      setQueueItems(transformedData);
+    } catch (error) {
+      console.error('Error fetching production orders:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch production orders',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchProductionOrders();
+  }, [profile?.merchantId]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Queued':
+      case 'Created':
         return <Clock className="h-4 w-4" />;
       case 'In Progress':
         return <Play className="h-4 w-4" />;
@@ -157,7 +153,7 @@ const EnhancedProductionQueue = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Queued':
+      case 'Created':
         return 'bg-blue-100 text-blue-800';
       case 'In Progress':
         return 'bg-yellow-100 text-yellow-800';
@@ -227,7 +223,32 @@ const EnhancedProductionQueue = () => {
     );
   };
 
-  const handleProductAdded = (newItem: ProductionQueueItem) => {
+  const handleProductAdded = (newOrder: any) => {
+    // Transform the new order to match our interface
+    const newItem: ProductionQueueItem = {
+      id: newOrder.id,
+      order_number: newOrder.order_number,
+      product_code: newOrder.product_configs?.product_code || 'Unknown',
+      category: newOrder.product_configs?.category || 'Unknown',
+      subcategory: newOrder.product_configs?.subcategory || 'Unknown',
+      size: `${newOrder.product_configs?.size_value || 0}"`,
+      quantity_required: newOrder.quantity_required,
+      quantity_in_progress: 0,
+      priority: newOrder.priority as 'High' | 'Medium' | 'Low',
+      status: newOrder.status as 'Created' | 'In Progress' | 'Completed' | 'On Hold',
+      expected_completion_date: newOrder.expected_completion_date,
+      order_numbers: [newOrder.order_number],
+      created_at: newOrder.created_at,
+      current_step: 1,
+      manufacturing_steps: [
+        { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
+        { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
+        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
+        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ]
+    };
+    
     setQueueItems(items => [newItem, ...items]);
   };
 
@@ -243,11 +264,19 @@ const EnhancedProductionQueue = () => {
   });
 
   const statusStats = {
-    queued: queueItems.filter(item => item.status === 'Queued').length,
+    queued: queueItems.filter(item => item.status === 'Created').length,
     inProgress: queueItems.filter(item => item.status === 'In Progress').length,
     completed: queueItems.filter(item => item.status === 'Completed').length,
     onHold: queueItems.filter(item => item.status === 'On Hold').length
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">Loading production queue...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -332,7 +361,7 @@ const EnhancedProductionQueue = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Queued">Queued</SelectItem>
+                <SelectItem value="Created">Created</SelectItem>
                 <SelectItem value="In Progress">In Progress</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
                 <SelectItem value="On Hold">On Hold</SelectItem>
@@ -381,6 +410,9 @@ const EnhancedProductionQueue = () => {
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {item.category} • {item.subcategory} • {item.size}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Order: {item.order_number}
                         </div>
                       </div>
                     </TableCell>

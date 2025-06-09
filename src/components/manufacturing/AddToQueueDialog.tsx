@@ -18,6 +18,8 @@ import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface AddToQueueDialogProps {
   onProductAdded: (newItem: any) => void;
@@ -35,6 +37,7 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
   const { toast } = useToast();
   const { productConfigs, loading: configsLoading } = useProductConfigs();
   const { rawMaterials } = useRawMaterials();
+  const { profile } = useUserProfile();
 
   const selectedConfig = productConfigs.find(config => config.id === productConfigId);
   const quantity = parseInt(quantityRequired) || 0;
@@ -71,38 +74,56 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
         throw new Error('Product configuration not found');
       }
 
-      // Create new production item
-      const newProductionItem = {
-        id: `prod-${Date.now()}`,
-        product_code: selectedConfig.product_code,
-        category: selectedConfig.category,
-        subcategory: selectedConfig.subcategory,
-        size: `${selectedConfig.size_value}"`,
-        quantity_required: parseInt(quantityRequired),
-        quantity_in_progress: 0,
-        priority,
-        status: 'Queued' as const,
-        estimated_completion: format(estimatedCompletion, 'yyyy-MM-dd'),
-        order_numbers: [],
-        created_date: format(new Date(), 'yyyy-MM-dd'),
-        current_step: 1,
-        manufacturing_steps: [
-          { step: 1, name: 'Jalhai', status: 'Pending' as const, completed_quantity: 0 },
-          { step: 2, name: 'Cutting & Shaping', status: 'Pending' as const, completed_quantity: 0 },
-          { step: 3, name: 'Assembly', status: 'Pending' as const, completed_quantity: 0 },
-          { step: 4, name: 'Finishing', status: 'Pending' as const, completed_quantity: 0 },
-          { step: 5, name: 'Quality Control', status: 'Pending' as const, completed_quantity: 0 }
-        ]
-      };
+      if (!profile?.merchantId) {
+        toast({
+          title: 'Error',
+          description: 'Unable to get merchant information.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      console.log('Creating new production item:', newProductionItem);
+      // Generate order number
+      const { data: orderNumberData, error: orderNumberError } = await supabase
+        .rpc('get_next_order_number');
+
+      if (orderNumberError) throw orderNumberError;
+
+      // Create production order in database
+      const { data: productionOrder, error: productionOrderError } = await supabase
+        .from('production_orders')
+        .insert({
+          merchant_id: profile.merchantId,
+          order_number: orderNumberData,
+          product_config_id: productConfigId,
+          quantity_required: parseInt(quantityRequired),
+          priority: priority,
+          status: 'Created',
+          expected_completion_date: format(estimatedCompletion, 'yyyy-MM-dd'),
+          notes: notes,
+          created_by: profile.id
+        })
+        .select(`
+          *,
+          product_configs (
+            product_code,
+            category,
+            subcategory,
+            size_value
+          )
+        `)
+        .single();
+
+      if (productionOrderError) throw productionOrderError;
+
+      console.log('Created production order:', productionOrder);
 
       toast({
         title: 'Product Added to Queue',
         description: `${selectedConfig.product_code} has been added to the manufacturing queue.`,
       });
 
-      onProductAdded(newProductionItem);
+      onProductAdded(productionOrder);
       
       // Reset form
       setProductConfigId('');
