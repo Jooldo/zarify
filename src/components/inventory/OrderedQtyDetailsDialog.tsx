@@ -57,10 +57,23 @@ const OrderedQtyDetailsDialog = ({
             <Package className="h-5 w-5" />
             Ordered Quantity Details
           </DialogTitle>
-          <div className="text-sm text-gray-600 mt-2">
-            {productCode && <div>Product: <span className="font-medium">{productCode}</span></div>}
-            {materialName && <div>Material: <span className="font-medium">{materialName}</span></div>}
-            <div>Total Ordered Quantity: <span className="font-bold text-blue-600">{totalQuantity}</span></div>
+          <div className="text-sm text-gray-600 mt-2 space-y-1">
+            {productCode && (
+              <div>
+                <span className="text-gray-500">Product Code:</span> 
+                <span className="font-medium ml-2 font-mono text-blue-600">{productCode}</span>
+              </div>
+            )}
+            {materialName && (
+              <div>
+                <span className="text-gray-500">Material:</span> 
+                <span className="font-medium ml-2">{materialName}</span>
+              </div>
+            )}
+            <div>
+              <span className="text-gray-500">Total Ordered Quantity:</span> 
+              <span className="font-bold text-blue-600 ml-2">{totalQuantity}</span>
+            </div>
           </div>
         </DialogHeader>
 
