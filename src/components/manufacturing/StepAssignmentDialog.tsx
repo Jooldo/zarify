@@ -63,42 +63,48 @@ const StepAssignmentDialog = ({
 
   // Fetch required materials for step 1
   useEffect(() => {
-    if (stepNumber === 1 && open && productionItemId) {
-      // Find the product config based on production item
-      // In a real app, you'd get this from the production item data
-      // For now, we'll use the first config as an example
+    if (stepNumber === 1 && open && productionItemId && quantityToProduce) {
+      console.log('Fetching materials for production item:', productionItemId);
+      console.log('Available product configs:', productConfigs);
+      console.log('Available raw materials:', rawMaterials);
+      
+      // For now, since we don't have the production item details, 
+      // we'll use the first available product config
+      // In a real implementation, you would fetch the production item details 
+      // and get the correct product_config_id from it
       const productConfig = productConfigs[0];
       
-      if (productConfig?.product_config_materials) {
+      if (productConfig?.product_config_materials && productConfig.product_config_materials.length > 0) {
+        console.log('Product config materials:', productConfig.product_config_materials);
+        
+        const quantity = parseFloat(quantityToProduce) || 0;
+        
         const materials = productConfig.product_config_materials.map(configMaterial => {
           const rawMaterial = rawMaterials.find(rm => rm.id === configMaterial.raw_material_id);
+          const totalRequired = configMaterial.quantity_required * quantity;
+          
+          console.log(`Material ${rawMaterial?.name}: ${configMaterial.quantity_required} x ${quantity} = ${totalRequired}`);
+          
           return {
             raw_material_id: configMaterial.raw_material_id,
             raw_material_name: rawMaterial?.name || 'Unknown Material',
             quantity_required: configMaterial.quantity_required,
-            allocated_weight: 0,
+            allocated_weight: totalRequired,
             unit: configMaterial.unit,
             current_stock: rawMaterial?.current_stock || 0
           };
         });
+        
+        console.log('Calculated material allocations:', materials);
         setMaterialAllocations(materials);
+      } else {
+        console.log('No product config materials found');
+        setMaterialAllocations([]);
       }
     } else if (stepNumber !== 1) {
       setMaterialAllocations([]);
     }
-  }, [stepNumber, open, productionItemId, productConfigs, rawMaterials]);
-
-  // Update allocated weights when quantity changes
-  useEffect(() => {
-    const quantity = parseInt(quantityToProduce) || 0;
-    if (quantity > 0 && materialAllocations.length > 0) {
-      const updatedAllocations = materialAllocations.map(allocation => ({
-        ...allocation,
-        allocated_weight: allocation.quantity_required * quantity
-      }));
-      setMaterialAllocations(updatedAllocations);
-    }
-  }, [quantityToProduce]);
+  }, [stepNumber, open, productionItemId, quantityToProduce, productConfigs, rawMaterials]);
 
   const updateMaterialAllocation = (index: number, allocated_weight: number) => {
     const updated = [...materialAllocations];
@@ -249,7 +255,7 @@ const StepAssignmentDialog = ({
             <div>
               <Label className="text-base font-medium">Raw Material Allocations</Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Materials required for production (automatically calculated based on quantity)
+                Materials required for production (calculated based on quantity)
               </p>
 
               {materialAllocations.length > 0 ? (
@@ -264,7 +270,7 @@ const StepAssignmentDialog = ({
                       </div>
 
                       <div className="col-span-3">
-                        <Label className="text-sm">Calculated Weight</Label>
+                        <Label className="text-sm">Calculated Total</Label>
                         <div className="text-sm font-medium">
                           {allocation.allocated_weight.toFixed(2)} {allocation.unit}
                         </div>
@@ -298,7 +304,12 @@ const StepAssignmentDialog = ({
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                  {quantityToProduce ? "Loading required materials..." : "Enter quantity to see required materials"}
+                  {quantityToProduce ? (
+                    productConfigs.length === 0 ? "Loading product configurations..." : 
+                    "No raw materials configured for this product"
+                  ) : (
+                    "Enter quantity to see required materials"
+                  )}
                 </div>
               )}
             </div>
