@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Download, Mail, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { format } from 'date-fns';
 import type { Invoice } from '@/hooks/useInvoices';
 import type { Order } from '@/hooks/useOrders';
@@ -18,34 +19,43 @@ interface ViewInvoiceDialogProps {
 
 const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialogProps) => {
   const { toast } = useToast();
+  const { profile } = useUserProfile();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
 
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      // Create a new window with the invoice content for printing/PDF
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(generateInvoiceHTML());
-        printWindow.document.close();
-        printWindow.focus();
-        
-        // Trigger print dialog which can save as PDF
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
+      const htmlContent = generateInvoiceHTML();
+      
+      // Create a blob with the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link element
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice_${invoice.invoice_number}.html`;
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL
+      URL.revokeObjectURL(url);
       
       toast({
-        title: 'PDF Generation',
-        description: 'Invoice PDF is ready for download',
+        title: 'Download Started',
+        description: `Invoice ${invoice.invoice_number} is downloading`,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
         title: 'Error',
-        description: 'Failed to generate PDF',
+        description: 'Failed to download invoice',
         variant: 'destructive',
       });
     } finally {
@@ -91,22 +101,37 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
         <head>
           <title>Invoice ${invoice.invoice_number}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+            .company-info { text-align: left; }
+            .company-info h1 { margin: 0; font-size: 28px; color: #1a1a1a; }
+            .company-info p { margin: 2px 0; color: #666; }
+            .invoice-title { text-align: right; }
+            .invoice-title h2 { margin: 0; font-size: 24px; color: #1a1a1a; }
             .invoice-details { margin-bottom: 20px; }
             .customer-details { margin-bottom: 20px; }
             .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .items-table th { background-color: #f2f2f2; }
+            .items-table th { background-color: #f8f9fa; font-weight: bold; }
             .totals { text-align: right; margin-top: 20px; }
             .total-line { margin: 5px 0; }
             .total-final { font-weight: bold; font-size: 1.2em; border-top: 2px solid #000; padding-top: 10px; }
+            .footer { margin-top: 40px; font-size: 12px; color: #666; text-align: center; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>INVOICE</h1>
-            <h2>${invoice.invoice_number}</h2>
+            <div class="company-info">
+              <h1>${profile?.merchantName || 'Your Company'}</h1>
+              <p>123 Business Street</p>
+              <p>City, State 12345</p>
+              <p>GST No: 27XXXXX1234X1Z5</p>
+              <p>Phone: +91 9876543210</p>
+            </div>
+            <div class="invoice-title">
+              <h2>INVOICE</h2>
+              <p><strong>${invoice.invoice_number}</strong></p>
+            </div>
           </div>
           
           <div class="invoice-details">
@@ -119,6 +144,7 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
             <h3>Bill To:</h3>
             <p><strong>${order.customer.name}</strong></p>
             ${order.customer.phone ? `<p>Phone: ${order.customer.phone}</p>` : ''}
+            ${order.customer.address ? `<p>${order.customer.address}</p>` : ''}
           </div>
           
           <table class="items-table">
@@ -159,6 +185,11 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
               <p>${invoice.notes}</p>
             </div>
           ` : ''}
+          
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>This is a computer-generated invoice and does not require a physical signature.</p>
+          </div>
         </body>
       </html>
     `;
@@ -189,12 +220,27 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
 
           <Separator />
 
-          {/* Customer Information */}
-          <div>
-            <h3 className="font-semibold mb-2">Bill To:</h3>
-            <div className="bg-gray-50 p-3 rounded">
-              <p className="font-medium">{order.customer.name}</p>
-              {order.customer.phone && <p className="text-sm text-gray-600">Phone: {order.customer.phone}</p>}
+          {/* Merchant Information */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold mb-2">From:</h3>
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="font-medium">{profile?.merchantName || 'Your Company'}</p>
+                <p className="text-sm text-gray-600">123 Business Street</p>
+                <p className="text-sm text-gray-600">City, State 12345</p>
+                <p className="text-sm text-gray-600">GST No: 27XXXXX1234X1Z5</p>
+                <p className="text-sm text-gray-600">Phone: +91 9876543210</p>
+              </div>
+            </div>
+            
+            {/* Customer Information */}
+            <div>
+              <h3 className="font-semibold mb-2">Bill To:</h3>
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="font-medium">{order.customer.name}</p>
+                {order.customer.phone && <p className="text-sm text-gray-600">Phone: {order.customer.phone}</p>}
+                {order.customer.address && <p className="text-sm text-gray-600">{order.customer.address}</p>}
+              </div>
             </div>
           </div>
 
@@ -279,7 +325,7 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                {isDownloading ? 'Generating...' : 'Download PDF'}
+                {isDownloading ? 'Downloading...' : 'Download HTML'}
               </Button>
               <Button
                 variant="outline"
