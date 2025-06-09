@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,9 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface AddToQueueDialogProps {
   onProductAdded: (newItem: any) => void;
@@ -24,11 +27,28 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
   const [quantityRequired, setQuantityRequired] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [estimatedCompletion, setEstimatedCompletion] = useState<Date>();
-  const [orderNumbers, setOrderNumbers] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { productConfigs, loading: configsLoading } = useProductConfigs();
+  const { rawMaterials } = useRawMaterials();
+
+  const selectedConfig = productConfigs.find(config => config.id === productConfigId);
+  const quantity = parseInt(quantityRequired) || 0;
+
+  // Calculate material requirements based on quantity
+  const materialRequirements = selectedConfig?.product_config_materials?.map(material => {
+    const rawMaterial = rawMaterials.find(rm => rm.id === material.raw_material_id);
+    const totalRequired = material.quantity_required * quantity;
+    
+    return {
+      ...material,
+      rawMaterial,
+      totalRequired,
+      currentStock: rawMaterial?.current_stock || 0,
+      shortfall: Math.max(0, totalRequired - (rawMaterial?.current_stock || 0))
+    };
+  }) || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +64,6 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
         return;
       }
 
-      const selectedConfig = productConfigs.find(config => config.id === productConfigId);
       if (!selectedConfig) {
         throw new Error('Product configuration not found');
       }
@@ -61,7 +80,7 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
         priority,
         status: 'Queued' as const,
         estimated_completion: format(estimatedCompletion, 'yyyy-MM-dd'),
-        order_numbers: orderNumbers.split(',').map(n => n.trim()).filter(n => n),
+        order_numbers: [],
         created_date: format(new Date(), 'yyyy-MM-dd'),
         current_step: 1,
         manufacturing_steps: [
@@ -87,7 +106,6 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
       setQuantityRequired('');
       setPriority('Medium');
       setEstimatedCompletion(undefined);
-      setOrderNumbers('');
       setNotes('');
       setIsOpen(false);
     } catch (error) {
@@ -110,7 +128,7 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
           Add to Queue
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Product to Manufacturing Queue</DialogTitle>
         </DialogHeader>
@@ -141,6 +159,41 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Product Details */}
+          {selectedConfig && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Product Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Category</Label>
+                    <div className="font-medium">{selectedConfig.category}</div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Subcategory</Label>
+                    <div className="font-medium">{selectedConfig.subcategory}</div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Size</Label>
+                    <div className="font-medium">{selectedConfig.size_value?.toFixed(2)}"</div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Weight</Label>
+                    <div className="font-medium">{selectedConfig.weight_range}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Status:</Label>
+                  <Badge variant={selectedConfig.is_active ? "default" : "secondary"}>
+                    {selectedConfig.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quantity and Priority */}
           <div className="grid grid-cols-2 gap-4">
@@ -173,6 +226,49 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
             </div>
           </div>
 
+          {/* Raw Materials Requirements */}
+          {selectedConfig && quantity > 0 && materialRequirements.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Raw Materials Required</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {materialRequirements.map((requirement, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">
+                          {requirement.rawMaterial?.name || 'Unknown Material'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {requirement.rawMaterial?.type} • {requirement.unit}
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="text-sm font-medium">
+                          Required: {requirement.totalRequired.toFixed(2)} {requirement.unit}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Available: {requirement.currentStock.toFixed(2)} {requirement.unit}
+                        </div>
+                        {requirement.shortfall > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            Shortfall: {requirement.shortfall.toFixed(2)} {requirement.unit}
+                          </Badge>
+                        )}
+                        {requirement.shortfall === 0 && (
+                          <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                            Sufficient Stock
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Estimated Completion Date */}
           <div>
             <Label className="text-sm font-medium">Estimated Completion Date *</Label>
@@ -198,19 +294,6 @@ const AddToQueueDialog = ({ onProductAdded }: AddToQueueDialogProps) => {
                 />
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Order Numbers */}
-          <div>
-            <Label htmlFor="orderNumbers" className="text-sm font-medium">Related Order Numbers</Label>
-            <Input
-              id="orderNumbers"
-              value={orderNumbers}
-              onChange={(e) => setOrderNumbers(e.target.value)}
-              placeholder="ORD-001, ORD-002 (comma separated)"
-              className="h-10 text-sm mt-2"
-            />
-            <p className="text-xs text-gray-500 mt-1">Enter order numbers separated by commas</p>
           </div>
 
           {/* Notes */}
