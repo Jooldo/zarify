@@ -1,5 +1,7 @@
 
-import { Factory, Calendar, Users, Wrench } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Factory, Kanban, Calendar, BarChart3 } from 'lucide-react';
+import ProductionKanban from './ProductionKanban';
 
 const FGManufacturingTab = () => {
   return (
@@ -13,91 +15,60 @@ const FGManufacturingTab = () => {
           Manage and monitor the manufacturing process of finished goods based on orders and inventory levels.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <h4 className="font-semibold">Production Schedule</h4>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              View and manage daily production schedules and timelines.
-            </p>
-            <div className="text-sm font-medium text-blue-600">
-              View Schedule →
-            </div>
-          </div>
+        <Tabs defaultValue="kanban" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="kanban" className="flex items-center gap-2">
+              <Kanban className="h-4 w-4" />
+              Production Queue
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Factory className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
+          </TabsList>
           
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Factory className="h-5 w-5 text-green-600" />
-              <h4 className="font-semibold">Production Queue</h4>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Monitor items scheduled for production and their status.
-            </p>
-            <div className="text-sm font-medium text-green-600">
-              Manage Queue →
-            </div>
-          </div>
+          <TabsContent value="kanban" className="mt-6">
+            <ProductionKanban />
+          </TabsContent>
           
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Users className="h-5 w-5 text-purple-600" />
-              <h4 className="font-semibold">Workforce Planning</h4>
+          <TabsContent value="schedule" className="mt-6">
+            <div className="bg-blue-50 p-8 rounded-lg text-center">
+              <Calendar className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold mb-2">Production Schedule</h4>
+              <p className="text-muted-foreground">
+                Production scheduling and timeline management coming soon.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Assign workers to production tasks and manage shifts.
-            </p>
-            <div className="text-sm font-medium text-purple-600">
-              Plan Workforce →
-            </div>
-          </div>
+          </TabsContent>
           
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Wrench className="h-5 w-5 text-orange-600" />
-              <h4 className="font-semibold">Equipment Status</h4>
+          <TabsContent value="analytics" className="mt-6">
+            <div className="bg-green-50 p-8 rounded-lg text-center">
+              <BarChart3 className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold mb-2">Manufacturing Analytics</h4>
+              <p className="text-muted-foreground">
+                Production metrics and performance analytics coming soon.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Monitor manufacturing equipment and maintenance schedules.
-            </p>
-            <div className="text-sm font-medium text-orange-600">
-              Check Status →
-            </div>
-          </div>
+          </TabsContent>
           
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Factory className="h-5 w-5 text-red-600" />
-              <h4 className="font-semibold">Quality Control</h4>
+          <TabsContent value="settings" className="mt-6">
+            <div className="bg-purple-50 p-8 rounded-lg text-center">
+              <Factory className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold mb-2">Manufacturing Settings</h4>
+              <p className="text-muted-foreground">
+                Configure process steps, worker assignments, and production parameters.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Track quality metrics and manage inspection processes.
-            </p>
-            <div className="text-sm font-medium text-red-600">
-              View QC →
-            </div>
-          </div>
-          
-          <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              <h4 className="font-semibold">Resource Planning</h4>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Ensure adequate raw materials and resources for production.
-            </p>
-            <div className="text-sm font-medium text-indigo-600">
-              Plan Resources →
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            🏭 Advanced manufacturing features and real-time monitoring dashboard coming soon.
-          </p>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
