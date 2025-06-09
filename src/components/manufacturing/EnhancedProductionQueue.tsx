@@ -77,11 +77,15 @@ const EnhancedProductionQueue = () => {
     itemId: string;
     stepNumber: number;
     stepName: string;
+    productConfigId: string;
+    quantityRequired: number;
   }>({
     open: false,
     itemId: '',
     stepNumber: 0,
-    stepName: ''
+    stepName: '',
+    productConfigId: '',
+    quantityRequired: 0
   });
   const { profile } = useUserProfile();
   const { toast } = useToast();
@@ -259,12 +263,14 @@ const EnhancedProductionQueue = () => {
   };
 
   // Open assignment dialog
-  const handleOpenAssignmentDialog = (itemId: string, stepNumber: number, stepName: string) => {
+  const handleOpenAssignmentDialog = (itemId: string, stepNumber: number, stepName: string, productConfigId: string, quantityRequired: number) => {
     setAssignmentDialog({
       open: true,
       itemId,
       stepNumber,
-      stepName
+      stepName,
+      productConfigId,
+      quantityRequired
     });
   };
 
@@ -303,7 +309,7 @@ const EnhancedProductionQueue = () => {
       })
     );
     
-    setAssignmentDialog({ open: false, itemId: '', stepNumber: 0, stepName: '' });
+    setAssignmentDialog({ open: false, itemId: '', stepNumber: 0, stepName: '', productConfigId: '', quantityRequired: 0 });
     
     toast({
       title: 'Step Assigned',
@@ -584,7 +590,13 @@ const EnhancedProductionQueue = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleOpenAssignmentDialog(item.id, currentStep.step, currentStep.name)}
+                                  onClick={() => handleOpenAssignmentDialog(
+                                    item.id, 
+                                    currentStep.step, 
+                                    currentStep.name,
+                                    item.id, // Using item.id as productConfigId for now
+                                    item.quantity_required
+                                  )}
                                   className="flex items-center gap-1"
                                 >
                                   <Plus className="h-3 w-3" />
@@ -638,6 +650,8 @@ const EnhancedProductionQueue = () => {
         onAssign={handleStepAssignment}
         stepNumber={assignmentDialog.stepNumber}
         stepName={assignmentDialog.stepName}
+        productConfigId={assignmentDialog.productConfigId}
+        quantityRequired={assignmentDialog.quantityRequired}
       />
     </div>
   );
