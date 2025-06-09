@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -335,6 +334,8 @@ const EnhancedUpdateProductionItemDialog = ({
         productionItemId={item.id}
         stepNumber={selectedStep}
         stepName={item.manufacturing_steps.find(s => s.step === selectedStep)?.name || ''}
+        productCode={item.product_code}
+        quantityRequired={item.quantity_required}
         onAssignmentComplete={handleAssignmentComplete}
       />
 
