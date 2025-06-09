@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface Worker {
   id: string;
@@ -66,14 +67,18 @@ const StepAssignmentDialog = ({
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const { toast } = useToast();
   const { productConfigs } = useProductConfigs();
+  const { profile } = useUserProfile();
 
   // Fetch workers from database
   useEffect(() => {
     const fetchWorkers = async () => {
+      if (!profile?.merchant_id) return;
+      
       try {
         const { data, error } = await supabase
           .from('workers')
           .select('id, name')
+          .eq('merchant_id', profile.merchant_id)
           .eq('status', 'Active');
         
         if (error) throw error;
@@ -91,15 +96,18 @@ const StepAssignmentDialog = ({
     if (open) {
       fetchWorkers();
     }
-  }, [open, toast]);
+  }, [open, toast, profile?.merchant_id]);
 
   // Fetch raw materials from database
   useEffect(() => {
     const fetchRawMaterials = async () => {
+      if (!profile?.merchant_id) return;
+      
       try {
         const { data, error } = await supabase
           .from('raw_materials')
-          .select('id, name, unit, current_stock');
+          .select('id, name, unit, current_stock')
+          .eq('merchant_id', profile.merchant_id);
         
         if (error) throw error;
         setRawMaterials(data || []);
@@ -116,7 +124,7 @@ const StepAssignmentDialog = ({
     if (open) {
       fetchRawMaterials();
     }
-  }, [open, toast]);
+  }, [open, toast, profile?.merchant_id]);
 
   // Auto-fetch materials for Step 1
   useEffect(() => {
@@ -189,6 +197,15 @@ const StepAssignmentDialog = ({
       return;
     }
 
+    if (!profile?.merchant_id) {
+      toast({
+        title: 'Error',
+        description: 'Unable to get merchant information.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Validate material allocations
     const invalidAllocations = materialAllocations.some(
       allocation => !allocation.raw_material_id || allocation.allocated_weight <= 0
@@ -228,6 +245,7 @@ const StepAssignmentDialog = ({
       const { data: assignment, error: assignmentError } = await supabase
         .from('production_step_assignments')
         .insert({
+          merchant_id: profile.merchant_id,
           production_order_id: productionItemId,
           step_number: stepNumber,
           step_name: stepName,
@@ -245,6 +263,7 @@ const StepAssignmentDialog = ({
         supabase
           .from('production_material_allocations')
           .insert({
+            merchant_id: profile.merchant_id,
             production_step_assignment_id: assignment.id,
             raw_material_id: allocation.raw_material_id,
             allocated_quantity: allocation.allocated_weight,
@@ -258,6 +277,7 @@ const StepAssignmentDialog = ({
       await supabase
         .from('production_logs')
         .insert({
+          merchant_id: profile.merchant_id,
           production_order_id: productionItemId,
           production_step_assignment_id: assignment.id,
           log_type: 'assignment',
