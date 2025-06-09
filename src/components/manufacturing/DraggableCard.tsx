@@ -4,7 +4,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Eye, Calendar, Weight, Hash } from 'lucide-react';
+import { Clock, User, Package, Eye, Calendar, Weight, Hash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useState } from 'react';
 
 interface ProductionTask {
   id: string;
@@ -53,7 +55,28 @@ const formatTimeElapsed = (startedAt: Date) => {
   return `${Math.floor(elapsed / 60)}h ${elapsed % 60}m`;
 };
 
+// Mock previous steps data for demonstration
+const getMockPreviousSteps = (stepId: string) => {
+  if (stepId === 'quellai') {
+    return [
+      {
+        stepName: 'Raw Materials',
+        outputWeight: 65.5,
+        outputQuantity: 50,
+      },
+      {
+        stepName: 'Jhalai',
+        assignedWorker: 'Rajesh Kumar',
+        outputWeight: 63.2,
+        outputQuantity: 50,
+      }
+    ];
+  }
+  return [];
+};
+
 const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
   const {
     attributes,
     listeners,
@@ -81,10 +104,18 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
     onTaskClick(task);
   };
 
+  const handleTimelineClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsTimelineExpanded(!isTimelineExpanded);
+  };
+
   // Define card border style based on whether it's a child task
   const cardBorderClass = task.isChildTask 
     ? "cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-orange-500 border border-orange-300 bg-orange-50 active:cursor-grabbing"
     : "cursor-grab hover:shadow-md transition-shadow border-l-4 border-l-blue-500 active:cursor-grabbing";
+
+  const previousSteps = getMockPreviousSteps(stepId);
+  const hasPreviousSteps = previousSteps.length > 0;
     
   const renderPendingCard = () => (
     <Card 
@@ -159,7 +190,7 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
     </Card>
   );
 
-  const renderJalhaiCard = () => (
+  const renderProcessingStepCard = () => (
     <Card 
       ref={setNodeRef}
       style={style}
@@ -190,10 +221,22 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
         
         <div className="space-y-1">
           <p className="text-xs font-medium">{task.productCode}</p>
-          <p className="text-xs text-muted-foreground">Qty: {task.quantity} pcs</p>
-          {task.receivedWeight && (
-            <p className="text-xs text-muted-foreground">Weight: {task.receivedWeight} kg</p>
-          )}
+          
+          {/* Current Step Quantity/Weight */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-muted-foreground">Qty:</span>
+              <span className="font-medium ml-1">
+                {task.receivedQuantity || task.quantity} pcs
+              </span>
+            </div>
+            {task.receivedWeight && (
+              <div>
+                <span className="text-muted-foreground">Weight:</span>
+                <span className="font-medium ml-1">{task.receivedWeight} kg</span>
+              </div>
+            )}
+          </div>
         </div>
         
         {task.assignedWorker && (
@@ -224,6 +267,42 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
           }`}>
             {task.status}
           </Badge>
+        )}
+
+        {/* Expandable Previous Steps Summary */}
+        {hasPreviousSteps && (
+          <Collapsible open={isTimelineExpanded} onOpenChange={setIsTimelineExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between p-1 h-6 text-xs"
+                onClick={handleTimelineClick}
+              >
+                <span>Previous Steps ({previousSteps.length})</span>
+                {isTimelineExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="pt-1">
+              <div className="space-y-1 text-xs bg-gray-50 rounded p-2">
+                {previousSteps.map((step, index) => (
+                  <div key={index} className="flex justify-between items-center py-1 border-b last:border-b-0">
+                    <div>
+                      <div className="font-medium">{step.stepName}</div>
+                      {step.assignedWorker && (
+                        <div className="text-muted-foreground text-xs">{step.assignedWorker}</div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div>{step.outputWeight} kg</div>
+                      <div className="text-muted-foreground">{step.outputQuantity} pcs</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </CardContent>
     </Card>
@@ -302,8 +381,8 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
 
   if (stepId === 'pending') {
     return renderPendingCard();
-  } else if (stepId === 'jhalai') {
-    return renderJalhaiCard();
+  } else if (stepId === 'jhalai' || stepId === 'quellai' || stepId === 'meena' || stepId === 'vibrator') {
+    return renderProcessingStepCard();
   } else {
     return renderRegularCard();
   }
