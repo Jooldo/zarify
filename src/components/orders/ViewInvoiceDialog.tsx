@@ -144,7 +144,6 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
             <h3>Bill To:</h3>
             <p><strong>${order.customer.name}</strong></p>
             ${order.customer.phone ? `<p>Phone: ${order.customer.phone}</p>` : ''}
-            ${order.customer.address ? `<p>${order.customer.address}</p>` : ''}
           </div>
           
           <table class="items-table">
@@ -239,7 +238,6 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
               <div className="bg-gray-50 p-3 rounded">
                 <p className="font-medium">{order.customer.name}</p>
                 {order.customer.phone && <p className="text-sm text-gray-600">Phone: {order.customer.phone}</p>}
-                {order.customer.address && <p className="text-sm text-gray-600">{order.customer.address}</p>}
               </div>
             </div>
           </div>
