@@ -50,8 +50,6 @@ interface TaskDetailsDialogProps {
 
 const STEP_STATUSES = [
   { value: 'Progress', label: 'In Progress' },
-  { value: 'Received', label: 'Received' },
-  { value: 'QC', label: 'Quality Check' },
   { value: 'Partially Completed', label: 'Partially Completed' },
   { value: 'Completed', label: 'Completed' }
 ];
@@ -126,10 +124,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
 
   const handleStatusChange = (newStatus: string) => {
     setSelectedStatus(newStatus);
-    if (newStatus === 'Received') {
-      setShowWeightQuantityForm(true);
-      setShowPartialCompletionForm(false);
-    } else if (newStatus === 'Partially Completed') {
+    if (newStatus === 'Partially Completed') {
       setShowPartialCompletionForm(true);
       setShowWeightQuantityForm(false);
     } else {
@@ -357,48 +352,6 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Weight and Quantity Form for Received Status */}
-                {showWeightQuantityForm && (
-                  <div className="space-y-3 p-3 bg-white rounded border">
-                    <h5 className="font-medium text-green-800">Received Details</h5>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Weight (kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter weight"
-                          value={weight}
-                          onChange={(e) => setWeight(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Quantity (pieces)</Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter quantity"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleReceivedSubmit} className="flex-1">
-                        Confirm Received
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setShowWeightQuantityForm(false);
-                          setSelectedStatus('');
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
                 {/* Partial Completion Form */}
                 {showPartialCompletionForm && (
