@@ -1,29 +1,16 @@
-
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { Package, Clock, Play, Pause, CheckCircle, AlertCircle, Eye, Plus, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Calendar, 
-  Clock, 
-  Package, 
-  AlertTriangle, 
-  CheckCircle, 
-  Play,
-  Pause,
-  MoreHorizontal,
-  Eye,
-  Edit
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import AddToQueueDialog from './AddToQueueDialog';
-import StepAssignmentDialog from './StepAssignmentDialog';
-import EnhancedUpdateProductionItemDialog from './EnhancedUpdateProductionItemDialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Progress } from '@/components/ui/progress';
+import EnhancedUpdateProductionItemDialog from './EnhancedUpdateProductionItemDialog';
+import AddToQueueDialog from './AddToQueueDialog';
 
-interface ProductionItem {
+interface ProductionQueueItem {
   id: string;
   product_code: string;
   category: string;
@@ -34,6 +21,7 @@ interface ProductionItem {
   priority: 'High' | 'Medium' | 'Low';
   status: 'Queued' | 'In Progress' | 'Completed' | 'On Hold';
   estimated_completion: string;
+  assigned_worker?: string;
   order_numbers: string[];
   created_date: string;
   current_step: number;
@@ -42,384 +30,445 @@ interface ProductionItem {
     name: string;
     status: 'Pending' | 'In Progress' | 'Completed';
     completed_quantity: number;
+    assignment?: {
+      id: string;
+      worker_name: string;
+      delivery_date: string;
+      status: string;
+      materials: { name: string; allocated_weight: number; unit: string; }[];
+    };
+    qc_logs?: {
+      received_weight: number;
+      received_pieces: number;
+      qc_passed_pieces: number;
+      qc_failed_pieces: number;
+      qc_passed_weight: number;
+      qc_failed_weight: number;
+    }[];
+  }[];
+  child_tickets?: {
+    id: string;
+    parent_step: number;
+    quantity: number;
+    failed_weight: number;
+    reason: string;
+    status: 'Open' | 'In Progress' | 'Resolved';
+    created_at: string;
   }[];
 }
 
-// Mock data for demonstration
-const mockProductionItems: ProductionItem[] = [
-  {
-    id: '1',
-    product_code: 'FG-001',
-    category: 'Furniture',
-    subcategory: 'Chair',
-    size: 'Standard',
-    quantity_required: 100,
-    quantity_in_progress: 20,
-    priority: 'High',
-    status: 'In Progress',
-    estimated_completion: '2024-08-15',
-    order_numbers: ['SO-2024-001', 'SO-2024-002'],
-    created_date: '2024-01-20',
-    current_step: 2,
-    manufacturing_steps: [
-      { step: 1, name: 'Jalhai', status: 'Completed', completed_quantity: 100 },
-      { step: 2, name: 'Cutting & Shaping', status: 'In Progress', completed_quantity: 20 },
-      { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-      { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-      { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-    ]
-  },
-  {
-    id: '2',
-    product_code: 'FG-002',
-    category: 'Textiles',
-    subcategory: 'Fabric Roll',
-    size: 'Large',
-    quantity_required: 500,
-    quantity_in_progress: 100,
-    priority: 'Medium',
-    status: 'In Progress',
-    estimated_completion: '2024-09-01',
-    order_numbers: ['SO-2024-005'],
-    created_date: '2024-02-10',
-    current_step: 3,
-    manufacturing_steps: [
-      { step: 1, name: 'Jalhai', status: 'Completed', completed_quantity: 500 },
-      { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 500 },
-      { step: 3, name: 'Assembly', status: 'In Progress', completed_quantity: 100 },
-      { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-      { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-    ]
-  },
-  {
-    id: '3',
-    product_code: 'FG-003',
-    category: 'Electronics',
-    subcategory: 'Circuit Board',
-    size: 'Small',
-    quantity_required: 1000,
-    quantity_in_progress: 0,
-    priority: 'Low',
-    status: 'Queued',
-    estimated_completion: '2024-10-15',
-    order_numbers: ['SO-2024-010', 'SO-2024-011'],
-    created_date: '2024-03-01',
-    current_step: 1,
-    manufacturing_steps: [
-      { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
-      { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
-      { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-      { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-      { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-    ]
-  },
-  {
-    id: '4',
-    product_code: 'FG-004',
-    category: 'Plastics',
-    subcategory: 'Container',
-    size: 'Medium',
-    quantity_required: 200,
-    quantity_in_progress: 50,
-    priority: 'Medium',
-    status: 'In Progress',
-    estimated_completion: '2024-09-20',
-    order_numbers: ['SO-2024-007'],
-    created_date: '2024-02-20',
-    current_step: 4,
-    manufacturing_steps: [
-      { step: 1, name: 'Jalhai', status: 'Completed', completed_quantity: 200 },
-      { step: 2, name: 'Cutting & Shaping', status: 'Completed', completed_quantity: 200 },
-      { step: 3, name: 'Assembly', status: 'Completed', completed_quantity: 200 },
-      { step: 4, name: 'Finishing', status: 'In Progress', completed_quantity: 50 },
-      { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-    ]
-  },
-  {
-    id: '5',
-    product_code: 'FG-005',
-    category: 'Metals',
-    subcategory: 'Metal Sheet',
-    size: 'Large',
-    quantity_required: 300,
-    quantity_in_progress: 0,
-    priority: 'High',
-    status: 'Queued',
-    estimated_completion: '2024-08-25',
-    order_numbers: ['SO-2024-003', 'SO-2024-004'],
-    created_date: '2024-01-25',
-    current_step: 1,
-    manufacturing_steps: [
-      { step: 1, name: 'Jalhai', status: 'Pending', completed_quantity: 0 },
-      { step: 2, name: 'Cutting & Shaping', status: 'Pending', completed_quantity: 0 },
-      { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
-      { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
-      { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
-    ]
-  }
-];
-
 const EnhancedProductionQueue = () => {
-  const [productionItems, setProductionItems] = useState<ProductionItem[]>(mockProductionItems);
-  const [stepAssignmentDialog, setStepAssignmentDialog] = useState<{
-    open: boolean;
-    productionItemId: string;
-    stepNumber: number;
-    stepName: string;
-    productionItem?: ProductionItem;
-  }>({
-    open: false,
-    productionItemId: '',
-    stepNumber: 1,
-    stepName: '',
-    productionItem: undefined
-  });
-  const [updateDialog, setUpdateDialog] = useState<{
-    open: boolean;
-    item: ProductionItem | null;
-  }>({
-    open: false,
-    item: null
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [updateItem, setUpdateItem] = useState<ProductionQueueItem | null>(null);
 
-  const handleProductAdded = (newItem: ProductionItem) => {
-    setProductionItems(prev => [newItem, ...prev]);
+  // Enhanced mock data with assignments and QC logs
+  const [queueItems, setQueueItems] = useState<ProductionQueueItem[]>([
+    {
+      id: '1',
+      product_code: 'ANK-001-2.50',
+      category: 'Traditional',
+      subcategory: 'Silver',
+      size: '2.50m',
+      quantity_required: 50,
+      quantity_in_progress: 20,
+      priority: 'High',
+      status: 'In Progress',
+      estimated_completion: '2024-01-15',
+      assigned_worker: 'John Doe',
+      order_numbers: ['ORD-001', 'ORD-003'],
+      created_date: '2024-01-10',
+      current_step: 2,
+      manufacturing_steps: [
+        {
+          step: 1,
+          name: 'Jalhai',
+          status: 'Completed',
+          completed_quantity: 50,
+          assignment: {
+            id: 'assign-1',
+            worker_name: 'John Doe',
+            delivery_date: '2024-01-12',
+            status: 'Completed',
+            materials: [
+              { name: 'Silver Wire', allocated_weight: 125.5, unit: 'kg' },
+              { name: 'Copper Base', allocated_weight: 50.0, unit: 'kg' }
+            ]
+          },
+          qc_logs: [
+            {
+              received_weight: 175.0,
+              received_pieces: 50,
+              qc_passed_pieces: 48,
+              qc_failed_pieces: 2,
+              qc_passed_weight: 168.5,
+              qc_failed_weight: 6.5
+            }
+          ]
+        },
+        {
+          step: 2,
+          name: 'Cutting & Shaping',
+          status: 'In Progress',
+          completed_quantity: 20,
+          assignment: {
+            id: 'assign-2',
+            worker_name: 'Jane Smith',
+            delivery_date: '2024-01-14',
+            status: 'In Progress',
+            materials: [
+              { name: 'Processed Silver', allocated_weight: 168.5, unit: 'kg' }
+            ]
+          }
+        },
+        { step: 3, name: 'Assembly', status: 'Pending', completed_quantity: 0 },
+        { step: 4, name: 'Finishing', status: 'Pending', completed_quantity: 0 },
+        { step: 5, name: 'Quality Control', status: 'Pending', completed_quantity: 0 }
+      ],
+      child_tickets: [
+        {
+          id: 'CT-12345678-1-001',
+          parent_step: 1,
+          quantity: 2,
+          failed_weight: 6.5,
+          reason: 'QC Failed - Material defects',
+          status: 'Open',
+          created_at: '2024-01-12'
+        }
+      ]
+    }
+  ]);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Queued':
+        return <Clock className="h-4 w-4" />;
+      case 'In Progress':
+        return <Play className="h-4 w-4" />;
+      case 'Completed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'On Hold':
+        return <Pause className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
+    }
   };
 
-  const handleAssignStep = (item: ProductionItem, stepNumber: number, stepName: string) => {
-    console.log('DEBUG: handleAssignStep called with full item:', {
-      item: item,
-      itemId: item.id,
-      productCode: item.product_code,
-      category: item.category,
-      subcategory: item.subcategory,
-      size: item.size,
-      quantityRequired: item.quantity_required,
-      stepNumber,
-      stepName
-    });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Queued':
+        return 'bg-blue-100 text-blue-800';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'On Hold':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'High':
+        return 'bg-red-100 text-red-800';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStepStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCurrentStepProgress = (item: ProductionQueueItem) => {
+    const currentStep = item.manufacturing_steps.find(step => step.step === item.current_step);
+    if (!currentStep) return 0;
+    return (currentStep.completed_quantity / item.quantity_required) * 100;
+  };
+
+  const getOverallProgress = (item: ProductionQueueItem) => {
+    const completedSteps = item.manufacturing_steps.filter(step => step.status === 'Completed').length;
+    const inProgressSteps = item.manufacturing_steps.filter(step => step.status === 'In Progress').length;
+    const totalSteps = item.manufacturing_steps.length;
     
-    setStepAssignmentDialog({
-      open: true,
-      productionItemId: item.id,
-      stepNumber,
-      stepName,
-      productionItem: item
-    });
+    let progress = (completedSteps / totalSteps) * 100;
+    
+    if (inProgressSteps > 0) {
+      const currentStepProgress = getCurrentStepProgress(item);
+      progress += (currentStepProgress / 100) * (1 / totalSteps) * 100;
+    }
+    
+    return Math.round(progress);
   };
 
-  const handleAssignmentComplete = () => {
-    // Refresh production items or update the specific item
-    console.log('Assignment completed');
+  const handleUpdateItem = (item: ProductionQueueItem) => {
+    setUpdateItem(item);
   };
 
-  const handleUpdateItem = (item: ProductionItem) => {
-    setUpdateDialog({
-      open: true,
-      item
-    });
-  };
-
-  const handleItemUpdated = (updatedItem: ProductionItem) => {
-    setProductionItems(prev => 
-      prev.map(item => 
-        item.id === updatedItem.id ? updatedItem : item
-      )
+  const handleUpdateComplete = (updatedItem: ProductionQueueItem) => {
+    setQueueItems(items => 
+      items.map(item => item.id === updatedItem.id ? updatedItem : item)
     );
   };
 
-  const calculateProgress = (item: ProductionItem): number => {
-    const completedSteps = item.manufacturing_steps.filter(step => step.status === 'Completed').length;
-    return (completedSteps / item.manufacturing_steps.length) * 100;
+  const handleProductAdded = (newItem: ProductionQueueItem) => {
+    setQueueItems(items => [newItem, ...items]);
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'Queued': return 'text-gray-500';
-      case 'In Progress': return 'text-blue-500';
-      case 'Completed': return 'text-green-500';
-      case 'On Hold': return 'text-yellow-500';
-      default: return 'text-gray-500';
-    }
-  };
+  const filteredItems = queueItems.filter(item => {
+    const matchesSearch = item.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || item.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
-  const getPriorityColor = (priority: string): string => {
-    switch (priority) {
-      case 'High': return 'text-red-500';
-      case 'Medium': return 'text-yellow-500';
-      case 'Low': return 'text-green-500';
-      default: return 'text-gray-500';
-    }
+  const statusStats = {
+    queued: queueItems.filter(item => item.status === 'Queued').length,
+    inProgress: queueItems.filter(item => item.status === 'In Progress').length,
+    completed: queueItems.filter(item => item.status === 'Completed').length,
+    onHold: queueItems.filter(item => item.status === 'On Hold').length
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Production Queue</h2>
-          <p className="text-muted-foreground">
-            Manage and track manufacturing progress
-          </p>
-        </div>
-        <AddToQueueDialog onProductAdded={handleProductAdded} />
-      </div>
-
-      {/* Quick Stats */}
+      {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Total Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{productionItems.length}</div>
-            <p className="text-muted-foreground">Total items in the queue</p>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Queued</p>
+                <p className="text-2xl font-bold text-blue-600">{statusStats.queued}</p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader>
-            <CardTitle>In Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{productionItems.filter(item => item.status === 'In Progress').length}</div>
-            <p className="text-muted-foreground">Items currently being manufactured</p>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold text-yellow-600">{statusStats.inProgress}</p>
+              </div>
+              <Play className="h-8 w-8 text-yellow-600" />
+            </div>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader>
-            <CardTitle>Queued</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{productionItems.filter(item => item.status === 'Queued').length}</div>
-            <p className="text-muted-foreground">Items waiting to be manufactured</p>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{statusStats.completed}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader>
-            <CardTitle>Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{productionItems.filter(item => item.status === 'Completed').length}</div>
-            <p className="text-muted-foreground">Items that have completed manufacturing</p>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">On Hold</p>
+                <p className="text-2xl font-bold text-red-600">{statusStats.onHold}</p>
+              </div>
+              <Pause className="h-8 w-8 text-red-600" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Production Items Table */}
+      {/* Main Content */}
       <Card>
         <CardHeader>
-          <CardTitle>Production Items</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Enhanced Production Queue
+            </CardTitle>
+            <AddToQueueDialog onProductAdded={handleProductAdded} />
+          </div>
         </CardHeader>
+        
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Estimated Completion</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {productionItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.product_code}</TableCell>
-                  <TableCell>{item.category} / {item.subcategory}</TableCell>
-                  <TableCell>{item.size}</TableCell>
-                  <TableCell>{item.quantity_required}</TableCell>
-                  <TableCell className={getPriorityColor(item.priority)}>
-                    {item.priority}
-                  </TableCell>
-                  <TableCell className={getStatusColor(item.status)}>
-                    {item.status}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Progress value={calculateProgress(item)} className="w-[150px] mr-2" />
-                      <span>{calculateProgress(item).toFixed(0)}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(item.estimated_completion).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleUpdateItem(item)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Update Item
-                        </DropdownMenuItem>
-                        {item.manufacturing_steps
-                          .filter(step => step.status === 'Pending')
-                          .slice(0, 1)
-                          .map(step => {
-                            console.log('DEBUG: Creating dropdown item for step assignment:', {
-                              itemId: item.id,
-                              productCode: item.product_code,
-                              stepNumber: step.step,
-                              stepName: step.name
-                            });
-                            return (
-                              <DropdownMenuItem 
-                                key={step.step}
-                                onClick={() => {
-                                  console.log('DEBUG: Dropdown item clicked, calling handleAssignStep with:', {
-                                    item: item,
-                                    stepNumber: step.step,
-                                    stepName: step.name
-                                  });
-                                  handleAssignStep(item, step.step, step.name);
-                                }}
-                              >
-                                <Play className="h-4 w-4 mr-2" />
-                                Assign Step {step.step}
-                              </DropdownMenuItem>
-                            );
-                          })
-                        }
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {/* Filters */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 max-w-md">
+              <Input
+                placeholder="Search by product code, category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Queued">Queued</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Queue Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Details</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Manufacturing Progress</TableHead>
+                  <TableHead>Current Step</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-2">
+                          {item.product_code}
+                          {item.child_tickets && item.child_tickets.length > 0 && (
+                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600">
+                              {item.child_tickets.length} rework
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.category} • {item.subcategory} • {item.size}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{item.quantity_required} required</div>
+                        {item.quantity_in_progress > 0 && (
+                          <div className="text-sm text-muted-foreground">
+                            {item.quantity_in_progress} in progress
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Overall Progress</span>
+                          <span>{getOverallProgress(item)}%</span>
+                        </div>
+                        <Progress value={getOverallProgress(item)} className="h-2" />
+                        <div className="flex gap-1">
+                          {item.manufacturing_steps.map((step) => (
+                            <div
+                              key={step.step}
+                              className={`h-2 w-4 rounded-sm ${
+                                step.status === 'Completed'
+                                  ? 'bg-green-500'
+                                  : step.status === 'In Progress'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-gray-200'
+                              }`}
+                              title={`Step ${step.step}: ${step.name} (${step.status})`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge className={getStepStatusColor(item.manufacturing_steps[item.current_step - 1]?.status || 'Pending')}>
+                          Step {item.current_step}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                          {item.manufacturing_steps[item.current_step - 1]?.name}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getPriorityColor(item.priority)}>
+                        {item.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`${getStatusColor(item.status)} flex items-center gap-1 w-fit`}>
+                        {getStatusIcon(item.status)}
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleUpdateItem(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Empty State */}
+          {filteredItems.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No items found in the production queue matching your filters.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Step Assignment Dialog */}
-      <StepAssignmentDialog
-        open={stepAssignmentDialog.open}
-        onOpenChange={(open) => setStepAssignmentDialog(prev => ({ ...prev, open }))}
-        productionItemId={stepAssignmentDialog.productionItemId}
-        stepNumber={stepAssignmentDialog.stepNumber}
-        stepName={stepAssignmentDialog.stepName}
-        productionItem={stepAssignmentDialog.productionItem}
-        onAssignmentComplete={handleAssignmentComplete}
-      />
-
-      {/* Update Production Item Dialog */}
+      {/* Enhanced Update Production Item Dialog */}
       <EnhancedUpdateProductionItemDialog
-        open={updateDialog.open}
-        onOpenChange={(open) => setUpdateDialog(prev => ({ ...prev, open }))}
-        item={updateDialog.item}
-        onUpdate={handleItemUpdated}
+        item={updateItem}
+        open={!!updateItem}
+        onOpenChange={(open) => !open && setUpdateItem(null)}
+        onUpdate={handleUpdateComplete}
       />
     </div>
   );
