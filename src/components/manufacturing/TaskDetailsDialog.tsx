@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash, Calculator } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Package, User, Calendar, Clock, FileText, ArrowRight, Weight, Hash, Calculator, Package2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
@@ -204,6 +205,13 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
   const category = task.product_configs?.category || task.customer_name;
   const subcategory = task.product_configs?.subcategory || 'Production Request';
 
+  // Get product config and materials for the table
+  const productConfig = productConfigs.find(config => 
+    config.id === task.product_config_id ||
+    config.product_code === task.product_configs?.product_code ||
+    (config.category === task.product_configs?.category && config.subcategory === task.product_configs?.subcategory)
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -255,6 +263,46 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
               </div>
             </div>
           </div>
+
+          {/* Raw Material Requirements Table */}
+          {productConfig && productConfig.product_config_materials && productConfig.product_config_materials.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold text-lg flex items-center gap-2">
+                <Package2 className="h-4 w-4" />
+                Raw Material Requirements
+              </h4>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-semibold">Material</TableHead>
+                      <TableHead className="font-semibold text-center">Qty per Unit</TableHead>
+                      <TableHead className="font-semibold text-center">Unit</TableHead>
+                      <TableHead className="font-semibold text-center">Total Required</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productConfig.product_config_materials.map((material, index) => (
+                      <TableRow key={material.id || index} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">
+                          Material #{material.raw_material_id.slice(-6)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {material.quantity_required}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {material.unit}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold">
+                          {(material.quantity_required * task.quantity).toFixed(2)} {material.unit}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
 
           {/* Assigned Weight for Jhalai (In Progress) */}
           {stepId === 'jhalai' && currentStatus === 'Progress' && (
