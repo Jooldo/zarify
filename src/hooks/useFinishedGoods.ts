@@ -31,18 +31,34 @@ export const useFinishedGoods = () => {
     try {
       console.log('Fetching finished goods data...');
       
-      // First, fetch all finished goods with their product configs
+      // First, get the merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        throw merchantError;
+      }
+
+      console.log('Merchant ID:', merchantId);
+
+      // Fetch all finished goods with their product configs for this merchant
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
           *,
           product_config:product_configs(category, subcategory, size_value, weight_range, is_active)
         `)
+        .eq('merchant_id', merchantId)
         .order('product_code');
 
-      if (finishedGoodsError) throw finishedGoodsError;
+      if (finishedGoodsError) {
+        console.error('Error fetching finished goods:', finishedGoodsError);
+        throw finishedGoodsError;
+      }
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+      console.log('Raw finished goods data:', finishedGoodsData);
 
       // Fetch all order items with status 'Created' or 'In Progress' to calculate required quantities
       const { data: orderItemsData, error: orderItemsError } = await supabase
@@ -52,9 +68,13 @@ export const useFinishedGoods = () => {
           quantity,
           status
         `)
+        .eq('merchant_id', merchantId)
         .in('status', ['Created', 'In Progress']);
 
-      if (orderItemsError) throw orderItemsError;
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+        throw orderItemsError;
+      }
 
       console.log('Pending order items fetched:', orderItemsData?.length || 0, 'items');
 
