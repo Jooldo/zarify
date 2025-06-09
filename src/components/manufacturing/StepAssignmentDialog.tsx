@@ -317,6 +317,7 @@ const StepAssignmentDialog = ({
                         <TableRow className="bg-muted/50">
                           <TableHead className="py-1 text-xs font-medium">Raw Material & Stock</TableHead>
                           <TableHead className="py-1 w-32 text-xs font-medium">Required Quantity</TableHead>
+                          <TableHead className="py-1 w-32 text-xs font-medium">Assigned Quantity</TableHead>
                           {!isStep1 && <TableHead className="py-1 w-16 text-xs font-medium">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
@@ -351,6 +352,12 @@ const StepAssignmentDialog = ({
                                   </SelectContent>
                                 </Select>
                               )}
+                            </TableCell>
+                            <TableCell className="py-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs">{allocation.required_quantity || allocation.allocated_weight}</span>
+                                <span className="text-xs text-muted-foreground">{allocation.unit}</span>
+                              </div>
                             </TableCell>
                             <TableCell className="py-1">
                               <div className="flex items-center gap-1">
