@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Trash2, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Search, Check, ChevronsUpDown, AlertTriangle } from 'lucide-react';
 import ProductConfigDetails from './config/ProductConfigDetails';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { cn } from '@/lib/utils';
 
 interface CreateProductConfigFormProps {
@@ -28,12 +30,14 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [threshold, setThreshold] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [productCodeExists, setProductCodeExists] = useState(false);
   const [rawMaterials, setRawMaterials] = useState([
     { material: '', quantity: 0, unit: 'grams' }
   ]);
   const [openMaterialSelectors, setOpenMaterialSelectors] = useState<boolean[]>([false]);
 
   const { rawMaterials: availableRawMaterials, loading: rawMaterialsLoading } = useRawMaterials();
+  const { checkProductCodeExists } = useProductConfigs();
 
   // Categories list
   const categories = [
@@ -66,6 +70,19 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
     
     return `${categoryCode}-${productCode}${weightCode ? '-' + weightCode : ''}`;
   };
+
+  // Check for duplicate product code whenever the generated code changes
+  useEffect(() => {
+    const checkDuplicate = async () => {
+      const productCode = generateProductCode();
+      if (productCode && !isUpdate) {
+        const exists = await checkProductCodeExists(productCode);
+        setProductCodeExists(exists);
+      }
+    };
+
+    checkDuplicate();
+  }, [category, product, weightInGrams, checkProductCodeExists, isUpdate]);
 
   const addMaterial = () => {
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
@@ -120,6 +137,12 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       return;
     }
 
+    // Check for duplicate product code
+    if (productCodeExists && !isUpdate) {
+      alert('This product code already exists. Please modify the product type, category, or weight to generate a unique code.');
+      return;
+    }
+
     // Validate weight format (should be a positive number)
     const weight = parseFloat(weightInGrams);
     if (isNaN(weight) || weight <= 0) {
@@ -145,7 +168,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         size_value: parseFloat(sizeValue),
         weight_range: `${weightInGrams}g`,
         is_active: isActive,
-        product_code: productCode
+        product_code: productCode,
+        threshold: threshold ? parseInt(threshold) : undefined
       };
 
       if (onSubmit) {
@@ -245,6 +269,21 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
               />
               <p className="text-xs text-gray-500 mt-1">Minimum stock level before alert</p>
             </div>
+
+            {/* Product Code Warning */}
+            {productCodeExists && !isUpdate && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-800">
+                    Product code "{generateProductCode()}" already exists
+                  </span>
+                </div>
+                <p className="text-xs text-red-600 mt-1">
+                  Please modify the product type, category, or weight to generate a unique code.
+                </p>
+              </div>
+            )}
 
             <ProductConfigDetails 
               category={category}
@@ -437,7 +476,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
             type="submit" 
             size="sm" 
             className="h-10 text-sm px-6"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (productCodeExists && !isUpdate)}
           >
             {isSubmitting ? 'Saving...' : (isUpdate ? 'Update' : 'Create')} Configuration
           </Button>

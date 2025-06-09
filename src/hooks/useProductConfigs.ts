@@ -83,8 +83,29 @@ export const useProductConfigs = () => {
     },
   });
 
+  const checkProductCodeExists = async (productCode: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('product_configs')
+      .select('id')
+      .eq('product_code', productCode)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking product code:', error);
+      return false;
+    }
+
+    return data && data.length > 0;
+  };
+
   const createProductConfigMutation = useMutation({
     mutationFn: async (configData: CreateProductConfigData) => {
+      // Check if product code already exists
+      const exists = await checkProductCodeExists(configData.product_code);
+      if (exists) {
+        throw new Error(`Product code "${configData.product_code}" already exists. Please modify the configuration to generate a unique code.`);
+      }
+
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
@@ -112,9 +133,10 @@ export const useProductConfigs = () => {
     },
     onError: (error) => {
       console.error('Error creating product config:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create product configuration';
       toast({
         title: 'Error',
-        description: 'Failed to create product configuration',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -173,5 +195,6 @@ export const useProductConfigs = () => {
     createProductConfig,
     deleteProductConfig,
     refetch,
+    checkProductCodeExists,
   };
 };
