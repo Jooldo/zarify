@@ -4,11 +4,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Eye, Calendar, Weight, Hash, ChevronDown, ChevronUp } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useState } from 'react';
+import { Clock, User, Package, Eye, Calendar, Weight, Hash } from 'lucide-react';
 import { ProductionTask } from '@/hooks/useProductionTasks';
-import { useProductionStepHistory } from '@/hooks/useProductionStepHistory';
 
 interface DraggableCardProps {
   task: ProductionTask;
@@ -35,9 +32,6 @@ const formatTimeElapsed = (startedAt: string) => {
 };
 
 const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
-  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
-  const { stepHistory } = useProductionStepHistory(task.id);
-  
   const {
     attributes,
     listeners,
@@ -63,11 +57,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onTaskClick(task);
-  };
-
-  const handleTimelineClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsTimelineExpanded(!isTimelineExpanded);
   };
 
   // Define card border style based on whether it's a child task
@@ -229,42 +218,6 @@ const DraggableCard = ({ task, stepId, onTaskClick }: DraggableCardProps) => {
           }`}>
             {task.status}
           </Badge>
-        )}
-
-        {/* Expandable Previous Steps Summary */}
-        {stepHistory.length > 0 && (
-          <Collapsible open={isTimelineExpanded} onOpenChange={setIsTimelineExpanded}>
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between p-1 h-6 text-xs"
-                onClick={handleTimelineClick}
-              >
-                <span>Previous Steps ({stepHistory.length})</span>
-                {isTimelineExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent className="pt-1">
-              <div className="space-y-1 text-xs bg-gray-50 rounded p-2">
-                {stepHistory.map((step, index) => (
-                  <div key={index} className="flex justify-between items-center py-1 border-b last:border-b-0">
-                    <div>
-                      <div className="font-medium">{step.step_name}</div>
-                      {step.assigned_worker_name && (
-                        <div className="text-muted-foreground text-xs">{step.assigned_worker_name}</div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div>{step.output_weight || '-'} kg</div>
-                      <div className="text-muted-foreground">{step.output_quantity || '-'} pcs</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         )}
       </CardContent>
     </Card>
