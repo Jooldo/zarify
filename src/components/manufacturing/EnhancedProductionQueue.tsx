@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import EnhancedUpdateProductionItemDialog from './EnhancedUpdateProductionItemDialog';
+import AddToQueueDialog from './AddToQueueDialog';
 
 interface ProductionQueueItem {
   id: string;
@@ -226,6 +227,10 @@ const EnhancedProductionQueue = () => {
     );
   };
 
+  const handleProductAdded = (newItem: ProductionQueueItem) => {
+    setQueueItems(items => [newItem, ...items]);
+  };
+
   const filteredItems = queueItems.filter(item => {
     const matchesSearch = item.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -300,10 +305,13 @@ const EnhancedProductionQueue = () => {
       {/* Main Content */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Enhanced Production Queue
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Enhanced Production Queue
+            </CardTitle>
+            <AddToQueueDialog onProductAdded={handleProductAdded} />
+          </div>
         </CardHeader>
         
         <CardContent>
