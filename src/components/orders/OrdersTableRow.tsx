@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText } from
 import OrderDetails from '@/components/OrderDetails';
 import EditOrderDialog from './EditOrderDialog';
 import CreateInvoiceDialog from './CreateInvoiceDialog';
+import ViewInvoiceDialog from './ViewInvoiceDialog';
 import { useInvoices } from '@/hooks/useInvoices';
 
 interface OrdersTableRowProps {
@@ -39,6 +39,7 @@ interface OrdersTableRowProps {
 const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate, onFinishedGoodsUpdate }: OrdersTableRowProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
+  const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
   const { getInvoiceByOrderId } = useInvoices();
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
@@ -147,6 +148,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
                     variant="outline" 
                     size="sm" 
                     className="h-6 w-6 p-0"
+                    onClick={() => setIsViewInvoiceDialogOpen(true)}
                     title="View Invoice"
                   >
                     <FileText className="h-3 w-3" />
@@ -177,15 +179,26 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
             onOrderUpdate={onOrderUpdate}
           />
           
-          <CreateInvoiceDialog
-            isOpen={isCreateInvoiceDialogOpen}
-            onClose={() => setIsCreateInvoiceDialogOpen(false)}
-            order={order}
-            onInvoiceCreated={() => {
-              onOrderUpdate();
-              // Additional refresh for invoices if needed
-            }}
-          />
+          {!existingInvoice && (
+            <CreateInvoiceDialog
+              isOpen={isCreateInvoiceDialogOpen}
+              onClose={() => setIsCreateInvoiceDialogOpen(false)}
+              order={order}
+              onInvoiceCreated={() => {
+                onOrderUpdate();
+                setIsCreateInvoiceDialogOpen(false);
+              }}
+            />
+          )}
+          
+          {existingInvoice && (
+            <ViewInvoiceDialog
+              isOpen={isViewInvoiceDialogOpen}
+              onClose={() => setIsViewInvoiceDialogOpen(false)}
+              invoice={existingInvoice}
+              order={order}
+            />
+          )}
         </>
       )}
     </>
