@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, User, Package, Eye, MoreHorizontal } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
+import AddProductionItemDialog from './AddProductionItemDialog';
 
 interface ProductionTask {
   id: string;
@@ -19,6 +20,7 @@ interface ProductionTask {
   estimatedTime?: number;
   startedAt?: Date;
   notes?: string;
+  expectedDate?: Date;
 }
 
 const PROCESS_STEPS = [
@@ -136,9 +138,33 @@ const formatTimeElapsed = (startedAt: Date) => {
 
 const ProductionKanban = () => {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
+  const [tasks, setTasks] = useState(mockTasks);
   
   const handleTaskClick = (task: ProductionTask) => {
     setSelectedTask(task);
+  };
+
+  const handleAddItem = (newItem: {
+    productCode: string;
+    quantity: number;
+    expectedDate: Date;
+  }) => {
+    const newTask: ProductionTask = {
+      id: `new-${Date.now()}`,
+      productCode: newItem.productCode,
+      category: 'RCC Pipe', // Default category - could be fetched from product config
+      subcategory: 'Standard', // Default subcategory - could be fetched from product config
+      quantity: newItem.quantity,
+      orderNumber: `OD${String(Date.now()).slice(-6)}`,
+      customerName: 'Production Request',
+      priority: 'Medium',
+      expectedDate: newItem.expectedDate,
+    };
+
+    setTasks(prev => ({
+      ...prev,
+      pending: [...(prev.pending || []), newTask]
+    }));
   };
 
   return (
@@ -148,6 +174,7 @@ const ProductionKanban = () => {
           <h2 className="text-2xl font-semibold">Production Queue</h2>
           <p className="text-muted-foreground">Track manufacturing progress across process steps</p>
         </div>
+        <AddProductionItemDialog onAddItem={handleAddItem} />
       </div>
 
       <div className="grid grid-cols-7 gap-4 min-h-[600px]">
@@ -156,12 +183,12 @@ const ProductionKanban = () => {
             <div className={`p-3 rounded-lg ${step.color}`}>
               <h3 className="font-semibold text-sm">{step.name}</h3>
               <p className="text-xs text-muted-foreground">
-                {mockTasks[step.id]?.length || 0} tasks
+                {tasks[step.id]?.length || 0} tasks
               </p>
             </div>
             
             <div className="space-y-2 min-h-[500px]">
-              {mockTasks[step.id]?.map(task => (
+              {tasks[step.id]?.map(task => (
                 <Card 
                   key={task.id} 
                   className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
@@ -209,13 +236,18 @@ const ProductionKanban = () => {
                     <div className="border-t pt-2">
                       <p className="text-xs text-muted-foreground">{task.orderNumber}</p>
                       <p className="text-xs text-muted-foreground truncate">{task.customerName}</p>
+                      {task.expectedDate && (
+                        <p className="text-xs text-muted-foreground">
+                          Due: {task.expectedDate.toLocaleDateString()}
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               ))}
               
               {/* Empty state */}
-              {(!mockTasks[step.id] || mockTasks[step.id].length === 0) && (
+              {(!tasks[step.id] || tasks[step.id].length === 0) && (
                 <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
                   <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">No tasks</p>
