@@ -1,6 +1,17 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+export interface ProductConfigMaterial {
+  id: string;
+  product_config_id: string;
+  raw_material_id: string;
+  quantity_required: number;
+  unit: string;
+  merchant_id: string;
+  created_at?: string;
+}
 
 export interface ProductConfig {
   id: string;
@@ -13,15 +24,30 @@ export interface ProductConfig {
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
+  threshold?: number;
+  product_config_materials?: ProductConfigMaterial[];
 }
 
 export const useProductConfigs = () => {
-  const { data: productConfigs = [], isLoading, error } = useQuery({
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: productConfigs = [], isLoading, error, refetch } = useQuery({
     queryKey: ['product-configs'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_configs')
-        .select('*')
+        .select(`
+          *,
+          product_config_materials (
+            id,
+            raw_material_id,
+            quantity_required,
+            unit,
+            merchant_id,
+            created_at
+          )
+        `)
         .eq('is_active', true)
         .order('product_code');
 
@@ -34,14 +60,88 @@ export const useProductConfigs = () => {
     },
   });
 
+  const createProductConfigMutation = useMutation({
+    mutationFn: async (configData: Partial<ProductConfig>) => {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { data, error } = await supabase
+        .from('product_configs')
+        .insert({
+          ...configData,
+          merchant_id: merchantId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-configs'] });
+      toast({
+        title: 'Success',
+        description: 'Product configuration created successfully',
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating product config:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create product configuration',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteProductConfigMutation = useMutation({
+    mutationFn: async (configId: string) => {
+      const { error } = await supabase
+        .from('product_configs')
+        .delete()
+        .eq('id', configId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-configs'] });
+      toast({
+        title: 'Success',
+        description: 'Product configuration deleted successfully',
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting product config:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete product configuration',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const findProductConfigByCode = (productCode: string) => {
     return productConfigs.find(config => config.product_code === productCode);
+  };
+
+  const createProductConfig = (configData: Partial<ProductConfig>) => {
+    return createProductConfigMutation.mutate(configData);
+  };
+
+  const deleteProductConfig = (configId: string) => {
+    return deleteProductConfigMutation.mutate(configId);
   };
 
   return {
     productConfigs,
     isLoading,
+    loading: isLoading, // Alias for backward compatibility
     error,
     findProductConfigByCode,
+    createProductConfig,
+    deleteProductConfig,
+    refetch,
   };
 };
