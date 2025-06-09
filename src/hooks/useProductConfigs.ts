@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +33,7 @@ export interface ProductConfig {
   product_config_materials?: ProductConfigMaterial[];
 }
 
-// Interface for creating product configs (only includes database fields)
+// Interface for creating product configs (updated to include raw materials)
 interface CreateProductConfigData {
   product_code: string;
   category: string;
@@ -43,6 +42,11 @@ interface CreateProductConfigData {
   weight_range?: string;
   is_active?: boolean;
   threshold?: number;
+  rawMaterials?: Array<{
+    material: string;
+    quantity: number;
+    unit: string;
+  }>;
 }
 
 export const useProductConfigs = () => {
@@ -111,17 +115,42 @@ export const useProductConfigs = () => {
 
       if (merchantError) throw merchantError;
 
-      const { data, error } = await supabase
+      // Extract raw materials from configData
+      const { rawMaterials, ...productConfigFields } = configData;
+
+      // Create the product configuration
+      const { data: productConfig, error } = await supabase
         .from('product_configs')
         .insert({
-          ...configData,
+          ...productConfigFields,
           merchant_id: merchantId
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+
+      // If there are raw materials, save them to the product_config_materials table
+      if (rawMaterials && rawMaterials.length > 0) {
+        const materialEntries = rawMaterials.map(material => ({
+          product_config_id: productConfig.id,
+          raw_material_id: material.material,
+          quantity_required: material.quantity,
+          unit: material.unit,
+          merchant_id: merchantId
+        }));
+
+        const { error: materialsError } = await supabase
+          .from('product_config_materials')
+          .insert(materialEntries);
+
+        if (materialsError) {
+          console.error('Error saving raw materials:', materialsError);
+          throw materialsError;
+        }
+      }
+
+      return productConfig;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-configs'] });

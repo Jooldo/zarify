@@ -169,7 +169,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         weight_range: `${weightInGrams}g`,
         is_active: isActive,
         product_code: productCode,
-        threshold: threshold ? parseInt(threshold) : undefined
+        threshold: threshold ? parseInt(threshold) : undefined,
+        rawMaterials: rawMaterials.filter(material => material.material && material.quantity > 0)
       };
 
       if (onSubmit) {
