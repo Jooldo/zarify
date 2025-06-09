@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -148,6 +149,25 @@ export const useProductConfigs = () => {
           console.error('Error saving raw materials:', materialsError);
           throw materialsError;
         }
+      }
+
+      // Create corresponding finished goods entry
+      const { error: finishedGoodsError } = await supabase
+        .from('finished_goods')
+        .insert({
+          product_config_id: productConfig.id,
+          product_code: productConfig.product_code,
+          merchant_id: merchantId,
+          current_stock: 0,
+          threshold: configData.threshold || 0,
+          in_manufacturing: 0,
+          required_quantity: 0,
+          tag_enabled: true
+        });
+
+      if (finishedGoodsError) {
+        console.error('Error creating finished goods entry:', finishedGoodsError);
+        throw finishedGoodsError;
       }
 
       return productConfig;
