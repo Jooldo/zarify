@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import OrdersTableRow from './OrdersTableRow';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
@@ -28,10 +29,10 @@ const OrdersTable = ({
     return (
       <TableSkeleton 
         rows={10} 
-        columns={14}
+        columns={12}
         columnWidths={[
-          'w-20', 'w-24', 'w-32', 'w-20', 'w-24', 'w-24', 
-          'w-12', 'w-20', 'w-16', 'w-16', 'w-16', 'w-16', 'w-24', 'w-20'
+          'w-20', 'w-24', 'w-32', 'w-32', 'w-12', 'w-20', 
+          'w-16', 'w-16', 'w-16', 'w-24', 'w-20', 'w-20'
         ]}
       />
     );
@@ -43,17 +44,13 @@ const OrdersTable = ({
         <TableHeader>
           <TableRow className="h-8">
             <TableHead className="py-1 px-2 text-xs font-medium">Order ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Suborder ID</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium w-24">Suborder ID</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Product Type</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Size & Weight</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Stock Available</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Created</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Updated</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Expected Delivery</TableHead>
             <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
           </TableRow>

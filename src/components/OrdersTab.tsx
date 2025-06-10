@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -55,7 +56,7 @@ const OrdersTab = () => {
     return {
       total: allOrderItems.length,
       created: allOrderItems.filter(item => item.status === 'Created').length,
-      inProgress: allOrderItems.filter(item => item.status === 'In Progress').length,
+      inProgress: allOrderItems.filter(item => item.status === 'Progress').length,
       ready: allOrderItems.filter(item => item.status === 'Ready').length,
       delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
     };
@@ -97,7 +98,7 @@ const OrdersTab = () => {
     
     if (statuses.every(s => s === "Delivered")) return "Delivered";
     if (statuses.every(s => s === "Ready")) return "Ready";
-    if (statuses.some(s => s === "In Progress")) return "In Progress";
+    if (statuses.some(s => s === "Progress")) return "Progress";
     
     return "Created";
   };
@@ -106,7 +107,7 @@ const OrdersTab = () => {
     switch (status) {
       case "Created":
         return "secondary" as const;
-      case "In Progress":
+      case "Progress":
         return "default" as const;
       case "Ready":
         return "default" as const;

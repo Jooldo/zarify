@@ -10,7 +10,7 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
-  status: 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+  status: 'Created' | 'Progress' | 'Ready' | 'Delivered';
   product_config_id: string;
   product_config: {
     id: string;
@@ -29,7 +29,7 @@ export interface Order {
   created_date: string;
   updated_date: string;
   expected_delivery?: string;
-  status: 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+  status: 'Created' | 'Progress' | 'Ready' | 'Delivered';
   customer_id: string;
   customer: {
     id: string;
@@ -39,7 +39,7 @@ export interface Order {
   order_items: OrderItem[];
 }
 
-type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);

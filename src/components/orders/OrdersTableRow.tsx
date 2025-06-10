@@ -53,7 +53,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
     switch (status) {
       case 'Created':
         return <Clock className="h-3 w-3" />;
-      case 'In Progress':
+      case 'Progress':
         return <Package className="h-3 w-3" />;
       case 'Ready':
         return <CheckCircle className="h-3 w-3" />;
@@ -68,7 +68,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
     switch (status) {
       case 'Created':
         return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
-      case 'In Progress':
+      case 'Progress':
         return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       case 'Ready':
         return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
@@ -101,11 +101,16 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
     <>
       <TableRow className="h-10 hover:bg-gray-50">
         <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
-        <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium">{item.suborder_id}</TableCell>
+        <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium w-24">
+          <div 
+            className="truncate cursor-pointer" 
+            title={item.suborder_id}
+          >
+            {item.suborder_id}
+          </div>
+        </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">{item.category}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">{item.subcategory}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">{item.size}</TableCell>
+        <TableCell className="py-1 px-2 text-xs font-mono">{item.productCode}</TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
           <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>
@@ -118,8 +123,6 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         <TableCell className="py-1 px-2">
           <StatusBadge status={getOverallOrderStatus(item.orderId)} />
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">{new Date(item.updatedDate).toLocaleDateString('en-IN')}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
           {item.expectedDelivery ? new Date(item.expectedDelivery).toLocaleDateString('en-IN') : '-'}
         </TableCell>
