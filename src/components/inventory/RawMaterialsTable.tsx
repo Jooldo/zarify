@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
@@ -117,9 +118,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     return (
       <TableSkeleton 
         rows={8} 
-        columns={9}
+        columns={7}
         columnWidths={[
-          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
         ]}
       />
     );
@@ -240,17 +241,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div 
-                      className="cursor-help flex items-center gap-1"
+                      className="cursor-help"
                       title={getShortfallTooltip()}
                     >
-                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <span className="text-sm font-medium">
                         {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
                       </span>
-                      {shortfall > 0 ? (
-                        <ArrowDown className="h-4 w-4 text-red-600" />
-                      ) : (
-                        <ArrowUp className="h-4 w-4 text-green-600" />
-                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-2 py-1">
