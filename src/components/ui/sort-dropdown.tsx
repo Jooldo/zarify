@@ -19,9 +19,8 @@ const SortDropdown = ({ options, onSortChange, currentSort }: SortDropdownProps)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8">
-          <SortAsc className="h-4 w-4 mr-2" />
-          Sort
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+          <SortAsc className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

@@ -39,20 +39,20 @@ const OrdersTable = ({
   }
 
   return (
-    <div className="bg-white rounded-lg border max-h-[calc(100vh-300px)] overflow-auto">
+    <div className="bg-white rounded-lg border">
       <Table>
-        <TableHeader className="sticky top-0 bg-white z-10">
+        <TableHeader>
           <TableRow className="h-8">
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Order ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium w-24 bg-white">Suborder ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Customer</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Product Code</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Qty</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Stock Available</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Sub Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Order Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Expected Delivery</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium bg-white">Actions</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Order ID</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium w-24">Suborder ID</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Stock Available</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Expected Delivery</TableHead>
+            <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

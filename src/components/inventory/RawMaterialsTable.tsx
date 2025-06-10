@@ -162,12 +162,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
   return (
     <TooltipProvider>
-      <div className="bg-white rounded-lg border max-h-[calc(100vh-300px)] overflow-auto">
+      <div className="bg-white rounded-lg border">
         <Table>
-          <TableHeader className="sticky top-0 bg-white z-10">
+          <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs font-medium bg-white">Material</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium bg-white">Threshold</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-blue-700 font-semibold">Ordered Qty</span>
@@ -181,8 +181,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center bg-white">Current Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center bg-white">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">Current Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span>In Procurement</span>
                   <Tooltip>
@@ -195,7 +195,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center bg-white">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span>Shortfall</span>
                   <Tooltip>
@@ -208,7 +208,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium bg-white">
+              <TableHead className="py-1 px-2 text-xs font-medium">
                 <div className="flex items-center gap-1">
                   <span>Status</span>
                   <Tooltip>
@@ -221,7 +221,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium bg-white">Actions</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
