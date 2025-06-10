@@ -1,7 +1,6 @@
-
 import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import AuthPage from './AuthPage';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 interface ProtectedRouteProps {
@@ -27,7 +26,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <AuthPage />;
   }
 
   return <>{children}</>;
