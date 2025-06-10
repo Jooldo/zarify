@@ -83,80 +83,82 @@ const Index = () => {
   });
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex w-full min-h-screen">
-        <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
+    <div className="min-h-screen bg-gray-50">
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex w-full min-h-screen">
+          <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
-        <SidebarInset className="overflow-auto">
-          {/* Raw Material Management - Full width with its own layout */}
-          {isRawMaterialTab() && (
-            <Tabs value={activeTab} className="w-full">
-              <TabsContent value={activeTab} className="space-y-0 mt-0">
-                <div className="px-4 sm:px-6 lg:px-8">
-                  <RawMaterialManagement 
-                    activeTab={activeTab} 
-                    onTabChange={handleNavigateToTab} 
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-
-          {/* Finished Good Management - Full width with its own layout */}
-          {isFinishedGoodTab() && (
-            <Tabs value={activeTab} className="w-full">
-              <TabsContent value={activeTab} className="space-y-0 mt-0">
-                <div className="px-4 sm:px-6 lg:px-8">
-                  <FinishedGoodManagement 
-                    activeTab={activeTab} 
-                    onTabChange={handleNavigateToTab} 
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-
-          {/* Users Management - Full width with its own layout */}
-          {isUsersTab() && (
-            <div className="px-4 sm:px-6 lg:px-8">
-              <UsersTab 
-                activeTab={activeTab === 'users' ? 'customers' : activeTab} 
-                onTabChange={handleNavigateToTab} 
-              />
-            </div>
-          )}
-
-          {/* Other tabs with optimized layout */}
-          {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
-            <div className="px-4 sm:px-6 lg:px-8 py-6">
-              {/* Header - only show if there's a title */}
-              {pageTitle && (
-                <div className="flex items-center justify-between mb-8">
-                  <h1 className="text-2xl font-semibold text-gray-900">
-                    {pageTitle}
-                  </h1>
-                </div>
-              )}
-
-              {/* Main Content */}
+          <SidebarInset className="overflow-auto">
+            {/* Raw Material Management - Full width with its own layout */}
+            {isRawMaterialTab() && (
               <Tabs value={activeTab} className="w-full">
-                <TabsContent value="dashboard" className="space-y-6 mt-0">
-                  <VisualDashboard onNavigateToTab={handleNavigateToTab} />
-                </TabsContent>
-
-                <TabsContent value="orders" className="space-y-6 mt-0">
-                  <OrdersTab />
-                </TabsContent>
-
-                <TabsContent value="activity" className="space-y-6 mt-0">
-                  <ActivityLogsTab />
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <RawMaterialManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
-            </div>
-          )}
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+            )}
+
+            {/* Finished Good Management - Full width with its own layout */}
+            {isFinishedGoodTab() && (
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <FinishedGoodManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {/* Users Management - Full width with its own layout */}
+            {isUsersTab() && (
+              <div className="px-4 sm:px-6 lg:px-8">
+                <UsersTab 
+                  activeTab={activeTab === 'users' ? 'customers' : activeTab} 
+                  onTabChange={handleNavigateToTab} 
+                />
+              </div>
+            )}
+
+            {/* Other tabs with optimized layout */}
+            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
+                {/* Header - only show if there's a title */}
+                {pageTitle && (
+                  <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-2xl font-semibold text-gray-900">
+                      {pageTitle}
+                    </h1>
+                  </div>
+                )}
+
+                {/* Main Content */}
+                <Tabs value={activeTab} className="w-full">
+                  <TabsContent value="dashboard" className="space-y-6 mt-0">
+                    <VisualDashboard onNavigateToTab={handleNavigateToTab} />
+                  </TabsContent>
+
+                  <TabsContent value="orders" className="space-y-6 mt-0">
+                    <OrdersTab />
+                  </TabsContent>
+
+                  <TabsContent value="activity" className="space-y-6 mt-0">
+                    <ActivityLogsTab />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    </div>
   );
 };
 

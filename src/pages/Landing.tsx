@@ -10,7 +10,7 @@ import LandingFooter from '@/components/landing/LandingFooter';
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
       {/* Subtle Background */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-emerald-400/5 to-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
