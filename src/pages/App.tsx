@@ -15,26 +15,26 @@ const App = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardOverview onNavigateToTab={setActiveTab} />;
+        return <DashboardOverview />;
       case 'orders':
-        return <OrdersTab onNavigateToTab={setActiveTab} />;
+        return <OrdersTab />;
       case 'inventory':
-        return <InventoryTab onNavigateToTab={setActiveTab} />;
+        return <InventoryTab />;
       case 'config':
-        return <ProductConfigTab onNavigateToTab={setActiveTab} />;
+        return <ProductConfigTab />;
       case 'users':
         return <UsersTab activeTab={activeTab} onTabChange={setActiveTab} />;
       case 'logs':
         return <ActivityLogsTab />;
       default:
-        return <DashboardOverview onNavigateToTab={setActiveTab} />;
+        return <DashboardOverview />;
     }
   };
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar activeTab={activeTab} onNavigate={setActiveTab} />
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="flex-1">
           <SidebarTrigger />
           {renderContent()}
