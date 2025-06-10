@@ -143,7 +143,21 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       <SidebarHeader>
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
           {!isCollapsed && (
-            <h1 className="text-lg font-bold text-sidebar-foreground">Zarify</h1>
+            <div className="flex items-center gap-3">
+              <img 
+                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=40&h=40&fit=crop&crop=center" 
+                alt="Zarify Logo" 
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+              <h1 className="text-2xl font-bold text-sidebar-foreground">Zarify</h1>
+            </div>
+          )}
+          {isCollapsed && (
+            <img 
+              src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=40&h=40&fit=crop&crop=center" 
+              alt="Zarify Logo" 
+              className="w-6 h-6 rounded object-cover mx-auto"
+            />
           )}
           <Button 
             variant="ghost" 
