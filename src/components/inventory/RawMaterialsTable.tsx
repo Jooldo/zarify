@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -212,11 +211,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               return (
                 <TableRow key={material.id} className="h-10">
                   <TableCell className="py-1 px-2 text-xs">
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="text-xs px-2 py-1 flex items-center gap-1">
-                        <Tag className="h-3 w-3" />
-                        {material.name}
-                      </Badge>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{material.name}</span>
                       <Badge variant="secondary" className="text-xs px-2 py-1">
                         {material.type}
                       </Badge>
