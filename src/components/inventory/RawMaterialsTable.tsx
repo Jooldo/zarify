@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -112,12 +113,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
+              <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200">
                 <div className="flex items-center gap-1">
-                  <span>Ordered Qty</span>
+                  <span className="text-blue-700 font-semibold">Ordered Qty</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                      <Info className="h-3 w-3 text-blue-500 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
@@ -206,10 +207,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)}
                   </TableCell>
-                  <TableCell className="py-1 px-2">
+                  <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      className="h-auto p-0 text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
                       {formatIndianNumber(material.required || 0)}
