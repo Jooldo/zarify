@@ -15,6 +15,11 @@ export interface InventoryTag {
   used_by: string | null;
   operation_type: string | null;
   merchant_id: string;
+  net_weight: number | null;
+  gross_weight: number | null;
+  customer_id: string | null;
+  order_id: string | null;
+  order_item_id: string | null;
 }
 
 export const useInventoryTags = () => {
@@ -43,7 +48,12 @@ export const useInventoryTags = () => {
     }
   };
 
-  const generateTag = async (productId: string, quantity: number) => {
+  const generateTag = async (
+    productId: string, 
+    quantity: number, 
+    netWeight?: number, 
+    grossWeight?: number
+  ) => {
     try {
       // Get next tag ID
       const { data: tagIdData, error: tagIdError } = await supabase.rpc('get_next_tag_id');
@@ -54,6 +64,8 @@ export const useInventoryTags = () => {
         tag_id: tagId,
         product_id: productId,
         quantity: quantity,
+        net_weight: netWeight,
+        gross_weight: grossWeight,
         timestamp: new Date().toISOString()
       });
 
@@ -63,6 +75,8 @@ export const useInventoryTags = () => {
           tag_id: tagId,
           product_id: productId,
           quantity: quantity,
+          net_weight: netWeight,
+          gross_weight: grossWeight,
           qr_code_data: qrCodeData,
           merchant_id: (await supabase.rpc('get_user_merchant_id')).data
         })
@@ -89,7 +103,13 @@ export const useInventoryTags = () => {
     }
   };
 
-  const processTagOperation = async (tagId: string, operationType: 'Tag In' | 'Tag Out') => {
+  const processTagOperation = async (
+    tagId: string, 
+    operationType: 'Tag In' | 'Tag Out',
+    customerId?: string,
+    orderId?: string,
+    orderItemId?: string
+  ) => {
     try {
       // Get tag details
       const { data: tag, error: tagError } = await supabase
@@ -137,15 +157,23 @@ export const useInventoryTags = () => {
 
       if (stockError) throw stockError;
 
-      // Update tag status
+      // Update tag status with customer and order information for tag out
+      const updateData: any = {
+        status: 'Used',
+        operation_type: operationType,
+        used_at: new Date().toISOString(),
+        used_by: (await supabase.auth.getUser()).data.user?.id
+      };
+
+      if (operationType === 'Tag Out' && customerId && orderId && orderItemId) {
+        updateData.customer_id = customerId;
+        updateData.order_id = orderId;
+        updateData.order_item_id = orderItemId;
+      }
+
       const { error: tagUpdateError } = await supabase
         .from('inventory_tags')
-        .update({
-          status: 'Used',
-          operation_type: operationType,
-          used_at: new Date().toISOString(),
-          used_by: (await supabase.auth.getUser()).data.user?.id
-        })
+        .update(updateData)
         .eq('id', tag.id);
 
       if (tagUpdateError) throw tagUpdateError;

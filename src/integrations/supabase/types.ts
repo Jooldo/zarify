@@ -116,9 +116,14 @@ export type Database = {
       inventory_tags: {
         Row: {
           created_at: string
+          customer_id: string | null
+          gross_weight: number | null
           id: string
           merchant_id: string
+          net_weight: number | null
           operation_type: string | null
+          order_id: string | null
+          order_item_id: string | null
           product_id: string
           qr_code_data: string | null
           quantity: number
@@ -129,9 +134,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
+          gross_weight?: number | null
           id?: string
           merchant_id: string
+          net_weight?: number | null
           operation_type?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
           product_id: string
           qr_code_data?: string | null
           quantity: number
@@ -142,9 +152,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
+          gross_weight?: number | null
           id?: string
           merchant_id?: string
+          net_weight?: number | null
           operation_type?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
           product_id?: string
           qr_code_data?: string | null
           quantity?: number
@@ -154,6 +169,27 @@ export type Database = {
           used_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_tags_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_tags_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_tags_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_tags_product_id_fkey"
             columns: ["product_id"]
