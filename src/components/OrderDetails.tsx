@@ -19,7 +19,6 @@ interface OrderDetailsProps {
 type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
 
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('Created');
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
 
@@ -33,7 +32,10 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       
       const { error } = await supabase
         .from('order_items')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', itemId);
 
       if (error) throw error;
