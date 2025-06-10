@@ -36,7 +36,7 @@ const AuthPage = () => {
           variant: 'destructive',
         });
       } else {
-        navigate('/');
+        navigate('/app');
       }
     } catch (error) {
       toast({
@@ -58,7 +58,7 @@ const AuthPage = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/app`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -94,7 +94,7 @@ const AuthPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center">Anklet Order Management</CardTitle>
+          <CardTitle className="text-center">Zarify - Jewelry Manufacturing</CardTitle>
           <CardDescription className="text-center">
             Sign in to your merchant account or create a new one
           </CardDescription>
