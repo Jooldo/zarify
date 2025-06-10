@@ -5,7 +5,6 @@ import CriticalRawMaterials from './CriticalRawMaterials';
 import CriticalFinishedGoods from './CriticalFinishedGoods';
 import ConversationalQueryWidget from './ConversationalQueryWidget';
 import DailyInsights from './DailyInsights';
-import MerchantProfile from '../MerchantProfile';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface VisualDashboardProps {
@@ -61,13 +60,6 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
         <div className="space-y-6">
           <CriticalRawMaterials onNavigateToProcurement={() => onNavigateToTab?.('inventory')} />
           <CriticalFinishedGoods onNavigateToInventory={() => onNavigateToTab?.('inventory')} />
-        </div>
-      </div>
-
-      {/* Merchant Profile Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <MerchantProfile />
         </div>
       </div>
     </div>
