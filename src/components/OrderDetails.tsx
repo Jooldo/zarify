@@ -16,7 +16,7 @@ interface OrderDetailsProps {
   onOrderUpdate: () => void;
 }
 
-type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered';
+type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
 
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { toast } = useToast();
@@ -30,10 +30,13 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       const orderItem = order.order_items.find(item => item.id === itemId);
       console.log('Order item before update:', orderItem);
       
+      // Convert Progress to "In Progress" for database storage
+      const dbStatus = newStatus === 'Progress' ? 'In Progress' : newStatus;
+      
       const { error } = await supabase
         .from('order_items')
         .update({ 
-          status: newStatus,
+          status: dbStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', itemId);
@@ -166,7 +169,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Created">Created</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Progress">Progress</SelectItem>
                         <SelectItem value="Ready">Ready</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>
                       </SelectContent>
