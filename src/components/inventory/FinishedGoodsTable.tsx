@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +6,7 @@ import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
+import ProductDetailsPopover from '@/components/ui/ProductDetailsPopover';
 
 interface FinishedGoodsTableProps {
   products: FinishedGood[];
@@ -67,9 +67,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
           <TableHeader>
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Category</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Subcategory</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Size (inches)</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Ordered Qty</TableHead>
@@ -101,16 +98,11 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
               return (
                 <TableRow key={product.id} className="h-10">
                   <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">
-                    {product.product_code}
-                  </TableCell>
-                  <TableCell className="px-2 py-1 text-xs">
-                    {product.product_config.category}
-                  </TableCell>
-                  <TableCell className="px-2 py-1 text-xs">
-                    {product.product_config.subcategory}
-                  </TableCell>
-                  <TableCell className="px-2 py-1 text-xs">
-                    {product.product_config.size_value}"
+                    <ProductDetailsPopover productCode={product.product_code}>
+                      <Button variant="ghost" className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+                        {product.product_code}
+                      </Button>
+                    </ProductDetailsPopover>
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <Badge variant={getStockStatusVariant(product.current_stock, product.threshold)} className="text-xs px-2 py-1 font-bold">

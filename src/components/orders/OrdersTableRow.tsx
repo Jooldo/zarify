@@ -9,6 +9,7 @@ import OrderDetails from '@/components/OrderDetails';
 import EditOrderDialog from './EditOrderDialog';
 import CreateInvoiceDialog from './CreateInvoiceDialog';
 import ViewInvoiceDialog from './ViewInvoiceDialog';
+import ProductDetailsPopover from '@/components/ui/ProductDetailsPopover';
 import { useInvoices } from '@/hooks/useInvoices';
 
 interface OrdersTableRowProps {
@@ -110,7 +111,13 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
           </div>
         </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
-        <TableCell className="py-1 px-2 text-xs font-mono">{item.productCode}</TableCell>
+        <TableCell className="py-1 px-2 text-xs font-mono">
+          <ProductDetailsPopover productCode={item.productCode}>
+            <Button variant="ghost" className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+              {item.productCode}
+            </Button>
+          </ProductDetailsPopover>
+        </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
           <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>

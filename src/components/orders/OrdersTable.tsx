@@ -29,10 +29,10 @@ const OrdersTable = ({
     return (
       <TableSkeleton 
         rows={10} 
-        columns={12}
+        columns={8}
         columnWidths={[
-          'w-20', 'w-24', 'w-32', 'w-32', 'w-12', 'w-20', 
-          'w-16', 'w-16', 'w-16', 'w-24', 'w-20', 'w-20'
+          'w-20', 'w-24', 'w-32', 'w-12', 'w-20', 
+          'w-16', 'w-24', 'w-20'
         ]}
       />
     );
