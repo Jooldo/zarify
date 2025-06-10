@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft } from 'lucide-react';
 
 const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +37,7 @@ const AuthPage = () => {
           variant: 'destructive',
         });
       } else {
-        navigate('/');
+        navigate('/app');
       }
     } catch (error) {
       toast({
@@ -58,7 +59,7 @@ const AuthPage = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/app`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -91,108 +92,126 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">Anklet Order Management</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your merchant account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">Z</span>
+            </div>
+            <span className="text-2xl font-bold text-gray-900">Zarify</span>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">Welcome to Zarify</CardTitle>
+            <CardDescription className="text-center">
+              Sign in to your jewelry manufacturing account or create a new one
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="signin">
+                <form onSubmit={handleSignIn} className="space-y-4">
                   <div>
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="password">Password</Label>
                     <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                     />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="merchantName">Business Name</Label>
-                  <Input
-                    id="merchantName"
-                    value={merchantName}
-                    onChange={(e) => setMerchantName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="signupEmail">Email</Label>
-                  <Input
-                    id="signupEmail"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="signupPassword">Password</Label>
-                  <Input
-                    id="signupPassword"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="merchantName">Business Name</Label>
+                    <Input
+                      id="merchantName"
+                      value={merchantName}
+                      onChange={(e) => setMerchantName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signupEmail">Email</Label>
+                    <Input
+                      id="signupEmail"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signupPassword">Password</Label>
+                    <Input
+                      id="signupPassword"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Creating account...' : 'Create Account'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
