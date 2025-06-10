@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
@@ -15,13 +16,13 @@ const App = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'orders':
-        return <OrdersTab onNavigateToTab={setActiveTab} />;
+        return <OrdersTab />;
       case 'inventory':
-        return <InventoryTab onNavigateToTab={setActiveTab} />;
+        return <InventoryTab />;
       case 'products':
-        return <ProductConfigTab onNavigateToTab={setActiveTab} />;
+        return <ProductConfigTab />;
       case 'users':
-        return <UsersTab />;
+        return <UsersTab activeTab="customers" onTabChange={() => {}} />;
       case 'logs':
         return <ActivityLogsTab />;
       default:
@@ -42,3 +43,4 @@ const App = () => {
 };
 
 export default App;
+
