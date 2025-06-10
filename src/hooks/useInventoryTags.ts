@@ -15,11 +15,6 @@ export interface InventoryTag {
   used_by: string | null;
   operation_type: string | null;
   merchant_id: string;
-  net_weight?: number;
-  gross_weight?: number;
-  customer_id?: string;
-  order_id?: string;
-  suborder_id?: string;
 }
 
 export const useInventoryTags = () => {
@@ -94,11 +89,7 @@ export const useInventoryTags = () => {
     }
   };
 
-  const processTagOperation = async (
-    tagId: string, 
-    operationType: 'Tag In' | 'Tag Out', 
-    additionalData?: any
-  ) => {
+  const processTagOperation = async (tagId: string, operationType: 'Tag In' | 'Tag Out') => {
     try {
       // Get tag details
       const { data: tag, error: tagError } = await supabase
@@ -146,76 +137,39 @@ export const useInventoryTags = () => {
 
       if (stockError) throw stockError;
 
-      // Prepare tag update data
-      const tagUpdateData: any = {
-        status: 'Used',
-        operation_type: operationType,
-        used_at: new Date().toISOString(),
-        used_by: (await supabase.auth.getUser()).data.user?.id
-      };
-
-      // Add additional data based on operation type
-      if (operationType === 'Tag In' && additionalData) {
-        tagUpdateData.net_weight = additionalData.netWeight;
-        tagUpdateData.gross_weight = additionalData.grossWeight;
-        // Update quantity if provided in Tag In
-        if (additionalData.quantity) {
-          tagUpdateData.quantity = additionalData.quantity;
-        }
-      } else if (operationType === 'Tag Out' && additionalData) {
-        tagUpdateData.customer_id = additionalData.customerId;
-        tagUpdateData.order_id = additionalData.orderId;
-        tagUpdateData.suborder_id = additionalData.suborderId;
-      }
-
       // Update tag status
       const { error: tagUpdateError } = await supabase
         .from('inventory_tags')
-        .update(tagUpdateData)
+        .update({
+          status: 'Used',
+          operation_type: operationType,
+          used_at: new Date().toISOString(),
+          used_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', tag.id);
 
       if (tagUpdateError) throw tagUpdateError;
 
       // Create audit log entry
-      const auditData: any = {
-        tag_id: tagId,
-        product_id: tag.product_id,
-        action: operationType,
-        quantity: quantity,
-        previous_stock: currentStock,
-        new_stock: newStock,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        user_name: userName,
-        merchant_id: tag.merchant_id
-      };
-
-      // Add additional audit data
-      if (operationType === 'Tag In' && additionalData) {
-        auditData.net_weight = additionalData.netWeight;
-        auditData.gross_weight = additionalData.grossWeight;
-      } else if (operationType === 'Tag Out' && additionalData) {
-        auditData.customer_id = additionalData.customerId;
-        auditData.order_id = additionalData.orderId;
-        auditData.suborder_id = additionalData.suborderId;
-      }
-
       const { error: auditError } = await supabase
         .from('tag_audit_log')
-        .insert(auditData);
+        .insert({
+          tag_id: tagId,
+          product_id: tag.product_id,
+          action: operationType,
+          quantity: quantity,
+          previous_stock: currentStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: userName,
+          merchant_id: tag.merchant_id
+        });
 
       if (auditError) throw auditError;
 
-      let successMessage = `${operationType}: ${operationType === 'Tag In' ? '+' : '-'}${quantity} units of ${tag.finished_goods.product_code}`;
-      
-      if (operationType === 'Tag In' && additionalData) {
-        successMessage += ` (Net: ${additionalData.netWeight}kg, Gross: ${additionalData.grossWeight}kg)`;
-      } else if (operationType === 'Tag Out' && additionalData) {
-        successMessage += ` → Order assigned`;
-      }
-
       toast({
         title: 'Success',
-        description: successMessage,
+        description: `${operationType}: ${operationType === 'Tag In' ? '+' : '-'}${quantity} units of ${tag.finished_goods.product_code}`,
       });
 
       await fetchTags();
