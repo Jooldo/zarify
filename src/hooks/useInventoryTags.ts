@@ -103,6 +103,209 @@ export const useInventoryTags = () => {
     }
   };
 
+  const manualTagIn = async (
+    productId: string,
+    quantity: number,
+    netWeight?: number,
+    grossWeight?: number
+  ) => {
+    try {
+      // Get product details and current stock
+      const { data: product, error: productError } = await supabase
+        .from('finished_goods')
+        .select('*, product_configs!inner(product_code)')
+        .eq('id', productId)
+        .single();
+
+      if (productError) throw productError;
+      if (!product) throw new Error('Product not found');
+
+      const currentStock = product.current_stock;
+      const newStock = currentStock + quantity;
+
+      // Get user profile for audit log
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const userName = profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User';
+
+      // Generate manual tag ID
+      const manualTagId = `MAN-IN-${Date.now()}`;
+
+      // Update finished goods stock
+      const { error: stockError } = await supabase
+        .from('finished_goods')
+        .update({ 
+          current_stock: newStock,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', productId);
+
+      if (stockError) throw stockError;
+
+      // Create manual tag record
+      const { error: tagError } = await supabase
+        .from('inventory_tags')
+        .insert({
+          tag_id: manualTagId,
+          product_id: productId,
+          quantity: quantity,
+          net_weight: netWeight,
+          gross_weight: grossWeight,
+          status: 'Manual Tag In',
+          operation_type: 'Manual Tag In',
+          used_at: new Date().toISOString(),
+          used_by: (await supabase.auth.getUser()).data.user?.id,
+          merchant_id: (await supabase.rpc('get_user_merchant_id')).data
+        });
+
+      if (tagError) throw tagError;
+
+      // Create audit log entry
+      const { error: auditError } = await supabase
+        .from('tag_audit_log')
+        .insert({
+          tag_id: manualTagId,
+          product_id: productId,
+          action: 'Manual Tag In',
+          quantity: quantity,
+          previous_stock: currentStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: userName,
+          merchant_id: (await supabase.rpc('get_user_merchant_id')).data
+        });
+
+      if (auditError) throw auditError;
+
+      toast({
+        title: 'Success',
+        description: `Manual Tag In: +${quantity} units of ${product.product_configs.product_code}`,
+      });
+
+      await fetchTags();
+      return { product, newStock };
+    } catch (error) {
+      console.error('Error processing manual tag in:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to process manual tag in',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const manualTagOut = async (
+    productId: string,
+    quantity: number,
+    customerId: string,
+    orderId: string,
+    orderItemId: string,
+    netWeight?: number,
+    grossWeight?: number
+  ) => {
+    try {
+      // Get product details and current stock
+      const { data: product, error: productError } = await supabase
+        .from('finished_goods')
+        .select('*, product_configs!inner(product_code)')
+        .eq('id', productId)
+        .single();
+
+      if (productError) throw productError;
+      if (!product) throw new Error('Product not found');
+
+      const currentStock = product.current_stock;
+      
+      if (currentStock < quantity) {
+        throw new Error('Insufficient stock for manual tag out operation');
+      }
+
+      const newStock = currentStock - quantity;
+
+      // Get user profile for audit log
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const userName = profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User';
+
+      // Generate manual tag ID
+      const manualTagId = `MAN-OUT-${Date.now()}`;
+
+      // Update finished goods stock
+      const { error: stockError } = await supabase
+        .from('finished_goods')
+        .update({ 
+          current_stock: newStock,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', productId);
+
+      if (stockError) throw stockError;
+
+      // Create manual tag record
+      const { error: tagError } = await supabase
+        .from('inventory_tags')
+        .insert({
+          tag_id: manualTagId,
+          product_id: productId,
+          quantity: quantity,
+          net_weight: netWeight,
+          gross_weight: grossWeight,
+          status: 'Manual Tag Out',
+          operation_type: 'Manual Tag Out',
+          customer_id: customerId,
+          order_id: orderId,
+          order_item_id: orderItemId,
+          used_at: new Date().toISOString(),
+          used_by: (await supabase.auth.getUser()).data.user?.id,
+          merchant_id: (await supabase.rpc('get_user_merchant_id')).data
+        });
+
+      if (tagError) throw tagError;
+
+      // Create audit log entry
+      const { error: auditError } = await supabase
+        .from('tag_audit_log')
+        .insert({
+          tag_id: manualTagId,
+          product_id: productId,
+          action: 'Manual Tag Out',
+          quantity: quantity,
+          previous_stock: currentStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: userName,
+          merchant_id: (await supabase.rpc('get_user_merchant_id')).data
+        });
+
+      if (auditError) throw auditError;
+
+      toast({
+        title: 'Success',
+        description: `Manual Tag Out: -${quantity} units of ${product.product_configs.product_code}`,
+      });
+
+      await fetchTags();
+      return { product, newStock };
+    } catch (error) {
+      console.error('Error processing manual tag out:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to process manual tag out',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   const processTagOperation = async (
     tagId: string, 
     operationType: 'Tag In' | 'Tag Out',
@@ -222,6 +425,8 @@ export const useInventoryTags = () => {
     loading,
     generateTag,
     processTagOperation,
+    manualTagIn,
+    manualTagOut,
     refetch: fetchTags
   };
 };
