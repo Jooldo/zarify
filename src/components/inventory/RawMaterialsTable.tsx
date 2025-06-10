@@ -134,8 +134,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200">
-                <div className="flex items-center gap-1">
+              <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-blue-700 font-semibold">Ordered Qty</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -147,8 +147,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
+                <div className="flex items-center justify-center gap-1">
                   <span>In Procurement</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -160,8 +160,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
+                <div className="flex items-center justify-center gap-1">
                   <span>Shortfall</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -226,7 +226,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200">
+                  <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
@@ -235,12 +235,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-medium">
+                  <TableCell className="py-1 px-2 text-sm font-medium text-center">
                     {formatIndianNumber(material.in_procurement)} {shortUnit}
                   </TableCell>
-                  <TableCell className="px-2 py-1">
+                  <TableCell className="px-2 py-1 text-center">
                     <div 
-                      className="cursor-help flex items-center gap-1"
+                      className="cursor-help flex items-center justify-center gap-1"
                       title={getShortfallTooltip()}
                     >
                       <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
