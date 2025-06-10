@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -117,9 +118,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     return (
       <TableSkeleton 
         rows={8} 
-        columns={7}
+        columns={8}
         columnWidths={[
-          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
         ]}
       />
     );
@@ -132,8 +133,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
           <TableHeader>
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-blue-700 font-semibold">Ordered Qty</span>
@@ -147,6 +147,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   </Tooltip>
                 </div>
               </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span>In Procurement</span>
@@ -219,9 +220,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                     </div>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.current_stock)} {shortUnit}
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
                   <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
@@ -232,6 +230,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                     >
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-sm font-bold text-center">
+                    {formatIndianNumber(material.current_stock)} {shortUnit}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-sm font-medium text-center">
                     {formatIndianNumber(material.in_procurement)} {shortUnit}

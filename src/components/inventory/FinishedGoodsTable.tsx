@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,14 +64,13 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
           <TableHeader>
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
-                  <span>Ordered Qty</span>
+              <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-blue-700 font-semibold">Ordered Qty</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                      <Info className="h-3 w-3 text-blue-500 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">Total quantity of this product required for all pending orders (Created + In Progress status)</p>
@@ -80,8 +78,9 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">Current Stock</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
+                <div className="flex items-center justify-center gap-1">
                   <span>In Manufacturing</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -93,8 +92,8 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
+                <div className="flex items-center justify-center gap-1">
                   <span>Shortfall</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -150,28 +149,26 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                       </Button>
                     </ProductDetailsPopover>
                   </TableCell>
-                  <TableCell className="px-2 py-1">
-                    <Badge variant={getStockStatusVariant(product.current_stock, product.threshold)} className="text-xs px-2 py-1 font-bold">
-                      {formatIndianNumber(product.current_stock)}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="px-2 py-1 text-xs font-medium">
                     {formatIndianNumber(product.threshold)}
                   </TableCell>
-                  <TableCell className="px-2 py-1">
+                  <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-50"
                       onClick={() => handleOrderedQtyClick(product)}
                     >
                       {formatIndianNumber(product.required_quantity)}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-2 py-1 text-xs font-medium">
+                  <TableCell className="px-2 py-1 text-sm font-bold text-center">
+                    {formatIndianNumber(product.current_stock)}
+                  </TableCell>
+                  <TableCell className="px-2 py-1 text-sm font-medium text-center">
                     {formatIndianNumber(product.in_manufacturing)}
                   </TableCell>
-                  <TableCell className="px-2 py-1">
-                    <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <TableCell className="px-2 py-1 text-center">
+                    <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
                     </span>
                   </TableCell>
