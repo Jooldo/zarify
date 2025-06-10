@@ -23,25 +23,23 @@ const TagScanInterface = ({ onOperationComplete }: TagScanInterfaceProps) => {
       </CardHeader>
       <CardContent className="pt-0">
         <Tabs defaultValue="print" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-16">
-            <div className="grid grid-cols-2 gap-1 col-span-2">
-              <TabsTrigger value="print" className="flex flex-col items-center gap-1 text-xs h-14">
-                <Printer className="h-3 w-3" />
-                <span>Print Tag</span>
-              </TabsTrigger>
-              <TabsTrigger value="tagout" className="flex flex-col items-center gap-1 text-xs h-14">
-                <ArrowDown className="h-3 w-3" />
-                <span>Tag Out</span>
-              </TabsTrigger>
-              <TabsTrigger value="manual-in" className="flex flex-col items-center gap-1 text-xs h-14">
-                <Plus className="h-3 w-3" />
-                <span>Manual Tag In</span>
-              </TabsTrigger>
-              <TabsTrigger value="manual-out" className="flex flex-col items-center gap-1 text-xs h-14">
-                <Minus className="h-3 w-3" />
-                <span>Manual Tag Out</span>
-              </TabsTrigger>
-            </div>
+          <TabsList className="grid w-full grid-cols-2 gap-1 h-auto p-1">
+            <TabsTrigger value="print" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
+              <Printer className="h-3 w-3" />
+              <span>Print Tag</span>
+            </TabsTrigger>
+            <TabsTrigger value="tagout" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
+              <ArrowDown className="h-3 w-3" />
+              <span>Tag Out</span>
+            </TabsTrigger>
+            <TabsTrigger value="manual-in" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
+              <Plus className="h-3 w-3" />
+              <span>Manual In</span>
+            </TabsTrigger>
+            <TabsTrigger value="manual-out" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
+              <Minus className="h-3 w-3" />
+              <span>Manual Out</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="print" className="mt-3">
