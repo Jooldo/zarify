@@ -87,6 +87,10 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
     setVisibleCount(prev => Math.min(prev + 15, filteredConfigs.length));
   };
 
+  const formatSize = (sizeValue: number) => {
+    return `${sizeValue}"`;
+  };
+
   return (
     <div className="relative">
       <Label className="text-xs font-medium">Product Code *</Label>
@@ -134,10 +138,37 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
                       onClick={() => handleSelect(config.product_code)}
                       className="p-3 hover:bg-gray-50 cursor-pointer border border-gray-100 rounded-md mb-2 transition-colors bg-white"
                     >
-                      <div className="flex items-center justify-center">
-                        <Badge variant="outline" className="text-sm h-6 px-3 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="outline" className="text-xs h-5 px-2 font-mono font-semibold bg-blue-50 text-blue-700 border-blue-200">
                           {config.product_code}
                         </Badge>
+                        <div className="text-right">
+                          <div className="text-xs font-medium text-gray-700">
+                            {formatSize(config.size_value)}
+                          </div>
+                          {config.weight_range && (
+                            <div className="text-xs text-gray-500">
+                              {config.weight_range}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        {/* Product Type (subcategory) - Higher prominence */}
+                        <div>
+                          <span className="text-xs text-gray-500">Product Type:</span>
+                          <div className="text-sm font-semibold text-gray-900 leading-tight">
+                            {config.subcategory}
+                          </div>
+                        </div>
+                        {/* Category - Lower prominence */}
+                        <div>
+                          <span className="text-xs text-gray-400">Category:</span>
+                          <div className="text-xs text-gray-600">
+                            {config.category}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -161,9 +192,23 @@ const ProductCodeSelector = ({ value, onChange, disabled = false }: ProductCodeS
 
       {selectedConfig && (
         <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
-          <div className="text-center">
-            <span className="font-medium text-gray-700">Selected:</span>
-            <div className="text-sm font-bold text-blue-700">{selectedConfig.product_code}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="font-medium text-gray-700">Product Type:</span>
+              <div className="text-gray-900 font-medium">{selectedConfig.subcategory}</div>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Category:</span>
+              <div className="text-gray-900">{selectedConfig.category}</div>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Size:</span>
+              <div className="text-gray-900">{formatSize(selectedConfig.size_value)}</div>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Weight:</span>
+              <div className="text-gray-900">{selectedConfig.weight_range || 'N/A'}</div>
+            </div>
           </div>
         </div>
       )}
