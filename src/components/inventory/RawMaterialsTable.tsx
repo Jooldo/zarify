@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
@@ -31,6 +31,30 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
+  };
+
+  const getShortUnit = (unit: string) => {
+    const unitMap: { [key: string]: string } = {
+      'grams': 'g',
+      'gram': 'g',
+      'kilograms': 'kg',
+      'kilogram': 'kg',
+      'liters': 'l',
+      'liter': 'l',
+      'milliliters': 'ml',
+      'milliliter': 'ml',
+      'pieces': 'pcs',
+      'piece': 'pc',
+      'meters': 'm',
+      'meter': 'm',
+      'centimeters': 'cm',
+      'centimeter': 'cm',
+      'pounds': 'lbs',
+      'pound': 'lb',
+      'ounces': 'oz',
+      'ounce': 'oz'
+    };
+    return unitMap[unit.toLowerCase()] || unit;
   };
 
   const getStockStatusVariant = (currentStock: number, minimumStock: number) => {
@@ -94,9 +118,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     return (
       <TableSkeleton 
         rows={8} 
-        columns={10}
+        columns={9}
         columnWidths={[
-          'w-32', 'w-16', 'w-12', 'w-20', 'w-16', 'w-20', 'w-20', 'w-16', 'w-16', 'w-24'
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
         ]}
       />
     );
@@ -108,9 +132,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         <Table>
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200">
@@ -185,27 +207,25 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               );
 
               const StatusIcon = statusInfo.icon;
+              const shortUnit = getShortUnit(material.unit);
               
               return (
                 <TableRow key={material.id} className="h-10">
-                  <TableCell className="py-1 px-2 text-xs font-medium">
-                    {material.name}
-                  </TableCell>
                   <TableCell className="py-1 px-2 text-xs">
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {material.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-xs">
-                    {material.unit}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{material.name}</span>
+                      <Badge variant="outline" className="text-xs h-4 px-1 w-fit mt-1">
+                        {material.type}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell className="py-1 px-2">
                     <Badge variant={getStockStatusVariant(material.current_stock, material.minimum_stock)} className="text-xs px-2 py-1 font-bold">
-                      {formatIndianNumber(material.current_stock)}
+                      {formatIndianNumber(material.current_stock)} {shortUnit}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.minimum_stock)}
+                    {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
                   <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200">
                     <Button 
@@ -213,20 +233,25 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       className="h-auto p-0 text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
-                      {formatIndianNumber(material.required || 0)}
+                      {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.in_procurement)}
+                    {formatIndianNumber(material.in_procurement)} {shortUnit}
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div 
-                      className="cursor-help"
+                      className="cursor-help flex items-center gap-1"
                       title={getShortfallTooltip()}
                     >
-                      <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
+                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
                       </span>
+                      {shortfall > 0 ? (
+                        <ArrowDown className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <ArrowUp className="h-4 w-4 text-green-600" />
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-2 py-1">
