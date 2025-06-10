@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,15 +11,18 @@ import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
+import SortDropdown from '@/components/ui/sort-dropdown';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
   loading: boolean;
   onUpdate: () => void;
   onRequestCreated?: () => void;
+  sortConfig?: { field: string; direction: 'asc' | 'desc' } | null;
+  onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
-const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: RawMaterialsTableProps) => {
+const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
   const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
@@ -114,6 +116,38 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
     }
   };
 
+  // Sort materials based on sortConfig
+  const sortedMaterials = [...materials].sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    const { field, direction } = sortConfig;
+    let aValue: number;
+    let bValue: number;
+
+    switch (field) {
+      case 'ordered_qty':
+        aValue = a.required || 0;
+        bValue = b.required || 0;
+        break;
+      case 'current_stock':
+        aValue = a.current_stock;
+        bValue = b.current_stock;
+        break;
+      case 'in_procurement':
+        aValue = a.in_procurement;
+        bValue = b.in_procurement;
+        break;
+      case 'shortfall':
+        aValue = calculateShortfall(a.current_stock, a.in_procurement, a.required, a.minimum_stock);
+        bValue = calculateShortfall(b.current_stock, b.in_procurement, b.required, b.minimum_stock);
+        break;
+      default:
+        return 0;
+    }
+
+    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+  });
+
   if (loading) {
     return (
       <TableSkeleton 
@@ -191,7 +225,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
             </TableRow>
           </TableHeader>
           <TableBody>
-            {materials.map((material) => {
+            {sortedMaterials.map((material) => {
               const shortfall = calculateShortfall(
                 material.current_stock,
                 material.in_procurement,

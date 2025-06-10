@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -7,6 +6,7 @@ import { Search } from 'lucide-react';
 import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
 import RawMaterialsFilter from './inventory/RawMaterialsFilter';
+import SortDropdown from './ui/sort-dropdown';
 
 interface RawMaterialInventoryProps {
   onRequestCreated?: () => void;
@@ -17,6 +17,18 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const { suppliers } = useSuppliers();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({});
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const sortOptions = [
+    { value: 'ordered_qty', label: 'Ordered Quantity' },
+    { value: 'current_stock', label: 'Current Stock' },
+    { value: 'in_procurement', label: 'In Procurement' },
+    { value: 'shortfall', label: 'Shortfall' }
+  ];
+
+  const handleSortChange = (field: string, direction: 'asc' | 'desc') => {
+    setSortConfig({ field, direction });
+  };
 
   const applyFilters = (materials: any[], appliedFilters: any) => {
     return materials.filter(material => {
@@ -128,6 +140,11 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
           materialTypes={materialTypes}
           suppliers={supplierNames}
         />
+        <SortDropdown
+          options={sortOptions}
+          onSortChange={handleSortChange}
+          currentSort={sortConfig}
+        />
       </div>
       
       <RawMaterialsTable 
@@ -135,6 +152,8 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
         loading={loading} 
         onUpdate={refetch}
         onRequestCreated={handleRequestCreated}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import ViewFinishedGoodDialog from './inventory/ViewFinishedGoodDialog';
 import StockUpdateDialog from './inventory/StockUpdateDialog';
 import TagAuditTrail from './inventory/TagAuditTrail';
 import FinishedGoodsFilter from './inventory/FinishedGoodsFilter';
+import SortDropdown from './ui/sort-dropdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const FinishedGoodsInventory = () => {
@@ -20,9 +21,21 @@ const FinishedGoodsInventory = () => {
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('inventory');
   const [filters, setFilters] = useState({});
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
   const queryClient = useQueryClient();
+
+  const sortOptions = [
+    { value: 'ordered_qty', label: 'Ordered Quantity' },
+    { value: 'current_stock', label: 'Current Stock' },
+    { value: 'in_manufacturing', label: 'In Manufacturing' },
+    { value: 'shortfall', label: 'Shortfall' }
+  ];
+
+  const handleSortChange = (field: string, direction: 'asc' | 'desc') => {
+    setSortConfig({ field, direction });
+  };
 
   console.log('FinishedGoodsInventory rendered with:', finishedGoods.length, 'products');
 
@@ -157,12 +170,19 @@ const FinishedGoodsInventory = () => {
               categories={categories}
               subcategories={subcategories}
             />
+            <SortDropdown
+              options={sortOptions}
+              onSortChange={handleSortChange}
+              currentSort={sortConfig}
+            />
           </div>
           
           <FinishedGoodsTable 
             products={filteredProducts}
             onViewProduct={handleViewProduct}
             onEditProduct={handleEditProduct}
+            sortConfig={sortConfig}
+            onSortChange={handleSortChange}
           />
 
           <FinishedGoodsEmptyState 

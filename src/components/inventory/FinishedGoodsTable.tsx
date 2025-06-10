@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +13,11 @@ interface FinishedGoodsTableProps {
   products: FinishedGood[];
   onViewProduct: (product: FinishedGood) => void;
   onEditProduct: (product: FinishedGood) => void;
+  sortConfig?: { field: string; direction: 'asc' | 'desc' } | null;
+  onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
-const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: FinishedGoodsTableProps) => {
+const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig, onSortChange }: FinishedGoodsTableProps) => {
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<FinishedGood | null>(null);
   const [orderDetails, setOrderDetails] = useState<any[]>([]);
@@ -57,6 +58,38 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
     const details = await fetchFinishedGoodOrderDetails(product.product_code);
     setOrderDetails(details);
   };
+
+  // Sort products based on sortConfig
+  const sortedProducts = [...products].sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    const { field, direction } = sortConfig;
+    let aValue: number;
+    let bValue: number;
+
+    switch (field) {
+      case 'ordered_qty':
+        aValue = a.required_quantity || 0;
+        bValue = b.required_quantity || 0;
+        break;
+      case 'current_stock':
+        aValue = a.current_stock || 0;
+        bValue = b.current_stock || 0;
+        break;
+      case 'in_manufacturing':
+        aValue = a.in_manufacturing || 0;
+        bValue = b.in_manufacturing || 0;
+        break;
+      case 'shortfall':
+        aValue = calculateShortfall(a.current_stock, a.in_manufacturing, a.required_quantity, a.threshold);
+        bValue = calculateShortfall(b.current_stock, b.in_manufacturing, b.required_quantity, b.threshold);
+        break;
+      default:
+        return 0;
+    }
+
+    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+  });
 
   return (
     <TooltipProvider>
@@ -123,7 +156,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => {
+            {sortedProducts.map((product) => {
               const shortfall = calculateShortfall(
                 product.current_stock,
                 product.in_manufacturing,
