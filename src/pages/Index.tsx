@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -85,7 +84,7 @@ const Index = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex w-full min-h-screen bg-gray-50">
+      <div className="flex w-full min-h-screen">
         <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
         <SidebarInset className="overflow-auto">
@@ -127,9 +126,9 @@ const Index = () => {
             </div>
           )}
 
-          {/* Other tabs with standard layout */}
+          {/* Other tabs with optimized layout */}
           {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="px-4 sm:px-6 lg:px-8 py-6">
               {/* Header - only show if there's a title */}
               {pageTitle && (
                 <div className="flex items-center justify-between mb-8">

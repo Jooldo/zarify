@@ -143,7 +143,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       <SidebarHeader>
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
           {!isCollapsed && (
-            <h1 className="text-lg font-bold text-sidebar-foreground">Anklet Order Management</h1>
+            <h1 className="text-lg font-bold text-sidebar-foreground">Zarify</h1>
           )}
           <Button 
             variant="ghost" 

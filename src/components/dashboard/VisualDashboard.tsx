@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OrderFunnelChart from './OrderFunnelChart';
 import CriticalRawMaterials from './CriticalRawMaterials';
@@ -28,7 +27,7 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
   };
 
   return (
-    <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-8">
       {/* Header */}
       <div className="border-b border-gray-200 pb-4">
         <h1 className="text-2xl font-semibold text-gray-900 mb-1">
