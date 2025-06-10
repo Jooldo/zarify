@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
@@ -211,9 +212,14 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               return (
                 <TableRow key={material.id} className="h-10">
                   <TableCell className="py-1 px-2 text-xs">
-                    <div className="flex flex-col">
-                      <span className="font-medium">{material.name}</span>
-                      <span className="text-xs text-gray-500 mt-0.5">{material.type}</span>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-xs px-2 py-1 flex items-center gap-1">
+                        <Tag className="h-3 w-3" />
+                        {material.name}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs px-2 py-1">
+                        {material.type}
+                      </Badge>
                     </div>
                   </TableCell>
                   <TableCell className="py-1 px-2">
