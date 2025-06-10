@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OrderFunnelChart from './OrderFunnelChart';
 import CriticalRawMaterials from './CriticalRawMaterials';
@@ -48,7 +49,7 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Order Funnel - Takes 1 column on large screens */}
         <div>
-          <OrderFunnelChart onNavigateToOrders={() => onNavigateToTab?.('orders')} />
+          <OrderFunnelChart />
         </div>
 
         {/* Ask Data Widget - Takes 1 column */}

@@ -41,6 +41,12 @@ export interface Order {
 
 type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
 
+// Helper function to normalize status from database
+const normalizeStatus = (status: string): OrderStatus => {
+  if (status === 'In Progress') return 'Progress';
+  return status as OrderStatus;
+};
+
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +68,18 @@ export const useOrders = () => {
         .order('created_date', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      
+      // Normalize the data to match our types
+      const normalizedData = data?.map(order => ({
+        ...order,
+        status: normalizeStatus(order.status),
+        order_items: order.order_items.map(item => ({
+          ...item,
+          status: normalizeStatus(item.status)
+        }))
+      })) || [];
+      
+      setOrders(normalizedData);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -77,9 +94,12 @@ export const useOrders = () => {
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
+      // Convert Progress back to In Progress for database
+      const dbStatus = status === 'Progress' ? 'In Progress' : status;
+      
       const { error } = await supabase
         .from('orders')
-        .update({ status, updated_date: new Date().toISOString() })
+        .update({ status: dbStatus, updated_date: new Date().toISOString() })
         .eq('id', orderId);
 
       if (error) throw error;
@@ -106,9 +126,12 @@ export const useOrders = () => {
 
   const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
     try {
+      // Convert Progress back to In Progress for database
+      const dbStatus = status === 'Progress' ? 'In Progress' : status;
+      
       const { error } = await supabase
         .from('order_items')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
         .eq('id', itemId);
 
       if (error) throw error;
