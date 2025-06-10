@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,8 +64,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
 
   const calculateShortfall = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
     const totalAvailable = currentStock + inProcurement;
-    const needed = Math.max(required, minimumStock);
-    return needed - totalAvailable;
+    const totalNeeded = required + minimumStock;
+    return totalNeeded - totalAvailable;
   };
 
   const getInventoryStatus = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
@@ -82,7 +81,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   };
 
   const getShortfallTooltip = () => {
-    return "Shortfall = (Ordered Qty + Minimum Stock) - (Current Stock + In Procurement). Negative values indicate shortfall, positive values indicate surplus.";
+    return "Shortfall = (Ordered Qty + Minimum Stock) - (Current Stock + In Procurement). Positive values indicate shortfall, negative values indicate surplus.";
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
@@ -169,7 +168,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Min Stock) - (Current Stock + In Procurement). Negative values indicate surplus, positive indicate shortage.</p>
+                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
