@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -256,21 +257,6 @@ const StockUpdateDialog = ({ isOpen, onOpenChange, product, onProductUpdated }: 
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Compact Product Context */}
-          <div className="bg-blue-50 p-3 rounded border border-blue-200">
-            <h3 className="text-xs font-semibold text-blue-900 mb-2">Product Info</h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-gray-600">Category:</span>
-                <p className="font-medium">{product.product_config.category}</p>
-              </div>
-              <div>
-                <span className="text-gray-600">Size:</span>
-                <p className="font-medium">{product.product_config.size_value}"</p>
-              </div>
-            </div>
-          </div>
-
           {/* Compact Stock Info */}
           <div className="bg-gray-50 p-3 rounded">
             <div className="grid grid-cols-3 gap-3 text-center text-xs">

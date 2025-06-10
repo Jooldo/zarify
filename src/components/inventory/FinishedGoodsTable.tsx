@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
@@ -33,8 +34,8 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
 
   const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
     const totalAvailable = currentStock + inManufacturing;
-    const needed = Math.max(requiredQuantity, threshold);
-    return needed - totalAvailable;
+    const totalNeeded = requiredQuantity + threshold;
+    return totalNeeded - totalAvailable;
   };
 
   const getInventoryStatus = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
@@ -100,7 +101,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Threshold) - (Current Stock + In Manufacturing). Negative values indicate surplus, positive indicate shortage.</p>
+                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Threshold) - (Current Stock + In Manufacturing). Positive values indicate shortage, negative indicate surplus.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -118,7 +119,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -168,9 +168,16 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                     {formatIndianNumber(product.in_manufacturing)}
                   </TableCell>
                   <TableCell className="px-2 py-1 text-center">
-                    <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
-                    </span>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {formatIndianNumber(Math.abs(shortfall))}
+                      </span>
+                      {shortfall > 0 ? (
+                        <ArrowDown className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <ArrowUp className="h-4 w-4 text-green-600" />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
@@ -179,9 +186,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                         {statusInfo.status}
                       </span>
                     </div>
-                  </TableCell>
-                  <TableCell className="px-2 py-1 text-xs">
-                    {product.last_produced ? new Date(product.last_produced).toLocaleDateString() : 'Never'}
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div className="flex gap-1">
