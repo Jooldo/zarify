@@ -1,8 +1,10 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
+import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
@@ -49,10 +51,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
     }
   };
 
-  const getShortfallTooltip = () => {
-    return "Shortfall = (Ordered Qty + Threshold) - (Current Stock + In Manufacturing). Negative values indicate shortfall, positive values indicate surplus.";
-  };
-
   const handleOrderedQtyClick = async (product: FinishedGood) => {
     setSelectedProduct(product);
     setIsOrderDetailsOpen(true);
@@ -61,7 +59,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
   };
 
   return (
-    <>
+    <TooltipProvider>
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
@@ -69,10 +67,58 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
               <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Ordered Qty</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">In Manufacturing</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Ordered Qty</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Total quantity of this product required for all pending orders (Created + In Progress status)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>In Manufacturing</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Quantity of this product currently being manufactured</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Shortfall</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Threshold) - (Current Stock + In Manufacturing). Negative values indicate surplus, positive indicate shortage.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Status</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Critical: Shortage exists; Low: Current stock below threshold; Good: Adequate stock levels</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Last Produced</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
@@ -125,14 +171,9 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
                     {formatIndianNumber(product.in_manufacturing)}
                   </TableCell>
                   <TableCell className="px-2 py-1">
-                    <div 
-                      className="cursor-help"
-                      title={getShortfallTooltip()}
-                    >
-                      <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
-                      </span>
-                    </div>
+                    <span className={`text-xs font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {shortfall > 0 ? `-${formatIndianNumber(shortfall)}` : `+${formatIndianNumber(Math.abs(shortfall))}`}
+                    </span>
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
@@ -180,7 +221,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct }: Finished
         totalQuantity={selectedProduct?.required_quantity || 0}
         loading={loading}
       />
-    </>
+    </TooltipProvider>
   );
 };
 

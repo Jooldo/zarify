@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
@@ -102,7 +102,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
@@ -112,10 +112,58 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
               <TableHead className="py-1 px-2 text-xs font-medium">Unit</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Current Stock</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Min Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Ordered Qty</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">In Procurement</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Shortfall</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Ordered Qty</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>In Procurement</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Quantity of this material currently being procured from suppliers</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Shortfall</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Shortage calculation: (Ordered Qty + Min Stock) - (Current Stock + In Procurement). Negative values indicate surplus, positive indicate shortage.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <span>Status</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Critical: Shortage exists; Low: Current stock below minimum; Good: Adequate stock levels</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -254,7 +302,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
         totalQuantity={selectedMaterial?.required || 0}
         loading={orderDetailsLoading}
       />
-    </>
+    </TooltipProvider>
   );
 };
 
