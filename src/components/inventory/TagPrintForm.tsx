@@ -3,11 +3,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useInventoryTags } from '@/hooks/useInventoryTags';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
-import { Printer, QrCode } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TagPrintFormProps {
@@ -66,83 +65,80 @@ const TagPrintForm = ({ onTagGenerated }: TagPrintFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Printer className="h-5 w-5" />
-          Print Tag (Tag In)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="productCode">Product Code</Label>
-          <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select product..." />
-            </SelectTrigger>
-            <SelectContent>
-              {finishedGoods.map((product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.product_code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="productCode" className="text-xs">Product Code</Label>
+        <Select value={productId} onValueChange={setProductId}>
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="Select product..." />
+          </SelectTrigger>
+          <SelectContent>
+            {finishedGoods.map((product) => (
+              <SelectItem key={product.id} value={product.id}>
+                {product.product_code}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="netWeight">Net Weight (kg)</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="netWeight" className="text-xs">Net Weight (kg)</Label>
           <Input
             id="netWeight"
             type="number"
             step="0.01"
             value={netWeight}
             onChange={(e) => setNetWeight(e.target.value)}
-            placeholder="Enter net weight..."
+            placeholder="0.00"
+            className="h-8"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="grossWeight">Gross Weight (kg)</Label>
+        <div className="space-y-1">
+          <Label htmlFor="grossWeight" className="text-xs">Gross Weight (kg)</Label>
           <Input
             id="grossWeight"
             type="number"
             step="0.01"
             value={grossWeight}
             onChange={(e) => setGrossWeight(e.target.value)}
-            placeholder="Enter gross weight..."
+            placeholder="0.00"
+            className="h-8"
           />
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Quantity</Label>
-          <Input
-            id="quantity"
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            placeholder="Enter quantity..."
-          />
-        </div>
+      <div className="space-y-1">
+        <Label htmlFor="quantity" className="text-xs">Quantity</Label>
+        <Input
+          id="quantity"
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          placeholder="Enter quantity..."
+          className="h-8"
+        />
+      </div>
 
-        <Button 
-          onClick={handlePrintTag} 
-          disabled={loading || !productId || !netWeight || !grossWeight || !quantity}
-          className="w-full"
-        >
-          {loading ? 'Generating...' : (
-            <>
-              <QrCode className="h-4 w-4 mr-2" />
-              Generate & Print Tag
-            </>
-          )}
-        </Button>
+      <Button 
+        onClick={handlePrintTag} 
+        disabled={loading || !productId || !netWeight || !grossWeight || !quantity}
+        className="w-full h-8 text-xs"
+      >
+        {loading ? 'Generating...' : (
+          <>
+            <QrCode className="h-3 w-3 mr-1" />
+            Generate & Print Tag
+          </>
+        )}
+      </Button>
 
-        <div className="text-xs text-muted-foreground">
-          <p>After printing, scan the barcode to tag in the product to stock</p>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="text-xs text-muted-foreground">
+        <p>After printing, scan the barcode to tag in the product to stock</p>
+      </div>
+    </div>
   );
 };
 

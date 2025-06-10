@@ -3,13 +3,12 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useInventoryTags } from '@/hooks/useInventoryTags';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowDown, Tag } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Order {
@@ -131,106 +130,98 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
   const selectedOrder = orders.find(order => order.id === selectedOrderId);
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowDown className="h-5 w-5" />
-          Tag Out
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="tagId">Tag ID or Scan QR Code</Label>
-          <div className="relative">
-            <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="tagId"
-              value={tagId}
-              onChange={(e) => setTagId(e.target.value)}
-              placeholder="Enter tag ID or scan QR..."
-              className="pl-10"
-            />
-          </div>
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="tagId" className="text-xs">Tag ID or Scan QR Code</Label>
+        <div className="relative">
+          <Tag className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
+          <Input
+            id="tagId"
+            value={tagId}
+            onChange={(e) => setTagId(e.target.value)}
+            placeholder="Enter tag ID or scan QR..."
+            className="pl-7 h-8"
+          />
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="customer">Customer Name</Label>
-          <Select value={customerId} onValueChange={setCustomerId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select customer..." />
+      <div className="space-y-1">
+        <Label htmlFor="customer" className="text-xs">Customer Name</Label>
+        <Select value={customerId} onValueChange={setCustomerId}>
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="Select customer..." />
+          </SelectTrigger>
+          <SelectContent>
+            {customers.map((customer) => (
+              <SelectItem key={customer.id} value={customer.id}>
+                {customer.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {customerId && (
+        <div className="space-y-1">
+          <Label htmlFor="order" className="text-xs">Order</Label>
+          <Select 
+            value={selectedOrderId} 
+            onValueChange={setSelectedOrderId}
+            disabled={loadingOrders}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder={loadingOrders ? "Loading orders..." : "Select order..."} />
             </SelectTrigger>
             <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
+              {orders.map((order) => (
+                <SelectItem key={order.id} value={order.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">{order.order_number}</span>
+                    <Badge variant="outline" className="text-xs">{order.status}</Badge>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+      )}
 
-        {customerId && (
-          <div className="space-y-2">
-            <Label htmlFor="order">Order</Label>
-            <Select 
-              value={selectedOrderId} 
-              onValueChange={setSelectedOrderId}
-              disabled={loadingOrders}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={loadingOrders ? "Loading orders..." : "Select order..."} />
-              </SelectTrigger>
-              <SelectContent>
-                {orders.map((order) => (
-                  <SelectItem key={order.id} value={order.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{order.order_number}</span>
-                      <Badge variant="outline">{order.status}</Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {selectedOrder && (
-          <div className="space-y-2">
-            <Label htmlFor="suborder">Sub-order</Label>
-            <Select value={selectedOrderItemId} onValueChange={setSelectedOrderItemId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select sub-order..." />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedOrder.order_items.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{item.suborder_id}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {item.product_configs.product_code} (Qty: {item.quantity})
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <Button 
-          onClick={handleTagOut} 
-          disabled={loading || !tagId.trim() || !customerId || !selectedOrderId || !selectedOrderItemId}
-          className="w-full"
-        >
-          {loading ? 'Processing...' : 'Tag Out'}
-        </Button>
-
-        <div className="text-xs text-muted-foreground">
-          <p>• Select customer to view their active orders and sub-orders</p>
-          <p>• Choose the relevant order for which the product is being tagged out</p>
+      {selectedOrder && (
+        <div className="space-y-1">
+          <Label htmlFor="suborder" className="text-xs">Sub-order</Label>
+          <Select value={selectedOrderItemId} onValueChange={setSelectedOrderItemId}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select sub-order..." />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedOrder.order_items.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">{item.suborder_id}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.product_configs.product_code} (Qty: {item.quantity})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      <Button 
+        onClick={handleTagOut} 
+        disabled={loading || !tagId.trim() || !customerId || !selectedOrderId || !selectedOrderItemId}
+        className="w-full h-8 text-xs"
+      >
+        {loading ? 'Processing...' : 'Tag Out'}
+      </Button>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>• Select customer to view their active orders and sub-orders</p>
+        <p>• Choose the relevant order for which the product is being tagged out</p>
+      </div>
+    </div>
   );
 };
 

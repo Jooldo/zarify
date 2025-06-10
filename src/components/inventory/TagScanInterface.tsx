@@ -12,31 +12,31 @@ interface TagScanInterfaceProps {
 
 const TagScanInterface = ({ onOperationComplete }: TagScanInterfaceProps) => {
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Scan className="h-5 w-5" />
-          Inventory Tag Management
+    <Card className="w-full max-w-lg mx-auto">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Scan className="h-4 w-4" />
+          Tag Management
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <Tabs defaultValue="print" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="print" className="flex items-center gap-2">
-              <Printer className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-2 h-8">
+            <TabsTrigger value="print" className="flex items-center gap-1 text-xs">
+              <Printer className="h-3 w-3" />
               Print Tag
             </TabsTrigger>
-            <TabsTrigger value="tagout" className="flex items-center gap-2">
-              <ArrowDown className="h-4 w-4" />
+            <TabsTrigger value="tagout" className="flex items-center gap-1 text-xs">
+              <ArrowDown className="h-3 w-3" />
               Tag Out
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="print" className="mt-6">
+          <TabsContent value="print" className="mt-3">
             <TagPrintForm onTagGenerated={onOperationComplete} />
           </TabsContent>
           
-          <TabsContent value="tagout" className="mt-6">
+          <TabsContent value="tagout" className="mt-3">
             <TagOutForm onOperationComplete={onOperationComplete} />
           </TabsContent>
         </Tabs>
