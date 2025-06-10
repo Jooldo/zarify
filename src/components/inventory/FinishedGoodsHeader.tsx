@@ -63,15 +63,6 @@ const FinishedGoodsHeader = ({
             <TagScanInterface onOperationComplete={handleScanComplete} />
           </DialogContent>
         </Dialog>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onRefresh}
-          className="h-8"
-        >
-          Refresh
-        </Button>
       </div>
 
       <TagPrintDialog
