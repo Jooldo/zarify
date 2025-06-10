@@ -218,10 +218,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <Badge variant={getStockStatusVariant(material.current_stock, material.minimum_stock)} className="text-xs px-2 py-1 font-bold">
-                      {formatIndianNumber(material.current_stock)} {shortUnit}
-                    </Badge>
+                  <TableCell className="py-1 px-2 text-xs font-medium">
+                    {formatIndianNumber(material.current_stock)} {shortUnit}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)} {shortUnit}
