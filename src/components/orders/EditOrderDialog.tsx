@@ -216,6 +216,9 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
           continue;
         }
 
+        // Convert Progress to "In Progress" for database storage
+        const dbStatus = item.status === 'Progress' ? 'In Progress' : item.status;
+
         // Only update status if suborder is not in "Created" status
         let updateData: any;
         if (item.status === 'Created') {
@@ -223,12 +226,12 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
             quantity: Number(item.quantity) || 1,
             unit_price: Number(item.unit_price) || 0,
             total_price: Number(item.total_price) || 0,
-            status: item.status || 'Created'
+            status: dbStatus
           };
         } else {
           // Only allow status updates for non-created suborders
           updateData = {
-            status: item.status || 'Created'
+            status: dbStatus
           };
         }
 
@@ -291,6 +294,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Created': return 'bg-gray-100 text-gray-800';
+      case 'Progress': return 'bg-blue-100 text-blue-800';
       case 'In Progress': return 'bg-blue-100 text-blue-800';
       case 'Ready': return 'bg-yellow-100 text-yellow-800';
       case 'Delivered': return 'bg-green-100 text-green-800';
@@ -420,7 +424,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Created">Created</SelectItem>
-                          <SelectItem value="In Progress">In Progress</SelectItem>
+                          <SelectItem value="Progress">Progress</SelectItem>
                           <SelectItem value="Ready">Ready</SelectItem>
                           <SelectItem value="Delivered">Delivered</SelectItem>
                         </SelectContent>
