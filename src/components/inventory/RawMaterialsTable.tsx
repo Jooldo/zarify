@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
@@ -214,9 +214,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 text-xs">
                     <div className="flex flex-col">
                       <span className="font-medium">{material.name}</span>
-                      <Badge variant="outline" className="text-xs h-4 px-1 w-fit mt-1">
-                        {material.type}
-                      </Badge>
+                      <span className="text-xs text-gray-500 mt-0.5">{material.type}</span>
                     </div>
                   </TableCell>
                   <TableCell className="py-1 px-2">
@@ -230,23 +228,28 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated }: R
                   <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                      className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">
+                  <TableCell className="py-1 px-2 text-sm font-medium">
                     {formatIndianNumber(material.in_procurement)} {shortUnit}
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div 
-                      className="cursor-help"
+                      className="cursor-help flex items-center gap-1"
                       title={getShortfallTooltip()}
                     >
-                      <span className="text-sm font-medium">
+                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
                       </span>
+                      {shortfall > 0 ? (
+                        <ArrowDown className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <ArrowUp className="h-4 w-4 text-green-600" />
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-2 py-1">
