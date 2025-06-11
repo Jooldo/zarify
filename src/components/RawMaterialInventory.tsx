@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -29,6 +30,36 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const handleSortChange = (field: string, direction: 'asc' | 'desc') => {
     setSortConfig({ field, direction });
   };
+
+  // Debug logging for specific material
+  useMemo(() => {
+    const targetMaterial = rawMaterials.find(material => 
+      material.name === '3MM BOLL CHAIN Tanuu'
+    );
+    
+    if (targetMaterial) {
+      console.log('=== 3MM BOLL CHAIN Tanuu Debug Info ===');
+      console.log('Material data:', {
+        id: targetMaterial.id,
+        name: targetMaterial.name,
+        required: targetMaterial.required,
+        current_stock: targetMaterial.current_stock,
+        in_procurement: targetMaterial.in_procurement,
+        minimum_stock: targetMaterial.minimum_stock
+      });
+      
+      // Check if this material appears in any product configurations
+      console.log('This material should be linked to product configs through product_config_materials table');
+      console.log('The "required" field comes from aggregating quantities from pending orders');
+      
+      const shortfall = Math.max(0, targetMaterial.required - (targetMaterial.current_stock + targetMaterial.in_procurement));
+      console.log('Shortfall calculation:', {
+        required: targetMaterial.required,
+        available: targetMaterial.current_stock + targetMaterial.in_procurement,
+        shortfall: shortfall
+      });
+    }
+  }, [rawMaterials]);
 
   const applyFilters = (materials: any[], appliedFilters: any) => {
     return materials.filter(material => {
