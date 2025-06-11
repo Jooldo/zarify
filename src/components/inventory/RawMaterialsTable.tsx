@@ -272,19 +272,25 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                     {formatIndianNumber(material.in_procurement)} {shortUnit}
                   </TableCell>
                   <TableCell className="px-2 py-1 text-center">
-                    <div 
-                      className="cursor-help flex items-center justify-center gap-1"
-                      title="Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus."
-                    >
-                      <span className={`text-sm font-medium ${material.shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatIndianNumber(Math.abs(material.shortfall))} {shortUnit}
+                    {material.shortfall === 0 ? (
+                      <span className="text-sm font-medium text-gray-600">
+                        0 {shortUnit}
                       </span>
-                      {material.shortfall > 0 ? (
-                        <ArrowDown className="h-4 w-4 text-red-600" />
-                      ) : (
-                        <ArrowUp className="h-4 w-4 text-green-600" />
-                      )}
-                    </div>
+                    ) : (
+                      <div 
+                        className="cursor-help flex items-center justify-center gap-1"
+                        title="Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus."
+                      >
+                        <span className={`text-sm font-medium ${material.shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatIndianNumber(Math.abs(material.shortfall))} {shortUnit}
+                        </span>
+                        {material.shortfall > 0 ? (
+                          <ArrowDown className="h-4 w-4 text-red-600" />
+                        ) : (
+                          <ArrowUp className="h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
