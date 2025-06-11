@@ -63,6 +63,15 @@ export const useRawMaterials = () => {
 
       console.log('📦 Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
+      // Check if 3MM BOLL CHAIN Tanuu exists in raw materials
+      const targetRawMaterial = rawMaterialsData?.find(rm => 
+        rm.name.toLowerCase().includes('3mm boll chain tanuu')
+      );
+      console.log('🎯 Target raw material found:', targetRawMaterial ? {
+        id: targetRawMaterial.id,
+        name: targetRawMaterial.name
+      } : 'NOT FOUND');
+
       // Fetch finished goods with their requirements from live orders
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
@@ -84,17 +93,18 @@ export const useRawMaterials = () => {
 
       console.log('🏭 Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
-      // Debug: Log finished goods with their required quantities
-      finishedGoodsData?.forEach(fg => {
-        if (fg.product_code.includes('AGR-HIM-111G')) {
-          console.log(`🎯 Found target FG: ${fg.product_code}`, {
-            required_quantity: fg.required_quantity,
-            current_stock: fg.current_stock,
-            in_manufacturing: fg.in_manufacturing,
-            threshold: fg.threshold
-          });
-        }
-      });
+      // Find AGR-HIM-111G specifically
+      const agrHimProduct = finishedGoodsData?.find(fg => fg.product_code === 'AGR-HIM-111G');
+      if (agrHimProduct) {
+        console.log('🎯 AGR-HIM-111G found:', {
+          id: agrHimProduct.id,
+          product_config_id: agrHimProduct.product_config_id,
+          required_quantity: agrHimProduct.required_quantity,
+          current_stock: agrHimProduct.current_stock,
+          threshold: agrHimProduct.threshold,
+          shortfall: Math.max(0, (agrHimProduct.required_quantity + agrHimProduct.threshold) - (agrHimProduct.current_stock + agrHimProduct.in_manufacturing))
+        });
+      }
 
       // Fetch product config materials to map finished goods to raw materials
       const { data: productConfigMaterials, error: pcmError } = await supabase
@@ -113,6 +123,27 @@ export const useRawMaterials = () => {
 
       console.log('🔗 Product config materials fetched:', productConfigMaterials?.length || 0, 'items');
 
+      // Find connections to 3MM BOLL CHAIN Tanuu specifically
+      if (targetRawMaterial) {
+        const connectionsToTarget = productConfigMaterials?.filter(
+          pcm => pcm.raw_material_id === targetRawMaterial.id
+        ) || [];
+        console.log('🔗 Connections to 3MM BOLL CHAIN Tanuu:', connectionsToTarget);
+        
+        connectionsToTarget.forEach(connection => {
+          const relatedFG = finishedGoodsData?.find(fg => fg.product_config_id === connection.product_config_id);
+          if (relatedFG) {
+            console.log(`  📋 Connected to FG: ${relatedFG.product_code}`, {
+              product_config_id: connection.product_config_id,
+              quantity_required_per_unit: connection.quantity_required,
+              fg_required_quantity: relatedFG.required_quantity,
+              fg_current_stock: relatedFG.current_stock,
+              fg_threshold: relatedFG.threshold
+            });
+          }
+        });
+      }
+
       // Calculate required quantities for each raw material based on finished goods shortfall
       const materialRequirements = rawMaterialsData?.map(material => {
         let totalRequired = 0;
@@ -122,9 +153,12 @@ export const useRawMaterials = () => {
           pcm => pcm.raw_material_id === material.id
         ) || [];
 
-        console.log(`\n=== CALCULATING FOR: ${material.name} ===`);
-        console.log('Material ID:', material.id);
-        console.log('Configs using this material:', configsUsingMaterial.length);
+        const isTargetMaterial = material.name.toLowerCase().includes('3mm boll chain tanuu');
+        if (isTargetMaterial) {
+          console.log(`\n🎯 === CALCULATING FOR: ${material.name} ===`);
+          console.log('Material ID:', material.id);
+          console.log('Configs using this material:', configsUsingMaterial.length);
+        }
 
         // For each config, calculate based on finished goods shortfall
         configsUsingMaterial.forEach(config => {
@@ -132,8 +166,10 @@ export const useRawMaterials = () => {
             fg => fg.product_config_id === config.product_config_id
           ) || [];
 
-          console.log(`📋 Config ${config.product_config_id} uses ${config.quantity_required} ${material.unit} per unit`);
-          console.log(`Found ${finishedGoodsForConfig.length} finished goods for this config`);
+          if (isTargetMaterial) {
+            console.log(`📋 Config ${config.product_config_id} uses ${config.quantity_required} ${material.unit} per unit`);
+            console.log(`Found ${finishedGoodsForConfig.length} finished goods for this config`);
+          }
 
           finishedGoodsForConfig.forEach(finishedGood => {
             // Use the required_quantity that should now be set from live orders
@@ -148,30 +184,39 @@ export const useRawMaterials = () => {
               const materialNeeded = shortfall * config.quantity_required;
               totalRequired += materialNeeded;
 
-              console.log(`  🎯 Product ${finishedGood.product_code}:`, {
-                liveOrderDemand,
-                threshold: finishedGood.threshold,
-                totalDemand,
-                current_stock: finishedGood.current_stock,
-                in_manufacturing: finishedGood.in_manufacturing,
-                available,
-                shortfall,
-                materialNeeded: materialNeeded,
-                quantityPerUnit: config.quantity_required
-              });
+              if (isTargetMaterial) {
+                console.log(`  🎯 Product ${finishedGood.product_code}:`, {
+                  liveOrderDemand,
+                  threshold: finishedGood.threshold,
+                  totalDemand,
+                  current_stock: finishedGood.current_stock,
+                  in_manufacturing: finishedGood.in_manufacturing,
+                  available,
+                  shortfall,
+                  materialNeeded: materialNeeded,
+                  quantityPerUnit: config.quantity_required
+                });
+              }
             } else {
-              console.log(`  ✅ Product ${finishedGood.product_code}: No shortfall (demand: ${totalDemand}, available: ${available})`);
+              if (isTargetMaterial) {
+                console.log(`  ✅ Product ${finishedGood.product_code}: No shortfall (demand: ${totalDemand}, available: ${available})`);
+              }
             }
           });
         });
 
-        console.log(`📊 TOTAL REQUIRED for ${material.name}: ${totalRequired} ${material.unit}`);
-        console.log('Current Stock:', material.current_stock);
-        console.log('In Procurement:', material.in_procurement);
+        if (isTargetMaterial) {
+          console.log(`📊 TOTAL REQUIRED for ${material.name}: ${totalRequired} ${material.unit}`);
+          console.log('Current Stock:', material.current_stock);
+          console.log('In Procurement:', material.in_procurement);
+        }
 
         const shortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
-        console.log('Final Shortfall:', shortfall);
-        console.log('='.repeat(50));
+        
+        if (isTargetMaterial) {
+          console.log('Final Shortfall:', shortfall);
+          console.log('='.repeat(50));
+        }
 
         return {
           id: material.id,
@@ -192,15 +237,19 @@ export const useRawMaterials = () => {
 
       console.log('✅ Final raw materials with requirements:', materialRequirements);
 
-      // Debug: Check if 3MM BOLL CHAIN Tanuu is in the results
-      const targetMaterial = materialRequirements.find(m => 
+      // Final check on 3MM BOLL CHAIN Tanuu result
+      const finalTargetMaterial = materialRequirements.find(m => 
         m.name.toLowerCase().includes('3mm boll chain tanuu')
       );
-      if (targetMaterial) {
-        console.log('🎯 Found 3MM BOLL CHAIN Tanuu:', targetMaterial);
+      if (finalTargetMaterial) {
+        console.log('🏁 FINAL 3MM BOLL CHAIN Tanuu result:', {
+          name: finalTargetMaterial.name,
+          required: finalTargetMaterial.required,
+          current_stock: finalTargetMaterial.current_stock,
+          shortfall: finalTargetMaterial.shortfall
+        });
       } else {
-        console.log('❌ 3MM BOLL CHAIN Tanuu not found in results');
-        console.log('Available materials:', materialRequirements.map(m => m.name));
+        console.log('❌ 3MM BOLL CHAIN Tanuu not found in final results');
       }
 
       setRawMaterials(materialRequirements);
