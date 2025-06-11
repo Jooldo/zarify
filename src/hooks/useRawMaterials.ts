@@ -67,6 +67,8 @@ export const useRawMaterials = () => {
 
       if (orderItemsError) throw orderItemsError;
 
+      console.log('📊 Live order items fetched:', liveOrderItems?.length || 0);
+
       // Fetch product config materials to map finished goods to raw materials
       const { data: productConfigMaterials, error: pcmError } = await supabase
         .from('product_config_materials')
@@ -79,20 +81,7 @@ export const useRawMaterials = () => {
 
       if (pcmError) throw pcmError;
 
-      // Fetch finished goods data
-      const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
-        .from('finished_goods')
-        .select(`
-          id,
-          product_code,
-          current_stock,
-          in_manufacturing,
-          threshold,
-          product_config_id
-        `)
-        .eq('merchant_id', merchantId);
-
-      if (finishedGoodsError) throw finishedGoodsError;
+      console.log('🔗 Product config materials fetched:', productConfigMaterials?.length || 0);
 
       // Group order items by product_config_id and sum quantities
       const requiredQuantitiesByConfig: { [key: string]: number } = {};
@@ -104,6 +93,8 @@ export const useRawMaterials = () => {
         requiredQuantitiesByConfig[configId] += item.quantity;
       });
 
+      console.log('📋 Required quantities by config:', requiredQuantitiesByConfig);
+
       // Calculate required quantities for each raw material
       const materialsWithCalculations = rawMaterialsData?.map(material => {
         let totalRequired = 0;
@@ -113,29 +104,25 @@ export const useRawMaterials = () => {
           pcm => pcm.raw_material_id === material.id
         ) || [];
 
+        console.log(`🔍 Material ${material.name} used in ${configsUsingMaterial.length} configurations`);
+
         configsUsingMaterial.forEach((config) => {
-          const finishedGoodsForConfig = finishedGoodsData?.filter(
-            fg => fg.product_config_id === config.product_config_id
-          ) || [];
-
-          finishedGoodsForConfig.forEach((finishedGood) => {
-            // Use the required_quantity from live orders
-            const liveOrderDemand = requiredQuantitiesByConfig[finishedGood.product_config_id] || 0;
+          // Get the order demand for this product configuration
+          const orderDemand = requiredQuantitiesByConfig[config.product_config_id] || 0;
+          
+          if (orderDemand > 0) {
+            // Calculate raw material needed for this order demand
+            const materialNeeded = orderDemand * config.quantity_required;
+            totalRequired += materialNeeded;
             
-            // Calculate shortfall for this finished good
-            const totalDemand = liveOrderDemand + finishedGood.threshold;
-            const available = finishedGood.current_stock + finishedGood.in_manufacturing;
-            const shortfall = Math.max(0, totalDemand - available);
-
-            if (shortfall > 0) {
-              const materialNeeded = shortfall * config.quantity_required;
-              totalRequired += materialNeeded;
-            }
-          });
+            console.log(`📊 Config ${config.product_config_id}: order_demand=${orderDemand}, quantity_required=${config.quantity_required}, material_needed=${materialNeeded}`);
+          }
         });
 
         // Calculate shortfall for this material
         const shortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
+
+        console.log(`🎯 Material ${material.name}: total_required=${totalRequired}, shortfall=${shortfall}`);
 
         return {
           ...material,
