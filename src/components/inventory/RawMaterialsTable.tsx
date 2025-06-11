@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,14 +66,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     return "default" as const;
   };
 
-  const calculateShortfall = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
-    const totalAvailable = currentStock + inProcurement;
-    const totalNeeded = required + minimumStock;
-    return totalNeeded - totalAvailable;
-  };
-
   const getInventoryStatus = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
-    const shortfall = calculateShortfall(currentStock, inProcurement, required, minimumStock);
+    const shortfall = Math.max(0, (required + minimumStock) - (currentStock + inProcurement));
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -146,8 +139,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         bValue = b.in_procurement;
         break;
       case 'shortfall':
-        aValue = calculateShortfall(a.current_stock, a.in_procurement, a.required, a.minimum_stock);
-        bValue = calculateShortfall(b.current_stock, b.in_procurement, b.required, b.minimum_stock);
+        aValue = a.shortfall;
+        bValue = b.shortfall;
         break;
       default:
         return 0;
@@ -240,13 +233,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           </TableHeader>
           <TableBody>
             {sortedMaterials.map((material) => {
-              const shortfall = calculateShortfall(
-                material.current_stock,
-                material.in_procurement,
-                material.required,
-                material.minimum_stock
-              );
-
               const statusInfo = getInventoryStatus(
                 material.current_stock,
                 material.in_procurement,
@@ -288,12 +274,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   <TableCell className="px-2 py-1 text-center">
                     <div 
                       className="cursor-help flex items-center justify-center gap-1"
-                      title={getShortfallTooltip()}
+                      title="Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus."
                     >
-                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
+                      <span className={`text-sm font-medium ${material.shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {formatIndianNumber(Math.abs(material.shortfall))} {shortUnit}
                       </span>
-                      {shortfall > 0 ? (
+                      {material.shortfall > 0 ? (
                         <ArrowDown className="h-4 w-4 text-red-600" />
                       ) : (
                         <ArrowUp className="h-4 w-4 text-green-600" />
