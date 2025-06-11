@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -21,7 +20,7 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
 
   const sortOptions = [
-    { value: 'ordered_qty', label: 'Ordered Quantity' },
+    { value: 'ordered_qty', label: 'Quantity Required based on Finished Good Shortfall' },
     { value: 'current_stock', label: 'Current Stock' },
     { value: 'in_procurement', label: 'In Procurement' },
     { value: 'shortfall', label: 'Shortfall' }

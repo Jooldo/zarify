@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -27,7 +26,7 @@ const FinishedGoodsInventory = () => {
   const queryClient = useQueryClient();
 
   const sortOptions = [
-    { value: 'ordered_qty', label: 'Ordered Quantity' },
+    { value: 'ordered_qty', label: 'Required Quantity Based On Live Orders' },
     { value: 'current_stock', label: 'Current Stock' },
     { value: 'in_manufacturing', label: 'In Manufacturing' },
     { value: 'shortfall', label: 'Shortfall' }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -138,7 +137,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
               <div className="text-sm">{product.in_manufacturing} units</div>
             </div>
             <div>
-              <Label className="text-sm font-medium">Ordered Quantity:</Label>
+              <Label className="text-sm font-medium">Required Quantity Based On Live Orders:</Label>
               <div className="text-sm">{product.required_quantity} units</div>
             </div>
             <div>
@@ -177,7 +176,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      // Calculate total required based on shortfall quantity (if positive) or ordered quantity
+                      // Calculate total required based on shortfall quantity (if positive) or required quantity
                       const quantityToUse = shortfall > 0 ? shortfall : product.required_quantity;
                       const totalRequired = material.quantity_required * quantityToUse;
                       const status = getStockStatus(
