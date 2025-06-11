@@ -72,6 +72,26 @@ export const useRawMaterials = () => {
         name: targetRawMaterial.name
       } : 'NOT FOUND');
 
+      // DEBUG: Fetch ALL product config materials to see what's in the table
+      const { data: allProductConfigMaterials, error: allPcmError } = await supabase
+        .from('product_config_materials')
+        .select('*')
+        .eq('merchant_id', merchantId);
+
+      if (allPcmError) {
+        console.error('Error fetching all product config materials:', allPcmError);
+      } else {
+        console.log('🔧 ALL Product config materials in database:', allProductConfigMaterials);
+        console.log('🔧 Total product config materials count:', allProductConfigMaterials?.length || 0);
+        
+        if (targetRawMaterial) {
+          const materialsUsingTarget = allProductConfigMaterials?.filter(
+            pcm => pcm.raw_material_id === targetRawMaterial.id
+          ) || [];
+          console.log('🔧 Materials using 3MM BOLL CHAIN Tanuu:', materialsUsingTarget);
+        }
+      }
+
       // Fetch finished goods with their requirements from live orders
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
@@ -104,6 +124,12 @@ export const useRawMaterials = () => {
           threshold: agrHimProduct.threshold,
           shortfall: Math.max(0, (agrHimProduct.required_quantity + agrHimProduct.threshold) - (agrHimProduct.current_stock + agrHimProduct.in_manufacturing))
         });
+
+        // DEBUG: Check if there are any product config materials for this specific product config
+        const materialsForAgrHim = allProductConfigMaterials?.filter(
+          pcm => pcm.product_config_id === agrHimProduct.product_config_id
+        ) || [];
+        console.log('🔧 Materials configured for AGR-HIM-111G product config:', materialsForAgrHim);
       }
 
       // Fetch product config materials to map finished goods to raw materials
@@ -158,6 +184,7 @@ export const useRawMaterials = () => {
           console.log(`\n🎯 === CALCULATING FOR: ${material.name} ===`);
           console.log('Material ID:', material.id);
           console.log('Configs using this material:', configsUsingMaterial.length);
+          console.log('Configs details:', configsUsingMaterial);
         }
 
         // For each config, calculate based on finished goods shortfall
@@ -169,6 +196,7 @@ export const useRawMaterials = () => {
           if (isTargetMaterial) {
             console.log(`📋 Config ${config.product_config_id} uses ${config.quantity_required} ${material.unit} per unit`);
             console.log(`Found ${finishedGoodsForConfig.length} finished goods for this config`);
+            console.log('Finished goods for this config:', finishedGoodsForConfig);
           }
 
           finishedGoodsForConfig.forEach(finishedGood => {
