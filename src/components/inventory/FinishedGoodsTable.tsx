@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye, AlertTriangle, CheckCircle, AlertCircle, Info, ArrowUp, ArrowDown } from 'lucide-react';
+import { Edit, AlertTriangle, CheckCircle, AlertCircle, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import type { FinishedGood } from '@/hooks/useFinishedGoods';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
@@ -58,6 +58,10 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
     setIsOrderDetailsOpen(true);
     const details = await fetchFinishedGoodOrderDetails(product.product_code);
     setOrderDetails(details);
+  };
+
+  const handleProductCodeClick = (product: FinishedGood) => {
+    onViewProduct(product);
   };
 
   // Sort products based on sortConfig
@@ -183,11 +187,13 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
               return (
                 <TableRow key={product.id} className="h-10">
                   <TableCell className="px-2 py-1 font-mono text-xs bg-gray-50">
-                    <ProductDetailsPopover productCode={product.product_code}>
-                      <Button variant="ghost" className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50">
-                        {product.product_code}
-                      </Button>
-                    </ProductDetailsPopover>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      onClick={() => handleProductCodeClick(product)}
+                    >
+                      {product.product_code}
+                    </Button>
                   </TableCell>
                   <TableCell className="px-2 py-1 text-xs font-medium">
                     {formatIndianNumber(product.threshold)}
@@ -229,14 +235,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   </TableCell>
                   <TableCell className="px-2 py-1">
                     <div className="flex gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={() => onViewProduct(product)}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 

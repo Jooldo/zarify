@@ -1,78 +1,37 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag } from 'lucide-react';
+import { Edit, AlertTriangle, CheckCircle, AlertCircle, Info, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { RawMaterial } from '@/hooks/useRawMaterials';
-import ViewRawMaterialDialog from './ViewRawMaterialDialog';
-import RaiseRequestDialog from './RaiseRequestDialog';
-import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
-import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
+import type { RawMaterial } from '@/hooks/useRawMaterials';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
-import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
-import SortDropdown from '@/components/ui/sort-dropdown';
+import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
+import RaiseRequestDialog from './RaiseRequestDialog';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
   loading: boolean;
   onUpdate: () => void;
-  onRequestCreated?: () => void;
+  onRequestCreated: () => void;
   sortConfig?: { field: string; direction: 'asc' | 'desc' } | null;
   onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
-  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
-  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
-  const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
-  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
+  const [isRaiseRequestOpen, setIsRaiseRequestOpen] = useState(false);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [productDetails, setProductDetails] = useState<any[]>([]);
-  const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
+  const { loading: detailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
   };
 
-  const getShortUnit = (unit: string) => {
-    const unitMap: { [key: string]: string } = {
-      'grams': 'g',
-      'gram': 'g',
-      'kilograms': 'kg',
-      'kilogram': 'kg',
-      'liters': 'l',
-      'liter': 'l',
-      'milliliters': 'ml',
-      'milliliter': 'ml',
-      'pieces': 'pcs',
-      'piece': 'pc',
-      'meters': 'm',
-      'meter': 'm',
-      'centimeters': 'cm',
-      'centimeter': 'cm',
-      'pounds': 'lbs',
-      'pound': 'lb',
-      'ounces': 'oz',
-      'ounce': 'oz'
-    };
-    return unitMap[unit.toLowerCase()] || unit;
-  };
-
-  const getStockStatusVariant = (currentStock: number, minimumStock: number) => {
-    if (currentStock <= minimumStock) return "destructive" as const;
-    if (currentStock <= minimumStock * 1.5) return "secondary" as const;
-    return "default" as const;
-  };
-
-  const calculateShortfall = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
-    const totalAvailable = currentStock + inProcurement;
-    const totalNeeded = required + minimumStock;
-    return totalNeeded - totalAvailable;
-  };
-
-  const getInventoryStatus = (currentStock: number, inProcurement: number, required: number, minimumStock: number) => {
-    const shortfall = calculateShortfall(currentStock, inProcurement, required, minimumStock);
+  const getStockStatus = (currentStock: number, minimumStock: number, required: number, inProcurement: number) => {
+    const shortfall = Math.max(0, required - (currentStock + inProcurement));
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -83,37 +42,16 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     }
   };
 
-  const getShortfallTooltip = () => {
-    return "Shortfall = (Ordered Qty + Minimum Stock) - (Current Stock + In Procurement). Positive values indicate shortfall, negative values indicate surplus.";
-  };
-
-  const handleViewMaterial = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsViewMaterialOpen(true);
-  };
-
   const handleRaiseRequest = (material: RawMaterial) => {
     setSelectedMaterial(material);
-    setIsRequestDialogOpen(true);
+    setIsRaiseRequestOpen(true);
   };
 
-  const handleUpdateStock = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsStockUpdateOpen(true);
-  };
-
-  const handleOrderedQtyClick = async (material: RawMaterial) => {
+  const handleRequiredClick = async (material: RawMaterial) => {
     setSelectedMaterial(material);
     setIsOrderDetailsOpen(true);
     const details = await fetchRawMaterialProductDetails(material.id);
     setProductDetails(details);
-  };
-
-  const handleRequestCreated = () => {
-    onUpdate();
-    if (onRequestCreated) {
-      onRequestCreated();
-    }
   };
 
   // Sort materials based on sortConfig
@@ -130,16 +68,16 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         bValue = b.required || 0;
         break;
       case 'current_stock':
-        aValue = a.current_stock;
-        bValue = b.current_stock;
+        aValue = a.current_stock || 0;
+        bValue = b.current_stock || 0;
         break;
       case 'in_procurement':
-        aValue = a.in_procurement;
-        bValue = b.in_procurement;
+        aValue = a.in_procurement || 0;
+        bValue = b.in_procurement || 0;
         break;
       case 'shortfall':
-        aValue = calculateShortfall(a.current_stock, a.in_procurement, a.required, a.minimum_stock);
-        bValue = calculateShortfall(b.current_stock, b.in_procurement, b.required, b.minimum_stock);
+        aValue = Math.max(0, (a.required || 0) - ((a.current_stock || 0) + (a.in_procurement || 0)));
+        bValue = Math.max(0, (b.required || 0) - ((b.current_stock || 0) + (b.in_procurement || 0)));
         break;
       default:
         return 0;
@@ -150,13 +88,17 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
   if (loading) {
     return (
-      <TableSkeleton 
-        rows={8} 
-        columns={8}
-        columnWidths={[
-          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
-        ]}
-      />
+      <div className="bg-white rounded-lg border p-8">
+        <div className="text-center text-gray-500">Loading raw materials...</div>
+      </div>
+    );
+  }
+
+  if (materials.length === 0) {
+    return (
+      <div className="bg-white rounded-lg border p-8">
+        <div className="text-center text-gray-500">No raw materials found</div>
+      </div>
     );
   }
 
@@ -166,22 +108,23 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         <Table>
           <TableHeader>
             <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Material Name</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Type</TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium">Supplier</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium text-center">
                 <div className="flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">Quantity Required</span>
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                    <span className="text-purple-700 font-semibold text-xs leading-tight">Qty Required based</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">based on Finished Good Shortfall</span>
+                    <span className="text-purple-700 font-semibold text-xs leading-tight">on FG Shortfall</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
+                        <Info className="h-3 w-3 text-purple-500 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
+                        <p className="max-w-xs">Total quantity of this raw material required based on finished goods shortfall calculations</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -196,7 +139,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Quantity of this material currently being procured from suppliers</p>
+                      <p className="max-w-xs">Quantity of this material currently being procured</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -209,7 +152,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus.</p>
+                      <p className="max-w-xs">Shortage: Required - (Current Stock + In Procurement). Positive values indicate shortage.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -222,7 +165,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Critical: Shortage exists; Low: Current stock below minimum; Good: Adequate stock levels</p>
+                      <p className="max-w-xs">Critical: Shortage exists; Low: Stock below minimum; Good: Adequate stock levels</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -232,58 +175,50 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           </TableHeader>
           <TableBody>
             {sortedMaterials.map((material) => {
-              const shortfall = calculateShortfall(
+              const shortfall = Math.max(0, material.required - (material.current_stock + material.in_procurement));
+              
+              const statusInfo = getStockStatus(
                 material.current_stock,
-                material.in_procurement,
+                material.minimum_stock,
                 material.required,
-                material.minimum_stock
-              );
-
-              const statusInfo = getInventoryStatus(
-                material.current_stock,
-                material.in_procurement,
-                material.required,
-                material.minimum_stock
+                material.in_procurement
               );
 
               const StatusIcon = statusInfo.icon;
-              const shortUnit = getShortUnit(material.unit);
-              
+
               return (
                 <TableRow key={material.id} className="h-10">
-                  <TableCell className="py-1 px-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{material.name}</span>
-                      <Badge variant="secondary" className="text-xs px-2 py-1">
-                        {material.type}
-                      </Badge>
+                  <TableCell className="px-2 py-1 text-xs font-medium">
+                    <div className="flex flex-col">
+                      <span>{material.name}</span>
+                      <span className="text-xs text-gray-500">{material.unit}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.minimum_stock)} {shortUnit}
+                  <TableCell className="px-2 py-1 text-xs">
+                    {material.type}
+                  </TableCell>
+                  <TableCell className="px-2 py-1 text-xs">
+                    {material.supplier_name || '-'}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-center">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
-                      onClick={() => handleOrderedQtyClick(material)}
+                      className="h-auto p-0 text-sm font-bold text-purple-700 hover:text-purple-900 hover:bg-purple-50"
+                      onClick={() => handleRequiredClick(material)}
                     >
-                      {formatIndianNumber(material.required || 0)} {shortUnit}
+                      {formatIndianNumber(material.required)}
                     </Button>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-bold text-center">
-                    {formatIndianNumber(material.current_stock)} {shortUnit}
+                  <TableCell className="px-2 py-1 text-sm font-bold text-center">
+                    {formatIndianNumber(material.current_stock)}
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-medium text-center">
-                    {formatIndianNumber(material.in_procurement)} {shortUnit}
+                  <TableCell className="px-2 py-1 text-sm font-medium text-center">
+                    {formatIndianNumber(material.in_procurement)}
                   </TableCell>
                   <TableCell className="px-2 py-1 text-center">
-                    <div 
-                      className="cursor-help flex items-center justify-center gap-1"
-                      title={getShortfallTooltip()}
-                    >
+                    <div className="flex items-center justify-center gap-1">
                       <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
+                        {formatIndianNumber(shortfall)}
                       </span>
                       {shortfall > 0 ? (
                         <ArrowDown className="h-4 w-4 text-red-600" />
@@ -300,33 +235,15 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 px-2">
+                  <TableCell className="px-2 py-1">
                     <div className="flex gap-1">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         className="h-6 w-6 p-0"
-                        onClick={() => handleViewMaterial(material)}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleUpdateStock(material)}
-                        title="Update Stock"
+                        onClick={() => handleRaiseRequest(material)}
                       >
                         <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleRaiseRequest(material)}
-                        title="Raise Request"
-                      >
-                        <Plus className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableCell>
@@ -337,35 +254,24 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         </Table>
       </div>
 
-      <ViewRawMaterialDialog 
+      <RaiseRequestDialog
+        isOpen={isRaiseRequestOpen}
+        onOpenChange={setIsRaiseRequestOpen}
         material={selectedMaterial}
-        isOpen={isViewMaterialOpen}
-        onOpenChange={setIsViewMaterialOpen}
-      />
-
-      <RaiseRequestDialog 
-        isOpen={isRequestDialogOpen}
-        onOpenChange={setIsRequestDialogOpen}
-        material={selectedMaterial}
-        onRequestCreated={handleRequestCreated}
-        mode="inventory"
-      />
-
-      <RawMaterialStockUpdateDialog
-        isOpen={isStockUpdateOpen}
-        onOpenChange={setIsStockUpdateOpen}
-        material={selectedMaterial}
-        onStockUpdated={onUpdate}
+        onRequestCreated={() => {
+          onRequestCreated();
+          setIsRaiseRequestOpen(false);
+        }}
       />
 
       <OrderedQtyDetailsDialog
         isOpen={isOrderDetailsOpen}
         onClose={() => setIsOrderDetailsOpen(false)}
-        materialName={selectedMaterial?.name}
+        materialId={selectedMaterial?.id}
         productDetails={productDetails}
         totalQuantity={selectedMaterial?.required || 0}
-        loading={orderDetailsLoading}
-        isRawMaterial={true}
+        loading={detailsLoading}
+        materialName={selectedMaterial?.name}
       />
     </TooltipProvider>
   );
