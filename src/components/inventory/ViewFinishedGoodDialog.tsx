@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -5,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface RawMaterialRequirement {
   id: string;
@@ -73,6 +75,16 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
     }
   };
 
+  const calculateShortfall = (currentStock: number, inManufacturing: number, requiredQuantity: number, threshold: number) => {
+    const totalAvailable = currentStock + inManufacturing;
+    const totalNeeded = requiredQuantity + threshold;
+    return totalNeeded - totalAvailable;
+  };
+
+  const formatIndianNumber = (num: number) => {
+    return num.toLocaleString('en-IN');
+  };
+
   const getStockStatus = (available: number, totalRequired: number) => {
     if (available >= totalRequired) return { label: 'Available', variant: 'default' as const };
     if (available > 0) return { label: 'Insufficient', variant: 'secondary' as const };
@@ -87,6 +99,13 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
   };
 
   if (!product) return null;
+
+  const shortfall = calculateShortfall(
+    product.current_stock,
+    product.in_manufacturing,
+    product.required_quantity,
+    product.threshold
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -119,8 +138,21 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
               <div className="text-sm">{product.in_manufacturing} units</div>
             </div>
             <div>
-              <Label className="text-sm font-medium">Required Quantity:</Label>
+              <Label className="text-sm font-medium">Ordered Quantity:</Label>
               <div className="text-sm">{product.required_quantity} units</div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Shortfall Quantity:</Label>
+              <div className="flex items-center gap-1">
+                <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatIndianNumber(Math.abs(shortfall))} units
+                </span>
+                {shortfall > 0 ? (
+                  <ArrowDown className="h-4 w-4 text-red-600" />
+                ) : (
+                  <ArrowUp className="h-4 w-4 text-green-600" />
+                )}
+              </div>
             </div>
           </div>
 
@@ -145,7 +177,9 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      const totalRequired = material.quantity_required * product.required_quantity;
+                      // Calculate total required based on shortfall quantity (if positive) or ordered quantity
+                      const quantityToUse = shortfall > 0 ? shortfall : product.required_quantity;
+                      const totalRequired = material.quantity_required * quantityToUse;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
                         totalRequired
