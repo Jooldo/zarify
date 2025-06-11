@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,6 +35,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   const [loading, setLoading] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string>('');
   
   const { toast } = useToast();
   const { suppliers } = useSuppliers();
@@ -44,6 +44,7 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   useEffect(() => {
     if (selectedRequest) {
       setEditedRequest({ ...selectedRequest });
+      setCurrentStatus(selectedRequest.status);
     }
   }, [selectedRequest]);
 
@@ -146,8 +147,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    await onUpdateRequestStatus(selectedRequest.id, newStatus);
-    onRequestUpdated();
+    // Update local state immediately
+    setCurrentStatus(newStatus);
+    
+    try {
+      await onUpdateRequestStatus(selectedRequest.id, newStatus);
+      onRequestUpdated();
+    } catch (error) {
+      // Revert local state if update fails
+      setCurrentStatus(selectedRequest.status);
+    }
   };
 
   const getSupplierName = (supplierId: string | undefined) => {
@@ -163,6 +172,9 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
     return selectedRequest.quantity_requested;
   };
 
+  // Use currentStatus instead of selectedRequest.status for display
+  const displayStatus = currentStatus;
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -171,8 +183,8 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             <DialogTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
               Request Details
-              <Badge className={getStatusColor(selectedRequest.status)}>
-                {selectedRequest.status}
+              <Badge className={getStatusColor(displayStatus)}>
+                {displayStatus}
               </Badge>
               {isMultiItem && (
                 <Badge variant="outline" className="flex items-center gap-1 text-xs">
@@ -345,11 +357,11 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                   )}
                 </div>
 
-                {/* Status Update Section */}
-                {!isEditing && selectedRequest.status !== 'Received' && (
+                {/* Status Update Section - Use displayStatus */}
+                {!isEditing && displayStatus !== 'Received' && (
                   <div>
                     <Label className="text-xs">Update Status</Label>
-                    <Select value={selectedRequest.status} onValueChange={handleStatusChange}>
+                    <Select value={displayStatus} onValueChange={handleStatusChange}>
                       <SelectTrigger className="mt-1 h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>

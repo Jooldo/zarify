@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -266,13 +267,7 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
 
           {/* Items List */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Procurement Items</Label>
-              <Button type="button" onClick={addItem} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
+            <Label className="text-base font-semibold">Procurement Items</Label>
 
             {items.map((item, index) => (
               <ProcurementItemForm
@@ -292,6 +287,14 @@ const MultiItemProcurementDialog = ({ isOpen, onOpenChange, onRequestCreated }: 
                 onSupplierAdded={handleSupplierAdded}
               />
             ))}
+
+            {/* Add Item Button - Now below the items */}
+            <div className="flex justify-center pt-2">
+              <Button type="button" onClick={addItem} variant="outline" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
