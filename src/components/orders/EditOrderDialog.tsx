@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -102,7 +101,35 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
     }
   };
 
+  const canDeleteOrder = () => {
+    // Check if any order items are in progress
+    const hasInProgressItems = orderItems.some(item => 
+      item.status === 'Progress' || item.status === 'In Progress' || item.status === 'Ready'
+    );
+    return !hasInProgressItems;
+  };
+
+  const getDeleteErrorMessage = () => {
+    const inProgressItems = orderItems.filter(item => 
+      item.status === 'Progress' || item.status === 'In Progress' || item.status === 'Ready'
+    );
+    
+    if (inProgressItems.length > 0) {
+      return `This order cannot be deleted because it has ${inProgressItems.length} suborder(s) already in progress or ready. Please contact your administrator to handle this order.`;
+    }
+    return '';
+  };
+
   const deleteEntireOrder = async () => {
+    if (!canDeleteOrder()) {
+      toast({
+        title: 'Cannot Delete Order',
+        description: getDeleteErrorMessage(),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -498,7 +525,13 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
           <div className="flex gap-2 justify-between pt-2 border-t">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive" size="sm" className="h-7 text-xs">
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  disabled={!canDeleteOrder()}
+                >
                   <Trash2 className="h-3 w-3 mr-1" />
                   Delete Order
                 </Button>
@@ -507,17 +540,22 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
-                    Delete Order
+                    {canDeleteOrder() ? 'Delete Order' : 'Cannot Delete Order'}
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete this entire order? This action cannot be undone and will remove all suborders.
+                    {canDeleteOrder() 
+                      ? 'Are you sure you want to delete this entire order? This action cannot be undone and will remove all suborders.'
+                      : getDeleteErrorMessage()
+                    }
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={deleteEntireOrder} className="bg-red-600 hover:bg-red-700">
-                    Delete Order
-                  </AlertDialogAction>
+                  {canDeleteOrder() && (
+                    <AlertDialogAction onClick={deleteEntireOrder} className="bg-red-600 hover:bg-red-700">
+                      Delete Order
+                    </AlertDialogAction>
+                  )}
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
