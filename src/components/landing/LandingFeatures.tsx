@@ -55,8 +55,8 @@ const LandingFeatures = () => {
           <Badge className="mb-4 px-3 py-1 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full text-xs">
             Complete Platform
           </Badge>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">
-            Everything You Need to Run Your Manufacturing
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight text-left">
+            Everything You Need to Run <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">Your Manufacturing</span>
           </h2>
           <p className="text-base text-gray-600 leading-relaxed">
             From raw materials to finished jewelry - manage your entire operation in one platform

@@ -22,11 +22,8 @@ const LandingHero = () => {
             </div>
           </div>
           
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight tracking-tight">
-            Streamline Your
-            <span className="block bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Jewelry Manufacturing
-            </span>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight tracking-tight text-left">
+            Streamline Your <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">Jewelry Business</span>
           </h1>
           
           <p className="text-base text-gray-600 mb-8 leading-relaxed max-w-2xl">
