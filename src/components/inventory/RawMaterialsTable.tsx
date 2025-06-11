@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -169,17 +170,22 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                  <span className="text-blue-700 font-semibold">Quantity Required based on Finished Good Shortfall</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-blue-500 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
-                    </TooltipContent>
-                  </Tooltip>
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-blue-700 font-semibold text-xs leading-tight">Quantity Required</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-blue-700 font-semibold text-xs leading-tight">based on Finished Good Shortfall</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium text-center">Current Stock</TableHead>
