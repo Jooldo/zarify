@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +102,6 @@ export const useRawMaterials = () => {
       console.log('🔗 Product config materials fetched:', productConfigMaterials?.length || 0, 'items');
 
       // Calculate required quantities for each raw material and prepare updates
-      const materialUpdates: { id: string; required: number }[] = [];
       const materialRequirements = rawMaterialsData?.map(material => {
         let totalRequired = 0;
 
@@ -172,11 +170,7 @@ export const useRawMaterials = () => {
           console.log(`📊 TOTAL REQUIRED for ${material.name}: ${totalRequired} ${material.unit}`);
           console.log('Current Stock:', material.current_stock);
           console.log('In Procurement:', material.in_procurement);
-        }
-
-        // Only update if the required quantity is different from what's in the database
-        if (totalRequired !== material.required) {
-          materialUpdates.push({ id: material.id, required: totalRequired });
+          console.log(`🔄 Will update database: current required = ${material.required}, new required = ${totalRequired}`);
         }
 
         const shortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
@@ -203,26 +197,27 @@ export const useRawMaterials = () => {
         };
       }) || [];
 
-      // Update the database with new required quantities
-      if (materialUpdates.length > 0) {
-        console.log('🔄 Updating required quantities in database:', materialUpdates);
-        
-        const updatePromises = materialUpdates.map(update => 
-          supabase
-            .from('raw_materials')
-            .update({ required: update.required, last_updated: new Date().toISOString() })
-            .eq('id', update.id)
-        );
+      // Update the database with new required quantities for ALL materials
+      console.log('🔄 Updating ALL material required quantities in database...');
+      
+      const updatePromises = materialRequirements.map(material => 
+        supabase
+          .from('raw_materials')
+          .update({ 
+            required: material.required, 
+            last_updated: new Date().toISOString() 
+          })
+          .eq('id', material.id)
+      );
 
-        const updateResults = await Promise.all(updatePromises);
-        
-        // Check for any update errors
-        const updateErrors = updateResults.filter(result => result.error);
-        if (updateErrors.length > 0) {
-          console.error('Some updates failed:', updateErrors);
-        } else {
-          console.log('✅ All required quantities updated successfully');
-        }
+      const updateResults = await Promise.all(updatePromises);
+      
+      // Check for any update errors
+      const updateErrors = updateResults.filter(result => result.error);
+      if (updateErrors.length > 0) {
+        console.error('Some updates failed:', updateErrors);
+      } else {
+        console.log('✅ All required quantities updated successfully');
       }
 
       console.log('✅ Final raw materials with requirements:', materialRequirements);
