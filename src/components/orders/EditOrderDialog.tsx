@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import OrderItemForm from './OrderItemForm';
+import { calculateAndUpdateRawMaterialRequirements } from '@/services/rawMaterialCalculationService';
 
 interface EditOrderDialogProps {
   isOpen: boolean;
@@ -270,6 +272,17 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
       if (orderError) {
         console.error('Order update error:', orderError);
         throw orderError;
+      }
+
+      console.log('🔄 Order updated successfully, starting calculations...');
+      
+      // Trigger calculations after order update
+      try {
+        await calculateAndUpdateRawMaterialRequirements();
+        console.log('✅ Calculations completed successfully');
+      } catch (calcError) {
+        console.error('⚠️ Calculation error (order still updated):', calcError);
+        // Don't fail the order update if calculations fail
       }
 
       toast({

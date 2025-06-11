@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { calculateAndUpdateRawMaterialRequirements } from '@/services/rawMaterialCalculationService';
 
 interface OrderSubmissionHookProps {
   onOrderCreated: () => void;
@@ -129,6 +130,17 @@ export const useOrderSubmission = ({ onOrderCreated, onClose }: OrderSubmissionH
           });
 
         if (itemError) throw itemError;
+      }
+
+      console.log('🔄 Order created successfully, starting calculations...');
+      
+      // Trigger calculations after order creation
+      try {
+        await calculateAndUpdateRawMaterialRequirements();
+        console.log('✅ Calculations completed successfully');
+      } catch (calcError) {
+        console.error('⚠️ Calculation error (order still created):', calcError);
+        // Don't fail the order creation if calculations fail
       }
 
       toast({

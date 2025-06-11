@@ -42,35 +42,8 @@ export const useFinishedGoods = () => {
 
       console.log('Merchant ID:', merchantId);
 
-      // Fetch all order items with status 'Created' or 'In Progress' to calculate required quantities
-      const { data: orderItemsData, error: orderItemsError } = await supabase
-        .from('order_items')
-        .select(`
-          product_config_id,
-          quantity,
-          status
-        `)
-        .eq('merchant_id', merchantId)
-        .in('status', ['Created', 'In Progress']);
-
-      if (orderItemsError) {
-        console.error('Error fetching order items:', orderItemsError);
-        throw orderItemsError;
-      }
-
-      console.log('Pending order items fetched:', orderItemsData?.length || 0, 'items');
-
-      // Calculate required quantities for each product config
-      const requiredQuantities = orderItemsData?.reduce((acc, item) => {
-        if (item.status === 'Created' || item.status === 'In Progress') {
-          acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
-        }
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      console.log('Calculated required quantities from orders:', requiredQuantities);
-
       // Fetch all finished goods with their product configs for this merchant
+      // The required_quantity should now be updated by the calculation service
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
@@ -87,19 +60,17 @@ export const useFinishedGoods = () => {
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
-      // Update finished goods with calculated required quantities (in memory only for display)
+      // Use the required_quantity directly from the database (updated by calculation service)
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
-        const orderDemand = requiredQuantities[item.product_config_id] || 0;
-        
-        console.log(`Product ${item.product_code}: order_demand=${orderDemand}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
+        console.log(`Product ${item.product_code}: required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
         
         return {
           ...item,
-          required_quantity: orderDemand
+          required_quantity: item.required_quantity || 0
         };
       }) || [];
 
-      console.log('Final finished goods with updated required quantities:', finishedGoodsWithRequiredQty);
+      console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
 
       setFinishedGoods(finishedGoodsWithRequiredQty);
     } catch (error) {
