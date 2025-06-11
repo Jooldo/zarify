@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -143,16 +142,25 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  // Enhanced error handling for destructive/error toasts
+  // For destructive toasts, we'll handle them via error dialogs in the UI
   const isError = props.variant === 'destructive'
   
-  const enhancedProps = {
-    ...props,
-    // Make error toasts non-dismissible and longer duration
-    ...(isError && {
-      duration: Infinity, // Don't auto-dismiss error toasts
-      action: props.action || undefined, // Keep any existing action
-    })
+  if (isError) {
+    // Don't add error toasts to the toast system - they'll be handled by error dialogs
+    // Just trigger a custom event that components can listen to
+    const errorEvent = new CustomEvent('show-error-dialog', {
+      detail: {
+        title: props.title,
+        description: props.description,
+      }
+    });
+    window.dispatchEvent(errorEvent);
+    
+    return {
+      id: id,
+      dismiss: () => {},
+      update: () => {},
+    };
   }
 
   const update = (props: ToasterToast) =>
@@ -165,12 +173,11 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...enhancedProps,
+      ...props,
       id,
       open: true,
       onOpenChange: (open) => {
-        // For error toasts, don't auto-dismiss on interaction unless explicitly closed
-        if (!open && !isError) dismiss()
+        if (!open) dismiss()
       },
     },
   })
