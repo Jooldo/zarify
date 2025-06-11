@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,40 +31,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [productDetails, setProductDetails] = useState<any[]>([]);
   const [calculatedTotalRequired, setCalculatedTotalRequired] = useState<number>(0);
-  const [materialRequirements, setMaterialRequirements] = useState<{ [key: string]: number }>({});
-  const [updateTrigger, setUpdateTrigger] = useState(0);
   const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
-
-  // Calculate material requirements for all materials
-  useEffect(() => {
-    const calculateAllMaterialRequirements = async () => {
-      const requirements: { [key: string]: number } = {};
-      
-      for (const material of materials) {
-        try {
-          const details = await fetchRawMaterialProductDetails(material.id);
-          const totalRequired = details.reduce((sum, product) => {
-            return sum + (product.total_material_required || 0);
-          }, 0);
-          requirements[material.id] = totalRequired;
-        } catch (error) {
-          console.error(`Error calculating requirements for material ${material.id}:`, error);
-          requirements[material.id] = 0;
-        }
-      }
-      
-      setMaterialRequirements(requirements);
-    };
-
-    if (materials.length > 0) {
-      calculateAllMaterialRequirements();
-    }
-  }, [materials, fetchRawMaterialProductDetails, updateTrigger]);
-
-  // Trigger recalculation when onUpdate is called
-  useEffect(() => {
-    setUpdateTrigger(prev => prev + 1);
-  }, [onUpdate]);
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
@@ -166,8 +134,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
     switch (field) {
       case 'ordered_qty':
-        aValue = materialRequirements[a.id] || 0;
-        bValue = materialRequirements[b.id] || 0;
+        aValue = a.required || 0;
+        bValue = b.required || 0;
         break;
       case 'current_stock':
         aValue = a.current_stock;
@@ -178,10 +146,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         bValue = b.in_procurement;
         break;
       case 'shortfall':
-        const aRequired = materialRequirements[a.id] || 0;
-        const bRequired = materialRequirements[b.id] || 0;
-        aValue = calculateShortfall(a.current_stock, a.in_procurement, aRequired, a.minimum_stock);
-        bValue = calculateShortfall(b.current_stock, b.in_procurement, bRequired, b.minimum_stock);
+        aValue = calculateShortfall(a.current_stock, a.in_procurement, a.required, a.minimum_stock);
+        bValue = calculateShortfall(b.current_stock, b.in_procurement, b.required, b.minimum_stock);
         break;
       default:
         return 0;
@@ -274,20 +240,17 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           </TableHeader>
           <TableBody>
             {sortedMaterials.map((material) => {
-              // Use calculated requirement instead of database value
-              const materialRequired = materialRequirements[material.id] || 0;
-              
               const shortfall = calculateShortfall(
                 material.current_stock,
                 material.in_procurement,
-                materialRequired,
+                material.required,
                 material.minimum_stock
               );
 
               const statusInfo = getInventoryStatus(
                 material.current_stock,
                 material.in_procurement,
-                materialRequired,
+                material.required,
                 material.minimum_stock
               );
 
@@ -313,7 +276,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
-                      {formatIndianNumber(materialRequired)} {shortUnit}
+                      {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-sm font-bold text-center">
