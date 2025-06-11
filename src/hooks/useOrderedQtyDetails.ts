@@ -85,6 +85,8 @@ export const useOrderedQtyDetails = () => {
     try {
       setLoading(true);
 
+      console.log('🔍 Fetching product details for material ID:', materialId);
+
       // Find product configs that use this raw material with their finished goods data
       const { data: productConfigMaterials, error: pcmError } = await supabase
         .from('product_config_materials')
@@ -105,16 +107,37 @@ export const useOrderedQtyDetails = () => {
         `)
         .eq('raw_material_id', materialId);
 
-      if (pcmError) throw pcmError;
+      if (pcmError) {
+        console.error('❌ Error fetching product config materials:', pcmError);
+        throw pcmError;
+      }
 
-      if (!productConfigMaterials?.length) return [];
+      console.log('📊 Raw product config materials data:', productConfigMaterials);
+
+      if (!productConfigMaterials?.length) {
+        console.log('⚠️ No product configs found for this material');
+        return [];
+      }
 
       const productDetails: ProductDetail[] = productConfigMaterials.map(pcm => {
+        console.log('🔄 Processing config:', {
+          product_code: pcm.product_config.product_code,
+          threshold: pcm.product_config.threshold,
+          finished_goods: pcm.product_config.finished_good
+        });
+
         const fg = pcm.product_config.finished_good[0];
         const currentStock = fg?.current_stock || 0;
         const inManufacturing = fg?.in_manufacturing || 0;
         const requiredQuantity = fg?.required_quantity || 0;
         const threshold = pcm.product_config.threshold || 0;
+        
+        console.log('📈 Calculated values for', pcm.product_config.product_code, {
+          currentStock,
+          inManufacturing,
+          requiredQuantity,
+          threshold
+        });
         
         // Calculate shortfall: (Required Qty + Threshold) - (Current Stock + In Manufacturing)
         const totalAvailable = currentStock + inManufacturing;
@@ -124,7 +147,7 @@ export const useOrderedQtyDetails = () => {
         // Calculate total material required based on shortfall
         const totalMaterialRequired = shortfall > 0 ? shortfall * pcm.quantity_required : 0;
 
-        return {
+        const result = {
           product_code: pcm.product_config.product_code,
           product_name: `${pcm.product_config.category} - ${pcm.product_config.subcategory}`,
           required_quantity: requiredQuantity,
@@ -135,8 +158,12 @@ export const useOrderedQtyDetails = () => {
           material_quantity_per_unit: pcm.quantity_required,
           total_material_required: totalMaterialRequired
         };
+
+        console.log('✅ Final product detail:', result);
+        return result;
       });
 
+      console.log('🎯 All product details:', productDetails);
       return productDetails;
 
     } catch (error) {
