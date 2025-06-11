@@ -151,9 +151,9 @@ export const getRawMaterialsWithSmartCaching = async () => {
 
     if (rawMaterialsError) throw rawMaterialsError;
 
-    // Calculate shortfall on the fly since it depends on current values
+    // Calculate shortfall on the fly since it depends on current values - REMOVE Math.max to allow negative values (surplus)
     const materialsWithShortfall = rawMaterialsData?.map(material => {
-      const shortfall = Math.max(0, material.required + material.minimum_stock - (material.current_stock + material.in_procurement));
+      const shortfall = material.required + material.minimum_stock - (material.current_stock + material.in_procurement);
       
       return {
         ...material,

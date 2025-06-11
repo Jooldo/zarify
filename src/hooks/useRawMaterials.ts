@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,8 +55,8 @@ export const useRawMaterials = () => {
 
       // Use the database values directly (calculation service should have updated them)
       const materialsWithCalculations = rawMaterialsData?.map(material => {
-        // Calculate shortfall for this material using database values
-        const shortfall = Math.max(0, (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement));
+        // Calculate shortfall for this material using database values - REMOVE Math.max to allow negative values (surplus)
+        const shortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement);
 
         if (material.name.includes('Chain') || material.name.includes('M Chain')) {
           console.log(`🔍 DEBUG M Chain material: ${material.name}`);
@@ -66,7 +65,7 @@ export const useRawMaterials = () => {
           console.log(`   Minimum stock: ${material.minimum_stock}`);
           console.log(`   In procurement: ${material.in_procurement}`);
           console.log(`   Calculated shortfall: ${shortfall}`);
-          console.log(`   Formula: max(0, (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement}))`);
+          console.log(`   Formula: (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement})`);
         }
 
         return {
