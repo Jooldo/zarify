@@ -169,7 +169,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
             <TableRow className="h-8">
               <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
               <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
                 <div className="flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
@@ -263,7 +263,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   <TableCell className="py-1 px-2 text-xs font-medium">
                     {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="py-1 px-2 bg-blue-50 border-l-2 border-r-2 border-blue-200 text-center">
+                  <TableCell className="py-1 px-2 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"

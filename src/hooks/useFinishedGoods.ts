@@ -42,23 +42,6 @@ export const useFinishedGoods = () => {
 
       console.log('Merchant ID:', merchantId);
 
-      // Fetch all finished goods with their product configs for this merchant
-      const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
-        .from('finished_goods')
-        .select(`
-          *,
-          product_config:product_configs(category, subcategory, size_value, weight_range, is_active)
-        `)
-        .eq('merchant_id', merchantId)
-        .order('product_code');
-
-      if (finishedGoodsError) {
-        console.error('Error fetching finished goods:', finishedGoodsError);
-        throw finishedGoodsError;
-      }
-
-      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
-
       // Fetch all order items with status 'Created' or 'In Progress' to calculate required quantities
       const { data: orderItemsData, error: orderItemsError } = await supabase
         .from('order_items')
@@ -87,6 +70,23 @@ export const useFinishedGoods = () => {
 
       console.log('Calculated required quantities from orders:', requiredQuantities);
 
+      // Fetch all finished goods with their product configs for this merchant
+      const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
+        .from('finished_goods')
+        .select(`
+          *,
+          product_config:product_configs(category, subcategory, size_value, weight_range, is_active)
+        `)
+        .eq('merchant_id', merchantId)
+        .order('product_code');
+
+      if (finishedGoodsError) {
+        console.error('Error fetching finished goods:', finishedGoodsError);
+        throw finishedGoodsError;
+      }
+
+      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+
       // Update finished goods with calculated required quantities and update database
       const finishedGoodsWithRequiredQty = [];
       
@@ -95,18 +95,16 @@ export const useFinishedGoods = () => {
         
         console.log(`Product ${item.product_code}: order_demand=${orderDemand}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
         
-        // Update the required_quantity in the database if it has changed
-        if (item.required_quantity !== orderDemand) {
-          console.log(`Updating required_quantity for ${item.product_code} from ${item.required_quantity} to ${orderDemand}`);
-          
-          const { error: updateError } = await supabase
-            .from('finished_goods')
-            .update({ required_quantity: orderDemand })
-            .eq('id', item.id);
+        // Always update the required_quantity in the database to reflect current order demands
+        console.log(`Updating required_quantity for ${item.product_code} to ${orderDemand}`);
+        
+        const { error: updateError } = await supabase
+          .from('finished_goods')
+          .update({ required_quantity: orderDemand })
+          .eq('id', item.id);
 
-          if (updateError) {
-            console.error(`Error updating required_quantity for ${item.product_code}:`, updateError);
-          }
+        if (updateError) {
+          console.error(`Error updating required_quantity for ${item.product_code}:`, updateError);
         }
         
         finishedGoodsWithRequiredQty.push({
