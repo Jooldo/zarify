@@ -146,15 +146,20 @@ function toast({ ...props }: Toast) {
   const isError = props.variant === 'destructive'
   
   if (isError) {
-    // Don't add error toasts to the toast system - they'll be handled by error dialogs
-    // Just trigger a custom event that components can listen to
-    const errorEvent = new CustomEvent('show-error-dialog', {
-      detail: {
-        title: props.title,
-        description: props.description,
-      }
+    // Import error utilities to create proper error objects
+    import('@/utils/errorUtils').then(({ createSystemError }) => {
+      const error = createSystemError(
+        props.description?.toString() || 'An error occurred',
+        props.title?.toString()
+      );
+      
+      const errorEvent = new CustomEvent('show-error-dialog', {
+        detail: {
+          error,
+        }
+      });
+      window.dispatchEvent(errorEvent);
     });
-    window.dispatchEvent(errorEvent);
     
     return {
       id: id,

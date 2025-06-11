@@ -1,38 +1,50 @@
 
 import { useState } from 'react';
+import { ErrorDetails, ErrorAction } from '@/types/error';
 
-interface ErrorState {
+interface ErrorDialogState {
   isOpen: boolean;
-  title?: string;
-  description?: string;
+  error?: ErrorDetails;
+  actions?: ErrorAction[];
 }
 
 export const useErrorDialog = () => {
-  const [errorState, setErrorState] = useState<ErrorState>({
+  const [errorState, setErrorState] = useState<ErrorDialogState>({
     isOpen: false,
-    title: undefined,
-    description: undefined,
+    error: undefined,
+    actions: undefined,
   });
 
-  const showError = (title?: string, description?: string) => {
+  const showError = (error: ErrorDetails, actions?: ErrorAction[]) => {
+    console.log('Error occurred:', error);
     setErrorState({
       isOpen: true,
-      title,
-      description,
+      error,
+      actions,
     });
   };
 
   const hideError = () => {
     setErrorState({
       isOpen: false,
-      title: undefined,
-      description: undefined,
+      error: undefined,
+      actions: undefined,
     });
+  };
+
+  const retry = () => {
+    if (errorState.error?.retryable && errorState.actions) {
+      const retryAction = errorState.actions.find(action => action.label.toLowerCase().includes('retry'));
+      if (retryAction) {
+        retryAction.action();
+      }
+    }
   };
 
   return {
     errorState,
     showError,
     hideError,
+    retry,
   };
 };
