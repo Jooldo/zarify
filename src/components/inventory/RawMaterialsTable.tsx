@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +31,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [productDetails, setProductDetails] = useState<any[]>([]);
   const [calculatedTotalRequired, setCalculatedTotalRequired] = useState<number>(0);
   const [materialRequirements, setMaterialRequirements] = useState<{ [key: string]: number }>({});
+  const [updateTrigger, setUpdateTrigger] = useState(0);
   const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
   // Calculate material requirements for all materials
@@ -58,7 +58,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     if (materials.length > 0) {
       calculateAllMaterialRequirements();
     }
-  }, [materials, fetchRawMaterialProductDetails]);
+  }, [materials, fetchRawMaterialProductDetails, updateTrigger]);
+
+  // Trigger recalculation when onUpdate is called
+  useEffect(() => {
+    setUpdateTrigger(prev => prev + 1);
+  }, [onUpdate]);
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
