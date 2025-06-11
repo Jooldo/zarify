@@ -33,7 +33,7 @@ export const useRawMaterials = () => {
 
   const fetchRawMaterials = async () => {
     try {
-      console.log('Fetching raw materials data...');
+      console.log('🔍 Starting raw materials fetch...');
       
       // First, get the merchant ID
       const { data: merchantId, error: merchantError } = await supabase
@@ -61,33 +61,9 @@ export const useRawMaterials = () => {
         throw rawMaterialsError;
       }
 
-      console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
+      console.log('📦 Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
-      // Fetch order items to calculate required quantities for finished goods
-      const { data: orderItemsData, error: orderItemsError } = await supabase
-        .from('order_items')
-        .select(`
-          product_config_id,
-          quantity,
-          status
-        `)
-        .eq('merchant_id', merchantId)
-        .in('status', ['Created', 'In Progress']);
-
-      if (orderItemsError) {
-        console.error('Error fetching order items:', orderItemsError);
-        throw orderItemsError;
-      }
-
-      // Calculate required quantities for each product config from live orders
-      const requiredQuantitiesByConfig = orderItemsData?.reduce((acc, item) => {
-        if (item.status === 'Created' || item.status === 'In Progress') {
-          acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
-        }
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      // Fetch finished goods with their current stock and manufacturing info
+      // Fetch finished goods with their requirements from live orders
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
@@ -96,7 +72,8 @@ export const useRawMaterials = () => {
           current_stock,
           in_manufacturing,
           threshold,
-          product_config_id
+          product_config_id,
+          required_quantity
         `)
         .eq('merchant_id', merchantId);
 
@@ -105,7 +82,19 @@ export const useRawMaterials = () => {
         throw finishedGoodsError;
       }
 
-      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+      console.log('🏭 Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+
+      // Debug: Log finished goods with their required quantities
+      finishedGoodsData?.forEach(fg => {
+        if (fg.product_code.includes('AGR-HIM-111G')) {
+          console.log(`🎯 Found target FG: ${fg.product_code}`, {
+            required_quantity: fg.required_quantity,
+            current_stock: fg.current_stock,
+            in_manufacturing: fg.in_manufacturing,
+            threshold: fg.threshold
+          });
+        }
+      });
 
       // Fetch product config materials to map finished goods to raw materials
       const { data: productConfigMaterials, error: pcmError } = await supabase
@@ -122,9 +111,9 @@ export const useRawMaterials = () => {
         throw pcmError;
       }
 
-      console.log('Product config materials fetched:', productConfigMaterials?.length || 0, 'items');
+      console.log('🔗 Product config materials fetched:', productConfigMaterials?.length || 0, 'items');
 
-      // Calculate required quantities for each raw material based on shortfall
+      // Calculate required quantities for each raw material based on finished goods shortfall
       const materialRequirements = rawMaterialsData?.map(material => {
         let totalRequired = 0;
 
@@ -143,14 +132,14 @@ export const useRawMaterials = () => {
             fg => fg.product_config_id === config.product_config_id
           ) || [];
 
-          console.log(`Config ${config.product_config_id} uses ${config.quantity_required} ${material.unit} per unit`);
+          console.log(`📋 Config ${config.product_config_id} uses ${config.quantity_required} ${material.unit} per unit`);
           console.log(`Found ${finishedGoodsForConfig.length} finished goods for this config`);
 
           finishedGoodsForConfig.forEach(finishedGood => {
-            // Get the required quantity from live orders
-            const liveOrderDemand = requiredQuantitiesByConfig[finishedGood.product_config_id] || 0;
+            // Use the required_quantity that should now be set from live orders
+            const liveOrderDemand = finishedGood.required_quantity || 0;
             
-            // Calculate shortfall for this finished good using live order demand
+            // Calculate shortfall for this finished good
             const totalDemand = liveOrderDemand + finishedGood.threshold;
             const available = finishedGood.current_stock + finishedGood.in_manufacturing;
             const shortfall = Math.max(0, totalDemand - available);
@@ -159,7 +148,7 @@ export const useRawMaterials = () => {
               const materialNeeded = shortfall * config.quantity_required;
               totalRequired += materialNeeded;
 
-              console.log(`  Product ${finishedGood.product_code}:`, {
+              console.log(`  🎯 Product ${finishedGood.product_code}:`, {
                 liveOrderDemand,
                 threshold: finishedGood.threshold,
                 totalDemand,
@@ -171,12 +160,12 @@ export const useRawMaterials = () => {
                 quantityPerUnit: config.quantity_required
               });
             } else {
-              console.log(`  Product ${finishedGood.product_code}: No shortfall (demand: ${totalDemand}, available: ${available})`);
+              console.log(`  ✅ Product ${finishedGood.product_code}: No shortfall (demand: ${totalDemand}, available: ${available})`);
             }
           });
         });
 
-        console.log(`TOTAL REQUIRED for ${material.name}: ${totalRequired} ${material.unit}`);
+        console.log(`📊 TOTAL REQUIRED for ${material.name}: ${totalRequired} ${material.unit}`);
         console.log('Current Stock:', material.current_stock);
         console.log('In Procurement:', material.in_procurement);
 
@@ -201,7 +190,18 @@ export const useRawMaterials = () => {
         };
       }) || [];
 
-      console.log('Final raw materials with requirements:', materialRequirements);
+      console.log('✅ Final raw materials with requirements:', materialRequirements);
+
+      // Debug: Check if 3MM BOLL CHAIN Tanuu is in the results
+      const targetMaterial = materialRequirements.find(m => 
+        m.name.toLowerCase().includes('3mm boll chain tanuu')
+      );
+      if (targetMaterial) {
+        console.log('🎯 Found 3MM BOLL CHAIN Tanuu:', targetMaterial);
+      } else {
+        console.log('❌ 3MM BOLL CHAIN Tanuu not found in results');
+        console.log('Available materials:', materialRequirements.map(m => m.name));
+      }
 
       setRawMaterials(materialRequirements);
     } catch (error) {
