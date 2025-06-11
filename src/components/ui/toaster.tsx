@@ -1,3 +1,4 @@
+
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -13,17 +14,31 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        const isError = variant === 'destructive'
+        
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} variant={variant} {...props}>
             <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {title && (
+                <ToastTitle className={isError ? "text-destructive font-semibold" : ""}>
+                  {title}
+                </ToastTitle>
+              )}
               {description && (
-                <ToastDescription>{description}</ToastDescription>
+                <ToastDescription className={isError ? "text-destructive-foreground text-sm leading-relaxed" : ""}>
+                  {description}
+                </ToastDescription>
+              )}
+              {isError && !description && !title && (
+                <ToastDescription className="text-destructive-foreground">
+                  An error occurred. Please try again or contact support if the problem persists.
+                </ToastDescription>
               )}
             </div>
             {action}
-            <ToastClose />
+            {/* Only show close button for error toasts, regular toasts auto-dismiss */}
+            {isError && <ToastClose />}
           </Toast>
         )
       })}
