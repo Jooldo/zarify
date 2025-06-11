@@ -1,6 +1,5 @@
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Package, Users, ClipboardList, BarChart3, Settings, Smartphone } from 'lucide-react';
 
 const LandingFeatures = () => {
@@ -50,19 +49,19 @@ const LandingFeatures = () => {
   ];
 
   return (
-    <section id="features" className="py-32 bg-white relative">
+    <div className="py-20 bg-white relative">
       <div className="container mx-auto px-6 lg:px-8">
-        <div className="text-center max-w-4xl mx-auto mb-20">
-          <Badge className="mb-8 px-6 py-3 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full text-sm">
             Complete Platform
           </Badge>
-          <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-8 leading-tight">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
             Everything You Need to
             <span className="block bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
               Run Your Manufacturing
             </span>
           </h2>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <p className="text-lg text-gray-600 leading-relaxed">
             From raw materials to finished jewelry - manage your entire operation in one platform
           </p>
         </div>
@@ -71,20 +70,18 @@ const LandingFeatures = () => {
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (
-              <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-                <CardContent className="p-8">
-                  <div className={`w-16 h-16 ${feature.bgColor} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <IconComponent className={`h-8 w-8 ${feature.color}`} />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <div key={index} className="p-6 hover:bg-gray-50/50 rounded-xl transition-all duration-300 group">
+                <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className={`h-6 w-6 ${feature.color}`} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{feature.title}</h3>
+                <p className="text-gray-600 leading-relaxed text-sm">{feature.description}</p>
+              </div>
             );
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
