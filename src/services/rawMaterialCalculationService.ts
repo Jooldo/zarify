@@ -171,10 +171,12 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
         required: totalRequired,
         shortfall: materialShortfall
       });
+
+      console.log(`📊 Material: ${material.name}, Calculated Required: ${totalRequired}, Shortfall: ${materialShortfall}`);
     }
 
-    // Update all materials in the database
-    console.log('📊 Updating calculated values in database...');
+    // Update all materials in the database with the calculated required values
+    console.log('📊 Updating calculated values in raw_materials database table...');
     
     const updatePromises = calculationResults.map(result => 
       supabase
@@ -191,11 +193,11 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
     // Check for any update errors
     const updateErrors = updateResults.filter(result => result.error);
     if (updateErrors.length > 0) {
-      console.error('Some calculation updates failed:', updateErrors);
-      throw new Error(`Failed to update ${updateErrors.length} materials`);
+      console.error('Some raw material updates failed:', updateErrors);
+      throw new Error(`Failed to update ${updateErrors.length} raw materials`);
     }
 
-    console.log('✅ All material calculations updated successfully');
+    console.log('✅ All raw material required values updated successfully in database');
     return calculationResults;
 
   } catch (error) {
