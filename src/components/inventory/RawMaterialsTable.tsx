@@ -362,6 +362,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         isOpen={isOrderDetailsOpen}
         onClose={() => setIsOrderDetailsOpen(false)}
         materialName={selectedMaterial?.name}
+        materialUnit={selectedMaterial?.unit}
         productDetails={productDetails}
         totalQuantity={selectedMaterial?.required || 0}
         loading={orderDetailsLoading}

@@ -35,6 +35,7 @@ interface OrderedQtyDetailsDialogProps {
   onClose: () => void;
   productCode?: string;
   materialName?: string;
+  materialUnit?: string;
   orderDetails?: OrderDetail[];
   productDetails?: ProductDetail[];
   totalQuantity: number;
@@ -47,6 +48,7 @@ const OrderedQtyDetailsDialog = ({
   onClose, 
   productCode, 
   materialName, 
+  materialUnit = '',
   orderDetails = [], 
   productDetails = [],
   totalQuantity,
@@ -84,6 +86,30 @@ const OrderedQtyDetailsDialog = ({
     }
   };
 
+  const getShortUnit = (unit: string) => {
+    const unitMap: { [key: string]: string } = {
+      'grams': 'g',
+      'gram': 'g',
+      'kilograms': 'kg',
+      'kilogram': 'kg',
+      'liters': 'l',
+      'liter': 'l',
+      'milliliters': 'ml',
+      'milliliter': 'ml',
+      'pieces': 'pcs',
+      'piece': 'pc',
+      'meters': 'm',
+      'meter': 'm',
+      'centimeters': 'cm',
+      'centimeter': 'cm',
+      'pounds': 'lbs',
+      'pound': 'lb',
+      'ounces': 'oz',
+      'ounce': 'oz'
+    };
+    return unitMap[unit.toLowerCase()] || unit;
+  };
+
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,7 +136,9 @@ const OrderedQtyDetailsDialog = ({
                 <span className="text-gray-500">
                   {isRawMaterial ? 'Total Material Required:' : 'Total Ordered Quantity:'}
                 </span> 
-                <span className="font-bold text-blue-600 ml-2">{formatIndianNumber(totalQuantity)}</span>
+                <span className="font-bold text-blue-600 ml-2">
+                  {formatIndianNumber(totalQuantity)}{materialUnit ? ` ${getShortUnit(materialUnit)}` : ''}
+                </span>
               </div>
             </div>
           </DialogHeader>
@@ -268,10 +296,10 @@ const OrderedQtyDetailsDialog = ({
                           <TableCell className="px-2 py-1 text-center">
                             <div className="text-base">
                               <div className="font-bold text-blue-600">
-                                {formatIndianNumber(materialRequiredFromShortfall)}
+                                {formatIndianNumber(materialRequiredFromShortfall)}{materialUnit ? ` ${getShortUnit(materialUnit)}` : ''}
                               </div>
                               <div className="text-gray-500 text-xs">
-                                ({formatIndianNumber(product.material_quantity_per_unit)} per unit)
+                                ({formatIndianNumber(product.material_quantity_per_unit)}{materialUnit ? ` ${getShortUnit(materialUnit)}` : ''} per unit)
                               </div>
                             </div>
                           </TableCell>
@@ -338,7 +366,7 @@ const OrderedQtyDetailsDialog = ({
                   {isRawMaterial ? `Products: ${productDetails.length}` : `Total Orders: ${orderDetails.length}`}
                 </span>
                 <span className="font-bold">
-                  {isRawMaterial ? `Total Material Required: ${formatIndianNumber(totalQuantity)}` : `Total Quantity: ${formatIndianNumber(totalQuantity)}`}
+                  {isRawMaterial ? `Total Material Required: ${formatIndianNumber(totalQuantity)}${materialUnit ? ` ${getShortUnit(materialUnit)}` : ''}` : `Total Quantity: ${formatIndianNumber(totalQuantity)}`}
                 </span>
               </div>
             </div>
