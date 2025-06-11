@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ interface RawMaterialsTableProps {
   onUpdate: () => void;
   onRequestCreated?: () => void;
   sortConfig?: { field: string; direction: 'asc' | 'desc' } | null;
-  onSortChange?: (field: string; direction: 'asc' | 'desc') => void;
+  onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
