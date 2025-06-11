@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,7 +113,10 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         <TableCell className="py-1 px-2 text-xs font-mono">
           <ProductDetailsPopover productCode={item.productCode}>
             <Button variant="ghost" className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50">
-              {item.productCode}
+              <div className="flex flex-col items-start">
+                <span>{item.productCode}</span>
+                <span className="text-xs text-gray-500 font-normal">{item.category}</span>
+              </div>
             </Button>
           </ProductDetailsPopover>
         </TableCell>
