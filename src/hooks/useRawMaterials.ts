@@ -59,7 +59,15 @@ export const useRawMaterials = () => {
         // Calculate shortfall for this material using database values
         const shortfall = Math.max(0, (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement));
 
-        console.log(`📊 Material: ${material.name}, Required: ${material.required}, Current: ${material.current_stock}, Min: ${material.minimum_stock}, In Procurement: ${material.in_procurement}, Shortfall: ${shortfall}`);
+        if (material.name.includes('Chain') || material.name.includes('M Chain')) {
+          console.log(`🔍 DEBUG M Chain material: ${material.name}`);
+          console.log(`   Required from DB: ${material.required}`);
+          console.log(`   Current stock: ${material.current_stock}`);
+          console.log(`   Minimum stock: ${material.minimum_stock}`);
+          console.log(`   In procurement: ${material.in_procurement}`);
+          console.log(`   Calculated shortfall: ${shortfall}`);
+          console.log(`   Formula: max(0, (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement}))`);
+        }
 
         return {
           ...material,
