@@ -106,6 +106,15 @@ export const useProcurementRequests = () => {
 
       if (updateError) throw updateError;
 
+      // Immediately update the local state
+      setRequests(prevRequests => 
+        prevRequests.map(req => 
+          req.id === requestId 
+            ? { ...req, status: newStatus }
+            : req
+        )
+      );
+
       // If status is "Received", update the raw material stock
       if (newStatus === 'Received') {
         console.log('Updating raw material stock for:', request.raw_material_id, 'quantity:', request.quantity_requested);
@@ -167,8 +176,7 @@ export const useProcurementRequests = () => {
         description: `Request status updated to ${newStatus}`,
       });
 
-      // Auto refresh related data
-      await fetchRequests();
+      // Invalidate related queries to ensure all data is fresh
       queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
     } catch (error) {
