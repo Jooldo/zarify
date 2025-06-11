@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [productDetails, setProductDetails] = useState<any[]>([]);
+  const [calculatedTotalRequired, setCalculatedTotalRequired] = useState<number>(0);
   const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
   const formatIndianNumber = (num: number) => {
@@ -107,6 +109,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     setIsOrderDetailsOpen(true);
     const details = await fetchRawMaterialProductDetails(material.id);
     setProductDetails(details);
+    
+    // Calculate the total material required from the product details
+    const totalRequired = details.reduce((sum, product) => {
+      return sum + (product.total_material_required || 0);
+    }, 0);
+    setCalculatedTotalRequired(totalRequired);
   };
 
   const handleRequestCreated = () => {
@@ -364,7 +372,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         materialName={selectedMaterial?.name}
         materialUnit={selectedMaterial?.unit}
         productDetails={productDetails}
-        totalQuantity={selectedMaterial?.required || 0}
+        totalQuantity={calculatedTotalRequired}
         loading={orderDetailsLoading}
         isRawMaterial={true}
       />
