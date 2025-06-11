@@ -3,6 +3,18 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface ProductDetail {
+  product_code: string;
+  product_name: string;
+  required_quantity: number;
+  current_stock: number;
+  in_manufacturing: number;
+  threshold: number;
+  shortfall: number;
+  material_quantity_per_unit: number;
+  total_material_required: number;
+}
+
 interface OrderDetail {
   order_number: string;
   customer_name: string;
@@ -69,17 +81,27 @@ export const useOrderedQtyDetails = () => {
     }
   };
 
-  const fetchRawMaterialOrderDetails = async (materialId: string): Promise<OrderDetail[]> => {
+  const fetchRawMaterialProductDetails = async (materialId: string): Promise<ProductDetail[]> => {
     try {
       setLoading(true);
 
-      // Find product configs that use this raw material
+      // Find product configs that use this raw material with their finished goods data
       const { data: productConfigMaterials, error: pcmError } = await supabase
         .from('product_config_materials')
         .select(`
           product_config_id,
           quantity_required,
-          product_config:product_configs(product_code)
+          product_config:product_configs!inner(
+            product_code,
+            category,
+            subcategory,
+            threshold,
+            finished_good:finished_goods(
+              current_stock,
+              in_manufacturing,
+              required_quantity
+            )
+          )
         `)
         .eq('raw_material_id', materialId);
 
@@ -87,52 +109,41 @@ export const useOrderedQtyDetails = () => {
 
       if (!productConfigMaterials?.length) return [];
 
-      const productConfigIds = productConfigMaterials.map(pcm => pcm.product_config_id);
+      const productDetails: ProductDetail[] = productConfigMaterials.map(pcm => {
+        const fg = pcm.product_config.finished_good[0];
+        const currentStock = fg?.current_stock || 0;
+        const inManufacturing = fg?.in_manufacturing || 0;
+        const requiredQuantity = fg?.required_quantity || 0;
+        const threshold = pcm.product_config.threshold || 0;
+        
+        // Calculate shortfall: (Required Qty + Threshold) - (Current Stock + In Manufacturing)
+        const totalAvailable = currentStock + inManufacturing;
+        const totalNeeded = requiredQuantity + threshold;
+        const shortfall = Math.max(0, totalNeeded - totalAvailable);
+        
+        // Calculate total material required for this product
+        const totalMaterialRequired = requiredQuantity * pcm.quantity_required;
 
-      // Fetch order items for these product configs
-      const { data: orderItems, error: orderError } = await supabase
-        .from('order_items')
-        .select(`
-          quantity,
-          status,
-          suborder_id,
-          product_config_id,
-          order:orders(
-            order_number,
-            created_date,
-            customer:customers(name)
-          )
-        `)
-        .in('product_config_id', productConfigIds)
-        .in('status', ['Created', 'In Progress']);
-
-      if (orderError) throw orderError;
-
-      // Calculate material requirements from order items
-      const orderDetails: OrderDetail[] = [];
-      
-      orderItems?.forEach(item => {
-        const pcm = productConfigMaterials.find(p => p.product_config_id === item.product_config_id);
-        if (pcm) {
-          const materialQuantityNeeded = item.quantity * pcm.quantity_required;
-          orderDetails.push({
-            order_number: item.order.order_number,
-            customer_name: item.order.customer.name,
-            quantity: materialQuantityNeeded,
-            status: item.status,
-            suborder_id: item.suborder_id,
-            created_date: item.order.created_date
-          });
-        }
+        return {
+          product_code: pcm.product_config.product_code,
+          product_name: `${pcm.product_config.category} - ${pcm.product_config.subcategory}`,
+          required_quantity: requiredQuantity,
+          current_stock: currentStock,
+          in_manufacturing: inManufacturing,
+          threshold: threshold,
+          shortfall: shortfall,
+          material_quantity_per_unit: pcm.quantity_required,
+          total_material_required: totalMaterialRequired
+        };
       });
 
-      return orderDetails;
+      return productDetails;
 
     } catch (error) {
-      console.error('Error fetching raw material order details:', error);
+      console.error('Error fetching raw material product details:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch order details',
+        description: 'Failed to fetch product details',
         variant: 'destructive',
       });
       return [];
@@ -144,6 +155,6 @@ export const useOrderedQtyDetails = () => {
   return {
     loading,
     fetchFinishedGoodOrderDetails,
-    fetchRawMaterialOrderDetails
+    fetchRawMaterialProductDetails
   };
 };

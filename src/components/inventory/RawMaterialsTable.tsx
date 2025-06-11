@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +28,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
-  const [orderDetails, setOrderDetails] = useState<any[]>([]);
-  const { loading: orderDetailsLoading, fetchRawMaterialOrderDetails } = useOrderedQtyDetails();
+  const [productDetails, setProductDetails] = useState<any[]>([]);
+  const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
   const formatIndianNumber = (num: number) => {
     return num.toLocaleString('en-IN');
@@ -106,8 +105,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const handleOrderedQtyClick = async (material: RawMaterial) => {
     setSelectedMaterial(material);
     setIsOrderDetailsOpen(true);
-    const details = await fetchRawMaterialOrderDetails(material.id);
-    setOrderDetails(details);
+    const details = await fetchRawMaterialProductDetails(material.id);
+    setProductDetails(details);
   };
 
   const handleRequestCreated = () => {
@@ -363,9 +362,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         isOpen={isOrderDetailsOpen}
         onClose={() => setIsOrderDetailsOpen(false)}
         materialName={selectedMaterial?.name}
-        orderDetails={orderDetails}
+        productDetails={productDetails}
         totalQuantity={selectedMaterial?.required || 0}
         loading={orderDetailsLoading}
+        isRawMaterial={true}
       />
     </TooltipProvider>
   );
