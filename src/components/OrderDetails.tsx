@@ -10,6 +10,7 @@ import { CheckCheck, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivityLog } from '@/hooks/useActivityLog';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface OrderDetailsProps {
   order: any;
@@ -21,6 +22,7 @@ type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
+  const queryClient = useQueryClient();
 
   const updateOrderItemStatus = async (itemId: string, newStatus: OrderStatus) => {
     try {
@@ -59,9 +61,13 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         description: 'Order item status updated successfully',
       });
 
-      // Always refresh orders data
+      // Always refresh orders data and invalidate related queries
       console.log('Refreshing orders data...');
       await onOrderUpdate();
+      
+      // Invalidate queries to trigger refetch of finished goods and raw materials
+      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
       
     } catch (error) {
       console.error('Error updating order item status:', error);

@@ -110,18 +110,21 @@ const FinishedGoodsInventory = () => {
     queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
     queryClient.invalidateQueries({ queryKey: ['orders'] });
     queryClient.invalidateQueries({ queryKey: ['product-configs'] });
+    queryClient.invalidateQueries({ queryKey: ['raw-materials'] }); // Also refresh raw materials
   };
 
   const handleTagOperationComplete = async () => {
     await refetch();
     queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
     queryClient.invalidateQueries({ queryKey: ['inventory-tags'] });
+    queryClient.invalidateQueries({ queryKey: ['raw-materials'] }); // Also refresh raw materials
   };
 
   const handleProductUpdate = async () => {
     await refetch();
     queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
     queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['raw-materials'] }); // Also refresh raw materials
   };
 
   const categories = [...new Set(finishedGoods.map(product => product.product_config?.category).filter(Boolean))];

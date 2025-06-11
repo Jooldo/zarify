@@ -58,7 +58,6 @@ export const useFinishedGoods = () => {
       }
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
-      console.log('Raw finished goods data:', finishedGoodsData);
 
       // Fetch all order items with status 'Created' or 'In Progress' to calculate required quantities
       const { data: orderItemsData, error: orderItemsError } = await supabase
@@ -88,19 +87,35 @@ export const useFinishedGoods = () => {
 
       console.log('Calculated required quantities from orders:', requiredQuantities);
 
-      // Map the finished goods with calculated required quantities
-      const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
+      // Update finished goods with calculated required quantities and update database
+      const finishedGoodsWithRequiredQty = [];
+      
+      for (const item of finishedGoodsData || []) {
         const orderDemand = requiredQuantities[item.product_config_id] || 0;
         
         console.log(`Product ${item.product_code}: order_demand=${orderDemand}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
         
-        return {
+        // Update the required_quantity in the database if it has changed
+        if (item.required_quantity !== orderDemand) {
+          console.log(`Updating required_quantity for ${item.product_code} from ${item.required_quantity} to ${orderDemand}`);
+          
+          const { error: updateError } = await supabase
+            .from('finished_goods')
+            .update({ required_quantity: orderDemand })
+            .eq('id', item.id);
+
+          if (updateError) {
+            console.error(`Error updating required_quantity for ${item.product_code}:`, updateError);
+          }
+        }
+        
+        finishedGoodsWithRequiredQty.push({
           ...item,
           required_quantity: orderDemand
-        };
-      }) || [];
+        });
+      }
 
-      console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
+      console.log('Final finished goods with updated required quantities:', finishedGoodsWithRequiredQty);
 
       setFinishedGoods(finishedGoodsWithRequiredQty);
     } catch (error) {

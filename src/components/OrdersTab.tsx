@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -123,8 +122,9 @@ const OrdersTab = () => {
     return finishedGood ? finishedGood.current_stock : 0;
   };
 
-  const handleOrderUpdate = () => {
-    refetch();
+  const handleOrderUpdate = async () => {
+    await refetch();
+    await refetchFinishedGoods(); // Ensure finished goods are refreshed when orders change
     refetchInvoices();
   };
 

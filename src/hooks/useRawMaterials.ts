@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +64,7 @@ export const useRawMaterials = () => {
 
       console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
-      // Fetch finished goods to calculate shortfall-based requirements
+      // Fetch finished goods with updated required quantities
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
