@@ -8,43 +8,37 @@ const LandingFeatures = () => {
       icon: Package,
       title: "Raw Material Management",
       description: "Track inventory, automate procurement, manage suppliers with WhatsApp integration",
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50"
+      color: "text-emerald-600"
     },
     {
       icon: Settings,
       title: "Production Workflow",
       description: "Kanban-style manufacturing tracking with step-by-step quality control",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
+      color: "text-blue-600"
     },
     {
       icon: ClipboardList,
       title: "Order Management",
       description: "End-to-end order processing from creation to delivery with customer tracking",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
+      color: "text-purple-600"
     },
     {
       icon: BarChart3,
       title: "Analytics & Insights",
       description: "Real-time dashboards, production metrics, and performance analytics",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50"
+      color: "text-orange-600"
     },
     {
       icon: Users,
       title: "Team Management",
       description: "Manage workers, assign tasks, track productivity across your manufacturing team",
-      color: "text-pink-600",
-      bgColor: "bg-pink-50"
+      color: "text-pink-600"
     },
     {
       icon: Smartphone,
       title: "QR Code Tracking",
       description: "Tag-based inventory system with QR codes for complete audit trails",
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50"
+      color: "text-indigo-600"
     }
   ];
 
@@ -63,19 +57,45 @@ const LandingFeatures = () => {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => {
-            const IconComponent = feature.icon;
-            return (
-              <div key={index} className="p-4 hover:bg-gray-50/50 rounded-lg transition-all duration-300 group">
-                <div className={`w-10 h-10 ${feature.bgColor} rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-                  <IconComponent className={`h-5 w-5 ${feature.color}`} />
+        <div className="max-w-4xl relative">
+          {/* Timeline line */}
+          <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gradient-to-b from-emerald-200 via-blue-200 to-purple-200 hidden md:block"></div>
+          
+          <div className="space-y-8">
+            {features.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <div 
+                  key={index} 
+                  className="flex items-start space-x-6 group animate-fade-in"
+                  style={{animationDelay: `${index * 0.15}s`}}
+                >
+                  {/* Animated Icon */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:border-emerald-300">
+                      <IconComponent 
+                        className={`h-6 w-6 ${feature.color} transition-all duration-500 group-hover:scale-125 group-hover:rotate-6`} 
+                      />
+                    </div>
+                    {/* Timeline dot */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-emerald-400 to-blue-400 rounded-full border-2 border-white shadow-sm hidden md:block"></div>
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 pt-2">
+                    <div className="group-hover:translate-x-2 transition-transform duration-300">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                        {feature.title}:
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-base font-bold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed text-sm">{feature.description}</p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
