@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Diamond, Brain } from 'lucide-react';
+import { ArrowRight, Diamond, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const LandingHeader = () => {
@@ -17,13 +17,13 @@ const LandingHeader = () => {
             </div>
             <div>
               <span className="text-3xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">Zarify</span>
-              <div className="text-xs text-gray-500 font-medium">AI-Powered Material & Inventory Intelligence</div>
+              <div className="text-xs text-gray-500 font-medium">Manufacturing & Inventory Management</div>
             </div>
           </div>
           
           <nav className="hidden md:flex items-center space-x-12">
-            <a href="#insights" className="text-gray-600 hover:text-emerald-600 transition-all duration-300 font-medium relative group">
-              AI Insights
+            <a href="#features" className="text-gray-600 hover:text-emerald-600 transition-all duration-300 font-medium relative group">
+              Features
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-emerald-600 to-blue-600 transition-all duration-300 group-hover:w-full"></span>
             </a>
             <a href="#benefits" className="text-gray-600 hover:text-emerald-600 transition-all duration-300 font-medium relative group">
@@ -45,7 +45,7 @@ const LandingHeader = () => {
               className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-medium shadow-xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
             >
               <span className="relative z-10 flex items-center">
-                Try AI Insights
+                Try Zarify Free
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
               </span>
             </Button>
