@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getRawMaterialsWithCalculations, calculateAndUpdateRawMaterialRequirements } from '@/services/rawMaterialCalculationService';
+import { getRawMaterialsWithSmartCaching, forceRecalculation } from '@/services/cachedCalculationService';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RawMaterial {
@@ -35,12 +35,12 @@ export const useRawMaterials = () => {
 
   const fetchRawMaterials = async () => {
     try {
-      console.log('🔍 Fetching raw materials with calculations...');
+      console.log('🔍 Fetching raw materials with smart caching...');
       setLoading(true);
       
-      const materialsWithCalculations = await getRawMaterialsWithCalculations();
+      const materialsWithCalculations = await getRawMaterialsWithSmartCaching();
       
-      console.log('✅ Raw materials fetched with updated calculations:', materialsWithCalculations.length, 'items');
+      console.log('✅ Raw materials fetched:', materialsWithCalculations.length, 'items');
       setRawMaterials(materialsWithCalculations);
       
     } catch (error) {
@@ -57,8 +57,10 @@ export const useRawMaterials = () => {
 
   const updateCalculations = async () => {
     try {
-      console.log('🔄 Manually updating raw material calculations...');
-      await calculateAndUpdateRawMaterialRequirements();
+      console.log('🔄 Manually forcing calculation update...');
+      setLoading(true);
+      
+      await forceRecalculation();
       await fetchRawMaterials(); // Refresh the data after calculations
       
       toast({
@@ -72,6 +74,8 @@ export const useRawMaterials = () => {
         description: 'Failed to update calculations',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
