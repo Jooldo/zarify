@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { useInventoryTags } from '@/hooks/useInventoryTags';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { createErrorFromCode } from '@/utils/errorUtils';
 
 interface ManualTagInFormProps {
   onOperationComplete?: () => void;
@@ -26,11 +26,11 @@ const ManualTagInForm = ({ onOperationComplete }: ManualTagInFormProps) => {
 
   const handleManualTagIn = async () => {
     if (!productId || !quantity) {
-      toast({
-        title: 'Error',
-        description: 'Product and quantity are required',
-        variant: 'destructive',
+      const error = await createErrorFromCode('VAL_001', 'Product and quantity are required');
+      const errorEvent = new CustomEvent('show-error-dialog', {
+        detail: { error }
       });
+      window.dispatchEvent(errorEvent);
       return;
     }
 
@@ -54,6 +54,22 @@ const ManualTagInForm = ({ onOperationComplete }: ManualTagInFormProps) => {
       }
     } catch (error) {
       console.error('Error processing manual tag in:', error);
+      
+      // Create appropriate error based on the error message
+      let errorCode = 'SYS_001'; // Default system error
+      if (error instanceof Error) {
+        if (error.message.includes('Insufficient stock')) {
+          errorCode = 'INV_001';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorCode = 'NET_001';
+        }
+      }
+      
+      const errorDetails = await createErrorFromCode(errorCode, error instanceof Error ? error.message : 'Failed to process manual tag in');
+      const errorEvent = new CustomEvent('show-error-dialog', {
+        detail: { error: errorDetails }
+      });
+      window.dispatchEvent(errorEvent);
     } finally {
       setLoading(false);
     }

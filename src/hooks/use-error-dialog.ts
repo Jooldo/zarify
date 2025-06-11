@@ -33,7 +33,7 @@ export const useErrorDialog = () => {
   };
 
   const retry = () => {
-    if (errorState.error?.retryable && errorState.actions) {
+    if (errorState.error?.is_retryable && errorState.actions) {
       const retryAction = errorState.actions.find(action => action.label.toLowerCase().includes('retry'));
       if (retryAction) {
         retryAction.action();

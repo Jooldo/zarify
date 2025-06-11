@@ -2,14 +2,16 @@
 export type ErrorType = 'validation' | 'network' | 'auth' | 'system' | 'permission' | 'timeout';
 
 export interface ErrorDetails {
-  id: string;
+  error_code: string;
   type: ErrorType;
   title: string;
   message: string;
-  details?: string;
+  description?: string;
+  possible_causes?: string[];
+  action_items?: string[];
   timestamp: Date;
-  actionable: boolean;
-  retryable: boolean;
+  is_retryable: boolean;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface ErrorAction {

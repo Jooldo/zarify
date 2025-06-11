@@ -1,92 +1,103 @@
 
 import { ErrorDetails, ErrorType } from '@/types/error';
+import { supabase } from '@/integrations/supabase/client';
 
-const generateErrorId = (): string => {
-  return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Fallback error configurations for when database is unavailable
+const fallbackErrors: Record<string, Omit<ErrorDetails, 'timestamp'>> = {
+  'SYS_001': {
+    error_code: 'SYS_001',
+    type: 'system',
+    title: 'System Error',
+    message: 'An unexpected error occurred',
+    description: 'The system encountered an unexpected error. Please try again.',
+    possible_causes: ['System overload', 'Temporary service disruption'],
+    action_items: ['Try again in a few moments', 'Contact support if problem persists'],
+    is_retryable: true,
+    severity: 'medium'
+  }
+};
+
+export const createErrorFromCode = async (
+  errorCode: string,
+  customMessage?: string,
+  customDetails?: string
+): Promise<ErrorDetails> => {
+  try {
+    const { data: config } = await supabase
+      .from('error_configurations')
+      .select('*')
+      .eq('error_code', errorCode)
+      .maybeSingle();
+
+    if (config) {
+      return {
+        error_code: config.error_code,
+        type: config.error_type as ErrorType,
+        title: config.title,
+        message: customMessage || config.message,
+        description: customDetails || config.description,
+        possible_causes: config.possible_causes,
+        action_items: config.action_items,
+        timestamp: new Date(),
+        is_retryable: config.is_retryable,
+        severity: config.severity as 'low' | 'medium' | 'high' | 'critical'
+      };
+    }
+  } catch (error) {
+    console.error('Failed to fetch error configuration:', error);
+  }
+
+  // Fallback to predefined error or generic error
+  const fallback = fallbackErrors[errorCode] || fallbackErrors['SYS_001'];
+  return {
+    ...fallback,
+    message: customMessage || fallback.message,
+    description: customDetails || fallback.description,
+    timestamp: new Date()
+  };
 };
 
 export const createError = (
   type: ErrorType,
   title: string,
   message: string,
-  details?: string,
-  actionable: boolean = true,
-  retryable: boolean = false
+  description?: string,
+  is_retryable: boolean = false,
+  severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'
 ): ErrorDetails => {
   return {
-    id: generateErrorId(),
+    error_code: 'CUSTOM_ERROR',
     type,
     title,
     message,
-    details,
+    description,
     timestamp: new Date(),
-    actionable,
-    retryable,
+    is_retryable,
+    severity,
   };
 };
 
-export const createValidationError = (message: string, details?: string): ErrorDetails => {
-  return createError(
-    'validation',
-    'Validation Error',
-    message,
-    details,
-    true,
-    false
-  );
+// Convenience functions for common errors
+export const createValidationError = (message: string, description?: string): ErrorDetails => {
+  return createError('validation', 'Validation Error', message, description, false, 'low');
 };
 
-export const createNetworkError = (message: string = 'Network request failed', details?: string): ErrorDetails => {
-  return createError(
-    'network',
-    'Network Error',
-    message,
-    details,
-    true,
-    true
-  );
+export const createNetworkError = (message: string = 'Network request failed', description?: string): ErrorDetails => {
+  return createError('network', 'Network Error', message, description, true, 'medium');
 };
 
-export const createAuthError = (message: string = 'Authentication failed', details?: string): ErrorDetails => {
-  return createError(
-    'auth',
-    'Authentication Error',
-    message,
-    details,
-    true,
-    false
-  );
+export const createAuthError = (message: string = 'Authentication failed', description?: string): ErrorDetails => {
+  return createError('auth', 'Authentication Error', message, description, false, 'medium');
 };
 
-export const createSystemError = (message: string = 'An unexpected error occurred', details?: string): ErrorDetails => {
-  return createError(
-    'system',
-    'System Error',
-    message,
-    details,
-    true,
-    false
-  );
+export const createSystemError = (message: string = 'An unexpected error occurred', description?: string): ErrorDetails => {
+  return createError('system', 'System Error', message, description, true, 'high');
 };
 
-export const createPermissionError = (message: string = 'Access denied', details?: string): ErrorDetails => {
-  return createError(
-    'permission',
-    'Permission Error',
-    message,
-    details,
-    true,
-    false
-  );
+export const createPermissionError = (message: string = 'Access denied', description?: string): ErrorDetails => {
+  return createError('permission', 'Permission Error', message, description, false, 'medium');
 };
 
-export const createTimeoutError = (message: string = 'Request timed out', details?: string): ErrorDetails => {
-  return createError(
-    'timeout',
-    'Timeout Error',
-    message,
-    details,
-    true,
-    true
-  );
+export const createTimeoutError = (message: string = 'Request timed out', description?: string): ErrorDetails => {
+  return createError('timeout', 'Timeout Error', message, description, true, 'medium');
 };
