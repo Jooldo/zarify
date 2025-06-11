@@ -1,6 +1,5 @@
 
 import { ErrorDetails, ErrorType } from '@/types/error';
-import { supabase } from '@/integrations/supabase/client';
 
 // Fallback error configurations for when database is unavailable
 const fallbackErrors: Record<string, Omit<ErrorDetails, 'timestamp'>> = {
@@ -23,7 +22,8 @@ export const createErrorFromCode = async (
   customDetails?: string
 ): Promise<ErrorDetails> => {
   try {
-    const { data: config } = await supabase
+    // Use type assertion to bypass TypeScript limitation with new table
+    const { data: config } = await (supabase as any)
       .from('error_configurations')
       .select('*')
       .eq('error_code', errorCode)
@@ -56,6 +56,9 @@ export const createErrorFromCode = async (
     timestamp: new Date()
   };
 };
+
+// Add missing import
+import { supabase } from '@/integrations/supabase/client';
 
 export const createError = (
   type: ErrorType,

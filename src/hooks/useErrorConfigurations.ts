@@ -19,7 +19,8 @@ export const useErrorConfigurations = () => {
   return useQuery({
     queryKey: ['error-configurations'],
     queryFn: async (): Promise<ErrorConfiguration[]> => {
-      const { data, error } = await supabase
+      // Use type assertion to bypass TypeScript limitation with new table
+      const { data, error } = await (supabase as any)
         .from('error_configurations')
         .select('*')
         .order('error_code');
@@ -29,7 +30,7 @@ export const useErrorConfigurations = () => {
         throw error;
       }
 
-      return data || [];
+      return (data || []) as ErrorConfiguration[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -39,7 +40,8 @@ export const useErrorConfiguration = (errorCode: string) => {
   return useQuery({
     queryKey: ['error-configuration', errorCode],
     queryFn: async (): Promise<ErrorConfiguration | null> => {
-      const { data, error } = await supabase
+      // Use type assertion to bypass TypeScript limitation with new table
+      const { data, error } = await (supabase as any)
         .from('error_configurations')
         .select('*')
         .eq('error_code', errorCode)
@@ -50,7 +52,7 @@ export const useErrorConfiguration = (errorCode: string) => {
         throw error;
       }
 
-      return data;
+      return data as ErrorConfiguration | null;
     },
     enabled: !!errorCode,
     staleTime: 5 * 60 * 1000, // 5 minutes
