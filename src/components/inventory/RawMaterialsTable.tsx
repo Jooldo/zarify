@@ -29,6 +29,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [productDetails, setProductDetails] = useState<any[]>([]);
+  const [materialRequirements, setMaterialRequirements] = useState<{[key: string]: number}>({});
   const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
   const formatIndianNumber = (num: number) => {
@@ -107,6 +108,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     setIsOrderDetailsOpen(true);
     const details = await fetchRawMaterialProductDetails(material.id);
     setProductDetails(details);
+    
+    // Calculate total material required and store it
+    const totalRequired = details.reduce((sum, detail) => sum + (detail.total_material_required || 0), 0);
+    setMaterialRequirements(prev => ({ ...prev, [material.id]: totalRequired }));
   };
 
   const handleRequestCreated = () => {
@@ -114,6 +119,19 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     if (onRequestCreated) {
       onRequestCreated();
     }
+  };
+
+  // Function to get total material required for a material
+  const getTotalMaterialRequired = async (materialId: string) => {
+    if (materialRequirements[materialId] !== undefined) {
+      return materialRequirements[materialId];
+    }
+    
+    // Fetch if not already calculated
+    const details = await fetchRawMaterialProductDetails(materialId);
+    const totalRequired = details.reduce((sum, detail) => sum + (detail.total_material_required || 0), 0);
+    setMaterialRequirements(prev => ({ ...prev, [materialId]: totalRequired }));
+    return totalRequired;
   };
 
   // Sort materials based on sortConfig
@@ -141,6 +159,10 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         aValue = calculateShortfall(a.current_stock, a.in_procurement, a.required, a.minimum_stock);
         bValue = calculateShortfall(b.current_stock, b.in_procurement, b.required, b.minimum_stock);
         break;
+      case 'total_material_required':
+        aValue = materialRequirements[a.id] || 0;
+        bValue = materialRequirements[b.id] || 0;
+        break;
       default:
         return 0;
     }
@@ -152,9 +174,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     return (
       <TableSkeleton 
         rows={8} 
-        columns={8}
+        columns={9}
         columnWidths={[
-          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
         ]}
       />
     );
@@ -182,6 +204,24 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs">Total quantity of this material required for all pending orders (Created + In Progress status)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="py-1 px-2 text-xs font-medium text-center">
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-purple-700 font-semibold text-xs leading-tight">Total Material</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-purple-700 font-semibold text-xs leading-tight">Required</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-purple-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Sum of all material requirements based on finished goods shortfall</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -248,6 +288,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
               const StatusIcon = statusInfo.icon;
               const shortUnit = getShortUnit(material.unit);
+              const totalMaterialRequired = materialRequirements[material.id] || 0;
               
               return (
                 <TableRow key={material.id} className="h-10">
@@ -270,6 +311,11 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                     >
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
+                  </TableCell>
+                  <TableCell className="py-1 px-2 text-center">
+                    <span className="text-sm font-bold text-purple-700">
+                      {formatIndianNumber(totalMaterialRequired)} {shortUnit}
+                    </span>
                   </TableCell>
                   <TableCell className="py-1 px-2 text-sm font-bold text-center">
                     {formatIndianNumber(material.current_stock)} {shortUnit}
@@ -337,6 +383,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         </Table>
       </div>
 
+      
       <ViewRawMaterialDialog 
         material={selectedMaterial}
         isOpen={isViewMaterialOpen}
