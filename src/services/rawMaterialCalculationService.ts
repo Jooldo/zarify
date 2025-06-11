@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MaterialCalculationResult {
@@ -18,7 +19,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
       status
     `)
     .eq('merchant_id', merchantId)
-    .in('status', ['Created', 'Progress']);
+    .in('status', ['Created', 'In Progress']);
 
   if (orderItemsError) {
     console.error('Error fetching live order items:', orderItemsError);
