@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -103,16 +104,6 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const materialTypes = [...new Set(rawMaterials.map(material => material.type))].filter(Boolean);
   const supplierNames = [...new Set(suppliers.map(supplier => supplier.company_name))].filter(Boolean);
 
-  const handleViewMaterial = (material: any) => {
-    // Add view material logic here if needed
-    console.log('View material:', material);
-  };
-
-  const handleEditMaterial = (material: any) => {
-    // Add edit material logic here if needed
-    console.log('Edit material:', material);
-  };
-
   return (
     <div className="space-y-4">
       <RawMaterialsHeader
@@ -142,9 +133,12 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
       </div>
       
       <RawMaterialsTable 
-        rawMaterials={filteredMaterials}
-        onViewMaterial={handleViewMaterial}
-        onEditMaterial={handleEditMaterial}
+        materials={filteredMaterials} 
+        loading={loading} 
+        onUpdate={refetch}
+        onRequestCreated={handleRequestCreated}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
       />
     </div>
   );
