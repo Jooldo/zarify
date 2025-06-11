@@ -87,31 +87,17 @@ export const useFinishedGoods = () => {
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
 
-      // Update finished goods with calculated required quantities and update database
-      const finishedGoodsWithRequiredQty = [];
-      
-      for (const item of finishedGoodsData || []) {
+      // Update finished goods with calculated required quantities (in memory only for display)
+      const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
         const orderDemand = requiredQuantities[item.product_config_id] || 0;
         
         console.log(`Product ${item.product_code}: order_demand=${orderDemand}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
         
-        // Always update the required_quantity in the database to reflect current order demands
-        console.log(`Updating required_quantity for ${item.product_code} to ${orderDemand}`);
-        
-        const { error: updateError } = await supabase
-          .from('finished_goods')
-          .update({ required_quantity: orderDemand })
-          .eq('id', item.id);
-
-        if (updateError) {
-          console.error(`Error updating required_quantity for ${item.product_code}:`, updateError);
-        }
-        
-        finishedGoodsWithRequiredQty.push({
+        return {
           ...item,
           required_quantity: orderDemand
-        });
-      }
+        };
+      }) || [];
 
       console.log('Final finished goods with updated required quantities:', finishedGoodsWithRequiredQty);
 

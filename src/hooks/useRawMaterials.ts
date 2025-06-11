@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +63,31 @@ export const useRawMaterials = () => {
 
       console.log('Raw materials fetched:', rawMaterialsData?.length || 0, 'items');
 
-      // Fetch finished goods with updated required quantities
+      // Fetch order items to calculate required quantities for finished goods
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          product_config_id,
+          quantity,
+          status
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['Created', 'In Progress']);
+
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+        throw orderItemsError;
+      }
+
+      // Calculate required quantities for each product config from live orders
+      const requiredQuantitiesByConfig = orderItemsData?.reduce((acc, item) => {
+        if (item.status === 'Created' || item.status === 'In Progress') {
+          acc[item.product_config_id] = (acc[item.product_config_id] || 0) + item.quantity;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Fetch finished goods with their current stock and manufacturing info
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
@@ -72,7 +95,6 @@ export const useRawMaterials = () => {
           product_code,
           current_stock,
           in_manufacturing,
-          required_quantity,
           threshold,
           product_config_id
         `)
@@ -125,8 +147,11 @@ export const useRawMaterials = () => {
           console.log(`Found ${finishedGoodsForConfig.length} finished goods for this config`);
 
           finishedGoodsForConfig.forEach(finishedGood => {
-            // Calculate shortfall for this finished good
-            const totalDemand = finishedGood.required_quantity + finishedGood.threshold;
+            // Get the required quantity from live orders
+            const liveOrderDemand = requiredQuantitiesByConfig[finishedGood.product_config_id] || 0;
+            
+            // Calculate shortfall for this finished good using live order demand
+            const totalDemand = liveOrderDemand + finishedGood.threshold;
             const available = finishedGood.current_stock + finishedGood.in_manufacturing;
             const shortfall = Math.max(0, totalDemand - available);
 
@@ -135,7 +160,7 @@ export const useRawMaterials = () => {
               totalRequired += materialNeeded;
 
               console.log(`  Product ${finishedGood.product_code}:`, {
-                required_quantity: finishedGood.required_quantity,
+                liveOrderDemand,
                 threshold: finishedGood.threshold,
                 totalDemand,
                 current_stock: finishedGood.current_stock,
@@ -155,7 +180,7 @@ export const useRawMaterials = () => {
         console.log('Current Stock:', material.current_stock);
         console.log('In Procurement:', material.in_procurement);
 
-        const shortfall = Math.max(0, totalRequired - (material.current_stock + material.in_procurement));
+        const shortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
         console.log('Final Shortfall:', shortfall);
         console.log('='.repeat(50));
 
