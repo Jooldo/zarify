@@ -71,18 +71,37 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
     for (const material of rawMaterialsData || []) {
       let totalRequired = 0;
 
+      // Special debugging for M Chain
+      const isMChain = material.name === 'M Chain' || material.name.includes('M Chain') || material.name.toLowerCase().includes('m chain');
+      
+      if (isMChain) {
+        console.log('🔍 === DEBUGGING M CHAIN ===');
+        console.log('Material ID:', material.id);
+        console.log('Material Name:', material.name);
+      }
+
       // Find all product configs that use this raw material
       const configsUsingMaterial = productConfigMaterials?.filter(
         pcm => pcm.raw_material_id === material.id
       ) || [];
 
+      if (isMChain) {
+        console.log('Product configs using M Chain:', configsUsingMaterial.length);
+        console.log('Config details:', configsUsingMaterial);
+      }
+
       // For each config, calculate based on finished goods shortfall
-      configsUsingMaterial.forEach(config => {
+      configsUsingMaterial.forEach((config, configIndex) => {
         const finishedGoodsForConfig = finishedGoodsData?.filter(
           fg => fg.product_config_id === config.product_config_id
         ) || [];
 
-        finishedGoodsForConfig.forEach(finishedGood => {
+        if (isMChain) {
+          console.log(`Config ${configIndex + 1} - Finished goods found:`, finishedGoodsForConfig.length);
+          console.log('Finished goods details:', finishedGoodsForConfig);
+        }
+
+        finishedGoodsForConfig.forEach((finishedGood, fgIndex) => {
           // Use the required_quantity that should be set from live orders
           const liveOrderDemand = finishedGood.required_quantity || 0;
           
@@ -91,15 +110,42 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
           const available = finishedGood.current_stock + finishedGood.in_manufacturing;
           const shortfall = Math.max(0, totalDemand - available);
 
+          if (isMChain) {
+            console.log(`  FG ${fgIndex + 1} (${finishedGood.product_code}):`);
+            console.log(`    Live Order Demand: ${liveOrderDemand}`);
+            console.log(`    Threshold: ${finishedGood.threshold}`);
+            console.log(`    Total Demand: ${totalDemand}`);
+            console.log(`    Current Stock: ${finishedGood.current_stock}`);
+            console.log(`    In Manufacturing: ${finishedGood.in_manufacturing}`);
+            console.log(`    Available: ${available}`);
+            console.log(`    Shortfall: ${shortfall}`);
+            console.log(`    Quantity Required per unit: ${config.quantity_required}`);
+          }
+
           if (shortfall > 0) {
             const materialNeeded = shortfall * config.quantity_required;
             totalRequired += materialNeeded;
+            
+            if (isMChain) {
+              console.log(`    Material needed for this FG: ${materialNeeded}`);
+              console.log(`    Running total required: ${totalRequired}`);
+            }
           }
         });
       });
 
       // Calculate shortfall for this material
       const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
+
+      if (isMChain) {
+        console.log('=== M CHAIN FINAL CALCULATION ===');
+        console.log('Total Required:', totalRequired);
+        console.log('Minimum Stock:', material.minimum_stock);
+        console.log('Current Stock:', material.current_stock);
+        console.log('In Procurement:', material.in_procurement);
+        console.log('Material Shortfall:', materialShortfall);
+        console.log('=== END M CHAIN DEBUG ===');
+      }
 
       calculationResults.push({
         id: material.id,
