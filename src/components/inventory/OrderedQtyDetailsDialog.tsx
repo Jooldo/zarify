@@ -202,7 +202,7 @@ const OrderedQtyDetailsDialog = ({
                               <Info className="h-3 w-3 text-gray-400 cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="max-w-xs">Total quantity of raw material required for this product's orders</p>
+                              <p className="max-w-xs">Quantity of raw material required based on product shortfall</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -218,6 +218,9 @@ const OrderedQtyDetailsDialog = ({
                         product.threshold
                       );
                       const StatusIcon = statusInfo.icon;
+                      
+                      // Calculate material required based on shortfall
+                      const materialRequiredFromShortfall = product.shortfall > 0 ? product.shortfall * product.material_quantity_per_unit : 0;
 
                       return (
                         <TableRow key={index} className="h-10">
@@ -263,11 +266,11 @@ const OrderedQtyDetailsDialog = ({
                             </div>
                           </TableCell>
                           <TableCell className="px-2 py-1 text-center">
-                            <div className="text-xs">
+                            <div className="text-base">
                               <div className="font-bold text-blue-600">
-                                {formatIndianNumber(product.total_material_required)}
+                                {formatIndianNumber(materialRequiredFromShortfall)}
                               </div>
-                              <div className="text-gray-500">
+                              <div className="text-gray-500 text-xs">
                                 ({formatIndianNumber(product.material_quantity_per_unit)} per unit)
                               </div>
                             </div>

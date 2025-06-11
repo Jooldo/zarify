@@ -121,8 +121,8 @@ export const useOrderedQtyDetails = () => {
         const totalNeeded = requiredQuantity + threshold;
         const shortfall = Math.max(0, totalNeeded - totalAvailable);
         
-        // Calculate total material required for this product
-        const totalMaterialRequired = requiredQuantity * pcm.quantity_required;
+        // Calculate total material required based on shortfall
+        const totalMaterialRequired = shortfall > 0 ? shortfall * pcm.quantity_required : 0;
 
         return {
           product_code: pcm.product_config.product_code,
