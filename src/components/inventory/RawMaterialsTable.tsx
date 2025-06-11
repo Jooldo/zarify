@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -258,6 +257,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         isOpen={isRaiseRequestOpen}
         onOpenChange={setIsRaiseRequestOpen}
         material={selectedMaterial}
+        mode="inventory"
         onRequestCreated={() => {
           onRequestCreated();
           setIsRaiseRequestOpen(false);
@@ -267,7 +267,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
       <OrderedQtyDetailsDialog
         isOpen={isOrderDetailsOpen}
         onClose={() => setIsOrderDetailsOpen(false)}
-        materialId={selectedMaterial?.id}
         productDetails={productDetails}
         totalQuantity={selectedMaterial?.required || 0}
         loading={detailsLoading}
