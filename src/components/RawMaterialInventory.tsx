@@ -21,7 +21,7 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
 
   const sortOptions = [
-    { value: 'ordered_qty', label: 'Quantity Required based on Finished Good Shortfall' },
+    { value: 'ordered_qty', label: 'Required Quantity' },
     { value: 'current_stock', label: 'Current Stock' },
     { value: 'in_procurement', label: 'In Procurement' },
     { value: 'shortfall', label: 'Shortfall' }

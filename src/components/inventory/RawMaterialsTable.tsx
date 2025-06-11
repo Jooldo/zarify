@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -173,7 +174,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                 <div className="flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">Quantity Required</span>
+                    <span className="text-blue-700 font-semibold text-xs leading-tight">Required Quantity</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-blue-700 font-semibold text-xs leading-tight">based on Finished Good Shortfall</span>
@@ -210,7 +211,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus.</p>
+                      <p className="max-w-xs">Shortage calculation: (Required Quantity + Min Stock) - (Current Stock + In Procurement). Positive values indicate shortage, negative indicate surplus.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
