@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -108,10 +107,9 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                 <div className="flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">Required Qty Based</span>
+                    <span className="text-blue-700 font-semibold text-xs leading-tight">Live Orders</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">On Live Orders</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-3 w-3 text-blue-500 cursor-help" />
@@ -145,7 +143,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Required Qty + Threshold) - (Current Stock + In Manufacturing). Positive values indicate shortage, negative indicate surplus.</p>
+                      <p className="max-w-xs">Shortage calculation: (Live Orders + Threshold) - (Current Stock + In Manufacturing). Positive values indicate shortage, negative indicate surplus.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
