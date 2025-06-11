@@ -1,4 +1,3 @@
-
 import { 
   AlertTriangle, 
   Wifi, 
@@ -52,22 +51,8 @@ const getErrorIcon = (type: ErrorType) => {
 };
 
 const getErrorColor = (type: ErrorType) => {
-  switch (type) {
-    case 'validation':
-      return 'text-amber-600';
-    case 'network':
-      return 'text-blue-600';
-    case 'auth':
-      return 'text-red-600';
-    case 'permission':
-      return 'text-purple-600';
-    case 'system':
-      return 'text-gray-600';
-    case 'timeout':
-      return 'text-orange-600';
-    default:
-      return 'text-red-600';
-  }
+  // Make all error icons red for consistency
+  return 'text-red-600';
 };
 
 const getBadgeVariant = (type: ErrorType) => {
