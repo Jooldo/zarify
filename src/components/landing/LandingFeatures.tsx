@@ -49,32 +49,29 @@ const LandingFeatures = () => {
   ];
 
   return (
-    <div className="py-20 bg-white relative">
+    <div className="py-16 bg-white relative">
       <div className="container mx-auto px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full text-sm">
+        <div className="max-w-3xl mb-12">
+          <Badge className="mb-4 px-3 py-1 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full text-xs">
             Complete Platform
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-            Everything You Need to
-            <span className="block bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-              Run Your Manufacturing
-            </span>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            Everything You Need to Run Your Manufacturing
           </h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
+          <p className="text-base text-gray-600 leading-relaxed">
             From raw materials to finished jewelry - manage your entire operation in one platform
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (
-              <div key={index} className="p-6 hover:bg-gray-50/50 rounded-xl transition-all duration-300 group">
-                <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <IconComponent className={`h-6 w-6 ${feature.color}`} />
+              <div key={index} className="p-4 hover:bg-gray-50/50 rounded-lg transition-all duration-300 group">
+                <div className={`w-10 h-10 ${feature.bgColor} rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className={`h-5 w-5 ${feature.color}`} />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{feature.title}</h3>
+                <h3 className="text-base font-bold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-gray-600 leading-relaxed text-sm">{feature.description}</p>
               </div>
             );
