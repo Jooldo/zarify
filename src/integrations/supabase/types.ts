@@ -472,6 +472,63 @@ export type Database = {
           },
         ]
       }
+      manufacturing_step_fields: {
+        Row: {
+          created_at: string
+          field_id: string
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          is_required: boolean
+          manufacturing_step_id: string
+          merchant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          manufacturing_step_id: string
+          merchant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          manufacturing_step_id?: string
+          merchant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_step_fields_manufacturing_step_id_fkey"
+            columns: ["manufacturing_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_step_fields_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manufacturing_steps: {
         Row: {
           created_at: string
@@ -480,6 +537,7 @@ export type Database = {
           id: string
           is_active: boolean
           merchant_id: string
+          qc_required: boolean
           step_name: string
           step_order: number
           updated_at: string
@@ -491,6 +549,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           merchant_id: string
+          qc_required?: boolean
           step_name: string
           step_order: number
           updated_at?: string
@@ -502,6 +561,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           merchant_id?: string
+          qc_required?: boolean
           step_name?: string
           step_order?: number
           updated_at?: string

@@ -59,22 +59,42 @@ const defaultRequiredFields: RequiredField[] = [
 
 const ManufacturingConfigPanel = () => {
   const { toast } = useToast();
-  const { manufacturingSteps, isLoading } = useManufacturingSteps();
+  const { manufacturingSteps, stepFields, isLoading, updateStep, saveStepFields } = useManufacturingSteps();
   const { merchant } = useMerchant();
   const [steps, setSteps] = useState<ManufacturingStepConfig[]>([]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-  // Convert database steps to local config format
+  // Convert database steps to local config format and load saved field configurations
   useEffect(() => {
     if (manufacturingSteps && manufacturingSteps.length > 0) {
-      const configSteps = manufacturingSteps.map(step => ({
-        id: step.id,
-        name: step.step_name,
-        order: step.step_order,
-        qcRequired: false, // This would need to be added to the database schema
-        requiredFields: [defaultRequiredFields[0], defaultRequiredFields[6]], // Worker and Status by default
-        estimatedDuration: step.estimated_duration_hours || 1
-      }));
+      const configSteps = manufacturingSteps.map(step => {
+        // Get saved fields for this step from stepFields
+        const savedFields = stepFields
+          .filter(field => field.manufacturing_step_id === step.id)
+          .map(field => ({
+            id: field.field_id,
+            name: field.field_name,
+            label: field.field_label,
+            type: field.field_type,
+            required: field.is_required,
+            options: field.field_options
+          }));
+
+        // Use saved fields if available, otherwise use defaults
+        const requiredFields = savedFields.length > 0 
+          ? savedFields 
+          : [defaultRequiredFields[0], defaultRequiredFields[6]]; // Worker and Status by default
+
+        return {
+          id: step.id,
+          name: step.step_name,
+          order: step.step_order,
+          qcRequired: step.qc_required,
+          requiredFields,
+          estimatedDuration: step.estimated_duration_hours || 1,
+          description: step.description
+        };
+      });
       setSteps(configSteps);
     } else {
       // Initialize with default steps if none exist
@@ -101,7 +121,7 @@ const ManufacturingConfigPanel = () => {
         }
       ]);
     }
-  }, [manufacturingSteps]);
+  }, [manufacturingSteps, stepFields]);
 
   const handleAddStep = useCallback(async () => {
     if (!merchant?.id) {
@@ -125,6 +145,7 @@ const ManufacturingConfigPanel = () => {
           estimated_duration_hours: 1,
           description: '',
           is_active: true,
+          qc_required: false,
           merchant_id: merchant.id
         })
         .select()
@@ -144,6 +165,9 @@ const ManufacturingConfigPanel = () => {
       setSteps(prev => [...prev, newStep]);
       setSelectedStepId(newStep.id);
 
+      // Save default fields to database
+      await saveStepFields(newStep.id, newStep.requiredFields);
+
       toast({
         title: 'Success',
         description: 'Manufacturing step added successfully',
@@ -156,7 +180,7 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [steps.length, toast, merchant?.id]);
+  }, [steps.length, toast, merchant?.id, saveStepFields]);
 
   const handleDeleteStep = useCallback(async (stepId: string) => {
     try {
@@ -216,17 +240,23 @@ const ManufacturingConfigPanel = () => {
     }
   }, [toast]);
 
-  const handleQCToggle = useCallback((stepId: string, qcRequired: boolean) => {
+  const handleQCToggle = useCallback(async (stepId: string, qcRequired: boolean) => {
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, qcRequired } : step
     ));
-  }, []);
+    
+    // Save to database
+    await updateStep(stepId, { qc_required: qcRequired });
+  }, [updateStep]);
 
-  const handleFieldsUpdate = useCallback((stepId: string, fields: RequiredField[]) => {
+  const handleFieldsUpdate = useCallback(async (stepId: string, fields: RequiredField[]) => {
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, requiredFields: fields } : step
     ));
-  }, []);
+    
+    // Save to database
+    await saveStepFields(stepId, fields);
+  }, [saveStepFields]);
 
   const handleDurationChange = useCallback(async (stepId: string, duration: number) => {
     try {
