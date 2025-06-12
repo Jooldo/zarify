@@ -25,12 +25,13 @@ const CriticalFinishedGoods = ({ onNavigateToInventory }: CriticalFinishedGoodsP
   const criticalGoods = finishedGoods
     .filter(item => {
       const totalDemand = item.required_quantity + item.threshold;
-      const available = item.current_stock + item.in_manufacturing;
+      // For now, just use current stock since manufacturing is being reworked
+      const available = item.current_stock + (item.in_manufacturing || 0);
       return totalDemand > available;
     })
     .sort((a, b) => {
-      const shortfallA = (a.required_quantity + a.threshold) - (a.current_stock + a.in_manufacturing);
-      const shortfallB = (b.required_quantity + b.threshold) - (b.current_stock + b.in_manufacturing);
+      const shortfallA = (a.required_quantity + a.threshold) - (a.current_stock + (a.in_manufacturing || 0));
+      const shortfallB = (b.required_quantity + b.threshold) - (b.current_stock + (b.in_manufacturing || 0));
       return shortfallB - shortfallA;
     })
     .slice(0, 3);
@@ -54,7 +55,7 @@ const CriticalFinishedGoods = ({ onNavigateToInventory }: CriticalFinishedGoodsP
           <div className="space-y-3">
             {criticalGoods.map((item) => {
               const totalDemand = item.required_quantity + item.threshold;
-              const available = item.current_stock + item.in_manufacturing;
+              const available = item.current_stock + (item.in_manufacturing || 0);
               const shortfall = Math.max(0, totalDemand - available);
               
               return (
