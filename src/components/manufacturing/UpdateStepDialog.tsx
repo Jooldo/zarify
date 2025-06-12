@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, User, Package, Clock, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { Calendar, Package, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { StepCardData } from './ManufacturingStepCard';
 import { ManufacturingStepField, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -51,7 +51,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       
       // Initialize basic fields
       setStatus(currentOrderStep.status || 'pending');
-      setAssignedWorker(currentOrderStep.assigned_worker_id || '');
+      setAssignedWorker(currentOrderStep.assigned_worker_id || 'unassigned');
       setProgress(currentOrderStep.progress_percentage || 0);
       setNotes(currentOrderStep.notes || '');
       
@@ -95,13 +95,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
 
     try {
+      const workerValue = assignedWorker === 'unassigned' ? undefined : assignedWorker;
+      
       await updateStep({
         stepId: currentOrderStep.id,
         status,
         progress,
         fieldValues: {
           ...formValues,
-          worker: assignedWorker || undefined,
+          worker: workerValue,
           notes: notes || undefined,
         },
       });
@@ -192,7 +194,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {previousSteps.map((step, index) => (
+                    {previousSteps.map((step) => (
                       <div key={step.id} className="flex items-center justify-between p-2 bg-muted rounded">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
@@ -245,7 +247,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <SelectValue placeholder="Select worker" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No worker assigned</SelectItem>
+                    <SelectItem value="unassigned">No worker assigned</SelectItem>
                     {workers.map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.name} - {worker.role}
