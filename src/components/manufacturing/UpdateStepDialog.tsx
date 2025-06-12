@@ -98,10 +98,12 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       await updateStep({
         stepId: currentOrderStep.id,
         status,
-        assignedWorkerId: assignedWorker || null,
-        progressPercentage: progress,
-        notes: notes || null,
-        fieldValues: formValues,
+        progress,
+        fieldValues: {
+          ...formValues,
+          worker: assignedWorker || undefined,
+          notes: notes || undefined,
+        },
       });
 
       toast({
@@ -118,7 +120,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         variant: 'destructive',
       });
     }
-  }, [currentOrderStep, stepData, status, assignedWorker, progress, notes, formValues, updateStep, toast, onOpenChange]);
+  }, [currentOrderStep, stepData, status, progress, notes, formValues, assignedWorker, updateStep, toast, onOpenChange]);
 
   if (!stepData || !currentOrderStep) {
     return null;

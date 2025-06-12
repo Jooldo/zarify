@@ -31,6 +31,7 @@ export const useUpdateManufacturingStep = () => {
           if (data.status !== undefined) updates.status = data.status;
           if (data.progress !== undefined) updates.progress_percentage = data.progress;
           if (data.fieldValues.worker) updates.assigned_worker_id = data.fieldValues.worker;
+          if (data.fieldValues.notes) updates.notes = data.fieldValues.notes;
 
           const { error: updateError } = await supabase
             .from('manufacturing_order_steps')
@@ -50,19 +51,23 @@ export const useUpdateManufacturingStep = () => {
 
           if (deleteError) throw deleteError;
 
-          // Insert new values
-          const fieldValuesToInsert = Object.entries(data.fieldValues).map(([fieldId, value]) => ({
-            manufacturing_order_step_id: data.stepId,
-            field_id: fieldId,
-            field_value: typeof value === 'string' ? value : JSON.stringify(value),
-            merchant_id: merchantId,
-          }));
+          // Insert new values (excluding worker and notes as they're handled above)
+          const fieldValuesToInsert = Object.entries(data.fieldValues)
+            .filter(([key]) => key !== 'worker' && key !== 'notes')
+            .map(([fieldId, value]) => ({
+              manufacturing_order_step_id: data.stepId,
+              field_id: fieldId,
+              field_value: typeof value === 'string' ? value : JSON.stringify(value),
+              merchant_id: merchantId,
+            }));
 
-          const { error: valuesError } = await supabase
-            .from('manufacturing_order_step_values')
-            .insert(fieldValuesToInsert);
+          if (fieldValuesToInsert.length > 0) {
+            const { error: valuesError } = await supabase
+              .from('manufacturing_order_step_values')
+              .insert(fieldValuesToInsert);
 
-          if (valuesError) throw valuesError;
+            if (valuesError) throw valuesError;
+          }
         }
 
         console.log('Manufacturing step updated successfully');
