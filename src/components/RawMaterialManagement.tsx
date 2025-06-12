@@ -1,11 +1,9 @@
 
-import { Package, Settings, ShoppingBag, Home, Users } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigation } from '@/contexts/NavigationContext';
 import RawMaterialInventory from './RawMaterialInventory';
-import RawMaterialsConfig from './config/RawMaterialsConfig';
-import RMProcurementTab from './procurement/RMProcurementTab';
 import RMHomeDashboard from './rawmaterial/RMHomeDashboard';
-import SupplierManagement from './procurement/SupplierManagement';
 
 interface RawMaterialManagementProps {
   activeTab: string;
@@ -13,75 +11,53 @@ interface RawMaterialManagementProps {
 }
 
 const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagementProps) => {
-  const renderActiveContent = () => {
+  const { hidePageHeader } = useNavigation();
+
+  const getTabContent = () => {
     switch (activeTab) {
-      case 'rm-inventory':
-        return <RawMaterialInventory onRequestCreated={() => {}} />;
-      case 'rm-procurement':
-        return <RMProcurementTab />;
       case 'rm-home':
         return <RMHomeDashboard onNavigateToTab={onTabChange} />;
+      case 'rm-inventory':
+        return <RawMaterialInventory />;
+      case 'rm-procurement':
+        return <div className="p-6">Raw Material Procurement content coming soon...</div>;
       case 'rm-suppliers':
-        return <SupplierManagement />;
+        return <div className="p-6">Supplier Management content coming soon...</div>;
       case 'rm-config':
-        return <RawMaterialsConfig />;
+        return <div className="p-6">Raw Material Configuration content coming soon...</div>;
       default:
         return <RMHomeDashboard onNavigateToTab={onTabChange} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Fixed Header Section */}
-      <div className="bg-card border-b border-border">
-        <div className="flex items-center justify-between py-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Raw Material Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage inventory, procurement, suppliers, and analytics
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section - Hide when hidePageHeader is true */}
+      {!hidePageHeader && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h2 className="text-2xl font-semibold mb-2">Raw Material Management</h2>
+          <p className="text-muted-foreground">
+            Manage inventory, procurement, suppliers, and analytics
+          </p>
         </div>
+      )}
 
+      {/* Tabs Section - Hide when hidePageHeader is true */}
+      {!hidePageHeader && (
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
-            <TabsTrigger value="rm-home" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Home className="h-4 w-4" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Package className="h-4 w-4" />
-              Inventory
-            </TabsTrigger>
-            <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <ShoppingBag className="h-4 w-4" />
-              Procurement
-            </TabsTrigger>
-            <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Users className="h-4 w-4" />
-              Suppliers
-            </TabsTrigger>
-            <TabsTrigger value="rm-config" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Settings className="h-4 w-4" />
-              Config
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="rm-home">Home</TabsTrigger>
+            <TabsTrigger value="rm-inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="rm-procurement">Procurement</TabsTrigger>
+            <TabsTrigger value="rm-suppliers">Suppliers</TabsTrigger>
+            <TabsTrigger value="rm-config">Config</TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
+      )}
 
-      {/* Content Section */}
-      <div className="bg-background py-6">
-        <div className="min-h-[700px]">
-          <Tabs value={activeTab} className="w-full">
-            <TabsContent value={activeTab} className="mt-0 animate-fade-in">
-              <div className="space-y-6">
-                {renderActiveContent()}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+      {/* Content Section - Always visible */}
+      <div className="mt-6">
+        {getTabContent()}
       </div>
     </div>
   );

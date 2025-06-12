@@ -1,26 +1,7 @@
 
-import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
-import FinishedGoodsConfig from './config/FinishedGoodsConfig';
-import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
-
-// Placeholder components for removed functionality
-const FGAnalyticsPlaceholder = () => (
-  <div className="p-8 text-center">
-    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold mb-2">Analytics</h3>
-    <p className="text-gray-500">Analytics functionality will be implemented here</p>
-  </div>
-);
-
-const FGWorkersPlaceholder = () => (
-  <div className="p-8 text-center">
-    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold mb-2">Workers</h3>
-    <p className="text-gray-500">Worker management functionality will be implemented here</p>
-  </div>
-);
 
 interface FinishedGoodManagementProps {
   activeTab: string;
@@ -28,75 +9,53 @@ interface FinishedGoodManagementProps {
 }
 
 const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManagementProps) => {
-  const renderActiveContent = () => {
+  const { hidePageHeader } = useNavigation();
+
+  const getTabContent = () => {
     switch (activeTab) {
       case 'fg-inventory':
         return <FinishedGoodsInventory />;
       case 'fg-manufacturing':
-        return <ManufacturingDashboard />;
+        return <div className="p-6">Manufacturing content coming soon...</div>;
       case 'fg-analytics':
-        return <FGAnalyticsPlaceholder />;
+        return <div className="p-6">Analytics content coming soon...</div>;
       case 'fg-workers':
-        return <FGWorkersPlaceholder />;
+        return <div className="p-6">Workers content coming soon...</div>;
       case 'fg-config':
-        return <FinishedGoodsConfig />;
+        return <div className="p-6">Configuration content coming soon...</div>;
       default:
         return <FinishedGoodsInventory />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Fixed Header Section */}
-      <div className="bg-card border-b border-border">
-        <div className="flex items-center justify-between py-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Finished Good Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage inventory, manufacturing, analytics, workforce, and configuration
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section - Hide when hidePageHeader is true */}
+      {!hidePageHeader && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h2 className="text-2xl font-semibold mb-2">Finished Good Management</h2>
+          <p className="text-muted-foreground">
+            Manage finished goods inventory, manufacturing, analytics, and workers
+          </p>
         </div>
+      )}
 
+      {/* Tabs Section - Hide when hidePageHeader is true */}
+      {!hidePageHeader && (
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
-            <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Package className="h-4 w-4" />
-              Inventory
-            </TabsTrigger>
-            <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Factory className="h-4 w-4" />
-              Manufacturing
-            </TabsTrigger>
-            <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Users className="h-4 w-4" />
-              Workers
-            </TabsTrigger>
-            <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Wrench className="h-4 w-4" />
-              Config
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="fg-inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="fg-manufacturing">Manufacturing</TabsTrigger>
+            <TabsTrigger value="fg-analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="fg-workers">Workers</TabsTrigger>
+            <TabsTrigger value="fg-config">Config</TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
+      )}
 
-      {/* Content Section */}
-      <div className="bg-background py-6">
-        <div className="min-h-[700px]">
-          <Tabs value={activeTab} className="w-full">
-            <TabsContent value={activeTab} className="mt-0 animate-fade-in">
-              <div className="space-y-6">
-                {renderActiveContent()}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+      {/* Content Section - Always visible */}
+      <div className="mt-6">
+        {getTabContent()}
       </div>
     </div>
   );
