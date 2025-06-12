@@ -1,16 +1,18 @@
 
 import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Package2, Clock, CheckCircle, AlertTriangle, Users } from 'lucide-react';
+import { Plus, Package2, Clock, CheckCircle, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
 import ManufacturingOrderCard from './ManufacturingOrderCard';
+import ProductionQueueView from './ProductionQueueView';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const ManufacturingDashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('orders');
   const { manufacturingOrders, loading } = useManufacturingOrders();
 
   if (loading) {
@@ -98,7 +100,7 @@ const ManufacturingDashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Users className="h-4 w-4 text-orange-600" />
+            <Workflow className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{inProgressOrders}</div>
@@ -116,37 +118,46 @@ const ManufacturingDashboard = () => {
         </Card>
       </div>
 
-      {/* Manufacturing Orders */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Manufacturing Orders</h2>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="orders">Manufacturing Orders</TabsTrigger>
+          <TabsTrigger value="queue">Production Queue</TabsTrigger>
+        </TabsList>
         
-        {manufacturingOrders.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package2 className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Manufacturing Orders</h3>
-              <p className="text-gray-500 text-center mb-4">
-                Create your first manufacturing order to start tracking production
-              </p>
-              <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create Manufacturing Order
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {manufacturingOrders.map((order) => (
-              <ManufacturingOrderCard 
-                key={order.id} 
-                order={order}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        <TabsContent value="orders" className="space-y-4">
+          {manufacturingOrders.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Package2 className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Manufacturing Orders</h3>
+                <p className="text-gray-500 text-center mb-4">
+                  Create your first manufacturing order to start tracking production
+                </p>
+                <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Manufacturing Order
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {manufacturingOrders.map((order) => (
+                <ManufacturingOrderCard 
+                  key={order.id} 
+                  order={order}
+                  getPriorityColor={getPriorityColor}
+                  getStatusColor={getStatusColor}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="queue" className="mt-0">
+          <ProductionQueueView />
+        </TabsContent>
+      </Tabs>
 
       <CreateManufacturingOrderDialog 
         open={showCreateDialog}

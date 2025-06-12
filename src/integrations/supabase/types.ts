@@ -326,6 +326,80 @@ export type Database = {
           },
         ]
       }
+      manufacturing_order_steps: {
+        Row: {
+          assigned_worker_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          manufacturing_order_id: string
+          manufacturing_step_id: string
+          merchant_id: string
+          notes: string | null
+          progress_percentage: number | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          manufacturing_order_id: string
+          manufacturing_step_id: string
+          merchant_id: string
+          notes?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          manufacturing_order_id?: string
+          manufacturing_step_id?: string
+          merchant_id?: string
+          notes?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_steps_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_manufacturing_order_id_fkey"
+            columns: ["manufacturing_order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_manufacturing_step_id_fkey"
+            columns: ["manufacturing_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manufacturing_orders: {
         Row: {
           completed_at: string | null
@@ -394,6 +468,50 @@ export type Database = {
             columns: ["product_config_id"]
             isOneToOne: false
             referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_steps: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_duration_hours: number | null
+          id: string
+          is_active: boolean
+          merchant_id: string
+          step_name: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id: string
+          step_name: string
+          step_order: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id?: string
+          step_name?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_steps_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
         ]
