@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -169,9 +168,21 @@ export const useManufacturingOrders = () => {
         // Get current user
         const { data: user } = await supabase.auth.getUser();
         
-        // Try to create the order with auto-generated order number
-        // We'll let the database trigger handle the order number generation
+        // Get next order number from the improved database function
+        const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
+          'get_next_manufacturing_order_number'
+        );
+
+        if (orderNumberError) {
+          console.error('Error getting order number:', orderNumberError);
+          throw orderNumberError;
+        }
+
+        console.log('Generated order number:', orderNumber);
+
+        // Create the manufacturing order with the generated number
         const orderToInsert = {
+          order_number: orderNumber,
           product_name: orderData.product_name,
           product_type: orderData.product_type || null,
           product_config_id: orderData.product_config_id || null,
@@ -184,62 +195,21 @@ export const useManufacturingOrders = () => {
           status: 'pending' as const
         };
 
-        console.log('Inserting order without order_number (will be auto-generated):', orderToInsert);
+        console.log('Inserting order:', orderToInsert);
 
-        // Try multiple times with different order numbers if needed
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (attempts < maxAttempts) {
-          try {
-            // Get next order number
-            const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
-              'get_next_manufacturing_order_number'
-            );
+        const { data: order, error } = await supabase
+          .from('manufacturing_orders')
+          .insert(orderToInsert)
+          .select()
+          .single();
 
-            if (orderNumberError) {
-              console.error('Error getting order number:', orderNumberError);
-              throw orderNumberError;
-            }
-
-            console.log('Generated order number:', orderNumber);
-
-            // Create the manufacturing order with the generated number
-            const { data: order, error } = await supabase
-              .from('manufacturing_orders')
-              .insert({
-                ...orderToInsert,
-                order_number: orderNumber
-              })
-              .select()
-              .single();
-
-            if (error) {
-              if (error.code === '23505' && attempts < maxAttempts - 1) {
-                // Duplicate key error, try again
-                attempts++;
-                console.log(`Duplicate order number, retrying... Attempt ${attempts + 1}`);
-                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-                continue;
-              }
-              console.error('Error creating manufacturing order:', error);
-              throw error;
-            }
-
-            console.log('Created order successfully:', order);
-            return order;
-          } catch (error: any) {
-            if (error.code === '23505' && attempts < maxAttempts - 1) {
-              attempts++;
-              console.log(`Duplicate order number, retrying... Attempt ${attempts + 1}`);
-              await new Promise(resolve => setTimeout(resolve, 100));
-              continue;
-            }
-            throw error;
-          }
+        if (error) {
+          console.error('Error creating manufacturing order:', error);
+          throw error;
         }
-        
-        throw new Error('Failed to create order after multiple attempts');
+
+        console.log('Created order successfully:', order);
+        return order;
       } catch (error) {
         console.error('Failed to create manufacturing order:', error);
         throw error;
@@ -258,7 +228,7 @@ export const useManufacturingOrders = () => {
       
       let errorMessage = 'Failed to create manufacturing order';
       
-      if (error.message?.includes('duplicate key')) {
+      if (error.message?.includes('Unable to generate unique order number')) {
         errorMessage = 'Unable to generate unique order number. Please try again.';
       } else if (error.message?.includes('invalid input syntax for type uuid')) {
         errorMessage = 'Invalid product configuration selected. Please check your selection.';
