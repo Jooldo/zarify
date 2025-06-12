@@ -3,10 +3,14 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Workflow, Users, CheckCircle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useNavigation } from '@/contexts/NavigationContext';
 import ManufacturingConfigPanel from './ManufacturingConfigPanel';
 
 const ManufacturingSettings = () => {
   const [activeTab, setActiveTab] = useState('workflow');
+  const { showPageHeaders, showTabNavigation, togglePageHeaders, toggleTabNavigation } = useNavigation();
 
   return (
     <div className="space-y-6">
@@ -78,7 +82,44 @@ const ManufacturingSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">General settings coming soon...</p>
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Navigation Settings</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Control the visibility of navigation elements across Raw Material and Finished Goods management sections.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-headers">Show Page Headers</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Display section titles and descriptions at the top of management pages
+                        </p>
+                      </div>
+                      <Switch
+                        id="show-headers"
+                        checked={showPageHeaders}
+                        onCheckedChange={togglePageHeaders}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-tab-nav">Show Tab Navigation</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Display tab navigation bars within management sections
+                        </p>
+                      </div>
+                      <Switch
+                        id="show-tab-nav"
+                        checked={showTabNavigation}
+                        onCheckedChange={toggleTabNavigation}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

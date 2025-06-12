@@ -115,11 +115,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           icon: Truck,
           tab: "rm-procurement",
         },
-        {
-          title: "Suppliers",
-          icon: Building2,
-          tab: "rm-suppliers",
-        },
       ],
     },
     {
@@ -145,11 +140,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "Analytics",
           icon: BarChart3,
           tab: "fg-analytics",
-        },
-        {
-          title: "Workers",
-          icon: UserCheck,
-          tab: "fg-workers",
         },
       ],
     },

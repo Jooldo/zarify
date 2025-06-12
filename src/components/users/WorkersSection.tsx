@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Plus, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
+import AddWorkerForm from './AddWorkerForm';
 
 interface Worker {
   id: string;
@@ -34,9 +36,15 @@ const WorkersSection = () => {
 
   const fetchWorkers = async () => {
     try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
       const { data, error } = await supabase
         .from('workers')
         .select('*')
+        .eq('merchant_id', merchantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -73,6 +81,11 @@ const WorkersSection = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleAddSuccess = () => {
+    setIsAddDialogOpen(false);
+    fetchWorkers();
   };
 
   useEffect(() => {
@@ -115,11 +128,14 @@ const WorkersSection = () => {
               Add Worker
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-base">Add New Worker</DialogTitle>
             </DialogHeader>
-            <p className="text-xs text-gray-500">Worker form will be implemented here</p>
+            <AddWorkerForm
+              onSuccess={handleAddSuccess}
+              onCancel={() => setIsAddDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>

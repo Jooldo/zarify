@@ -1,25 +1,17 @@
 
-import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
+import { Package, Wrench, Factory, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
 import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
 
-// Placeholder components for removed functionality
+// Placeholder component for analytics
 const FGAnalyticsPlaceholder = () => (
   <div className="p-8 text-center">
     <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
     <h3 className="text-lg font-semibold mb-2">Analytics</h3>
     <p className="text-gray-500">Analytics functionality will be implemented here</p>
-  </div>
-);
-
-const FGWorkersPlaceholder = () => (
-  <div className="p-8 text-center">
-    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold mb-2">Workers</h3>
-    <p className="text-gray-500">Worker management functionality will be implemented here</p>
   </div>
 );
 
@@ -39,8 +31,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
         return <ManufacturingDashboard />;
       case 'fg-analytics':
         return <FGAnalyticsPlaceholder />;
-      case 'fg-workers':
-        return <FGWorkersPlaceholder />;
       case 'fg-config':
         return <FinishedGoodsConfig />;
       default:
@@ -59,14 +49,14 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 Finished Good Management
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage inventory, manufacturing, analytics, workforce, and configuration
+                Manage inventory, manufacturing, analytics, and configuration
               </p>
             </div>
           </div>
 
           {showTabNavigation && (
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+              <TabsList className="grid w-full grid-cols-4 bg-muted h-12">
                 <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory
@@ -78,10 +68,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <BarChart3 className="h-4 w-4" />
                   Analytics
-                </TabsTrigger>
-                <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
-                  <Users className="h-4 w-4" />
-                  Workers
                 </TabsTrigger>
                 <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Wrench className="h-4 w-4" />
