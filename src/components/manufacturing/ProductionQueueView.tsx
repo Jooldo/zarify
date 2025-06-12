@@ -12,7 +12,7 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -25,7 +25,7 @@ import {
   Package,
   RefreshCw
 } from 'lucide-react';
-import { ProductNode } from '@/components/dashboard/ProductNode';
+import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -33,23 +33,10 @@ import { useWorkers } from '@/hooks/useWorkers';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const nodeTypes = {
-  productNode: ProductNode,
+  stepCard: ManufacturingStepCard,
 };
 
-interface ProductNodeData extends Record<string, unknown> {
-  productName: string;
-  orderId: string;
-  orderNumber: string;
-  currentStep: string;
-  assignedWorker?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'blocked';
-  progress: number;
-  dueDate?: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  quantity: number;
-}
-
-type ProductFlowNode = Node<ProductNodeData>;
+type StepFlowNode = Node<StepCardData>;
 
 const ProductionQueueView = () => {
   const { toast } = useToast();
@@ -60,103 +47,171 @@ const ProductionQueueView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  // Add debugging logs
   console.log('Manufacturing Orders:', manufacturingOrders);
   console.log('Order Steps:', orderSteps);
-  console.log('Orders Loading:', ordersLoading);
-  console.log('Steps Loading:', stepsLoading);
 
-  // Generate nodes from manufacturing orders
-  const generateProductNodes = useMemo((): ProductFlowNode[] => {
-    console.log('Generating nodes...');
+  // Define the standard manufacturing steps workflow
+  const standardSteps = [
+    { name: 'Jhalai', order: 1, duration: 2, isJhalai: true },
+    { name: 'Dhol', order: 2, duration: 3, isJhalai: false },
+    { name: 'Stone Setting', order: 3, duration: 4, isJhalai: false },
+    { name: 'Polish', order: 4, duration: 2, isJhalai: false },
+    { name: 'QC Check', order: 5, duration: 1, isJhalai: false },
+  ];
+
+  // Generate step nodes from manufacturing orders
+  const generateStepNodes = useMemo((): StepFlowNode[] => {
+    console.log('Generating step nodes...');
     
-    // Don't require orderSteps to exist - this was the bug
     if (!manufacturingOrders.length) {
       console.log('No manufacturing orders found');
       return [];
     }
 
-    console.log(`Processing ${manufacturingOrders.length} manufacturing orders`);
+    const stepNodes: StepFlowNode[] = [];
+    let nodeIndex = 0;
 
-    return manufacturingOrders.map((order, index) => {
+    manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`Processing order ${order.id}:`, order);
       
-      // Find current step for this order (if any)
-      const currentOrderStep = orderSteps.find(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status === 'in_progress'
-      ) || orderSteps.find(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status === 'pending'
-      );
+      standardSteps.forEach((standardStep, stepIndex) => {
+        // Find actual step data for this order and step
+        const actualStep = orderSteps.find(step => 
+          step.manufacturing_order_id === order.id && 
+          step.manufacturing_steps?.step_name === standardStep.name
+        );
 
-      console.log(`Current step for order ${order.id}:`, currentOrderStep);
+        console.log(`Step ${standardStep.name} for order ${order.id}:`, actualStep);
 
-      const assignedWorker = currentOrderStep?.workers?.name;
-      const currentStepName = currentOrderStep?.manufacturing_steps?.step_name || 'Not Started';
-      const progress = currentOrderStep?.progress_percentage || 0;
+        // Determine step status
+        let stepStatus: StepCardData['status'] = 'pending';
+        let progress = 0;
+        let assignedWorker = undefined;
 
-      // Map order status to node status
-      let nodeStatus: ProductNodeData['status'] = 'pending';
-      if (order.status === 'in_progress') nodeStatus = 'in_progress';
-      else if (order.status === 'completed') nodeStatus = 'completed';
-      else if (order.status === 'qc_failed') nodeStatus = 'qc_failed';
+        if (actualStep) {
+          switch (actualStep.status) {
+            case 'in_progress':
+              stepStatus = 'in_progress';
+              progress = actualStep.progress_percentage || 0;
+              break;
+            case 'completed':
+              stepStatus = 'completed';
+              progress = 100;
+              break;
+            case 'blocked':
+              stepStatus = 'blocked';
+              progress = actualStep.progress_percentage || 0;
+              break;
+            default:
+              stepStatus = 'pending';
+              progress = 0;
+          }
+          assignedWorker = actualStep.workers?.name;
+        }
 
-      const nodeData: ProductNodeData = {
-        productName: order.product_name,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        currentStep: currentStepName,
-        assignedWorker,
-        status: nodeStatus,
-        progress,
-        dueDate: order.due_date,
-        priority: order.priority,
-        quantity: order.quantity_required,
-      };
+        const stepData: StepCardData = {
+          stepName: standardStep.name,
+          stepOrder: standardStep.order,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          productName: order.product_name,
+          status: stepStatus,
+          progress: progress,
+          assignedWorker: assignedWorker,
+          estimatedDuration: standardStep.duration,
+          isJhalaiStep: standardStep.isJhalai,
+        };
 
-      console.log(`Generated node data for order ${order.id}:`, nodeData);
+        console.log(`Generated step node data:`, stepData);
 
-      return {
-        id: order.id,
-        type: 'productNode',
-        position: { 
-          x: (index % 4) * 320 + 100, 
-          y: Math.floor(index / 4) * 200 + 100 
-        },
-        data: nodeData,
-      } as ProductFlowNode;
+        const nodeId = `${order.id}-step-${standardStep.order}`;
+        
+        stepNodes.push({
+          id: nodeId,
+          type: 'stepCard',
+          position: { 
+            x: stepIndex * 320 + 50, 
+            y: orderIndex * 250 + 50 
+          },
+          data: stepData,
+        } as StepFlowNode);
+
+        nodeIndex++;
+      });
     });
-  }, [manufacturingOrders, orderSteps, workers]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(generateProductNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    return stepNodes;
+  }, [manufacturingOrders, orderSteps]);
+
+  // Generate edges to connect sequential steps
+  const generateStepEdges = useMemo(() => {
+    const edges: any[] = [];
+    
+    manufacturingOrders.forEach((order) => {
+      for (let i = 1; i < standardSteps.length; i++) {
+        const sourceId = `${order.id}-step-${i}`;
+        const targetId = `${order.id}-step-${i + 1}`;
+        
+        edges.push({
+          id: `${sourceId}-to-${targetId}`,
+          source: sourceId,
+          target: targetId,
+          type: 'smoothstep',
+          style: { stroke: '#9ca3af', strokeWidth: 2 },
+          animated: false,
+        });
+      }
+    });
+
+    return edges;
+  }, [manufacturingOrders]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(generateStepEdges);
 
   // Update nodes when data changes
   React.useEffect(() => {
-    console.log('Updating nodes with generated data:', generateProductNodes);
-    setNodes(generateProductNodes);
-  }, [generateProductNodes, setNodes]);
+    console.log('Updating nodes with generated step data:', generateStepNodes);
+    setNodes(generateStepNodes);
+  }, [generateStepNodes, setNodes]);
+
+  React.useEffect(() => {
+    console.log('Updating edges with generated step edges:', generateStepEdges);
+    setEdges(generateStepEdges);
+  }, [generateStepEdges, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    const nodeData = node.data as ProductNodeData;
+  const handleStepClick = useCallback((stepData: StepCardData) => {
     toast({
-      title: "Order Selected",
-      description: `Viewing details for ${nodeData.productName} (${nodeData.orderNumber})`,
+      title: "Step Selected",
+      description: `Viewing ${stepData.stepName} for ${stepData.productName} (${stepData.orderNumber})`,
     });
   }, [toast]);
+
+  const handleAddStep = useCallback((stepData: StepCardData) => {
+    toast({
+      title: "Add Step",
+      description: `Adding new step after ${stepData.stepName} for ${stepData.orderNumber}`,
+    });
+    // TODO: Implement add step functionality
+  }, [toast]);
+
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    const nodeData = node.data as StepCardData;
+    handleStepClick(nodeData);
+  }, [handleStepClick]);
 
   // Filter nodes based on search and status
   const filteredNodes = useMemo(() => {
     return nodes.filter(node => {
-      const nodeData = node.data as ProductNodeData;
+      const nodeData = node.data as StepCardData;
       const matchesSearch = nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase());
+                           nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           nodeData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = selectedStatus === 'all' || nodeData.status === selectedStatus;
       return matchesSearch && matchesStatus;
     });
@@ -164,17 +219,17 @@ const ProductionQueueView = () => {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const nodeData = nodes.map(n => n.data as ProductNodeData);
+    const nodeData = nodes.map(n => n.data as StepCardData);
     return {
       total: nodeData.length,
       inProgress: nodeData.filter(n => n.status === 'in_progress').length,
       completed: nodeData.filter(n => n.status === 'completed').length,
-      delayed: nodeData.filter(n => n.dueDate && new Date(n.dueDate) < new Date() && n.status !== 'completed').length,
+      blocked: nodeData.filter(n => n.status === 'blocked').length,
     };
   }, [nodes]);
 
-  console.log('Final filtered nodes:', filteredNodes);
-  console.log('Stats:', stats);
+  console.log('Final filtered step nodes:', filteredNodes);
+  console.log('Step Stats:', stats);
 
   if (ordersLoading || stepsLoading) {
     return (
@@ -196,7 +251,7 @@ const ProductionQueueView = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Production Queue</h1>
-            <p className="text-muted-foreground">Visual workflow of manufacturing orders through production steps</p>
+            <p className="text-muted-foreground">Visual workflow showing each manufacturing step as cards</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -222,7 +277,7 @@ const ProductionQueueView = () => {
                 <Package className="w-4 h-4 text-primary" />
                 <div>
                   <div className="text-lg font-bold">{stats.total}</div>
-                  <div className="text-xs text-muted-foreground">Total Orders</div>
+                  <div className="text-xs text-muted-foreground">Total Steps</div>
                 </div>
               </div>
             </CardContent>
@@ -254,8 +309,8 @@ const ProductionQueueView = () => {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-red-500" />
                 <div>
-                  <div className="text-lg font-bold">{stats.delayed}</div>
-                  <div className="text-xs text-muted-foreground">Delayed</div>
+                  <div className="text-lg font-bold">{stats.blocked}</div>
+                  <div className="text-xs text-muted-foreground">Blocked</div>
                 </div>
               </div>
             </CardContent>
@@ -267,7 +322,7 @@ const ProductionQueueView = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search products or order numbers..."
+              placeholder="Search steps, products or order numbers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -282,7 +337,6 @@ const ProductionQueueView = () => {
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
-            <option value="qc_failed">QC Failed</option>
             <option value="blocked">Blocked</option>
           </select>
         </div>
@@ -304,12 +358,12 @@ const ProductionQueueView = () => {
           <Controls />
           <MiniMap 
             nodeColor={(node) => {
-              const nodeData = node.data as ProductNodeData;
+              const nodeData = node.data as StepCardData;
+              if (nodeData?.isJhalaiStep) return '#3b82f6';
               switch (nodeData?.status) {
                 case 'completed': return '#22c55e';
                 case 'in_progress': return '#eab308';
-                case 'qc_failed': return '#ef4444';
-                case 'blocked': return '#f97316';
+                case 'blocked': return '#ef4444';
                 default: return '#6b7280';
               }
             }}
