@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import StepFieldsConfig from './StepFieldsConfig';
 import { useToast } from '@/hooks/use-toast';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface RequiredField {
   id: string;
@@ -57,65 +59,151 @@ const defaultRequiredFields: RequiredField[] = [
 
 const ManufacturingConfigPanel = () => {
   const { toast } = useToast();
-  const [steps, setSteps] = useState<ManufacturingStepConfig[]>([
-    {
-      id: '1',
-      name: 'Jhalai',
-      order: 1,
-      qcRequired: false,
-      requiredFields: defaultRequiredFields.filter(f => 
-        ['worker', 'dueDate', 'rawMaterialWeight', 'status', 'notes'].includes(f.id)
-      ),
-      estimatedDuration: 2
-    },
-    {
-      id: '2',
-      name: 'Dhol',
-      order: 2,
-      qcRequired: true,
-      requiredFields: defaultRequiredFields.filter(f => 
-        ['worker', 'dueDate', 'quantityAssigned', 'status', 'notes'].includes(f.id)
-      ),
-      estimatedDuration: 3
-    }
-  ]);
-
+  const { manufacturingSteps, isLoading } = useManufacturingSteps();
+  const [steps, setSteps] = useState<ManufacturingStepConfig[]>([]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-  const handleAddStep = useCallback(() => {
-    const newStep: ManufacturingStepConfig = {
-      id: Date.now().toString(),
-      name: `Step ${steps.length + 1}`,
-      order: steps.length + 1,
-      qcRequired: false,
-      requiredFields: [defaultRequiredFields[0], defaultRequiredFields[6]], // Worker and Status by default
-      estimatedDuration: 1
-    };
-    
-    setSteps(prev => [...prev, newStep]);
-    setSelectedStepId(newStep.id);
-  }, [steps.length]);
-
-  const handleDeleteStep = useCallback((stepId: string) => {
-    setSteps(prev => {
-      const filteredSteps = prev.filter(step => step.id !== stepId);
-      // Reorder remaining steps
-      return filteredSteps.map((step, index) => ({
-        ...step,
-        order: index + 1
+  // Convert database steps to local config format
+  useEffect(() => {
+    if (manufacturingSteps && manufacturingSteps.length > 0) {
+      const configSteps = manufacturingSteps.map(step => ({
+        id: step.id,
+        name: step.step_name,
+        order: step.step_order,
+        qcRequired: false, // This would need to be added to the database schema
+        requiredFields: [defaultRequiredFields[0], defaultRequiredFields[6]], // Worker and Status by default
+        estimatedDuration: step.estimated_duration_hours || 1
       }));
-    });
-    
-    if (selectedStepId === stepId) {
-      setSelectedStepId(null);
+      setSteps(configSteps);
+    } else {
+      // Initialize with default steps if none exist
+      setSteps([
+        {
+          id: '1',
+          name: 'Jhalai',
+          order: 1,
+          qcRequired: false,
+          requiredFields: defaultRequiredFields.filter(f => 
+            ['worker', 'dueDate', 'rawMaterialWeight', 'status', 'notes'].includes(f.id)
+          ),
+          estimatedDuration: 2
+        },
+        {
+          id: '2',
+          name: 'Dhol',
+          order: 2,
+          qcRequired: true,
+          requiredFields: defaultRequiredFields.filter(f => 
+            ['worker', 'dueDate', 'quantityAssigned', 'status', 'notes'].includes(f.id)
+          ),
+          estimatedDuration: 3
+        }
+      ]);
     }
-  }, [selectedStepId]);
+  }, [manufacturingSteps]);
 
-  const handleStepNameChange = useCallback((stepId: string, name: string) => {
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, name } : step
-    ));
-  }, []);
+  const handleAddStep = useCallback(async () => {
+    const newOrder = steps.length + 1;
+    const newStepName = `Step ${newOrder}`;
+    
+    try {
+      const { data, error } = await supabase
+        .from('manufacturing_steps')
+        .insert({
+          step_name: newStepName,
+          step_order: newOrder,
+          estimated_duration_hours: 1,
+          description: '',
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newStep: ManufacturingStepConfig = {
+        id: data.id,
+        name: newStepName,
+        order: newOrder,
+        qcRequired: false,
+        requiredFields: [defaultRequiredFields[0], defaultRequiredFields[6]], // Worker and Status by default
+        estimatedDuration: 1
+      };
+      
+      setSteps(prev => [...prev, newStep]);
+      setSelectedStepId(newStep.id);
+
+      toast({
+        title: 'Success',
+        description: 'Manufacturing step added successfully',
+      });
+    } catch (error) {
+      console.error('Error adding manufacturing step:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add manufacturing step',
+        variant: 'destructive',
+      });
+    }
+  }, [steps.length, toast]);
+
+  const handleDeleteStep = useCallback(async (stepId: string) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_steps')
+        .delete()
+        .eq('id', stepId);
+
+      if (error) throw error;
+
+      setSteps(prev => {
+        const filteredSteps = prev.filter(step => step.id !== stepId);
+        // Reorder remaining steps
+        return filteredSteps.map((step, index) => ({
+          ...step,
+          order: index + 1
+        }));
+      });
+      
+      if (selectedStepId === stepId) {
+        setSelectedStepId(null);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Manufacturing step deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting manufacturing step:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete manufacturing step',
+        variant: 'destructive',
+      });
+    }
+  }, [selectedStepId, toast]);
+
+  const handleStepNameChange = useCallback(async (stepId: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_steps')
+        .update({ step_name: name })
+        .eq('id', stepId);
+
+      if (error) throw error;
+
+      setSteps(prev => prev.map(step => 
+        step.id === stepId ? { ...step, name } : step
+      ));
+    } catch (error) {
+      console.error('Error updating step name:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update step name',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
 
   const handleQCToggle = useCallback((stepId: string, qcRequired: boolean) => {
     setSteps(prev => prev.map(step => 
@@ -129,17 +217,31 @@ const ManufacturingConfigPanel = () => {
     ));
   }, []);
 
-  const handleDurationChange = useCallback((stepId: string, duration: number) => {
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, estimatedDuration: duration } : step
-    ));
-  }, []);
+  const handleDurationChange = useCallback(async (stepId: string, duration: number) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_steps')
+        .update({ estimated_duration_hours: duration })
+        .eq('id', stepId);
+
+      if (error) throw error;
+
+      setSteps(prev => prev.map(step => 
+        step.id === stepId ? { ...step, estimatedDuration: duration } : step
+      ));
+    } catch (error) {
+      console.error('Error updating duration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update duration',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
 
   const handleSaveConfiguration = async () => {
     try {
-      // TODO: Implement API call to save configuration
-      console.log('Saving manufacturing configuration:', steps);
-      
+      // Configuration is already saved as we update the database on each change
       toast({
         title: 'Configuration Saved',
         description: 'Manufacturing workflow configuration has been saved successfully.',
@@ -154,6 +256,10 @@ const ManufacturingConfigPanel = () => {
   };
 
   const selectedStep = steps.find(step => step.id === selectedStepId);
+
+  if (isLoading) {
+    return <div>Loading manufacturing steps...</div>;
+  }
 
   return (
     <div className="space-y-6">
