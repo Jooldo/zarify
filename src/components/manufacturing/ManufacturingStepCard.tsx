@@ -52,13 +52,25 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
   };
 
+  const getNextStepName = () => {
+    if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
+      return 'Move to Jhalai';
+    }
+    return 'Add Next Step';
+  };
+
   const cardClassName = data.isJhalaiStep 
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[300px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[300px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddStep?.(data);
+    if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
+      // For manufacturing orders, trigger the Jhalai creation flow
+      onStepClick?.(data);
+    } else {
+      onAddStep?.(data);
+    }
   };
 
   const handleCardClick = () => {
@@ -189,7 +201,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           onClick={handleAddStep}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Add Step
+          {getNextStepName()}
         </Button>
       </CardContent>
 
