@@ -55,7 +55,7 @@ const ProductionQueueView = () => {
   const { manufacturingSteps, orderSteps, stepFields, isLoading: stepsLoading } = useManufacturingSteps();
   const { workers } = useWorkers();
   const { createStep, isCreating } = useCreateManufacturingStep();
-  const { isLoading: valuesLoading } = useManufacturingStepValues();
+  const { isLoading: valuesLoading, getStepValue } = useManufacturingStepValues();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -159,7 +159,7 @@ const ProductionQueueView = () => {
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 220 + 50 // Reduced from 280 to 220
+          y: orderIndex * 200 + 50 // Reduced spacing
         },
         data: manufacturingOrderData,
       });
@@ -212,6 +212,48 @@ const ProductionQueueView = () => {
         // Get step-specific fields from configuration
         const stepFieldsConfig = getStepFields(configStep.id);
 
+        // Get material and quantity values from step fields if the step exists
+        let materialAssignedValue: number | undefined;
+        let materialReceivedValue: number | undefined;
+        let quantityAssignedValue: number | undefined;
+        let quantityReceivedValue: number | undefined;
+
+        if (actualStep && stepFieldsConfig.length > 0) {
+          const materialAssignedField = stepFieldsConfig.find(field => 
+            field.field_name.toLowerCase().includes('material') && 
+            field.field_name.toLowerCase().includes('assigned')
+          );
+          const materialReceivedField = stepFieldsConfig.find(field => 
+            field.field_name.toLowerCase().includes('material') && 
+            field.field_name.toLowerCase().includes('received')
+          );
+          const quantityAssignedField = stepFieldsConfig.find(field => 
+            field.field_name.toLowerCase().includes('quantity') && 
+            field.field_name.toLowerCase().includes('assigned')
+          );
+          const quantityReceivedField = stepFieldsConfig.find(field => 
+            field.field_name.toLowerCase().includes('quantity') && 
+            field.field_name.toLowerCase().includes('received')
+          );
+
+          if (materialAssignedField) {
+            const value = getStepValue(actualStep.id, materialAssignedField.field_id);
+            materialAssignedValue = value ? Number(value) : undefined;
+          }
+          if (materialReceivedField) {
+            const value = getStepValue(actualStep.id, materialReceivedField.field_id);
+            materialReceivedValue = value ? Number(value) : undefined;
+          }
+          if (quantityAssignedField) {
+            const value = getStepValue(actualStep.id, quantityAssignedField.field_id);
+            quantityAssignedValue = value ? Number(value) : undefined;
+          }
+          if (quantityReceivedField) {
+            const value = getStepValue(actualStep.id, quantityReceivedField.field_id);
+            quantityReceivedValue = value ? Number(value) : undefined;
+          }
+        }
+
         const stepData: StepCardData = {
           stepName: configStep.step_name,
           stepOrder: configStep.step_order,
@@ -228,8 +270,10 @@ const ProductionQueueView = () => {
           stepFields: stepFieldsConfig,
           qcRequired: configStep.qc_required,
           dueDate: order.due_date,
-          materialAssigned: Math.random() > 0.5, // Mock data - replace with actual field values
-          materialReceived: Math.random() > 0.5, // Mock data - replace with actual field values
+          materialAssignedValue,
+          materialReceivedValue,
+          quantityAssignedValue,
+          quantityReceivedValue,
         };
 
         const nodeId = `${order.id}-step-${configStep.step_order}`;
@@ -238,8 +282,8 @@ const ProductionQueueView = () => {
           id: nodeId,
           type: 'stepCard',
           position: { 
-            x: (stepIndex + 1) * 300 + 50, // Reduced from 340 to 300
-            y: orderIndex * 220 + 50 // Reduced from 280 to 220
+            x: (stepIndex + 1) * 280 + 50, // Reduced spacing
+            y: orderIndex * 200 + 50 // Reduced spacing
           },
           data: stepData,
         });
@@ -249,7 +293,7 @@ const ProductionQueueView = () => {
     });
 
     return stepNodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
 

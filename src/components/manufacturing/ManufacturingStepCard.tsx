@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck } from 'lucide-react';
+import { Plus, Calendar, User, Package, CheckCircle2, Truck, ClipboardCheck } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -36,6 +36,10 @@ export interface StepCardData extends Record<string, unknown> {
   dueDate?: string;
   materialAssigned?: boolean;
   materialReceived?: boolean;
+  materialAssignedValue?: number;
+  materialReceivedValue?: number;
+  quantityAssignedValue?: number;
+  quantityReceivedValue?: number;
 }
 
 interface ManufacturingStepCardProps {
@@ -103,7 +107,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const getUserDefinedStatus = () => {
     if (!currentOrderStep || !data.stepFields) return null;
     
-    const statusField = data.stepFields.find(field => field.field_type === 'select' && field.field_name.toLowerCase().includes('status'));
+    const statusField = data.stepFields.find(field => field.field_type === 'status' && field.field_name.toLowerCase().includes('status'));
     if (statusField) {
       const value = getStepValue(currentOrderStep.id, statusField.field_id);
       return value;
@@ -112,8 +116,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[250px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[250px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -124,7 +128,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // FIXED: Only show CTA for Manufacturing Order if no steps exist yet
+  // FIXED: Show CTA for Manufacturing Order only if no steps exist for this order
   const shouldShowCTA = data.stepName === 'Manufacturing Order' && 
     data.status === 'pending' && 
     !orderSteps.some(step => step.manufacturing_order_id === data.orderId);
@@ -135,22 +139,22 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     <Card className={cardClassName} onClick={handleCardClick}>
       <Handle type="target" position={Position.Left} className="!bg-gray-400" />
       
-      <CardHeader className="pb-2 p-4">
+      <CardHeader className="pb-2 p-3">
         <div className="flex items-center justify-between">
           <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
             {data.stepName}
             {data.isJhalaiStep && (
-              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
+              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300 text-xs">
                 Jhalai
               </Badge>
             )}
             {data.stepName === 'Manufacturing Order' && (
-              <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
+              <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700 text-xs">
                 Order
               </Badge>
             )}
             {data.qcRequired && (
-              <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+              <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 QC
               </Badge>
@@ -164,61 +168,63 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-2 p-4 pt-0">
-        {/* Order Information */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Package className="h-3 w-3" />
-          <span>{data.orderNumber} - {data.productName}</span>
-        </div>
-
-        {/* Quantity and Priority for Manufacturing Orders */}
+      <CardContent className="space-y-2 p-3 pt-0">
+        {/* Order Information - Only for Manufacturing Orders */}
         {data.stepName === 'Manufacturing Order' && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {data.quantityRequired && (
-              <div>
-                <span className="text-muted-foreground">Qty:</span>
-                <span className="font-medium ml-1">{data.quantityRequired}</span>
-              </div>
-            )}
-            {data.priority && (
-              <div>
-                <span className="text-muted-foreground">Priority:</span>
-                <span className={`font-medium ml-1 capitalize ${
-                  data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
-                  data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                  {data.priority}
-                </span>
-              </div>
-            )}
-          </div>
+          <>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Package className="h-3 w-3" />
+              <span>{data.orderNumber} - {data.productName}</span>
+            </div>
+
+            {/* Quantity and Priority for Manufacturing Orders */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {data.quantityRequired && (
+                <div>
+                  <span className="text-muted-foreground">Qty:</span>
+                  <span className="font-medium ml-1">{data.quantityRequired}</span>
+                </div>
+              )}
+              {data.priority && (
+                <div>
+                  <span className="text-muted-foreground">Priority:</span>
+                  <span className={`font-medium ml-1 capitalize ${
+                    data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
+                    data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {data.priority}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        {/* Status Pills - Show user-defined status instead of default status */}
+        {/* Status Pills - Show user-defined status instead of default status for Step Cards */}
         {data.stepOrder > 0 && (
           <div className="flex items-center justify-between">
             {userDefinedStatus ? (
-              <Badge className="bg-purple-100 text-purple-800 capitalize">
+              <Badge className="bg-purple-100 text-purple-800 capitalize text-xs">
                 {userDefinedStatus}
               </Badge>
             ) : (
-              <Badge className={getStatusColor(data.status)}>
+              <Badge className={getStatusColor(data.status) + " text-xs"}>
                 {data.status.replace('_', ' ').toUpperCase()}
               </Badge>
             )}
           </div>
         )}
 
-        {/* Due Date instead of hours estimated */}
-        {data.dueDate && (
+        {/* Due Date for Step Cards */}
+        {data.stepOrder > 0 && data.dueDate && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
             <span>Due: {new Date(data.dueDate).toLocaleDateString()}</span>
           </div>
         )}
 
-        {/* Worker Assignment */}
-        {data.assignedWorker && (
+        {/* Worker Assignment for Step Cards */}
+        {data.stepOrder > 0 && data.assignedWorker && (
           <div className="flex items-center gap-2 text-xs">
             <User className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Assigned to:</span>
@@ -226,34 +232,48 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Material Assigned */}
-        {data.stepOrder > 0 && data.materialAssigned !== undefined && (
+        {/* Material Assigned with Values for Step Cards */}
+        {data.stepOrder > 0 && data.materialAssignedValue !== undefined && (
           <div className="flex items-center gap-2 text-xs">
             <Truck className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Material Assigned:</span>
-            <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
-              {data.materialAssigned ? 'Yes' : 'No'}
-            </span>
+            <span className="font-medium text-green-600">{data.materialAssignedValue}</span>
           </div>
         )}
 
-        {/* Material Received */}
-        {data.stepOrder > 0 && data.materialReceived !== undefined && (
+        {/* Material Received with Values for Step Cards */}
+        {data.stepOrder > 0 && data.materialReceivedValue !== undefined && (
           <div className="flex items-center gap-2 text-xs">
             <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Material Received:</span>
-            <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
-              {data.materialReceived ? 'Yes' : 'No'}
-            </span>
+            <span className="font-medium text-red-600">{data.materialReceivedValue}</span>
           </div>
         )}
 
-        {/* Add Step Button - FIXED: Only show for Manufacturing Order when no steps exist */}
+        {/* Quantity Assigned for Step Cards */}
+        {data.stepOrder > 0 && data.quantityAssignedValue !== undefined && (
+          <div className="flex items-center gap-2 text-xs">
+            <Package className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Qty Assigned:</span>
+            <span className="font-medium text-green-600">{data.quantityAssignedValue}</span>
+          </div>
+        )}
+
+        {/* Quantity Received for Step Cards */}
+        {data.stepOrder > 0 && data.quantityReceivedValue !== undefined && (
+          <div className="flex items-center gap-2 text-xs">
+            <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Qty Received:</span>
+            <span className="font-medium text-red-600">{data.quantityReceivedValue}</span>
+          </div>
+        )}
+
+        {/* Add Step Button - Only show for Manufacturing Order when no steps exist */}
         {shouldShowCTA && (
           <Button 
             variant="outline" 
             size="sm" 
-            className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
+            className={`w-full mt-2 text-xs ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
             onClick={handleAddStep}
           >
             <Plus className="h-3 w-3 mr-1" />
