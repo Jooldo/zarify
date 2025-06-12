@@ -11,9 +11,10 @@ interface ManufacturingOrdersTableProps {
   orders: ManufacturingOrder[];
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
+  onViewOrder: (order: ManufacturingOrder) => void;
 }
 
-const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor }: ManufacturingOrdersTableProps) => {
+const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, onViewOrder }: ManufacturingOrdersTableProps) => {
   return (
     <div className="border rounded-lg">
       <Table>
@@ -56,7 +57,7 @@ const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor }: 
                 {format(new Date(order.created_at), 'MMM dd, yyyy')}
               </TableCell>
               <TableCell>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => onViewOrder(order)}>
                   <Eye className="h-3 w-3 mr-1" />
                   View
                 </Button>

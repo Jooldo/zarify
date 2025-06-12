@@ -4,16 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Package2, Clock, CheckCircle, Workflow } from 'lucide-react';
-import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
 import ManufacturingOrdersTable from './ManufacturingOrdersTable';
+import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionQueueView from './ProductionQueueView';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const ManufacturingDashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
-  const { manufacturingOrders, loading } = useManufacturingOrders();
+  const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const { manufacturingOrders, loading, updateOrder } = useManufacturingOrders();
 
   if (loading) {
     return (
@@ -57,6 +60,15 @@ const ManufacturingDashboard = () => {
       case 'cancelled': return 'bg-gray-100 text-gray-600';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleViewOrder = (order: ManufacturingOrder) => {
+    setSelectedOrder(order);
+    setShowDetailsDialog(true);
+  };
+
+  const handleStatusUpdate = (orderId: string, status: string) => {
+    updateOrder(orderId, { status });
   };
 
   return (
@@ -145,6 +157,7 @@ const ManufacturingDashboard = () => {
               orders={manufacturingOrders}
               getPriorityColor={getPriorityColor}
               getStatusColor={getStatusColor}
+              onViewOrder={handleViewOrder}
             />
           )}
         </TabsContent>
@@ -157,6 +170,15 @@ const ManufacturingDashboard = () => {
       <CreateManufacturingOrderDialog 
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+
+      <ManufacturingOrderDetailsDialog
+        order={selectedOrder}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        onStatusUpdate={handleStatusUpdate}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
       />
     </div>
   );
