@@ -338,11 +338,19 @@ const ProductionQueueView = () => {
   }, [selectedStepData, setNodes, setEdges, toast]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
-    toast({
-      title: "Add Step",
-      description: `Adding new step after ${stepData.stepName} for ${stepData.orderNumber}`,
-    });
-    // TODO: Implement add step functionality
+    console.log('Add step clicked for:', stepData);
+    
+    if (stepData.stepName === 'Manufacturing Order' && stepData.status === 'pending') {
+      // For manufacturing orders, trigger the Jhalai creation flow
+      setSelectedStepData(stepData);
+      setIsJhalaiDialogOpen(true);
+    } else {
+      toast({
+        title: "Add Step",
+        description: `Adding new step after ${stepData.stepName} for ${stepData.orderNumber}`,
+      });
+      // TODO: Implement add step functionality for other step types
+    }
   }, [toast]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -500,7 +508,15 @@ const ProductionQueueView = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
-            nodeTypes={nodeTypes}
+            nodeTypes={{
+              stepCard: (props) => (
+                <ManufacturingStepCard
+                  {...props}
+                  onAddStep={handleAddStep}
+                  onStepClick={handleStepClick}
+                />
+              ),
+            }}
             fitView
             className="bg-background"
           >

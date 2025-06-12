@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,12 +64,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
-      // For manufacturing orders, trigger the Jhalai creation flow
-      onStepClick?.(data);
-    } else {
-      onAddStep?.(data);
-    }
+    onAddStep?.(data);
   };
 
   const handleCardClick = () => {

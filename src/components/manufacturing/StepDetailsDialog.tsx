@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[70vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -44,9 +43,9 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Order Information */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Order Number</label>
               <p className="text-sm font-semibold">{stepData.orderNumber}</p>
@@ -64,7 +63,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                 <Settings className="h-3 w-3" />
                 Product Configuration
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {stepData.productCode && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-blue-700">Product Code</label>
@@ -77,6 +76,41 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-blue-700">Category</label>
                     <p className="text-xs text-blue-800">{stepData.category}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Status and Progress */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <Badge className={getStatusColor(stepData.status)}>
+                {stepData.status.replace('_', ' ').toUpperCase()}
+              </Badge>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Progress</label>
+              <p className="text-sm font-semibold">{stepData.progress}%</p>
+            </div>
+          </div>
+
+          {/* Manufacturing Details */}
+          {stepData.stepName === 'Manufacturing Order' && (stepData.quantityRequired || stepData.priority) && (
+            <div className="bg-green-50 p-3 rounded-lg">
+              <h3 className="text-xs font-medium text-green-900 mb-2">Manufacturing Details</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {stepData.quantityRequired && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-green-700">Quantity</label>
+                    <p className="text-xs text-green-800">{stepData.quantityRequired}</p>
+                  </div>
+                )}
+                {stepData.priority && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-green-700">Priority</label>
+                    <p className="text-xs text-green-800 capitalize">{stepData.priority}</p>
                   </div>
                 )}
               </div>
@@ -106,47 +140,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
-          {/* Status and Progress */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Status</label>
-              <Badge className={getStatusColor(stepData.status)}>
-                {stepData.status.replace('_', ' ').toUpperCase()}
-              </Badge>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Progress</label>
-              <p className="text-sm font-semibold">{stepData.progress}%</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Step Order</label>
-              <p className="text-sm">Step {stepData.stepOrder}</p>
-            </div>
-          </div>
-
-          {/* Manufacturing Details */}
-          {stepData.stepName === 'Manufacturing Order' && (stepData.quantityRequired || stepData.priority) && (
-            <div className="bg-green-50 p-3 rounded-lg">
-              <h3 className="text-xs font-medium text-green-900 mb-2">Manufacturing Details</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {stepData.quantityRequired && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-green-700">Quantity</label>
-                    <p className="text-xs text-green-800">{stepData.quantityRequired}</p>
-                  </div>
-                )}
-                {stepData.priority && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-green-700">Priority</label>
-                    <p className="text-xs text-green-800 capitalize">{stepData.priority}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Worker and Duration */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {stepData.assignedWorker && (
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Assigned Worker</label>
