@@ -58,8 +58,9 @@ export const useManufacturingOrders = () => {
   const { data: manufacturingOrders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: async () => {
+      // Use raw SQL query since types aren't generated yet
       const { data, error } = await supabase
-        .from('manufacturing_orders')
+        .from('manufacturing_orders' as any)
         .select(`
           *,
           product_configs (
@@ -94,9 +95,10 @@ export const useManufacturingOrders = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: CreateManufacturingOrderData) => {
-      // Get next order number
-      const { data: orderNumber, error: orderNumberError } = await supabase
-        .rpc('get_next_manufacturing_order_number');
+      // Get next order number using raw RPC call
+      const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
+        'get_next_manufacturing_order_number' as any
+      );
 
       if (orderNumberError) throw orderNumberError;
 
@@ -108,13 +110,13 @@ export const useManufacturingOrders = () => {
 
       // Create the manufacturing order
       const { data: order, error } = await supabase
-        .from('manufacturing_orders')
+        .from('manufacturing_orders' as any)
         .insert({
           ...orderData,
           order_number: orderNumber,
           merchant_id: merchantId,
           created_by: (await supabase.auth.getUser()).data.user?.id
-        })
+        } as any)
         .select()
         .single();
 
@@ -142,7 +144,7 @@ export const useManufacturingOrders = () => {
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ManufacturingOrder> }) => {
       const { data, error } = await supabase
-        .from('manufacturing_orders')
+        .from('manufacturing_orders' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -171,7 +173,7 @@ export const useManufacturingOrders = () => {
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
       const { error } = await supabase
-        .from('manufacturing_orders')
+        .from('manufacturing_orders' as any)
         .delete()
         .eq('id', orderId);
 
