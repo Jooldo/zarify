@@ -1,5 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import {
   BarChart3, 
   ShoppingCart, 
@@ -36,6 +37,8 @@ import {
   useSidebar
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -44,6 +47,7 @@ interface AppSidebarProps {
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const { signOut } = useAuth();
+  const { hideNavbar, hidePageHeader, setHideNavbar, setHidePageHeader } = useNavigation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -211,6 +215,37 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Navigation Controls */}
+        {!isCollapsed && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Display Settings</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="px-3 py-2 space-y-3">
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="hide-navbar" className="text-sm font-medium">
+                    Hide Navigation Bar
+                  </Label>
+                  <Switch
+                    id="hide-navbar"
+                    checked={hideNavbar}
+                    onCheckedChange={setHideNavbar}
+                  />
+                </div>
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="hide-header" className="text-sm font-medium">
+                    Hide Page Header
+                  </Label>
+                  <Switch
+                    id="hide-header"
+                    checked={hidePageHeader}
+                    onCheckedChange={setHidePageHeader}
+                  />
+                </div>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       
       <SidebarFooter>
