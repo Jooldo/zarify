@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -67,10 +68,13 @@ const ProductionQueueView = () => {
   const [isUpdateStepDialogOpen, setIsUpdateStepDialogOpen] = useState(false);
   const [targetStep, setTargetStep] = useState<ManufacturingStep | null>(null);
 
+  console.log('=== PRODUCTION QUEUE DEBUG ===');
   console.log('Manufacturing Orders:', manufacturingOrders);
+  console.log('Manufacturing Orders Count:', manufacturingOrders?.length || 0);
   console.log('Order Steps:', orderSteps);
   console.log('Manufacturing Steps from DB:', manufacturingSteps);
   console.log('Step Fields:', stepFields);
+  console.log('Loading states:', { ordersLoading, stepsLoading, valuesLoading });
 
   // Helper function to get fields for a specific step
   const getStepFields = (stepId: string) => {
@@ -112,10 +116,19 @@ const ProductionQueueView = () => {
 
   // Generate step nodes from manufacturing orders with progressive display
   const generateStepNodes = useMemo((): Node[] => {
-    console.log('Generating step nodes with configuration-based progressive display...');
+    console.log('=== GENERATING STEP NODES ===');
+    console.log('Input data check:');
+    console.log('- manufacturingOrders:', manufacturingOrders?.length || 0);
+    console.log('- manufacturingSteps:', manufacturingSteps?.length || 0);
+    console.log('- orderSteps:', orderSteps?.length || 0);
     
-    if (!manufacturingOrders.length || !manufacturingSteps.length) {
-      console.log('No manufacturing orders or steps found');
+    if (!manufacturingOrders || manufacturingOrders.length === 0) {
+      console.log('❌ No manufacturing orders found');
+      return [];
+    }
+
+    if (!manufacturingSteps || manufacturingSteps.length === 0) {
+      console.log('❌ No manufacturing steps found');
       return [];
     }
 
@@ -123,18 +136,11 @@ const ProductionQueueView = () => {
     let nodeIndex = 0;
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      console.log(`Processing order ${order.id}:`, order);
-      
-      // Extract raw materials from product config
-      const rawMaterials = order.product_configs?.product_config_materials?.map(material => ({
-        name: material.raw_materials.name,
-        quantity: material.quantity_required,
-        unit: material.unit
-      })) || [];
+      console.log(`🔄 Processing order ${orderIndex + 1}/${manufacturingOrders.length}:`, order.order_number);
       
       // Determine how many steps to show for this order
       const maxStepToShow = getFurthestProgressedStep(order.id);
-      console.log(`Order ${order.order_number} - showing steps up to: ${maxStepToShow}`);
+      console.log(`📊 Order ${order.order_number} - showing steps up to: ${maxStepToShow}`);
 
       // Always add the manufacturing order card
       const manufacturingOrderData: StepCardData = {
@@ -154,12 +160,15 @@ const ProductionQueueView = () => {
         dueDate: order.due_date,
       };
 
+      const orderNodeId = `${order.id}-manufacturing-order`;
+      console.log(`✅ Adding Manufacturing Order node: ${orderNodeId}`);
+
       stepNodes.push({
-        id: `${order.id}-manufacturing-order`,
+        id: orderNodeId,
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 200 + 50 // Reduced spacing
+          y: orderIndex * 160 + 50 // Reduced spacing
         },
         data: manufacturingOrderData,
       });
@@ -169,9 +178,12 @@ const ProductionQueueView = () => {
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
+      console.log(`📋 Available steps for order ${order.order_number}:`, sortedSteps.map(s => `${s.step_order}: ${s.step_name}`));
+
       sortedSteps.forEach((configStep, stepIndex) => {
         // Only show steps up to the max step to show
         if (configStep.step_order > maxStepToShow) {
+          console.log(`⏭️ Skipping step ${configStep.step_name} (order ${configStep.step_order} > max ${maxStepToShow})`);
           return; // Skip this step - don't show it yet
         }
 
@@ -187,7 +199,7 @@ const ProductionQueueView = () => {
         let assignedWorker = undefined;
 
         if (actualStep) {
-          console.log(`Step ${configStep.step_name} for order ${order.id}:`, actualStep);
+          console.log(`📌 Found actual step data for ${configStep.step_name}:`, actualStep);
 
           switch (actualStep.status) {
             case 'in_progress':
@@ -207,6 +219,8 @@ const ProductionQueueView = () => {
               progress = 0;
           }
           assignedWorker = actualStep.workers?.name;
+        } else {
+          console.log(`📝 Creating placeholder for step ${configStep.step_name}`);
         }
 
         // Get step-specific fields from configuration
@@ -277,13 +291,14 @@ const ProductionQueueView = () => {
         };
 
         const nodeId = `${order.id}-step-${configStep.step_order}`;
+        console.log(`✅ Adding step node: ${nodeId} - ${configStep.step_name}`);
         
         stepNodes.push({
           id: nodeId,
           type: 'stepCard',
           position: { 
-            x: (stepIndex + 1) * 280 + 50, // Reduced spacing
-            y: orderIndex * 200 + 50 // Reduced spacing
+            x: (stepIndex + 1) * 260 + 50, // Reduced spacing
+            y: orderIndex * 160 + 50 // Reduced spacing
           },
           data: stepData,
         });
@@ -292,6 +307,8 @@ const ProductionQueueView = () => {
       nodeIndex++;
     });
 
+    console.log(`🎯 Generated ${stepNodes.length} total nodes`);
+    console.log('Generated nodes:', stepNodes.map(n => ({ id: n.id, type: n.type, stepName: isStepCardData(n.data) ? n.data.stepName : 'Unknown' })));
     return stepNodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
@@ -352,12 +369,12 @@ const ProductionQueueView = () => {
 
   // Update nodes when data changes
   React.useEffect(() => {
-    console.log('Updating nodes with generated step data:', generateStepNodes);
+    console.log('🔄 Updating nodes with generated step data. New nodes count:', generateStepNodes.length);
     setNodes(generateStepNodes);
   }, [generateStepNodes, setNodes]);
 
   React.useEffect(() => {
-    console.log('Updating edges with generated step edges:', generateStepEdges);
+    console.log('🔄 Updating edges with generated step edges. New edges count:', generateStepEdges.length);
     setEdges(generateStepEdges);
   }, [generateStepEdges, setEdges]);
 
@@ -466,16 +483,33 @@ const ProductionQueueView = () => {
 
   // Filter nodes based on search and status
   const filteredNodes = useMemo(() => {
-    return nodes.filter(node => {
-      if (!isStepCardData(node.data)) return false;
+    console.log('🔍 Filtering nodes...');
+    console.log('- Total nodes before filtering:', nodes.length);
+    console.log('- Search term:', searchTerm);
+    console.log('- Selected status:', selectedStatus);
+    
+    const filtered = nodes.filter(node => {
+      if (!isStepCardData(node.data)) {
+        console.log('❌ Node failed StepCardData check:', node.id);
+        return false;
+      }
       
       const nodeData = node.data;
       const matchesSearch = nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = selectedStatus === 'all' || nodeData.status === selectedStatus;
-      return matchesSearch && matchesStatus;
+      
+      const passes = matchesSearch && matchesStatus;
+      if (!passes) {
+        console.log(`🚫 Node ${node.id} filtered out - search: ${matchesSearch}, status: ${matchesStatus}`);
+      }
+      
+      return passes;
     });
+    
+    console.log(`✅ Filtered to ${filtered.length} nodes`);
+    return filtered;
   }, [nodes, searchTerm, selectedStatus]);
 
   // Calculate statistics
@@ -509,10 +543,13 @@ const ProductionQueueView = () => {
       .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
   };
 
-  console.log('Final filtered step nodes:', filteredNodes);
-  console.log('Step Stats:', stats);
+  console.log('🎨 Final render state:');
+  console.log('- Filtered nodes count:', filteredNodes.length);
+  console.log('- Stats:', stats);
+  console.log('- Loading states:', { ordersLoading, stepsLoading, valuesLoading });
 
   if (ordersLoading || stepsLoading || valuesLoading) {
+    console.log('⏳ Showing loading state');
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -626,35 +663,53 @@ const ProductionQueueView = () => {
 
         {/* Canvas */}
         <div className="flex-1 relative">
-          <ReactFlow
-            nodes={filteredNodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            nodeTypes={nodeTypes}
-            fitView
-            className="bg-background"
-          >
-            <Controls />
-            <MiniMap 
-              nodeColor={(node) => {
-                if (isStepCardData(node.data)) {
-                  if (node.data.isJhalaiStep) return '#3b82f6';
-                  switch (node.data.status) {
-                    case 'completed': return '#22c55e';
-                    case 'in_progress': return '#eab308';
-                    case 'blocked': return '#ef4444';
-                    default: return '#6b7280';
+          {filteredNodes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Production Queue Items</h3>
+                <p className="text-muted-foreground">
+                  {manufacturingOrders.length === 0 ? (
+                    "Create some manufacturing orders to see them here."
+                  ) : (
+                    searchTerm || selectedStatus !== 'all' ? 
+                    "No items match your current filters." :
+                    "No production steps are currently visible."
+                  )}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={filteredNodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              nodeTypes={nodeTypes}
+              fitView
+              className="bg-background"
+            >
+              <Controls />
+              <MiniMap 
+                nodeColor={(node) => {
+                  if (isStepCardData(node.data)) {
+                    if (node.data.isJhalaiStep) return '#3b82f6';
+                    switch (node.data.status) {
+                      case 'completed': return '#22c55e';
+                      case 'in_progress': return '#eab308';
+                      case 'blocked': return '#ef4444';
+                      default: return '#6b7280';
+                    }
                   }
-                }
-                return '#6b7280';
-              }}
-              className="bg-background border border-border"
-            />
-            <Background gap={20} size={1} />
-          </ReactFlow>
+                  return '#6b7280';
+                }}
+                className="bg-background border border-border"
+              />
+              <Background gap={20} size={1} />
+            </ReactFlow>
+          )}
         </div>
       </div>
 
