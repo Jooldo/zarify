@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -93,7 +92,14 @@ const ProductionQueueView = () => {
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`Processing order ${order.id}:`, order);
       
-      // First, add the manufacturing order card
+      // Extract raw materials from product config
+      const rawMaterials = order.product_configs?.product_config_materials?.map(material => ({
+        name: material.raw_materials.name,
+        quantity: material.quantity_required,
+        unit: material.unit
+      })) || [];
+      
+      // First, add the manufacturing order card with enhanced data
       const manufacturingOrderData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -105,6 +111,11 @@ const ProductionQueueView = () => {
         assignedWorker: undefined,
         estimatedDuration: 0,
         isJhalaiStep: false,
+        productCode: order.product_configs?.product_code,
+        category: order.product_configs?.category,
+        quantityRequired: order.quantity_required,
+        priority: order.priority,
+        rawMaterials: rawMaterials,
       };
 
       stepNodes.push({
@@ -112,7 +123,7 @@ const ProductionQueueView = () => {
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 250 + 50 
+          y: orderIndex * 280 + 50 
         },
         data: manufacturingOrderData,
       });
@@ -161,6 +172,11 @@ const ProductionQueueView = () => {
             assignedWorker: assignedWorker,
             estimatedDuration: standardStep.duration,
             isJhalaiStep: standardStep.isJhalai,
+            productCode: order.product_configs?.product_code,
+            category: order.product_configs?.category,
+            quantityRequired: order.quantity_required,
+            priority: order.priority,
+            rawMaterials: standardStep.isJhalai ? rawMaterials : undefined,
           };
 
           const nodeId = `${order.id}-step-${standardStep.order}`;
@@ -169,8 +185,8 @@ const ProductionQueueView = () => {
             id: nodeId,
             type: 'stepCard',
             position: { 
-              x: (stepIndex + 1) * 320 + 50, 
-              y: orderIndex * 250 + 50 
+              x: (stepIndex + 1) * 340 + 50, 
+              y: orderIndex * 280 + 50 
             },
             data: stepData,
           });
@@ -255,11 +271,13 @@ const ProductionQueueView = () => {
   );
 
   const handleStepClick = useCallback((stepData: StepCardData) => {
+    console.log('Step clicked:', stepData);
     setSelectedStepData(stepData);
     setIsStepDetailsOpen(true);
   }, []);
 
   const handleMoveToJhalai = useCallback((stepData: StepCardData) => {
+    console.log('Moving to Jhalai:', stepData);
     setSelectedStepData(stepData);
     setIsJhalaiDialogOpen(true);
   }, []);
@@ -279,13 +297,18 @@ const ProductionQueueView = () => {
       assignedWorker: jhalaiStepData.assignedWorkerName,
       estimatedDuration: 2,
       isJhalaiStep: true,
+      productCode: selectedStepData?.productCode,
+      category: selectedStepData?.category,
+      quantityRequired: selectedStepData?.quantityRequired,
+      priority: selectedStepData?.priority,
+      rawMaterials: selectedStepData?.rawMaterials,
     };
 
     const newJhalaiNode: Node = {
       id: `${jhalaiStepData.manufacturingOrderId}-step-1`,
       type: 'stepCard',
       position: { 
-        x: 370, 
+        x: 390, 
         y: nodes.find(n => n.id === `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`)?.position.y || 50
       },
       data: jhalaiNodeData,

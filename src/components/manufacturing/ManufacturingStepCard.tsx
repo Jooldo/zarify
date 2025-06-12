@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, User, Package } from 'lucide-react';
+import { Plus, Clock, User, Package, Settings } from 'lucide-react';
+
+export interface RawMaterial {
+  name: string;
+  quantity: number;
+  unit: string;
+}
 
 export interface StepCardData extends Record<string, unknown> {
   stepName: string;
@@ -18,6 +24,11 @@ export interface StepCardData extends Record<string, unknown> {
   assignedWorker?: string;
   estimatedDuration?: number;
   isJhalaiStep?: boolean;
+  productCode?: string;
+  category?: string;
+  quantityRequired?: number;
+  priority?: string;
+  rawMaterials?: RawMaterial[];
 }
 
 interface ManufacturingStepCardProps {
@@ -42,8 +53,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[300px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[300px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,6 +98,60 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           <Package className="h-3 w-3" />
           <span>{data.orderNumber} - {data.productName}</span>
         </div>
+
+        {/* Product Code */}
+        {data.productCode && (
+          <div className="flex items-center gap-2 text-xs">
+            <Settings className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Code:</span>
+            <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">
+              {data.productCode}
+            </span>
+          </div>
+        )}
+
+        {/* Quantity and Priority for Manufacturing Orders */}
+        {data.stepName === 'Manufacturing Order' && (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {data.quantityRequired && (
+              <div>
+                <span className="text-muted-foreground">Qty:</span>
+                <span className="font-medium ml-1">{data.quantityRequired}</span>
+              </div>
+            )}
+            {data.priority && (
+              <div>
+                <span className="text-muted-foreground">Priority:</span>
+                <span className={`font-medium ml-1 capitalize ${
+                  data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
+                  data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                }`}>
+                  {data.priority}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Raw Materials Summary */}
+        {data.rawMaterials && data.rawMaterials.length > 0 && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">Materials:</span>
+            <div className="mt-1 space-y-1">
+              {data.rawMaterials.slice(0, 2).map((material, index) => (
+                <div key={index} className="flex justify-between bg-gray-50 px-2 py-1 rounded text-xs">
+                  <span className="truncate">{material.name}</span>
+                  <span>{material.quantity}{material.unit}</span>
+                </div>
+              ))}
+              {data.rawMaterials.length > 2 && (
+                <div className="text-muted-foreground text-xs">
+                  +{data.rawMaterials.length - 2} more materials
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Status and Progress */}
         <div className="space-y-2">

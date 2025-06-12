@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Package, Clock, Scale } from 'lucide-react';
+import { Calendar, User, Package, Clock, Scale, Settings } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
 
 interface StepDetailsDialogProps {
@@ -36,7 +36,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -56,6 +56,50 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
               <p className="text-lg">{stepData.productName}</p>
             </div>
           </div>
+
+          <Separator />
+
+          {/* Product Details */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Product Configuration
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-blue-700">Product Code</label>
+                <p className="text-sm text-blue-800 font-mono bg-white px-2 py-1 rounded border">
+                  {stepData.productCode || 'Not specified'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-blue-700">Category</label>
+                <p className="text-sm text-blue-800">
+                  {stepData.category || 'Not specified'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Raw Materials Section */}
+          {stepData.rawMaterials && stepData.rawMaterials.length > 0 && (
+            <div className="bg-amber-50 p-4 rounded-lg">
+              <h3 className="text-sm font-medium text-amber-900 mb-3 flex items-center gap-2">
+                <Scale className="h-4 w-4" />
+                Raw Materials Required
+              </h3>
+              <div className="space-y-2">
+                {stepData.rawMaterials.map((material, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white px-3 py-2 rounded border">
+                    <span className="text-sm font-medium text-amber-800">{material.name}</span>
+                    <span className="text-sm text-amber-700">
+                      {material.quantity} {material.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Separator />
 
@@ -91,6 +135,23 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
               </div>
             )}
           </div>
+
+          {/* Manufacturing Details */}
+          {stepData.stepName === 'Manufacturing Order' && (
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="text-sm font-medium text-green-900 mb-3">Manufacturing Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-green-700">Quantity Required</label>
+                  <p className="text-sm text-green-800">{stepData.quantityRequired || 'Not specified'}</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-green-700">Priority</label>
+                  <p className="text-sm text-green-800 capitalize">{stepData.priority || 'Medium'}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Worker Assignment */}
           {stepData.assignedWorker && (
