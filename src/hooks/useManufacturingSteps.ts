@@ -60,6 +60,7 @@ export const useManufacturingSteps = () => {
       const { data, error } = await supabase
         .from('manufacturing_steps')
         .select('*')
+        .eq('is_active', true)
         .order('step_order', { ascending: true });
 
       if (error) throw error;
@@ -91,7 +92,8 @@ export const useManufacturingSteps = () => {
             step_name,
             step_order,
             description,
-            qc_required
+            qc_required,
+            estimated_duration_hours
           ),
           workers (
             id,

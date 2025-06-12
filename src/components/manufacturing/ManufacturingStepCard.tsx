@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, User, Package, Settings } from 'lucide-react';
+import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ManufacturingStepField } from '@/hooks/useManufacturingSteps';
 
 export interface RawMaterial {
   name: string;
@@ -29,6 +30,8 @@ export interface StepCardData extends Record<string, unknown> {
   quantityRequired?: number;
   priority?: string;
   rawMaterials?: RawMaterial[];
+  stepFields?: ManufacturingStepField[];
+  qcRequired?: boolean;
 }
 
 interface ManufacturingStepCardProps {
@@ -36,6 +39,19 @@ interface ManufacturingStepCardProps {
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
 }
+
+// Dummy worker data for display
+const getDummyWorkerForStep = (stepName: string) => {
+  const workers = {
+    'Jhalai': 'Rajesh Kumar',
+    'Dhol': 'Amit Patel',
+    'Stone Setting': 'Priya Sharma',
+    'Polish': 'Manoj Singh',
+    'QC Check': 'Sunita Verma',
+    'Final Inspection': 'Deepak Gupta'
+  };
+  return workers[stepName as keyof typeof workers] || 'Unassigned';
+};
 
 const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({ 
   data, 
@@ -56,12 +72,20 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
       return 'Move to Jhalai';
     }
-    return 'Add Next Step';
+    return `Start ${data.stepName}`;
   };
 
+  // Get required fields for this step
+  const requiredFields = data.stepFields?.filter(field => field.is_required) || [];
+  const workerFields = data.stepFields?.filter(field => field.field_type === 'worker') || [];
+
+  // Use actual assigned worker or dummy worker based on step
+  const displayWorker = data.assignedWorker || 
+    (data.status !== 'pending' ? getDummyWorkerForStep(data.stepName) : undefined);
+
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[300px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[300px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[320px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[320px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,6 +112,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             {data.stepName === 'Manufacturing Order' && (
               <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
                 Order
+              </Badge>
+            )}
+            {data.qcRequired && (
+              <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                QC
               </Badge>
             )}
           </CardTitle>
@@ -160,6 +190,29 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
+        {/* Required Fields Display */}
+        {requiredFields.length > 0 && (
+          <div className="text-xs">
+            <span className="text-muted-foreground flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Required Fields:
+            </span>
+            <div className="mt-1 space-y-1">
+              {requiredFields.slice(0, 3).map((field, index) => (
+                <div key={index} className="bg-yellow-50 px-2 py-1 rounded text-xs border border-yellow-200">
+                  <span className="font-medium">{field.field_label}</span>
+                  <span className="text-muted-foreground ml-1">({field.field_type})</span>
+                </div>
+              ))}
+              {requiredFields.length > 3 && (
+                <div className="text-muted-foreground text-xs">
+                  +{requiredFields.length - 3} more required fields
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Status and Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -176,11 +229,26 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         </div>
 
         {/* Worker Assignment */}
-        {data.assignedWorker && (
+        {displayWorker && (
           <div className="flex items-center gap-2 text-xs">
             <User className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Assigned to:</span>
-            <span className="font-medium">{data.assignedWorker}</span>
+            <span className="font-medium">{displayWorker}</span>
+            {!data.assignedWorker && data.status !== 'pending' && (
+              <Badge variant="outline" className="text-xs py-0 px-1">
+                Demo
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Worker Field Requirements */}
+        {workerFields.length > 0 && data.status === 'pending' && (
+          <div className="text-xs bg-blue-50 p-2 rounded border border-blue-200">
+            <span className="text-blue-700 font-medium">Worker Assignment Required</span>
+            <div className="text-blue-600 mt-1">
+              {workerFields.length} worker field(s) need to be assigned
+            </div>
           </div>
         )}
 
@@ -193,15 +261,17 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         )}
 
         {/* Add Step Button */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className={`w-full mt-3 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
-          onClick={handleAddStep}
-        >
-          <Plus className="h-3 w-3 mr-1" />
-          {getNextStepName()}
-        </Button>
+        {data.status === 'pending' && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={`w-full mt-3 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
+            onClick={handleAddStep}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            {getNextStepName()}
+          </Button>
+        )}
       </CardContent>
 
       <Handle type="source" position={Position.Right} className="!bg-gray-400" />

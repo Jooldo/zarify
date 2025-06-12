@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -53,7 +54,7 @@ const isStepCardData = (data: Record<string, unknown>): data is StepCardData => 
 const ProductionQueueView = () => {
   const { toast } = useToast();
   const { manufacturingOrders, loading: ordersLoading } = useManufacturingOrders();
-  const { orderSteps, isLoading: stepsLoading } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps, stepFields, isLoading: stepsLoading } = useManufacturingSteps();
   const { workers } = useWorkers();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,16 +67,13 @@ const ProductionQueueView = () => {
 
   console.log('Manufacturing Orders:', manufacturingOrders);
   console.log('Order Steps:', orderSteps);
+  console.log('Manufacturing Steps from DB:', manufacturingSteps);
+  console.log('Step Fields:', stepFields);
 
-  // Define the standard manufacturing steps workflow
-  const standardSteps = [
-    { name: 'Manufacturing Order', order: 0, duration: 0, isJhalai: false }, // Initial manufacturing order
-    { name: 'Jhalai', order: 1, duration: 2, isJhalai: true },
-    { name: 'Dhol', order: 2, duration: 3, isJhalai: false },
-    { name: 'Stone Setting', order: 3, duration: 4, isJhalai: false },
-    { name: 'Polish', order: 4, duration: 2, isJhalai: false },
-    { name: 'QC Check', order: 5, duration: 1, isJhalai: false },
-  ];
+  // Helper function to get fields for a specific step
+  const getStepFields = (stepId: string) => {
+    return stepFields.filter(field => field.manufacturing_step_id === stepId);
+  };
 
   // Helper function to determine the furthest progressed step for an order
   const getFurthestProgressedStep = (orderId: string) => {
@@ -88,9 +86,9 @@ const ProductionQueueView = () => {
     // Find the furthest step that has been started (in_progress or completed)
     let furthestStep = 0;
     for (const step of orderStepsForOrder) {
-      const standardStep = standardSteps.find(s => s.name === step.manufacturing_steps?.step_name);
-      if (standardStep && (step.status === 'in_progress' || step.status === 'completed')) {
-        furthestStep = Math.max(furthestStep, standardStep.order);
+      const configStep = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
+      if (configStep && (step.status === 'in_progress' || step.status === 'completed')) {
+        furthestStep = Math.max(furthestStep, configStep.step_order);
       }
     }
 
@@ -112,10 +110,10 @@ const ProductionQueueView = () => {
 
   // Generate step nodes from manufacturing orders with progressive display
   const generateStepNodes = useMemo((): Node[] => {
-    console.log('Generating step nodes with progressive display...');
+    console.log('Generating step nodes with configuration-based progressive display...');
     
-    if (!manufacturingOrders.length) {
-      console.log('No manufacturing orders found');
+    if (!manufacturingOrders.length || !manufacturingSteps.length) {
+      console.log('No manufacturing orders or steps found');
       return [];
     }
 
@@ -153,6 +151,7 @@ const ProductionQueueView = () => {
         quantityRequired: order.quantity_required,
         priority: order.priority,
         rawMaterials: rawMaterials,
+        stepFields: [], // Manufacturing order doesn't have custom fields
       };
 
       stepNodes.push({
@@ -165,16 +164,20 @@ const ProductionQueueView = () => {
         data: manufacturingOrderData,
       });
 
-      // Add manufacturing steps only up to the determined max step
-      standardSteps.slice(1).forEach((standardStep, stepIndex) => {
+      // Add manufacturing steps from configuration only up to the determined max step
+      const sortedSteps = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      sortedSteps.forEach((configStep, stepIndex) => {
         // Only show steps up to the max step to show
-        if (standardStep.order > maxStepToShow) {
+        if (configStep.step_order > maxStepToShow) {
           return; // Skip this step - don't show it yet
         }
 
         const actualStep = orderSteps.find(step => 
           step.manufacturing_order_id === order.id && 
-          step.manufacturing_steps?.step_name === standardStep.name
+          step.manufacturing_step_id === configStep.id
         );
 
         // If we're showing this step but it doesn't exist in orderSteps yet, 
@@ -184,7 +187,7 @@ const ProductionQueueView = () => {
         let assignedWorker = undefined;
 
         if (actualStep) {
-          console.log(`Step ${standardStep.name} for order ${order.id}:`, actualStep);
+          console.log(`Step ${configStep.step_name} for order ${order.id}:`, actualStep);
 
           switch (actualStep.status) {
             case 'in_progress':
@@ -206,25 +209,30 @@ const ProductionQueueView = () => {
           assignedWorker = actualStep.workers?.name;
         }
 
+        // Get step-specific fields from configuration
+        const stepFieldsConfig = getStepFields(configStep.id);
+
         const stepData: StepCardData = {
-          stepName: standardStep.name,
-          stepOrder: standardStep.order,
+          stepName: configStep.step_name,
+          stepOrder: configStep.step_order,
           orderId: order.id,
           orderNumber: order.order_number,
           productName: order.product_name,
           status: stepStatus,
           progress: progress,
           assignedWorker: assignedWorker,
-          estimatedDuration: standardStep.duration,
-          isJhalaiStep: standardStep.isJhalai,
+          estimatedDuration: configStep.estimated_duration_hours,
+          isJhalaiStep: configStep.step_name.toLowerCase() === 'jhalai',
           productCode: order.product_configs?.product_code,
           category: order.product_configs?.category,
           quantityRequired: order.quantity_required,
           priority: order.priority,
-          rawMaterials: standardStep.isJhalai ? rawMaterials : undefined,
+          rawMaterials: configStep.step_name.toLowerCase() === 'jhalai' ? rawMaterials : undefined,
+          stepFields: stepFieldsConfig,
+          qcRequired: configStep.qc_required,
         };
 
-        const nodeId = `${order.id}-step-${standardStep.order}`;
+        const nodeId = `${order.id}-step-${configStep.step_order}`;
         
         stepNodes.push({
           id: nodeId,
@@ -241,7 +249,7 @@ const ProductionQueueView = () => {
     });
 
     return stepNodes;
-  }, [manufacturingOrders, orderSteps]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
 
@@ -339,6 +347,12 @@ const ProductionQueueView = () => {
       return;
     }
 
+    // Get step fields for Jhalai step
+    const jhalaiStep = manufacturingSteps.find(step => 
+      step.step_name.toLowerCase() === 'jhalai'
+    );
+    const jhalaiStepFields = jhalaiStep ? getStepFields(jhalaiStep.id) : [];
+
     // Create new Jhalai step node data
     const jhalaiNodeData: StepCardData = {
       stepName: 'Jhalai',
@@ -349,13 +363,15 @@ const ProductionQueueView = () => {
       status: 'in_progress',
       progress: 0,
       assignedWorker: jhalaiStepData.assignedWorkerName,
-      estimatedDuration: 2,
+      estimatedDuration: jhalaiStep?.estimated_duration_hours || 8,
       isJhalaiStep: true,
       productCode: selectedStepData?.productCode,
       category: selectedStepData?.category,
       quantityRequired: selectedStepData?.quantityRequired,
       priority: selectedStepData?.priority,
       rawMaterials: selectedStepData?.rawMaterials,
+      stepFields: jhalaiStepFields,
+      qcRequired: jhalaiStep?.qc_required || false,
     };
 
     const newJhalaiNode: Node = {
@@ -413,7 +429,7 @@ const ProductionQueueView = () => {
       title: 'Jhalai Step Created',
       description: `Jhalai step created and assigned to ${jhalaiStepData.assignedWorkerName}`,
     });
-  }, [selectedStepData, setNodes, setEdges, toast, nodes]);
+  }, [selectedStepData, setNodes, setEdges, toast, nodes, manufacturingSteps, getStepFields]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
     console.log('Add step clicked for:', stepData);
