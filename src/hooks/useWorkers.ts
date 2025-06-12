@@ -10,15 +10,30 @@ export interface Worker {
   status: 'Active' | 'Inactive';
   joined_date?: string;
   notes?: string;
+  merchant_id: string;
 }
 
 export const useWorkers = () => {
-  const { data: workers = [], isLoading, error } = useQuery({
+  const { data: workers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['workers'],
     queryFn: async () => {
+      console.log('Fetching workers...');
+      
+      // Get current user's merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        throw merchantError;
+      }
+
+      console.log('Merchant ID:', merchantId);
+
       const { data, error } = await supabase
         .from('workers')
         .select('*')
+        .eq('merchant_id', merchantId)
         .eq('status', 'Active')
         .order('name');
 
@@ -27,6 +42,7 @@ export const useWorkers = () => {
         throw error;
       }
 
+      console.log('Fetched workers:', data?.length || 0);
       return data as Worker[];
     },
   });
@@ -35,5 +51,6 @@ export const useWorkers = () => {
     workers,
     isLoading,
     error,
+    refetch,
   };
 };

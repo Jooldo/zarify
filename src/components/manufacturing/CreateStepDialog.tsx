@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
   onCreateStep
 }) => {
   const { toast } = useToast();
-  const { workers } = useWorkers();
+  const { workers, isLoading: workersLoading } = useWorkers();
   
   const [fieldValues, setFieldValues] = useState<{[key: string]: any}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,22 +78,42 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
               <User className="h-4 w-4" />
               {field.field_label} {field.is_required && '*'}
             </Label>
-            <Select value={fieldValue} onValueChange={(value) => handleFieldChange(field.field_id, value)}>
-              <SelectTrigger className={hasError ? 'border-red-500' : ''}>
-                <SelectValue placeholder={`Select ${field.field_label.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {workers.map((worker) => (
-                  <SelectItem key={worker.id} value={worker.id}>
-                    {worker.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {workersLoading ? (
+              <div className="text-sm text-muted-foreground">Loading workers...</div>
+            ) : workers.length === 0 ? (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="text-sm text-yellow-800">
+                  No workers found. Please seed dummy workers first using the Development Tools.
+                </div>
+              </div>
+            ) : (
+              <Select value={fieldValue} onValueChange={(value) => handleFieldChange(field.field_id, value)}>
+                <SelectTrigger className={hasError ? 'border-red-500' : ''}>
+                  <SelectValue placeholder={`Select ${field.field_label.toLowerCase()}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {workers.map((worker) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{worker.name}</span>
+                        {worker.role && (
+                          <span className="text-xs text-muted-foreground">{worker.role}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {hasError && (
               <div className="flex items-center gap-1 text-sm text-red-600">
                 <AlertCircle className="h-3 w-3" />
                 {errors[field.field_id]}
+              </div>
+            )}
+            {workers.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {workers.length} worker(s) available
               </div>
             )}
           </div>
