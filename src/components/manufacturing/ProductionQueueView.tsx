@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -9,7 +8,6 @@ import {
   useNodesState,
   useEdgesState,
   Connection,
-  Edge,
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -294,60 +292,6 @@ const ProductionQueueView = () => {
           />
           <Background gap={20} size={1} />
         </ReactFlow>
-
-        {/* Legend */}
-        <Card className="absolute bottom-4 left-4 w-48">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Status Legend</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-gray-500" />
-              <span>Pending</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span>In Progress</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Completed</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span>QC Failed</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-orange-500" />
-              <span>Blocked</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Priority Legend */}
-        <Card className="absolute bottom-4 right-4 w-48">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Priority Legend</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span>Urgent</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-orange-500" />
-              <span>High</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span>Medium</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Low</span>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
