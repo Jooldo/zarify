@@ -183,7 +183,9 @@ const ProductionQueueView = () => {
     return stepNodes;
   }, [manufacturingOrders, orderSteps]);
 
-  // Generate edges to connect sequential steps
+  const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
+
+  // Generate edges to connect sequential steps - now defined after nodes
   const generateStepEdges = useMemo(() => {
     const edges: any[] = [];
     
@@ -234,7 +236,6 @@ const ProductionQueueView = () => {
     return edges;
   }, [manufacturingOrders, nodes]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(generateStepEdges);
 
   // Update nodes when data changes
