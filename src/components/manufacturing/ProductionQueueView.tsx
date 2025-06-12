@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -96,13 +95,9 @@ const ProductionQueueView = () => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
 
-  // Create initial nodes and edges with proper typing
-  const initialNodes: FlowNode[] = [];
-  const initialEdges: Edge[] = [];
-
-  // Initialize ReactFlow state with proper defaults
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
+  // Create initial nodes and edges with proper typing - use empty arrays as defaults
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Create nodes data with proper spacing and positioning
   const nodesData = useMemo((): FlowNode[] => {
@@ -153,7 +148,7 @@ const ProductionQueueView = () => {
         data: { 
           label: `${order.order_number} - ${order.product_name}`,
           stepData: manufacturingOrderData
-        } as NodeData,
+        },
         style: {
           background: '#ffffff',
           border: '2px solid #3b82f6',
@@ -233,7 +228,7 @@ const ProductionQueueView = () => {
             data: { 
               label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
               stepData: stepData
-            } as NodeData,
+            },
             style: {
               background: stepStatus === 'completed' ? '#dcfce7' : 
                          stepStatus === 'in_progress' ? '#fef3c7' : 
@@ -373,9 +368,10 @@ const ProductionQueueView = () => {
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('Node clicked:', node);
-    if (node.data && typeof node.data === 'object' && 'stepData' in node.data) {
+    // Fix the type casting issue by properly checking the node data
+    if (node.data && typeof node.data === 'object' && node.data !== null) {
       const nodeData = node.data as Record<string, unknown>;
-      if (nodeData.stepData && isStepCardData(nodeData.stepData)) {
+      if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
         handleStepClick(nodeData.stepData);
       }
     }
@@ -394,17 +390,24 @@ const ProductionQueueView = () => {
     }
     
     const filtered = nodes.filter(node => {
-      if (!node.data?.stepData || !isStepCardData(node.data.stepData)) {
+      // Fix the type casting issue by properly checking the node data
+      if (!node.data || typeof node.data !== 'object' || node.data === null) {
+        console.log('❌ Node failed data check:', node.id);
+        return false;
+      }
+      
+      const nodeData = node.data as Record<string, unknown>;
+      if (!('stepData' in nodeData) || !nodeData.stepData || !isStepCardData(nodeData.stepData)) {
         console.log('❌ Node failed StepCardData check:', node.id);
         return false;
       }
       
-      const nodeData = node.data.stepData;
+      const stepData = nodeData.stepData;
       const matchesSearch = searchTerm === '' || 
-                           nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           nodeData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = selectedStatus === 'all' || nodeData.status === selectedStatus;
+                           stepData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           stepData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           stepData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = selectedStatus === 'all' || stepData.status === selectedStatus;
       
       const passes = matchesSearch && matchesStatus;
       if (!passes) {
@@ -431,8 +434,16 @@ const ProductionQueueView = () => {
   // Calculate statistics
   const stats = useMemo(() => {
     const validNodeData = filteredNodes
-      .map(n => n.data?.stepData)
-      .filter((data): data is StepCardData => Boolean(data && isStepCardData(data)));
+      .map(n => {
+        if (n.data && typeof n.data === 'object' && n.data !== null) {
+          const nodeData = n.data as Record<string, unknown>;
+          if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
+            return nodeData.stepData;
+          }
+        }
+        return null;
+      })
+      .filter((data): data is StepCardData => data !== null);
     
     return {
       total: validNodeData.length,
@@ -634,14 +645,17 @@ const ProductionQueueView = () => {
               <Controls />
               <MiniMap 
                 nodeColor={(node) => {
-                  const stepData = node.data?.stepData;
-                  if (stepData && isStepCardData(stepData)) {
-                    if (stepData.isJhalaiStep) return '#3b82f6';
-                    switch (stepData.status) {
-                      case 'completed': return '#22c55e';
-                      case 'in_progress': return '#eab308';
-                      case 'blocked': return '#ef4444';
-                      default: return '#6b7280';
+                  if (node.data && typeof node.data === 'object' && node.data !== null) {
+                    const nodeData = node.data as Record<string, unknown>;
+                    if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
+                      const stepData = nodeData.stepData;
+                      if (stepData.isJhalaiStep) return '#3b82f6';
+                      switch (stepData.status) {
+                        case 'completed': return '#22c55e';
+                        case 'in_progress': return '#eab308';
+                        case 'blocked': return '#ef4444';
+                        default: return '#6b7280';
+                      }
                     }
                   }
                   return '#6b7280';
