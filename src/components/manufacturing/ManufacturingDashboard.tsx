@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Package2, Clock, CheckCircle, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
-import ManufacturingOrderCard from './ManufacturingOrderCard';
+import ManufacturingOrdersTable from './ManufacturingOrdersTable';
 import ProductionQueueView from './ProductionQueueView';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
@@ -141,16 +141,11 @@ const ManufacturingDashboard = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {manufacturingOrders.map((order) => (
-                <ManufacturingOrderCard 
-                  key={order.id} 
-                  order={order}
-                  getPriorityColor={getPriorityColor}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
-            </div>
+            <ManufacturingOrdersTable 
+              orders={manufacturingOrders}
+              getPriorityColor={getPriorityColor}
+              getStatusColor={getStatusColor}
+            />
           )}
         </TabsContent>
         
