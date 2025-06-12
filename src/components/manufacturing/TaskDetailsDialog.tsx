@@ -12,8 +12,32 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
-import ManufacturingStepHistory from './ManufacturingStepHistory';
-import { ProductionTask } from '@/hooks/useProductionTasks';
+
+// Temporary type definition for ProductionTask until manufacturing is reworked
+interface ProductionTask {
+  id: string;
+  product_config_id?: string;
+  quantity: number;
+  status?: string;
+  priority: string;
+  customer_name?: string;
+  notes?: string;
+  created_at: string;
+  expected_date?: string;
+  assigned_worker_name?: string;
+  started_at?: string;
+  received_weight?: number;
+  received_quantity?: number;
+  completed_weight?: number;
+  completed_quantity?: number;
+  is_child_task?: boolean;
+  parent_task_id?: string;
+  product_configs?: {
+    product_code: string;
+    category: string;
+    subcategory: string;
+  };
+}
 
 interface TaskDetailsDialogProps {
   open: boolean;
@@ -248,10 +272,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Manufacturing Step History - Show at top for processing steps */}
-          {isProcessingStep && (
-            <ManufacturingStepHistory task={task} currentStep={stepId} />
-          )}
+          {/* Note: Manufacturing Step History removed - will be reimplemented */}
 
           {/* Header Section */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -328,179 +349,7 @@ const TaskDetailsDialog = ({ open, onOpenChange, task, stepId, onStatusUpdate }:
             </div>
           )}
 
-          {/* Assigned Weight for Jhalai (In Progress) */}
-          {stepId === 'jhalai' && currentStatus === 'Progress' && (
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Weight className="h-5 w-5 text-yellow-600" />
-                <h4 className="font-semibold text-lg text-yellow-800">Assigned Raw Material Weight</h4>
-              </div>
-              <div className="text-center p-3 bg-white rounded border border-yellow-200">
-                <p className="text-sm text-yellow-600">Total Weight for Jhalai</p>
-                <p className="text-2xl font-bold text-yellow-800">{getAssignedWeight().toFixed(2)} kg</p>
-                <p className="text-xs text-yellow-500 mt-1">Reference for worker before starting process</p>
-              </div>
-            </div>
-          )}
-
-          {/* Total Weight from Raw Materials */}
-          {totalWeightFromMaterials !== null && stepId === 'jhalai' && currentStatus !== 'Progress' && (
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="h-5 w-5 text-purple-600" />
-                <h4 className="font-semibold text-lg text-purple-800">Material Weight Calculation</h4>
-              </div>
-              <div className="text-center p-3 bg-white rounded border border-purple-200">
-                <p className="text-sm text-purple-600">Total Weight from Raw Materials</p>
-                <p className="text-2xl font-bold text-purple-800">{totalWeightFromMaterials.toFixed(2)} kg</p>
-                <p className="text-xs text-purple-500 mt-1">Based on {task.quantity} pieces</p>
-              </div>
-            </div>
-          )}
-
-          {/* Completed Details */}
-          {(task.completed_weight || task.completed_quantity) && (
-            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Package className="h-5 w-5 text-emerald-600" />
-                <h4 className="font-semibold text-lg text-emerald-800">Completed Output</h4>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-white rounded border border-emerald-200">
-                  <p className="text-sm text-emerald-600">Final Weight</p>
-                  <p className="text-2xl font-bold text-emerald-800">{task.completed_weight} kg</p>
-                </div>
-                <div className="text-center p-3 bg-white rounded border border-emerald-200">
-                  <p className="text-sm text-emerald-600">Pieces Produced</p>
-                  <p className="text-2xl font-bold text-emerald-800">{task.completed_quantity} pcs</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Status Update Section for Processing Steps */}
-          {isProcessingStep && onStatusUpdate && currentStatus !== 'Completed' && (
-            <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
-              <h4 className="font-semibold text-lg flex items-center gap-2 text-green-800">
-                <ArrowRight className="h-4 w-4" />
-                Update Status ({stepId === 'jhalai' ? 'Jhalai' : 'Quellai'})
-              </h4>
-              
-              <div className="space-y-3">
-                <div>
-                  <Label className="font-medium">New Status</Label>
-                  <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select new status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STEP_STATUSES.map(status => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Completion Form for Jhalai/Quellai Completed */}
-                {showCompletionForm && (
-                  <div className="space-y-3 p-3 bg-white rounded border">
-                    <h5 className="font-medium text-green-800">Enter Final Output</h5>
-                    <p className="text-sm text-gray-600">
-                      Enter the final weight and number of pieces after completing {stepId === 'jhalai' ? 'Jhalai' : 'Quellai'}.
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Final Weight (kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter final weight"
-                          value={finalWeight}
-                          onChange={(e) => setFinalWeight(e.target.value)}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Weight after {stepId === 'jhalai' ? 'Jhalai' : 'Quellai'} process
-                        </p>
-                      </div>
-                      <div>
-                        <Label>Number of Pieces</Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter pieces count"
-                          value={numberOfPieces}
-                          onChange={(e) => setNumberOfPieces(e.target.value)}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Total pieces produced
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleCompletionSubmit} className="flex-1">
-                        Complete {stepId === 'jhalai' ? 'Jhalai' : 'Quellai'}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setShowCompletionForm(false);
-                          setSelectedStatus('');
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Partial Completion Form */}
-                {showPartialCompletionForm && (
-                  <div className="space-y-3 p-3 bg-white rounded border">
-                    <h5 className="font-medium text-green-800">Partial Completion</h5>
-                    <p className="text-sm text-gray-600">
-                      Enter the weight and quantity that has been completed. Remaining work will be created as a new task.
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Completed Weight (kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Enter completed weight"
-                          value={completedWeight}
-                          onChange={(e) => setCompletedWeight(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Completed Quantity (pieces)</Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter completed quantity"
-                          value={completedQuantity}
-                          onChange={(e) => setCompletedQuantity(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handlePartialCompletionSubmit} className="flex-1">
-                        Confirm Partial Completion
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setShowPartialCompletionForm(false);
-                          setSelectedStatus('');
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Manufacturing functionality sections removed - will be reimplemented */}
 
           {/* Timeline Information */}
           <div className="space-y-4">

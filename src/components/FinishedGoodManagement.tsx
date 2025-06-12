@@ -3,9 +3,31 @@ import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
-import FGManufacturingTab from './manufacturing/FGManufacturingTab';
-import FGAnalytics from './analytics/FGAnalytics';
-import FGWorkers from './workers/FGWorkers';
+
+// Placeholder components for removed functionality
+const FGManufacturingPlaceholder = () => (
+  <div className="p-8 text-center">
+    <Factory className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+    <h3 className="text-lg font-semibold mb-2">Manufacturing</h3>
+    <p className="text-gray-500">Manufacturing functionality will be implemented here</p>
+  </div>
+);
+
+const FGAnalyticsPlaceholder = () => (
+  <div className="p-8 text-center">
+    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+    <h3 className="text-lg font-semibold mb-2">Analytics</h3>
+    <p className="text-gray-500">Analytics functionality will be implemented here</p>
+  </div>
+);
+
+const FGWorkersPlaceholder = () => (
+  <div className="p-8 text-center">
+    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+    <h3 className="text-lg font-semibold mb-2">Workers</h3>
+    <p className="text-gray-500">Worker management functionality will be implemented here</p>
+  </div>
+);
 
 interface FinishedGoodManagementProps {
   activeTab: string;
@@ -18,11 +40,11 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
       case 'fg-inventory':
         return <FinishedGoodsInventory />;
       case 'fg-manufacturing':
-        return <FGManufacturingTab />;
+        return <FGManufacturingPlaceholder />;
       case 'fg-analytics':
-        return <FGAnalytics />;
+        return <FGAnalyticsPlaceholder />;
       case 'fg-workers':
-        return <FGWorkers />;
+        return <FGWorkersPlaceholder />;
       case 'fg-config':
         return <FinishedGoodsConfig />;
       default:
