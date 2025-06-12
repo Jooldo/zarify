@@ -103,12 +103,32 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const getUserDefinedStatus = () => {
     if (!currentOrderStep || !data.stepFields) return null;
     
-    const statusField = data.stepFields.find(field => field.field_type === 'select' && field.field_name.toLowerCase().includes('status'));
+    const statusField = data.stepFields.find(field => field.field_type === 'status' && field.field_name.toLowerCase().includes('status'));
     if (statusField) {
       const value = getStepValue(currentOrderStep.id, statusField.field_id);
       return value;
     }
     return null;
+  };
+
+  // Get assigned worker name from step values or order step
+  const getAssignedWorkerName = () => {
+    if (!currentOrderStep) return data.assignedWorker;
+    
+    // First check if there's a worker field in step configuration
+    if (data.stepFields) {
+      const workerField = data.stepFields.find(field => field.field_type === 'worker');
+      if (workerField) {
+        const workerId = getStepValue(currentOrderStep.id, workerField.field_id);
+        if (workerId) {
+          const worker = workers.find(w => w.id === workerId);
+          return worker?.name;
+        }
+      }
+    }
+    
+    // Fallback to assigned worker from order step
+    return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
   const cardClassName = data.isJhalaiStep 
@@ -130,6 +150,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     !orderSteps.some(step => step.manufacturing_order_id === data.orderId);
 
   const userDefinedStatus = getUserDefinedStatus();
+  const assignedWorkerName = getAssignedWorkerName();
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
@@ -218,11 +239,11 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         )}
 
         {/* Worker Assignment */}
-        {data.assignedWorker && (
+        {assignedWorkerName && (
           <div className="flex items-center gap-2 text-xs">
             <User className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Assigned to:</span>
-            <span className="font-medium">{data.assignedWorker}</span>
+            <span className="font-medium">{assignedWorkerName}</span>
           </div>
         )}
 

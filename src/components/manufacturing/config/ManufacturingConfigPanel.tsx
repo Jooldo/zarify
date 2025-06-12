@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,29 +98,8 @@ const ManufacturingConfigPanel = () => {
       });
       setSteps(configSteps);
     } else {
-      // Initialize with default steps if none exist
-      setSteps([
-        {
-          id: '1',
-          name: 'Jhalai',
-          order: 1,
-          qcRequired: false,
-          requiredFields: defaultRequiredFields.filter(f => 
-            ['worker', 'dueDate', 'rawMaterialWeight', 'status', 'notes'].includes(f.id)
-          ),
-          estimatedDuration: 2
-        },
-        {
-          id: '2',
-          name: 'Dhol',
-          order: 2,
-          qcRequired: true,
-          requiredFields: defaultRequiredFields.filter(f => 
-            ['worker', 'dueDate', 'quantityAssigned', 'status', 'notes'].includes(f.id)
-          ),
-          estimatedDuration: 3
-        }
-      ]);
+      // No default steps - start with empty array
+      setSteps([]);
     }
   }, [manufacturingSteps, stepFields]);
 
@@ -219,6 +199,11 @@ const ManufacturingConfigPanel = () => {
   }, [selectedStepId, toast]);
 
   const handleStepNameChange = useCallback(async (stepId: string, name: string) => {
+    // Update local state immediately for better UX
+    setSteps(prev => prev.map(step => 
+      step.id === stepId ? { ...step, name } : step
+    ));
+
     try {
       const { error } = await supabase
         .from('manufacturing_steps')
@@ -226,19 +211,19 @@ const ManufacturingConfigPanel = () => {
         .eq('id', stepId);
 
       if (error) throw error;
-
-      setSteps(prev => prev.map(step => 
-        step.id === stepId ? { ...step, name } : step
-      ));
     } catch (error) {
       console.error('Error updating step name:', error);
+      // Revert local state on error
+      setSteps(prev => prev.map(step => 
+        step.id === stepId ? { ...step, name: manufacturingSteps.find(ms => ms.id === stepId)?.step_name || name } : step
+      ));
       toast({
         title: 'Error',
         description: 'Failed to update step name',
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, [toast, manufacturingSteps]);
 
   const handleQCToggle = useCallback(async (stepId: string, qcRequired: boolean) => {
     setSteps(prev => prev.map(step => 
@@ -413,6 +398,25 @@ const StepConfigCard: React.FC<StepConfigCardProps> = ({
   onDurationChange,
   onDelete
 }) => {
+  const [localName, setLocalName] = useState(step.name);
+
+  // Update local name when step name changes from props
+  useEffect(() => {
+    setLocalName(step.name);
+  }, [step.name]);
+
+  const handleNameBlur = () => {
+    if (localName !== step.name) {
+      onNameChange(step.id, localName);
+    }
+  };
+
+  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameBlur();
+    }
+  };
+
   return (
     <div
       className={`p-4 border rounded-lg cursor-pointer transition-colors ${
@@ -432,11 +436,13 @@ const StepConfigCard: React.FC<StepConfigCardProps> = ({
         
         <div className="flex-1">
           <Input
-            value={step.name}
+            value={localName}
             onChange={(e) => {
               e.stopPropagation();
-              onNameChange(step.id, e.target.value);
+              setLocalName(e.target.value);
             }}
+            onBlur={handleNameBlur}
+            onKeyPress={handleNameKeyPress}
             className="border-none p-0 h-auto text-sm font-medium bg-transparent focus-visible:ring-0"
             onClick={(e) => e.stopPropagation()}
           />
