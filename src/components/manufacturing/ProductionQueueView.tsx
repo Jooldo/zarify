@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -51,6 +50,8 @@ const isStepCardData = (data: Record<string, unknown>): data is StepCardData => 
 };
 
 const ProductionQueueView = () => {
+  console.log('🚀 ProductionQueueView component is rendering!');
+  
   const { toast } = useToast();
   const { manufacturingOrders, loading: ordersLoading } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps, stepFields, isLoading: stepsLoading } = useManufacturingSteps();
@@ -68,7 +69,7 @@ const ProductionQueueView = () => {
   const [isUpdateStepDialogOpen, setIsUpdateStepDialogOpen] = useState(false);
   const [targetStep, setTargetStep] = useState<ManufacturingStep | null>(null);
 
-  console.log('=== PRODUCTION QUEUE DEBUG ===');
+  console.log('🔍 PRODUCTION QUEUE DATA CHECK:');
   console.log('Manufacturing Orders:', manufacturingOrders);
   console.log('Manufacturing Orders Count:', manufacturingOrders?.length || 0);
   console.log('Order Steps:', orderSteps);
@@ -116,19 +117,15 @@ const ProductionQueueView = () => {
 
   // Generate step nodes from manufacturing orders with progressive display
   const generateStepNodes = useMemo((): Node[] => {
-    console.log('=== GENERATING STEP NODES ===');
-    console.log('Input data check:');
-    console.log('- manufacturingOrders:', manufacturingOrders?.length || 0);
-    console.log('- manufacturingSteps:', manufacturingSteps?.length || 0);
-    console.log('- orderSteps:', orderSteps?.length || 0);
+    console.log('🎯 GENERATING STEP NODES...');
+    console.log('Input validation:');
+    console.log('- manufacturingOrders available:', !!manufacturingOrders);
+    console.log('- manufacturingOrders count:', manufacturingOrders?.length || 0);
+    console.log('- manufacturingSteps available:', !!manufacturingSteps);
+    console.log('- manufacturingSteps count:', manufacturingSteps?.length || 0);
     
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
-      console.log('❌ No manufacturing orders found');
-      return [];
-    }
-
-    if (!manufacturingSteps || manufacturingSteps.length === 0) {
-      console.log('❌ No manufacturing steps found');
+      console.log('❌ No manufacturing orders - returning empty array');
       return [];
     }
 
@@ -136,11 +133,11 @@ const ProductionQueueView = () => {
     let nodeIndex = 0;
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      console.log(`🔄 Processing order ${orderIndex + 1}/${manufacturingOrders.length}:`, order.order_number);
+      console.log(`📦 Processing order ${orderIndex + 1}: ${order.order_number}`);
       
       // Determine how many steps to show for this order
       const maxStepToShow = getFurthestProgressedStep(order.id);
-      console.log(`📊 Order ${order.order_number} - showing steps up to: ${maxStepToShow}`);
+      console.log(`📊 Order ${order.order_number} - max step to show: ${maxStepToShow}`);
 
       // Always add the manufacturing order card
       const manufacturingOrderData: StepCardData = {
@@ -156,165 +153,162 @@ const ProductionQueueView = () => {
         isJhalaiStep: false,
         quantityRequired: order.quantity_required,
         priority: order.priority,
-        stepFields: [], // Manufacturing order doesn't have custom fields
+        stepFields: [],
         dueDate: order.due_date,
       };
 
       const orderNodeId = `${order.id}-manufacturing-order`;
-      console.log(`✅ Adding Manufacturing Order node: ${orderNodeId}`);
+      console.log(`✅ Creating Manufacturing Order node: ${orderNodeId}`);
 
       stepNodes.push({
         id: orderNodeId,
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 160 + 50 // Reduced spacing
+          y: orderIndex * 140 + 50
         },
         data: manufacturingOrderData,
       });
 
-      // Add manufacturing steps from configuration only up to the determined max step
-      const sortedSteps = manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order);
+      // Add manufacturing steps if available and within display limit
+      if (manufacturingSteps && manufacturingSteps.length > 0) {
+        const sortedSteps = manufacturingSteps
+          .filter(step => step.is_active)
+          .sort((a, b) => a.step_order - b.step_order);
 
-      console.log(`📋 Available steps for order ${order.order_number}:`, sortedSteps.map(s => `${s.step_order}: ${s.step_name}`));
+        console.log(`📋 Processing ${sortedSteps.length} manufacturing steps for order ${order.order_number}`);
 
-      sortedSteps.forEach((configStep, stepIndex) => {
-        // Only show steps up to the max step to show
-        if (configStep.step_order > maxStepToShow) {
-          console.log(`⏭️ Skipping step ${configStep.step_name} (order ${configStep.step_order} > max ${maxStepToShow})`);
-          return; // Skip this step - don't show it yet
-        }
-
-        const actualStep = orderSteps.find(step => 
-          step.manufacturing_order_id === order.id && 
-          step.manufacturing_step_id === configStep.id
-        );
-
-        // If we're showing this step but it doesn't exist in orderSteps yet, 
-        // create a pending step placeholder (for the next step to be started)
-        let stepStatus: StepCardData['status'] = 'pending';
-        let progress = 0;
-        let assignedWorker = undefined;
-
-        if (actualStep) {
-          console.log(`📌 Found actual step data for ${configStep.step_name}:`, actualStep);
-
-          switch (actualStep.status) {
-            case 'in_progress':
-              stepStatus = 'in_progress';
-              progress = actualStep.progress_percentage || 0;
-              break;
-            case 'completed':
-              stepStatus = 'completed';
-              progress = 100;
-              break;
-            case 'blocked':
-              stepStatus = 'blocked';
-              progress = actualStep.progress_percentage || 0;
-              break;
-            default:
-              stepStatus = 'pending';
-              progress = 0;
+        sortedSteps.forEach((configStep, stepIndex) => {
+          if (configStep.step_order > maxStepToShow) {
+            console.log(`⏭️ Skipping step ${configStep.step_name} (order ${configStep.step_order} > max ${maxStepToShow})`);
+            return;
           }
-          assignedWorker = actualStep.workers?.name;
-        } else {
-          console.log(`📝 Creating placeholder for step ${configStep.step_name}`);
-        }
 
-        // Get step-specific fields from configuration
-        const stepFieldsConfig = getStepFields(configStep.id);
-
-        // Get material and quantity values from step fields if the step exists
-        let materialAssignedValue: number | undefined;
-        let materialReceivedValue: number | undefined;
-        let quantityAssignedValue: number | undefined;
-        let quantityReceivedValue: number | undefined;
-
-        if (actualStep && stepFieldsConfig.length > 0) {
-          const materialAssignedField = stepFieldsConfig.find(field => 
-            field.field_name.toLowerCase().includes('material') && 
-            field.field_name.toLowerCase().includes('assigned')
-          );
-          const materialReceivedField = stepFieldsConfig.find(field => 
-            field.field_name.toLowerCase().includes('material') && 
-            field.field_name.toLowerCase().includes('received')
-          );
-          const quantityAssignedField = stepFieldsConfig.find(field => 
-            field.field_name.toLowerCase().includes('quantity') && 
-            field.field_name.toLowerCase().includes('assigned')
-          );
-          const quantityReceivedField = stepFieldsConfig.find(field => 
-            field.field_name.toLowerCase().includes('quantity') && 
-            field.field_name.toLowerCase().includes('received')
+          const actualStep = orderSteps.find(step => 
+            step.manufacturing_order_id === order.id && 
+            step.manufacturing_step_id === configStep.id
           );
 
-          if (materialAssignedField) {
-            const value = getStepValue(actualStep.id, materialAssignedField.field_id);
-            materialAssignedValue = value ? Number(value) : undefined;
-          }
-          if (materialReceivedField) {
-            const value = getStepValue(actualStep.id, materialReceivedField.field_id);
-            materialReceivedValue = value ? Number(value) : undefined;
-          }
-          if (quantityAssignedField) {
-            const value = getStepValue(actualStep.id, quantityAssignedField.field_id);
-            quantityAssignedValue = value ? Number(value) : undefined;
-          }
-          if (quantityReceivedField) {
-            const value = getStepValue(actualStep.id, quantityReceivedField.field_id);
-            quantityReceivedValue = value ? Number(value) : undefined;
-          }
-        }
+          let stepStatus: StepCardData['status'] = 'pending';
+          let progress = 0;
+          let assignedWorker = undefined;
 
-        const stepData: StepCardData = {
-          stepName: configStep.step_name,
-          stepOrder: configStep.step_order,
-          orderId: order.id,
-          orderNumber: order.order_number,
-          productName: order.product_name,
-          status: stepStatus,
-          progress: progress,
-          assignedWorker: assignedWorker,
-          estimatedDuration: configStep.estimated_duration_hours,
-          isJhalaiStep: configStep.step_name.toLowerCase() === 'jhalai',
-          quantityRequired: order.quantity_required,
-          priority: order.priority,
-          stepFields: stepFieldsConfig,
-          qcRequired: configStep.qc_required,
-          dueDate: order.due_date,
-          materialAssignedValue,
-          materialReceivedValue,
-          quantityAssignedValue,
-          quantityReceivedValue,
-        };
+          if (actualStep) {
+            console.log(`📌 Found actual step data for ${configStep.step_name}`);
+            switch (actualStep.status) {
+              case 'in_progress':
+                stepStatus = 'in_progress';
+                progress = actualStep.progress_percentage || 0;
+                break;
+              case 'completed':
+                stepStatus = 'completed';
+                progress = 100;
+                break;
+              case 'blocked':
+                stepStatus = 'blocked';
+                progress = actualStep.progress_percentage || 0;
+                break;
+              default:
+                stepStatus = 'pending';
+                progress = 0;
+            }
+            assignedWorker = actualStep.workers?.name;
+          } else {
+            console.log(`📝 Creating placeholder for step ${configStep.step_name}`);
+          }
 
-        const nodeId = `${order.id}-step-${configStep.step_order}`;
-        console.log(`✅ Adding step node: ${nodeId} - ${configStep.step_name}`);
-        
-        stepNodes.push({
-          id: nodeId,
-          type: 'stepCard',
-          position: { 
-            x: (stepIndex + 1) * 260 + 50, // Reduced spacing
-            y: orderIndex * 160 + 50 // Reduced spacing
-          },
-          data: stepData,
+          const stepFieldsConfig = getStepFields(configStep.id);
+
+          // Get material and quantity values
+          let materialAssignedValue: number | undefined;
+          let materialReceivedValue: number | undefined;
+          let quantityAssignedValue: number | undefined;
+          let quantityReceivedValue: number | undefined;
+
+          if (actualStep && stepFieldsConfig.length > 0) {
+            const materialAssignedField = stepFieldsConfig.find(field => 
+              field.field_name.toLowerCase().includes('material') && 
+              field.field_name.toLowerCase().includes('assigned')
+            );
+            const materialReceivedField = stepFieldsConfig.find(field => 
+              field.field_name.toLowerCase().includes('material') && 
+              field.field_name.toLowerCase().includes('received')
+            );
+            const quantityAssignedField = stepFieldsConfig.find(field => 
+              field.field_name.toLowerCase().includes('quantity') && 
+              field.field_name.toLowerCase().includes('assigned')
+            );
+            const quantityReceivedField = stepFieldsConfig.find(field => 
+              field.field_name.toLowerCase().includes('quantity') && 
+              field.field_name.toLowerCase().includes('received')
+            );
+
+            if (materialAssignedField) {
+              const value = getStepValue(actualStep.id, materialAssignedField.field_id);
+              materialAssignedValue = value ? Number(value) : undefined;
+            }
+            if (materialReceivedField) {
+              const value = getStepValue(actualStep.id, materialReceivedField.field_id);
+              materialReceivedValue = value ? Number(value) : undefined;
+            }
+            if (quantityAssignedField) {
+              const value = getStepValue(actualStep.id, quantityAssignedField.field_id);
+              quantityAssignedValue = value ? Number(value) : undefined;
+            }
+            if (quantityReceivedField) {
+              const value = getStepValue(actualStep.id, quantityReceivedField.field_id);
+              quantityReceivedValue = value ? Number(value) : undefined;
+            }
+          }
+
+          const stepData: StepCardData = {
+            stepName: configStep.step_name,
+            stepOrder: configStep.step_order,
+            orderId: order.id,
+            orderNumber: order.order_number,
+            productName: order.product_name,
+            status: stepStatus,
+            progress: progress,
+            assignedWorker: assignedWorker,
+            estimatedDuration: configStep.estimated_duration_hours,
+            isJhalaiStep: configStep.step_name.toLowerCase() === 'jhalai',
+            quantityRequired: order.quantity_required,
+            priority: order.priority,
+            stepFields: stepFieldsConfig,
+            qcRequired: configStep.qc_required,
+            dueDate: order.due_date,
+            materialAssignedValue,
+            materialReceivedValue,
+            quantityAssignedValue,
+            quantityReceivedValue,
+          };
+
+          const nodeId = `${order.id}-step-${configStep.step_order}`;
+          console.log(`✅ Creating step node: ${nodeId} - ${configStep.step_name}`);
+          
+          stepNodes.push({
+            id: nodeId,
+            type: 'stepCard',
+            position: { 
+              x: (stepIndex + 1) * 240 + 50,
+              y: orderIndex * 140 + 50
+            },
+            data: stepData,
+          });
         });
-      });
+      } else {
+        console.log('⚠️ No manufacturing steps available to process');
+      }
 
       nodeIndex++;
     });
 
     console.log(`🎯 Generated ${stepNodes.length} total nodes`);
-    console.log('Generated nodes:', stepNodes.map(n => ({ id: n.id, type: n.type, stepName: isStepCardData(n.data) ? n.data.stepName : 'Unknown' })));
     return stepNodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
 
-  // Generate edges to connect sequential steps - now defined after nodes
   const generateStepEdges = useMemo(() => {
     const edges: any[] = [];
     
@@ -547,6 +541,7 @@ const ProductionQueueView = () => {
   console.log('- Filtered nodes count:', filteredNodes.length);
   console.log('- Stats:', stats);
   console.log('- Loading states:', { ordersLoading, stepsLoading, valuesLoading });
+  console.log('- Component about to render with', filteredNodes.length, 'nodes');
 
   if (ordersLoading || stepsLoading || valuesLoading) {
     console.log('⏳ Showing loading state');
@@ -669,7 +664,7 @@ const ProductionQueueView = () => {
                 <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Production Queue Items</h3>
                 <p className="text-muted-foreground">
-                  {manufacturingOrders.length === 0 ? (
+                  {!manufacturingOrders || manufacturingOrders.length === 0 ? (
                     "Create some manufacturing orders to see them here."
                   ) : (
                     searchTerm || selectedStatus !== 'all' ? 
@@ -677,6 +672,12 @@ const ProductionQueueView = () => {
                     "No production steps are currently visible."
                   )}
                 </p>
+                <div className="mt-4 text-sm text-muted-foreground">
+                  <p>Debug info:</p>
+                  <p>Manufacturing Orders: {manufacturingOrders?.length || 0}</p>
+                  <p>Generated Nodes: {nodes.length}</p>
+                  <p>Filtered Nodes: {filteredNodes.length}</p>
+                </div>
               </div>
             </div>
           ) : (
