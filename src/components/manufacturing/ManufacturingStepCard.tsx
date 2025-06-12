@@ -42,8 +42,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px]" 
-    : "border-border bg-card shadow-md min-w-[280px]";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,13 +64,20 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             {data.stepName}
             {data.isJhalaiStep && (
               <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
-                Start
+                Jhalai
+              </Badge>
+            )}
+            {data.stepName === 'Manufacturing Order' && (
+              <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
+                Order
               </Badge>
             )}
           </CardTitle>
-          <Badge variant="secondary" className="text-xs">
-            Step {data.stepOrder}
-          </Badge>
+          {data.stepOrder > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              Step {data.stepOrder}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
@@ -102,7 +109,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         )}
 
         {/* Duration */}
-        {data.estimatedDuration && (
+        {data.estimatedDuration && data.estimatedDuration > 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>{data.estimatedDuration}h estimated</span>

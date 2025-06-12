@@ -26,6 +26,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
+import StepDetailsDialog from './StepDetailsDialog';
+import CreateJhalaiStepDialog, { JhalaiStepData } from './CreateJhalaiStepDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -57,12 +59,18 @@ const ProductionQueueView = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  
+  // Dialog states
+  const [selectedStepData, setSelectedStepData] = useState<StepCardData | null>(null);
+  const [isStepDetailsOpen, setIsStepDetailsOpen] = useState(false);
+  const [isJhalaiDialogOpen, setIsJhalaiDialogOpen] = useState(false);
 
   console.log('Manufacturing Orders:', manufacturingOrders);
   console.log('Order Steps:', orderSteps);
 
   // Define the standard manufacturing steps workflow
   const standardSteps = [
+    { name: 'Manufacturing Order', order: 0, duration: 0, isJhalai: false }, // Initial manufacturing order
     { name: 'Jhalai', order: 1, duration: 2, isJhalai: true },
     { name: 'Dhol', order: 2, duration: 3, isJhalai: false },
     { name: 'Stone Setting', order: 3, duration: 4, isJhalai: false },
@@ -85,21 +93,44 @@ const ProductionQueueView = () => {
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`Processing order ${order.id}:`, order);
       
-      standardSteps.forEach((standardStep, stepIndex) => {
-        // Find actual step data for this order and step
+      // First, add the manufacturing order card
+      const manufacturingOrderData: StepCardData = {
+        stepName: 'Manufacturing Order',
+        stepOrder: 0,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName: order.product_name,
+        status: order.status === 'pending' ? 'pending' : 'in_progress',
+        progress: order.status === 'completed' ? 100 : 0,
+        assignedWorker: undefined,
+        estimatedDuration: 0,
+        isJhalaiStep: false,
+      };
+
+      stepNodes.push({
+        id: `${order.id}-manufacturing-order`,
+        type: 'stepCard',
+        position: { 
+          x: 50, 
+          y: orderIndex * 250 + 50 
+        },
+        data: manufacturingOrderData,
+      });
+
+      // Then add actual manufacturing steps that have been started
+      standardSteps.slice(1).forEach((standardStep, stepIndex) => {
         const actualStep = orderSteps.find(step => 
           step.manufacturing_order_id === order.id && 
           step.manufacturing_steps?.step_name === standardStep.name
         );
 
-        console.log(`Step ${standardStep.name} for order ${order.id}:`, actualStep);
-
-        // Determine step status
-        let stepStatus: StepCardData['status'] = 'pending';
-        let progress = 0;
-        let assignedWorker = undefined;
-
         if (actualStep) {
+          console.log(`Step ${standardStep.name} for order ${order.id}:`, actualStep);
+
+          let stepStatus: StepCardData['status'] = 'pending';
+          let progress = 0;
+          let assignedWorker = undefined;
+
           switch (actualStep.status) {
             case 'in_progress':
               stepStatus = 'in_progress';
@@ -118,37 +149,35 @@ const ProductionQueueView = () => {
               progress = 0;
           }
           assignedWorker = actualStep.workers?.name;
+
+          const stepData: StepCardData = {
+            stepName: standardStep.name,
+            stepOrder: standardStep.order,
+            orderId: order.id,
+            orderNumber: order.order_number,
+            productName: order.product_name,
+            status: stepStatus,
+            progress: progress,
+            assignedWorker: assignedWorker,
+            estimatedDuration: standardStep.duration,
+            isJhalaiStep: standardStep.isJhalai,
+          };
+
+          const nodeId = `${order.id}-step-${standardStep.order}`;
+          
+          stepNodes.push({
+            id: nodeId,
+            type: 'stepCard',
+            position: { 
+              x: (stepIndex + 1) * 320 + 50, 
+              y: orderIndex * 250 + 50 
+            },
+            data: stepData,
+          });
         }
-
-        const stepData: StepCardData = {
-          stepName: standardStep.name,
-          stepOrder: standardStep.order,
-          orderId: order.id,
-          orderNumber: order.order_number,
-          productName: order.product_name,
-          status: stepStatus,
-          progress: progress,
-          assignedWorker: assignedWorker,
-          estimatedDuration: standardStep.duration,
-          isJhalaiStep: standardStep.isJhalai,
-        };
-
-        console.log(`Generated step node data:`, stepData);
-
-        const nodeId = `${order.id}-step-${standardStep.order}`;
-        
-        stepNodes.push({
-          id: nodeId,
-          type: 'stepCard',
-          position: { 
-            x: stepIndex * 320 + 50, 
-            y: orderIndex * 250 + 50 
-          },
-          data: stepData,
-        });
-
-        nodeIndex++;
       });
+
+      nodeIndex++;
     });
 
     return stepNodes;
@@ -159,14 +188,42 @@ const ProductionQueueView = () => {
     const edges: any[] = [];
     
     manufacturingOrders.forEach((order) => {
-      for (let i = 1; i < standardSteps.length; i++) {
-        const sourceId = `${order.id}-step-${i}`;
-        const targetId = `${order.id}-step-${i + 1}`;
+      // Connect manufacturing order to first actual step
+      const firstStepInOrder = nodes.find(node => 
+        node.id.startsWith(`${order.id}-step-`) && 
+        isStepCardData(node.data) && 
+        node.data.stepOrder === 1
+      );
+
+      if (firstStepInOrder) {
+        edges.push({
+          id: `${order.id}-manufacturing-to-first`,
+          source: `${order.id}-manufacturing-order`,
+          target: firstStepInOrder.id,
+          type: 'smoothstep',
+          style: { stroke: '#3b82f6', strokeWidth: 2 },
+          animated: true,
+        });
+      }
+
+      // Connect sequential steps within the same order
+      const orderStepNodes = nodes.filter(node => 
+        node.id.startsWith(`${order.id}-step-`) && 
+        isStepCardData(node.data)
+      ).sort((a, b) => {
+        const aData = a.data as StepCardData;
+        const bData = b.data as StepCardData;
+        return aData.stepOrder - bData.stepOrder;
+      });
+
+      for (let i = 0; i < orderStepNodes.length - 1; i++) {
+        const sourceNode = orderStepNodes[i];
+        const targetNode = orderStepNodes[i + 1];
         
         edges.push({
-          id: `${sourceId}-to-${targetId}`,
-          source: sourceId,
-          target: targetId,
+          id: `${sourceNode.id}-to-${targetNode.id}`,
+          source: sourceNode.id,
+          target: targetNode.id,
           type: 'smoothstep',
           style: { stroke: '#9ca3af', strokeWidth: 2 },
           animated: false,
@@ -175,7 +232,7 @@ const ProductionQueueView = () => {
     });
 
     return edges;
-  }, [manufacturingOrders]);
+  }, [manufacturingOrders, nodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(generateStepEdges);
@@ -197,11 +254,64 @@ const ProductionQueueView = () => {
   );
 
   const handleStepClick = useCallback((stepData: StepCardData) => {
+    setSelectedStepData(stepData);
+    setIsStepDetailsOpen(true);
+  }, []);
+
+  const handleMoveToJhalai = useCallback((stepData: StepCardData) => {
+    setSelectedStepData(stepData);
+    setIsJhalaiDialogOpen(true);
+  }, []);
+
+  const handleCreateJhalaiStep = useCallback((jhalaiStepData: JhalaiStepData) => {
+    console.log('Creating Jhalai step:', jhalaiStepData);
+    
+    // Create new Jhalai step node
+    const jhalaiNodeData: StepCardData = {
+      stepName: 'Jhalai',
+      stepOrder: 1,
+      orderId: jhalaiStepData.manufacturingOrderId,
+      orderNumber: selectedStepData?.orderNumber || '',
+      productName: selectedStepData?.productName || '',
+      status: 'in_progress',
+      progress: 0,
+      assignedWorker: jhalaiStepData.assignedWorkerName,
+      estimatedDuration: 2,
+      isJhalaiStep: true,
+    };
+
+    const newJhalaiNode: Node = {
+      id: `${jhalaiStepData.manufacturingOrderId}-step-1`,
+      type: 'stepCard',
+      position: { 
+        x: 370, 
+        y: nodes.find(n => n.id === `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`)?.position.y || 50
+      },
+      data: jhalaiNodeData,
+    };
+
+    // Add the new node
+    setNodes(prevNodes => [...prevNodes, newJhalaiNode]);
+
+    // Add edge from manufacturing order to Jhalai step
+    const newEdge = {
+      id: `${jhalaiStepData.manufacturingOrderId}-manufacturing-to-jhalai`,
+      source: `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`,
+      target: newJhalaiNode.id,
+      type: 'smoothstep',
+      style: { stroke: '#3b82f6', strokeWidth: 2 },
+      animated: true,
+    };
+
+    setEdges(prevEdges => [...prevEdges, newEdge]);
+
+    // TODO: Here you would typically make an API call to create the actual Jhalai step in the backend
+    
     toast({
-      title: "Step Selected",
-      description: `Viewing ${stepData.stepName} for ${stepData.productName} (${stepData.orderNumber})`,
+      title: 'Jhalai Step Created',
+      description: `Jhalai step created and assigned to ${jhalaiStepData.assignedWorkerName}`,
     });
-  }, [toast]);
+  }, [selectedStepData, setNodes, setEdges, toast]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
     toast({
@@ -259,136 +369,153 @@ const ProductionQueueView = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b bg-card p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Production Queue</h1>
-            <p className="text-muted-foreground">Visual workflow showing each manufacturing step as cards</p>
+    <>
+      <div className="h-screen flex flex-col bg-background">
+        {/* Header */}
+        <div className="border-b bg-card p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold">Production Queue</h1>
+              <p className="text-muted-foreground">Visual workflow showing each manufacturing step as cards</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm">
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Layout
+              </Button>
+              <Button variant="outline" size="sm">
+                <Filter className="w-4 h-4 mr-2" />
+                Filter
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-            <Button variant="outline" size="sm">
-              <LayoutGrid className="w-4 h-4 mr-2" />
-              Layout
-            </Button>
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-primary" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.total}</div>
+                    <div className="text-xs text-muted-foreground">Total Steps</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-yellow-500" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.inProgress}</div>
+                    <div className="text-xs text-muted-foreground">In Progress</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-green-500" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.completed}</div>
+                    <div className="text-xs text-muted-foreground">Completed</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-red-500" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.blocked}</div>
+                    <div className="text-xs text-muted-foreground">Blocked</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search steps, products or order numbers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-3 py-2 border rounded-md bg-background"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="blocked">Blocked</option>
+            </select>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-primary" />
-                <div>
-                  <div className="text-lg font-bold">{stats.total}</div>
-                  <div className="text-xs text-muted-foreground">Total Steps</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-yellow-500" />
-                <div>
-                  <div className="text-lg font-bold">{stats.inProgress}</div>
-                  <div className="text-xs text-muted-foreground">In Progress</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-green-500" />
-                <div>
-                  <div className="text-lg font-bold">{stats.completed}</div>
-                  <div className="text-xs text-muted-foreground">Completed</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-red-500" />
-                <div>
-                  <div className="text-lg font-bold">{stats.blocked}</div>
-                  <div className="text-xs text-muted-foreground">Blocked</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search steps, products or order numbers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
+        {/* Canvas */}
+        <div className="flex-1 relative">
+          <ReactFlow
+            nodes={filteredNodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            className="bg-background"
           >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="blocked">Blocked</option>
-          </select>
+            <Controls />
+            <MiniMap 
+              nodeColor={(node) => {
+                if (isStepCardData(node.data)) {
+                  if (node.data.isJhalaiStep) return '#3b82f6';
+                  switch (node.data.status) {
+                    case 'completed': return '#22c55e';
+                    case 'in_progress': return '#eab308';
+                    case 'blocked': return '#ef4444';
+                    default: return '#6b7280';
+                  }
+                }
+                return '#6b7280';
+              }}
+              className="bg-background border border-border"
+            />
+            <Background gap={20} size={1} />
+          </ReactFlow>
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={filteredNodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-background"
-        >
-          <Controls />
-          <MiniMap 
-            nodeColor={(node) => {
-              if (isStepCardData(node.data)) {
-                if (node.data.isJhalaiStep) return '#3b82f6';
-                switch (node.data.status) {
-                  case 'completed': return '#22c55e';
-                  case 'in_progress': return '#eab308';
-                  case 'blocked': return '#ef4444';
-                  default: return '#6b7280';
-                }
-              }
-              return '#6b7280';
-            }}
-            className="bg-background border border-border"
-          />
-          <Background gap={20} size={1} />
-        </ReactFlow>
-      </div>
-    </div>
+      {/* Dialogs */}
+      <StepDetailsDialog
+        open={isStepDetailsOpen}
+        onOpenChange={setIsStepDetailsOpen}
+        stepData={selectedStepData}
+        onMoveToJhalai={handleMoveToJhalai}
+      />
+
+      <CreateJhalaiStepDialog
+        open={isJhalaiDialogOpen}
+        onOpenChange={setIsJhalaiDialogOpen}
+        manufacturingStepData={selectedStepData}
+        onCreateJhalaiStep={handleCreateJhalaiStep}
+      />
+    </>
   );
 };
 
