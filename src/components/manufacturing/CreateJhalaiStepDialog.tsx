@@ -234,11 +234,11 @@ const CreateJhalaiStepDialog: React.FC<CreateJhalaiStepDialogProps> = ({
             )}
           </div>
 
-          {/* Required Raw Material Weight (Read-only) */}
+          {/* Required Material Weight (Read-only) */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Scale className="h-4 w-4" />
-              Required Raw Material Weight (Auto-calculated)
+              Required Material Weight (Auto-calculated)
             </Label>
             <Input
               value={`${requiredRawMaterialWeight}g`}
@@ -250,11 +250,11 @@ const CreateJhalaiStepDialog: React.FC<CreateJhalaiStepDialogProps> = ({
             </p>
           </div>
 
-          {/* Raw Material Weight Assigned */}
+          {/* Material Weight Assigned */}
           <div className="space-y-2">
             <Label htmlFor="weight" className="flex items-center gap-2">
               <Scale className="h-4 w-4" />
-              Raw Material Weight Assigned (g) *
+              Material Weight Assigned (g) *
             </Label>
             <Input
               id="weight"

@@ -42,8 +42,8 @@ export interface ManufacturingStepConfig {
 const defaultRequiredFields: RequiredField[] = [
   { id: 'worker', name: 'assignedWorker', label: 'Assigned Worker', type: 'worker', required: true },
   { id: 'dueDate', name: 'dueDate', label: 'Due Date', type: 'date', required: true },
-  { id: 'rawMaterialWeight', name: 'rawMaterialWeightAssigned', label: 'Raw Material Weight Assigned', type: 'number', required: false },
-  { id: 'rawMaterialReceived', name: 'rawMaterialReceived', label: 'Raw Material Received', type: 'number', required: false },
+  { id: 'rawMaterialWeight', name: 'rawMaterialWeightAssigned', label: 'Material Weight Assigned', type: 'number', required: false },
+  { id: 'rawMaterialReceived', name: 'rawMaterialReceived', label: 'Material Weight Received', type: 'number', required: false },
   { id: 'quantityAssigned', name: 'quantityAssigned', label: 'Quantity Assigned', type: 'number', required: false },
   { id: 'quantityReceived', name: 'quantityReceived', label: 'Quantity Received', type: 'number', required: false },
   { 
