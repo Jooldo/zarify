@@ -8,6 +8,7 @@ import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
 import RawMaterialManagement from "@/components/RawMaterialManagement";
 import FinishedGoodManagement from "@/components/FinishedGoodManagement";
+import ManufacturingSettings from "@/components/manufacturing/config/ManufacturingSettings";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -53,6 +54,10 @@ const Index = () => {
         return "Workers";
       case "activity":
         return "Activity Logs";
+      case "manufacturing-settings":
+        return "Manufacturing Settings";
+      case "general-settings":
+        return "General Settings";
       default:
         return "";
     }
@@ -73,12 +78,17 @@ const Index = () => {
     return isUserTab;
   };
 
+  const isSettingsTab = () => {
+    return ['manufacturing-settings', 'general-settings'].includes(activeTab);
+  };
+
   const pageTitle = getPageTitle();
 
   console.log('Rendering with conditions:', {
     isRawMaterialTab: isRawMaterialTab(),
     isFinishedGoodTab: isFinishedGoodTab(),
     isUsersTab: isUsersTab(),
+    isSettingsTab: isSettingsTab(),
     activeTab
   });
 
@@ -127,8 +137,22 @@ const Index = () => {
               </div>
             )}
 
+            {/* Settings Management - Full width with its own layout */}
+            {isSettingsTab() && (
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
+                {activeTab === 'manufacturing-settings' && (
+                  <ManufacturingSettings />
+                )}
+                {activeTab === 'general-settings' && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>General settings coming soon...</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Other tabs with optimized layout */}
-            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
+            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && (
               <div className="px-4 sm:px-6 lg:px-8 py-6">
                 {/* Header - only show if there's a title */}
                 {pageTitle && (

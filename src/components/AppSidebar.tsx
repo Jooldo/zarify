@@ -1,27 +1,6 @@
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigation } from "@/contexts/NavigationContext";
-import {
-  BarChart3, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  Settings, 
-  LogOut,
-  Activity,
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  Box,
-  Wrench,
-  ShoppingBag,
-  Building2,
-  Factory,
-  Home,
-  Eye,
-  EyeOff
-} from "lucide-react";
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -29,17 +8,37 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarSeparator,
-  useSidebar
+  SidebarHeader,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  Users, 
+  Settings,
+  LogOut,
+  ChevronRight,
+  Factory,
+  Hammer,
+  UserCheck,
+  FileText,
+  Truck,
+  Building2,
+  Boxes,
+  BarChart3,
+  ChevronDown,
+  Workflow
+} from "lucide-react";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -47,220 +46,258 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
-  const { signOut } = useAuth();
-  const { state, toggleSidebar } = useSidebar();
-  const { showPageHeaders, showTabNavigation, togglePageHeaders, toggleTabNavigation } = useNavigation();
-  const isCollapsed = state === "collapsed";
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    "raw-materials": true,
+    "finished-goods": true,
+    "manufacturing": true,
+    "users": true,
+    "settings": false,
+  });
 
-  const handleSignOut = async () => {
-    await signOut();
+  console.log("AppSidebar rendered with activeTab:", activeTab);
+
+  const toggleSection = (sectionId: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
   };
 
-  const menuItems = [
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  const menuSections = [
     {
-      title: "Dashboard",
-      value: "dashboard",
-      icon: BarChart3,
+      label: "Main",
+      items: [
+        {
+          title: "Dashboard",
+          icon: LayoutDashboard,
+          tab: "dashboard",
+          badge: null,
+        },
+        {
+          title: "Orders",
+          icon: ShoppingCart,
+          tab: "orders",
+          badge: null,
+        },
+      ],
     },
     {
-      title: "Orders",
-      value: "orders",
-      icon: ShoppingCart,
-    },
-    {
-      title: "Raw Material Management",
-      value: "raw-material-management",
-      icon: Layers,
-      subItems: [
+      label: "Raw Materials",
+      id: "raw-materials",
+      items: [
         {
           title: "Home",
-          value: "rm-home",
-          icon: Home,
+          icon: Factory,
+          tab: "rm-home",
         },
         {
-          title: "RM Inventory",
-          value: "rm-inventory",
+          title: "Inventory",
           icon: Package,
+          tab: "rm-inventory",
         },
         {
-          title: "RM Procurement",
-          value: "rm-procurement",
-          icon: ShoppingBag,
+          title: "Configuration",
+          icon: Settings,
+          tab: "rm-config",
+        },
+        {
+          title: "Procurement",
+          icon: Truck,
+          tab: "rm-procurement",
         },
         {
           title: "Suppliers",
-          value: "rm-suppliers",
           icon: Building2,
+          tab: "rm-suppliers",
         },
-        {
-          title: "RM Config",
-          value: "rm-config",
-          icon: Settings,
-        }
-      ]
+      ],
     },
     {
-      title: "Finished Good Management",
-      value: "finished-good-management",
-      icon: Box,
-      subItems: [
+      label: "Finished Goods",
+      id: "finished-goods",
+      items: [
         {
-          title: "FG Inventory",
-          value: "fg-inventory",
-          icon: Package,
+          title: "Inventory",
+          icon: Boxes,
+          tab: "fg-inventory",
         },
         {
-          title: "FG Manufacturing",
-          value: "fg-manufacturing",
-          icon: Factory,
+          title: "Configuration",
+          icon: Settings,
+          tab: "fg-config",
+        },
+        {
+          title: "Manufacturing",
+          icon: Hammer,
+          tab: "fg-manufacturing",
         },
         {
           title: "Analytics",
-          value: "fg-analytics",
           icon: BarChart3,
+          tab: "fg-analytics",
         },
         {
           title: "Workers",
-          value: "fg-workers",
+          icon: UserCheck,
+          tab: "fg-workers",
+        },
+      ],
+    },
+    {
+      label: "Users",
+      id: "users",
+      items: [
+        {
+          title: "Customers",
           icon: Users,
+          tab: "customers",
         },
         {
-          title: "FG Config",
-          value: "fg-config",
-          icon: Wrench,
-        }
-      ]
+          title: "Suppliers",
+          icon: Building2,
+          tab: "suppliers",
+        },
+        {
+          title: "Workers",
+          icon: UserCheck,
+          tab: "workers",
+        },
+      ],
     },
     {
-      title: "Users",
-      value: "users",
-      icon: Users,
+      label: "System",
+      items: [
+        {
+          title: "Activity Logs",
+          icon: FileText,
+          tab: "activity",
+        },
+      ],
     },
     {
-      title: "Activity Logs",
-      value: "activity",
-      icon: Activity,
+      label: "Settings",
+      id: "settings",
+      items: [
+        {
+          title: "Manufacturing",
+          icon: Workflow,
+          tab: "manufacturing-settings",
+        },
+        {
+          title: "General",
+          icon: Settings,
+          tab: "general-settings",
+        },
+      ],
     },
   ];
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center justify-between px-3 pt-3 pb-1">
-          {!isCollapsed && (
-            <div className="flex items-center gap-3">
-              <img 
-                src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=40&h=40&fit=crop&crop=center" 
-                alt="Zarify Logo" 
-                className="w-8 h-8 rounded-lg object-cover"
-              />
-              <h1 className="text-2xl font-bold text-sidebar-foreground">Zarify</h1>
-            </div>
-          )}
-          {isCollapsed && (
-            <img 
-              src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=40&h=40&fit=crop&crop=center" 
-              alt="Zarify Logo" 
-              className="w-6 h-6 rounded object-cover mx-auto"
-            />
-          )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="ml-auto h-6 w-6" 
-            onClick={toggleSidebar}
-          >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+    <Sidebar className="border-r">
+      <SidebarHeader className="border-b p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Package className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Jewelry ERP</span>
+            <span className="text-xs text-muted-foreground">Manufacturing</span>
+          </div>
         </div>
       </SidebarHeader>
-      
-      <SidebarContent>
-        <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.value}>
-                  <SidebarMenuButton 
-                    isActive={activeTab === item.value || 
-                      (item.subItems && item.subItems.some(sub => activeTab === sub.value))}
-                    onClick={() => {
-                      if (!item.subItems) {
-                        onTabChange(item.value);
-                      }
-                    }}
-                    tooltip={isCollapsed ? item.title : undefined}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {!isCollapsed && <span>{item.title}</span>}
-                  </SidebarMenuButton>
-                  
-                  {item.subItems && !isCollapsed && (
-                    <SidebarMenuSub>
-                      {item.subItems.map(subItem => (
-                        <SidebarMenuSubItem key={subItem.value}>
-                          <SidebarMenuSubButton 
-                            isActive={activeTab === subItem.value}
-                            onClick={() => onTabChange(subItem.value)}
-                          >
-                            <subItem.icon className="h-4 w-4 mr-2" />
-                            <span>{subItem.title}</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
-        {/* View Controls Section */}
-        <SidebarSeparator />
-        <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel>View Controls</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={togglePageHeaders}
-                  tooltip={isCollapsed ? (showPageHeaders ? "Hide Headers" : "Show Headers") : undefined}
-                >
-                  {showPageHeaders ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {!isCollapsed && <span>{showPageHeaders ? "Hide Headers" : "Show Headers"}</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={toggleTabNavigation}
-                  tooltip={isCollapsed ? (showTabNavigation ? "Hide Tab Nav" : "Show Tab Nav") : undefined}
-                >
-                  {showTabNavigation ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {!isCollapsed && <span>{showTabNavigation ? "Hide Tab Navigation" : "Show Tab Navigation"}</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      
-      <SidebarFooter>
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={handleSignOut} 
-                className="text-red-500 hover:text-red-600"
-                tooltip={isCollapsed ? "Sign Out" : undefined}
+      <SidebarContent>
+        {menuSections.map((section) => (
+          <SidebarGroup key={section.label}>
+            {section.id ? (
+              <Collapsible 
+                open={openSections[section.id]} 
+                onOpenChange={() => toggleSection(section.id!)}
               >
-                <LogOut className="h-4 w-4" />
-                {!isCollapsed && <span>Sign Out</span>}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent rounded-md p-2">
+                    <span>{section.label}</span>
+                    {openSections[section.id] ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {section.items.map((item) => (
+                        <SidebarMenuItem key={item.tab}>
+                          <SidebarMenuButton 
+                            onClick={() => onTabChange(item.tab)}
+                            isActive={activeTab === item.tab}
+                            className="w-full"
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                            {item.badge && (
+                              <Badge variant="secondary" className="ml-auto">
+                                {item.badge}
+                              </Badge>
+                            )}
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            ) : (
+              <>
+                <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {section.items.map((item) => (
+                      <SidebarMenuItem key={item.tab}>
+                        <SidebarMenuButton 
+                          onClick={() => onTabChange(item.tab)}
+                          isActive={activeTab === item.tab}
+                          className="w-full"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                          {item.badge && (
+                            <Badge variant="secondary" className="ml-auto">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </>
+            )}
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+
+      <SidebarFooter className="border-t p-4">
+        <Button 
+          variant="ghost" 
+          onClick={handleSignOut}
+          className="w-full justify-start text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
