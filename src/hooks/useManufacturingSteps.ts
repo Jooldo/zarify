@@ -113,6 +113,12 @@ export const useManufacturingSteps = () => {
       stepId: string; 
       fields: any[] 
     }) => {
+      // Get merchant ID first
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
       // First, delete existing fields for this step
       const { error: deleteError } = await supabase
         .from('manufacturing_step_fields')
@@ -131,6 +137,7 @@ export const useManufacturingSteps = () => {
           field_type: field.type,
           is_required: field.required,
           field_options: field.options || null,
+          merchant_id: merchantId,
         }));
 
         const { error: insertError } = await supabase
