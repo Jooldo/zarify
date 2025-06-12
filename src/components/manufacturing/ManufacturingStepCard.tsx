@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Clock, User, Package } from 'lucide-react';
 
-export interface StepCardData {
+export interface StepCardData extends Record<string, unknown> {
   stepName: string;
   stepOrder: number;
   orderId: string;

@@ -36,7 +36,18 @@ const nodeTypes = {
   stepCard: ManufacturingStepCard,
 };
 
-type StepFlowNode = Node<StepCardData>;
+// Helper function to check if data is StepCardData
+const isStepCardData = (data: Record<string, unknown>): data is StepCardData => {
+  return (
+    typeof data.stepName === 'string' &&
+    typeof data.stepOrder === 'number' &&
+    typeof data.orderId === 'string' &&
+    typeof data.orderNumber === 'string' &&
+    typeof data.productName === 'string' &&
+    typeof data.status === 'string' &&
+    typeof data.progress === 'number'
+  );
+};
 
 const ProductionQueueView = () => {
   const { toast } = useToast();
@@ -60,7 +71,7 @@ const ProductionQueueView = () => {
   ];
 
   // Generate step nodes from manufacturing orders
-  const generateStepNodes = useMemo((): StepFlowNode[] => {
+  const generateStepNodes = useMemo((): Node[] => {
     console.log('Generating step nodes...');
     
     if (!manufacturingOrders.length) {
@@ -68,7 +79,7 @@ const ProductionQueueView = () => {
       return [];
     }
 
-    const stepNodes: StepFlowNode[] = [];
+    const stepNodes: Node[] = [];
     let nodeIndex = 0;
 
     manufacturingOrders.forEach((order, orderIndex) => {
@@ -134,7 +145,7 @@ const ProductionQueueView = () => {
             y: orderIndex * 250 + 50 
           },
           data: stepData,
-        } as StepFlowNode);
+        });
 
         nodeIndex++;
       });
@@ -201,14 +212,17 @@ const ProductionQueueView = () => {
   }, [toast]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    const nodeData = node.data as StepCardData;
-    handleStepClick(nodeData);
+    if (isStepCardData(node.data)) {
+      handleStepClick(node.data);
+    }
   }, [handleStepClick]);
 
   // Filter nodes based on search and status
   const filteredNodes = useMemo(() => {
     return nodes.filter(node => {
-      const nodeData = node.data as StepCardData;
+      if (!isStepCardData(node.data)) return false;
+      
+      const nodeData = node.data;
       const matchesSearch = nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -219,12 +233,12 @@ const ProductionQueueView = () => {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const nodeData = nodes.map(n => n.data as StepCardData);
+    const validNodeData = nodes.map(n => n.data).filter(isStepCardData);
     return {
-      total: nodeData.length,
-      inProgress: nodeData.filter(n => n.status === 'in_progress').length,
-      completed: nodeData.filter(n => n.status === 'completed').length,
-      blocked: nodeData.filter(n => n.status === 'blocked').length,
+      total: validNodeData.length,
+      inProgress: validNodeData.filter(n => n.status === 'in_progress').length,
+      completed: validNodeData.filter(n => n.status === 'completed').length,
+      blocked: validNodeData.filter(n => n.status === 'blocked').length,
     };
   }, [nodes]);
 
@@ -358,14 +372,16 @@ const ProductionQueueView = () => {
           <Controls />
           <MiniMap 
             nodeColor={(node) => {
-              const nodeData = node.data as StepCardData;
-              if (nodeData?.isJhalaiStep) return '#3b82f6';
-              switch (nodeData?.status) {
-                case 'completed': return '#22c55e';
-                case 'in_progress': return '#eab308';
-                case 'blocked': return '#ef4444';
-                default: return '#6b7280';
+              if (isStepCardData(node.data)) {
+                if (node.data.isJhalaiStep) return '#3b82f6';
+                switch (node.data.status) {
+                  case 'completed': return '#22c55e';
+                  case 'in_progress': return '#eab308';
+                  case 'blocked': return '#ef4444';
+                  default: return '#6b7280';
+                }
               }
+              return '#6b7280';
             }}
             className="bg-background border border-border"
           />
