@@ -58,38 +58,72 @@ export const useManufacturingOrders = () => {
   const { data: manufacturingOrders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['manufacturing-orders'],
     queryFn: async () => {
-      // Use raw SQL query since types aren't generated yet
-      const { data, error } = await supabase
-        .from('manufacturing_orders' as any)
-        .select(`
-          *,
-          product_configs (
-            id,
-            product_code,
-            category,
-            subcategory,
-            product_config_materials (
-              id,
-              raw_material_id,
-              quantity_required,
-              unit,
-              raw_materials (
-                id,
-                name,
-                type,
-                unit
-              )
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
+      try {
+        // First, get manufacturing orders
+        const { data: orders, error: ordersError } = await supabase
+          .from('manufacturing_orders' as any)
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching manufacturing orders:', error);
+        if (ordersError) {
+          console.error('Error fetching manufacturing orders:', ordersError);
+          throw ordersError;
+        }
+
+        if (!orders || orders.length === 0) {
+          return [];
+        }
+
+        // Get unique product config IDs
+        const productConfigIds = orders
+          .map(order => order.product_config_id)
+          .filter(id => id);
+
+        let productConfigsMap: Record<string, any> = {};
+
+        // Fetch product configs if we have any IDs
+        if (productConfigIds.length > 0) {
+          const { data: productConfigs, error: configsError } = await supabase
+            .from('product_configs')
+            .select(`
+              id,
+              product_code,
+              category,
+              subcategory,
+              product_config_materials (
+                id,
+                raw_material_id,
+                quantity_required,
+                unit,
+                raw_materials (
+                  id,
+                  name,
+                  type,
+                  unit
+                )
+              )
+            `)
+            .in('id', productConfigIds);
+
+          if (!configsError && productConfigs) {
+            productConfigsMap = productConfigs.reduce((acc, config) => {
+              acc[config.id] = config;
+              return acc;
+            }, {} as Record<string, any>);
+          }
+        }
+
+        // Combine orders with their product configs
+        const ordersWithConfigs = orders.map(order => ({
+          ...order,
+          product_configs: order.product_config_id ? productConfigsMap[order.product_config_id] : null
+        }));
+
+        return ordersWithConfigs as ManufacturingOrder[];
+      } catch (error) {
+        console.error('Error in manufacturing orders query:', error);
         throw error;
       }
-
-      return data as ManufacturingOrder[];
     },
   });
 
