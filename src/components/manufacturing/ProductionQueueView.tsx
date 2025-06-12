@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -285,7 +286,17 @@ const ProductionQueueView = () => {
   const handleCreateJhalaiStep = useCallback((jhalaiStepData: JhalaiStepData) => {
     console.log('Creating Jhalai step:', jhalaiStepData);
     
-    // Create new Jhalai step node
+    // Find the manufacturing order position
+    const manufacturingOrderNode = nodes.find(n => 
+      n.id === `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`
+    );
+    
+    if (!manufacturingOrderNode) {
+      console.error('Manufacturing order node not found');
+      return;
+    }
+
+    // Create new Jhalai step node data
     const jhalaiNodeData: StepCardData = {
       stepName: 'Jhalai',
       stepOrder: 1,
@@ -308,14 +319,26 @@ const ProductionQueueView = () => {
       id: `${jhalaiStepData.manufacturingOrderId}-step-1`,
       type: 'stepCard',
       position: { 
-        x: 390, 
-        y: nodes.find(n => n.id === `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`)?.position.y || 50
+        x: manufacturingOrderNode.position.x + 340, 
+        y: manufacturingOrderNode.position.y
       },
       data: jhalaiNodeData,
     };
 
     // Add the new node
-    setNodes(prevNodes => [...prevNodes, newJhalaiNode]);
+    setNodes(prevNodes => {
+      // Check if node already exists
+      const existingNodeIndex = prevNodes.findIndex(n => n.id === newJhalaiNode.id);
+      if (existingNodeIndex >= 0) {
+        // Update existing node
+        const updatedNodes = [...prevNodes];
+        updatedNodes[existingNodeIndex] = newJhalaiNode;
+        return updatedNodes;
+      } else {
+        // Add new node
+        return [...prevNodes, newJhalaiNode];
+      }
+    });
 
     // Add edge from manufacturing order to Jhalai step
     const newEdge = {
@@ -327,7 +350,19 @@ const ProductionQueueView = () => {
       animated: true,
     };
 
-    setEdges(prevEdges => [...prevEdges, newEdge]);
+    setEdges(prevEdges => {
+      // Check if edge already exists
+      const existingEdgeIndex = prevEdges.findIndex(e => e.id === newEdge.id);
+      if (existingEdgeIndex >= 0) {
+        // Update existing edge
+        const updatedEdges = [...prevEdges];
+        updatedEdges[existingEdgeIndex] = newEdge;
+        return updatedEdges;
+      } else {
+        // Add new edge
+        return [...prevEdges, newEdge];
+      }
+    });
 
     // TODO: Here you would typically make an API call to create the actual Jhalai step in the backend
     
@@ -335,7 +370,7 @@ const ProductionQueueView = () => {
       title: 'Jhalai Step Created',
       description: `Jhalai step created and assigned to ${jhalaiStepData.assignedWorkerName}`,
     });
-  }, [selectedStepData, setNodes, setEdges, toast]);
+  }, [selectedStepData, setNodes, setEdges, toast, nodes]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
     console.log('Add step clicked for:', stepData);

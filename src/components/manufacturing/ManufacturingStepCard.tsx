@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -165,9 +166,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             <Badge className={getStatusColor(data.status)}>
               {data.status.replace('_', ' ').toUpperCase()}
             </Badge>
-            <span className="text-xs text-muted-foreground">{data.progress}%</span>
+            {data.progress > 0 && (
+              <span className="text-xs text-muted-foreground">{data.progress}%</span>
+            )}
           </div>
-          <Progress value={data.progress} className="h-2" />
+          {data.progress > 0 && (
+            <Progress value={data.progress} className="h-2" />
+          )}
         </div>
 
         {/* Worker Assignment */}
