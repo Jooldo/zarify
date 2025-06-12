@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -41,7 +42,6 @@ import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 interface NodeData {
   label: string;
   stepData: StepCardData;
-  [key: string]: unknown;
 }
 
 // Define proper node interface
@@ -49,17 +49,26 @@ interface FlowNode extends Node {
   data: NodeData;
 }
 
+// Helper function to safely check if data is NodeData
+const isNodeData = (data: any): data is NodeData => {
+  return data && 
+         typeof data === 'object' && 
+         typeof data.label === 'string' && 
+         data.stepData &&
+         typeof data.stepData === 'object';
+};
+
 // Helper function to check if data is StepCardData
-const isStepCardData = (data: Record<string, unknown>): data is StepCardData => {
-  return (
-    typeof data.stepName === 'string' &&
-    typeof data.stepOrder === 'number' &&
-    typeof data.orderId === 'string' &&
-    typeof data.orderNumber === 'string' &&
-    typeof data.productName === 'string' &&
-    typeof data.status === 'string' &&
-    typeof data.progress === 'number'
-  );
+const isStepCardData = (data: any): data is StepCardData => {
+  return data &&
+         typeof data === 'object' &&
+         typeof data.stepName === 'string' &&
+         typeof data.stepOrder === 'number' &&
+         typeof data.orderId === 'string' &&
+         typeof data.orderNumber === 'string' &&
+         typeof data.productName === 'string' &&
+         typeof data.status === 'string' &&
+         typeof data.progress === 'number';
 };
 
 const ProductionQueueView = () => {
@@ -94,10 +103,6 @@ const ProductionQueueView = () => {
   const getStepFields = (stepId: string) => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
-
-  // Create initial nodes and edges with proper typing - use empty arrays as defaults
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Create nodes data with proper spacing and positioning
   const nodesData = useMemo((): FlowNode[] => {
@@ -148,7 +153,7 @@ const ProductionQueueView = () => {
         data: { 
           label: `${order.order_number} - ${order.product_name}`,
           stepData: manufacturingOrderData
-        },
+        } as NodeData,
         style: {
           background: '#ffffff',
           border: '2px solid #3b82f6',
@@ -228,7 +233,7 @@ const ProductionQueueView = () => {
             data: { 
               label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
               stepData: stepData
-            },
+            } as NodeData,
             style: {
               background: stepStatus === 'completed' ? '#dcfce7' : 
                          stepStatus === 'in_progress' ? '#fef3c7' : 
@@ -247,7 +252,11 @@ const ProductionQueueView = () => {
     console.log(`🎯 Generated ${nodes.length} total nodes`);
     console.log('📊 Nodes data:', nodes);
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields]);
+
+  // Create initial nodes and edges with proper typing
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(nodesData);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Update nodes when data changes
   React.useEffect(() => {
@@ -368,12 +377,10 @@ const ProductionQueueView = () => {
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('Node clicked:', node);
-    // Fix the type casting issue by properly checking the node data
-    if (node.data && typeof node.data === 'object' && node.data !== null) {
-      const nodeData = node.data as Record<string, unknown>;
-      if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
-        handleStepClick(nodeData.stepData);
-      }
+    
+    // Safely handle node data with proper type checking
+    if (node.data && isNodeData(node.data) && isStepCardData(node.data.stepData)) {
+      handleStepClick(node.data.stepData);
     }
   }, [handleStepClick]);
 
@@ -390,19 +397,12 @@ const ProductionQueueView = () => {
     }
     
     const filtered = nodes.filter(node => {
-      // Fix the type casting issue by properly checking the node data
-      if (!node.data || typeof node.data !== 'object' || node.data === null) {
+      if (!isNodeData(node.data) || !isStepCardData(node.data.stepData)) {
         console.log('❌ Node failed data check:', node.id);
         return false;
       }
       
-      const nodeData = node.data as Record<string, unknown>;
-      if (!('stepData' in nodeData) || !nodeData.stepData || !isStepCardData(nodeData.stepData)) {
-        console.log('❌ Node failed StepCardData check:', node.id);
-        return false;
-      }
-      
-      const stepData = nodeData.stepData;
+      const stepData = node.data.stepData;
       const matchesSearch = searchTerm === '' || 
                            stepData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            stepData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -434,15 +434,7 @@ const ProductionQueueView = () => {
   // Calculate statistics
   const stats = useMemo(() => {
     const validNodeData = filteredNodes
-      .map(n => {
-        if (n.data && typeof n.data === 'object' && n.data !== null) {
-          const nodeData = n.data as Record<string, unknown>;
-          if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
-            return nodeData.stepData;
-          }
-        }
-        return null;
-      })
+      .map(n => isNodeData(n.data) && isStepCardData(n.data.stepData) ? n.data.stepData : null)
       .filter((data): data is StepCardData => data !== null);
     
     return {
@@ -645,17 +637,14 @@ const ProductionQueueView = () => {
               <Controls />
               <MiniMap 
                 nodeColor={(node) => {
-                  if (node.data && typeof node.data === 'object' && node.data !== null) {
-                    const nodeData = node.data as Record<string, unknown>;
-                    if ('stepData' in nodeData && nodeData.stepData && isStepCardData(nodeData.stepData)) {
-                      const stepData = nodeData.stepData;
-                      if (stepData.isJhalaiStep) return '#3b82f6';
-                      switch (stepData.status) {
-                        case 'completed': return '#22c55e';
-                        case 'in_progress': return '#eab308';
-                        case 'blocked': return '#ef4444';
-                        default: return '#6b7280';
-                      }
+                  if (isNodeData(node.data) && isStepCardData(node.data.stepData)) {
+                    const stepData = node.data.stepData;
+                    if (stepData.isJhalaiStep) return '#3b82f6';
+                    switch (stepData.status) {
+                      case 'completed': return '#22c55e';
+                      case 'in_progress': return '#eab308';
+                      case 'blocked': return '#ef4444';
+                      default: return '#6b7280';
                     }
                   }
                   return '#6b7280';
