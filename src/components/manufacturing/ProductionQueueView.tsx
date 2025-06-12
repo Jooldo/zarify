@@ -37,7 +37,7 @@ const nodeTypes = {
   productNode: ProductNode,
 };
 
-interface ProductNodeData {
+interface ProductNodeData extends Record<string, unknown> {
   productName: string;
   orderId: string;
   orderNumber: string;
@@ -50,6 +50,8 @@ interface ProductNodeData {
   quantity: number;
 }
 
+type ProductFlowNode = Node<ProductNodeData>;
+
 const ProductionQueueView = () => {
   const { toast } = useToast();
   const { manufacturingOrders, loading: ordersLoading } = useManufacturingOrders();
@@ -60,7 +62,7 @@ const ProductionQueueView = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   // Generate nodes from manufacturing orders
-  const generateProductNodes = useMemo((): Node[] => {
+  const generateProductNodes = useMemo((): ProductFlowNode[] => {
     if (!manufacturingOrders.length || !orderSteps.length) return [];
 
     return manufacturingOrders.map((order, index) => {
@@ -104,7 +106,7 @@ const ProductionQueueView = () => {
           y: Math.floor(index / 4) * 200 + 100 
         },
         data: nodeData,
-      };
+      } as ProductFlowNode;
     });
   }, [manufacturingOrders, orderSteps, workers]);
 
