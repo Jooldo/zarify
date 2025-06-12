@@ -71,7 +71,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         .sort((a, b) => a.step_order - b.step_order)[0];
       
       if (firstStep) {
-        return `Move to ${firstStep.step_name}`;
+        return `Start ${firstStep.step_name}`;
       }
       return 'Start Production';
     }
@@ -97,6 +97,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
+  console.log(`Step ${data.stepName} for order ${data.orderId}: stepExists=${stepExists}, currentOrderStep=`, currentOrderStep);
+
   // Get field values for display
   const getDisplayFieldValues = () => {
     if (!currentOrderStep || !data.stepFields) return [];
@@ -116,11 +118,10 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         value: displayValue,
         type: field.field_type
       };
-    });
+    }).filter(field => field.value !== 'Not set'); // Only show fields with values
   };
 
   const requiredFields = data.stepFields?.filter(field => field.is_required) || [];
-  const workerFields = data.stepFields?.filter(field => field.field_type === 'worker') || [];
   const displayFieldValues = getDisplayFieldValues();
 
   const cardClassName = data.isJhalaiStep 
@@ -136,9 +137,11 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // Only show CTA for Manufacturing Order OR if step doesn't exist yet
+  // FIXED: Show CTA only for Manufacturing Order OR if step doesn't exist yet
   const shouldShowCTA = (data.stepName === 'Manufacturing Order' && data.status === 'pending') ||
     (data.stepOrder > 0 && !stepExists);
+
+  console.log(`CTA logic for ${data.stepName}: shouldShowCTA=${shouldShowCTA}, stepName=${data.stepName}, status=${data.status}, stepOrder=${data.stepOrder}, stepExists=${stepExists}`);
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
@@ -214,8 +217,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Display Field Values */}
-        {displayFieldValues.length > 0 && (
+        {/* Display Field Values - FIXED: Only show if step exists and has values */}
+        {stepExists && displayFieldValues.length > 0 && (
           <div className="text-xs">
             <span className="text-muted-foreground font-medium">Step Details:</span>
             <div className="mt-1 space-y-1">
@@ -301,16 +304,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Worker Field Requirements - only show if step doesn't exist yet */}
-        {!stepExists && workerFields.length > 0 && data.status === 'pending' && !data.assignedWorker && (
-          <div className="text-xs bg-blue-50 p-2 rounded border border-blue-200">
-            <span className="text-blue-700 font-medium">Worker Assignment Required</span>
-            <div className="text-blue-600 mt-1">
-              {workerFields.length} worker field(s) need to be assigned
-            </div>
-          </div>
-        )}
-
         {/* Duration */}
         {data.estimatedDuration && data.estimatedDuration > 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -319,7 +312,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Add Step Button - Only show if shouldShowCTA is true */}
+        {/* Add Step Button - FIXED: Only show if shouldShowCTA is true */}
         {shouldShowCTA && (
           <Button 
             variant="outline" 

@@ -36,10 +36,6 @@ import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
-const nodeTypes = {
-  stepCard: ManufacturingStepCard,
-};
-
 // Helper function to check if data is StepCardData
 const isStepCardData = (data: Record<string, unknown>): data is StepCardData => {
   return (
@@ -331,16 +327,28 @@ const ProductionQueueView = () => {
   const handleStepClick = useCallback((stepData: StepCardData) => {
     console.log('Step clicked:', stepData);
     
-    // If it's a manufacturing order or a step that doesn't exist yet, open details
+    // If it's a manufacturing order, open details
     if (stepData.stepName === 'Manufacturing Order' || stepData.stepOrder === 0) {
       setSelectedStepData(stepData);
       setIsStepDetailsOpen(true);
     } else {
-      // For actual manufacturing steps, open update dialog
-      setSelectedStepData(stepData);
-      setIsUpdateStepDialogOpen(true);
+      // For actual manufacturing steps, check if they exist in the database
+      const currentOrderStep = orderSteps.find(step => 
+        step.manufacturing_order_id === stepData.orderId && 
+        step.manufacturing_steps?.step_order === stepData.stepOrder
+      );
+      
+      if (currentOrderStep) {
+        // Step exists, open update dialog
+        setSelectedStepData(stepData);
+        setIsUpdateStepDialogOpen(true);
+      } else {
+        // Step doesn't exist yet, open details dialog
+        setSelectedStepData(stepData);
+        setIsStepDetailsOpen(true);
+      }
     }
-  }, []);
+  }, [orderSteps]);
 
   const handleCreateStep = useCallback((stepData: any) => {
     console.log('Creating step:', stepData);
@@ -394,6 +402,19 @@ const ProductionQueueView = () => {
       }
     }
   }, [manufacturingSteps, toast]);
+
+  // FIXED: Memoize nodeTypes to prevent React Flow warning
+  const nodeTypes = useMemo(() => ({
+    stepCard: (props: any) => (
+      <ManufacturingStepCard
+        {...props}
+        manufacturingSteps={manufacturingSteps}
+        orderSteps={orderSteps}
+        onAddStep={handleAddStep}
+        onStepClick={handleStepClick}
+      />
+    ),
+  }), [manufacturingSteps, orderSteps, handleAddStep, handleStepClick]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (isStepCardData(node.data)) {
@@ -467,6 +488,7 @@ const ProductionQueueView = () => {
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <div className="border-b bg-card p-4">
+          {/* ... keep existing code (header content) */}
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">Production Queue</h1>
@@ -570,17 +592,7 @@ const ProductionQueueView = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
-            nodeTypes={{
-              stepCard: (props) => (
-                <ManufacturingStepCard
-                  {...props}
-                  manufacturingSteps={manufacturingSteps}
-                  orderSteps={orderSteps}
-                  onAddStep={handleAddStep}
-                  onStepClick={handleStepClick}
-                />
-              ),
-            }}
+            nodeTypes={nodeTypes}
             fitView
             className="bg-background"
           >
