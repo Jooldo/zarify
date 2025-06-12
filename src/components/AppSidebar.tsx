@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -47,7 +46,7 @@ interface AppSidebarProps {
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     "raw-materials": true,
     "finished-goods": true,
@@ -67,7 +66,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
 
   const handleSignOut = async () => {
     try {
-      await logout();
+      await signOut();
       navigate('/auth');
     } catch (error) {
       console.error('Sign out error:', error);

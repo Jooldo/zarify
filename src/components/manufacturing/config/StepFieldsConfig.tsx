@@ -142,7 +142,6 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
                         id={`required-${field.id}`}
                         checked={selectedField?.required || false}
                         onCheckedChange={(required) => handleRequiredToggle(field.id, required)}
-                        size="sm"
                       />
                     </div>
                   )}
