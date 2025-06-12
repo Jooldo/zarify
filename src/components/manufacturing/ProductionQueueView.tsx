@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -59,12 +60,28 @@ const ProductionQueueView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
+  // Add debugging logs
+  console.log('Manufacturing Orders:', manufacturingOrders);
+  console.log('Order Steps:', orderSteps);
+  console.log('Orders Loading:', ordersLoading);
+  console.log('Steps Loading:', stepsLoading);
+
   // Generate nodes from manufacturing orders
   const generateProductNodes = useMemo((): ProductFlowNode[] => {
-    if (!manufacturingOrders.length || !orderSteps.length) return [];
+    console.log('Generating nodes...');
+    
+    // Don't require orderSteps to exist - this was the bug
+    if (!manufacturingOrders.length) {
+      console.log('No manufacturing orders found');
+      return [];
+    }
+
+    console.log(`Processing ${manufacturingOrders.length} manufacturing orders`);
 
     return manufacturingOrders.map((order, index) => {
-      // Find current step for this order
+      console.log(`Processing order ${order.id}:`, order);
+      
+      // Find current step for this order (if any)
       const currentOrderStep = orderSteps.find(step => 
         step.manufacturing_order_id === order.id && 
         step.status === 'in_progress'
@@ -72,6 +89,8 @@ const ProductionQueueView = () => {
         step.manufacturing_order_id === order.id && 
         step.status === 'pending'
       );
+
+      console.log(`Current step for order ${order.id}:`, currentOrderStep);
 
       const assignedWorker = currentOrderStep?.workers?.name;
       const currentStepName = currentOrderStep?.manufacturing_steps?.step_name || 'Not Started';
@@ -96,6 +115,8 @@ const ProductionQueueView = () => {
         quantity: order.quantity_required,
       };
 
+      console.log(`Generated node data for order ${order.id}:`, nodeData);
+
       return {
         id: order.id,
         type: 'productNode',
@@ -113,6 +134,7 @@ const ProductionQueueView = () => {
 
   // Update nodes when data changes
   React.useEffect(() => {
+    console.log('Updating nodes with generated data:', generateProductNodes);
     setNodes(generateProductNodes);
   }, [generateProductNodes, setNodes]);
 
@@ -150,6 +172,9 @@ const ProductionQueueView = () => {
       delayed: nodeData.filter(n => n.dueDate && new Date(n.dueDate) < new Date() && n.status !== 'completed').length,
     };
   }, [nodes]);
+
+  console.log('Final filtered nodes:', filteredNodes);
+  console.log('Stats:', stats);
 
   if (ordersLoading || stepsLoading) {
     return (
