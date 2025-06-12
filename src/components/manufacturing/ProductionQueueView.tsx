@@ -38,15 +38,10 @@ import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
-// Define proper node data interface
-interface NodeData {
+// Define proper node data interface that extends Record<string, unknown>
+interface NodeData extends Record<string, unknown> {
   label: string;
   stepData: StepCardData;
-}
-
-// Define proper node interface
-interface FlowNode extends Node {
-  data: NodeData;
 }
 
 // Helper function to safely check if data is NodeData
@@ -105,7 +100,7 @@ const ProductionQueueView = () => {
   };
 
   // Create nodes data with proper spacing and positioning
-  const nodesData = useMemo((): FlowNode[] => {
+  const nodesData = useMemo((): Node[] => {
     console.log('🎯 GENERATING NODES DATA...');
     
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
@@ -113,7 +108,7 @@ const ProductionQueueView = () => {
       return [];
     }
 
-    const nodes: FlowNode[] = [];
+    const nodes: Node[] = [];
     const VERTICAL_SPACING = 300; // Space between rows
     const HORIZONTAL_SPACING = 400; // Space between columns
 
@@ -143,6 +138,11 @@ const ProductionQueueView = () => {
       const orderNodeId = `order-${order.id}`;
       console.log(`✅ Creating Manufacturing Order node: ${orderNodeId}`);
 
+      const nodeData: NodeData = { 
+        label: `${order.order_number} - ${order.product_name}`,
+        stepData: manufacturingOrderData
+      };
+
       nodes.push({
         id: orderNodeId,
         type: 'default',
@@ -150,10 +150,7 @@ const ProductionQueueView = () => {
           x: 50, 
           y: yPosition
         },
-        data: { 
-          label: `${order.order_number} - ${order.product_name}`,
-          stepData: manufacturingOrderData
-        } as NodeData,
+        data: nodeData,
         style: {
           background: '#ffffff',
           border: '2px solid #3b82f6',
@@ -223,6 +220,11 @@ const ProductionQueueView = () => {
           const stepNodeId = `step-${order.id}-${firstStep.step_order}`;
           console.log(`✅ Creating step node: ${stepNodeId} - ${firstStep.step_name}`);
           
+          const stepNodeData: NodeData = { 
+            label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
+            stepData: stepData
+          };
+          
           nodes.push({
             id: stepNodeId,
             type: 'default',
@@ -230,10 +232,7 @@ const ProductionQueueView = () => {
               x: 50 + HORIZONTAL_SPACING,
               y: yPosition
             },
-            data: { 
-              label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
-              stepData: stepData
-            } as NodeData,
+            data: stepNodeData,
             style: {
               background: stepStatus === 'completed' ? '#dcfce7' : 
                          stepStatus === 'in_progress' ? '#fef3c7' : 
@@ -255,7 +254,7 @@ const ProductionQueueView = () => {
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields]);
 
   // Create initial nodes and edges with proper typing
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(nodesData);
+  const [nodes, setNodes, onNodesChange] = useNodesState(nodesData);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Update nodes when data changes
