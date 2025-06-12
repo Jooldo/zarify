@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -151,36 +152,45 @@ export const useManufacturingOrders = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: CreateManufacturingOrderData) => {
-      console.log('Creating manufacturing order with data:', orderData);
+      console.log('🚀 Starting manufacturing order creation with data:', orderData);
       
       try {
         // Get merchant ID first
+        console.log('📍 Getting merchant ID...');
         const { data: merchantId, error: merchantError } = await supabase
           .rpc('get_user_merchant_id');
 
         if (merchantError) {
-          console.error('Error getting merchant ID:', merchantError);
-          throw merchantError;
+          console.error('❌ Error getting merchant ID:', merchantError);
+          throw new Error(`Failed to get merchant ID: ${merchantError.message}`);
         }
 
-        console.log('Merchant ID:', merchantId);
+        console.log('✅ Merchant ID retrieved:', merchantId);
 
         // Get current user
-        const { data: user } = await supabase.auth.getUser();
+        const { data: user, error: userError } = await supabase.auth.getUser();
         
-        // Get next order number from the improved database function
+        if (userError) {
+          console.error('❌ Error getting user:', userError);
+          throw new Error(`Failed to get user: ${userError.message}`);
+        }
+
+        console.log('✅ User retrieved:', user?.user?.id);
+        
+        // Get next order number
+        console.log('🔢 Generating order number...');
         const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
           'get_next_manufacturing_order_number'
         );
 
         if (orderNumberError) {
-          console.error('Error getting order number:', orderNumberError);
-          throw orderNumberError;
+          console.error('❌ Error getting order number:', orderNumberError);
+          throw new Error(`Failed to generate order number: ${orderNumberError.message}`);
         }
 
-        console.log('Generated order number:', orderNumber);
+        console.log('✅ Generated order number:', orderNumber);
 
-        // Create the manufacturing order with the generated number
+        // Create the manufacturing order
         const orderToInsert = {
           order_number: orderNumber,
           product_name: orderData.product_name,
@@ -195,28 +205,28 @@ export const useManufacturingOrders = () => {
           status: 'pending' as const
         };
 
-        console.log('Inserting order:', orderToInsert);
+        console.log('💾 Inserting order:', orderToInsert);
 
-        const { data: order, error } = await supabase
+        const { data: order, error: insertError } = await supabase
           .from('manufacturing_orders')
           .insert(orderToInsert)
           .select()
           .single();
 
-        if (error) {
-          console.error('Error creating manufacturing order:', error);
-          throw error;
+        if (insertError) {
+          console.error('❌ Error inserting manufacturing order:', insertError);
+          throw new Error(`Failed to create order: ${insertError.message}`);
         }
 
-        console.log('Created order successfully:', order);
+        console.log('🎉 Order created successfully:', order);
         return order;
       } catch (error) {
-        console.error('Failed to create manufacturing order:', error);
+        console.error('💥 Failed to create manufacturing order:', error);
         throw error;
       }
     },
     onSuccess: (data) => {
-      console.log('Order creation successful:', data);
+      console.log('✨ Order creation mutation successful:', data);
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
       toast({
         title: 'Success',
@@ -224,7 +234,7 @@ export const useManufacturingOrders = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Error creating manufacturing order:', error);
+      console.error('🚨 Order creation mutation failed:', error);
       
       let errorMessage = 'Failed to create manufacturing order';
       
@@ -232,6 +242,8 @@ export const useManufacturingOrders = () => {
         errorMessage = 'Unable to generate unique order number. Please try again.';
       } else if (error.message?.includes('invalid input syntax for type uuid')) {
         errorMessage = 'Invalid product configuration selected. Please check your selection.';
+      } else if (error.message?.includes('FOR UPDATE is not allowed')) {
+        errorMessage = 'Database configuration issue. Please contact support.';
       } else if (error.message) {
         errorMessage = error.message;
       }
