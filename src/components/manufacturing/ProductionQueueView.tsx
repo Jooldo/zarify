@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -9,6 +10,7 @@ import {
   useEdgesState,
   Connection,
   Node,
+  Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,6 +37,18 @@ import { useWorkers } from '@/hooks/useWorkers';
 import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
+
+// Define proper node data interface
+interface NodeData {
+  label: string;
+  stepData: StepCardData;
+  [key: string]: unknown;
+}
+
+// Define proper node interface
+interface FlowNode extends Node {
+  data: NodeData;
+}
 
 // Helper function to check if data is StepCardData
 const isStepCardData = (data: Record<string, unknown>): data is StepCardData => {
@@ -82,8 +96,16 @@ const ProductionQueueView = () => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
 
-  // Create nodes data
-  const nodesData = useMemo(() => {
+  // Create initial nodes and edges with proper typing
+  const initialNodes: FlowNode[] = [];
+  const initialEdges: Edge[] = [];
+
+  // Initialize ReactFlow state with proper defaults
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
+
+  // Create nodes data with proper spacing and positioning
+  const nodesData = useMemo((): FlowNode[] => {
     console.log('🎯 GENERATING NODES DATA...');
     
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
@@ -91,10 +113,14 @@ const ProductionQueueView = () => {
       return [];
     }
 
-    const nodes: any[] = [];
+    const nodes: FlowNode[] = [];
+    const VERTICAL_SPACING = 300; // Space between rows
+    const HORIZONTAL_SPACING = 400; // Space between columns
 
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`📦 Processing order ${orderIndex + 1}: ${order.order_number}`);
+      
+      const yPosition = orderIndex * VERTICAL_SPACING + 100;
       
       // Manufacturing Order Node
       const manufacturingOrderData: StepCardData = {
@@ -122,19 +148,19 @@ const ProductionQueueView = () => {
         type: 'default',
         position: { 
           x: 50, 
-          y: orderIndex * 250 + 50
+          y: yPosition
         },
         data: { 
           label: `${order.order_number} - ${order.product_name}`,
           stepData: manufacturingOrderData
-        },
+        } as NodeData,
         style: {
           background: '#ffffff',
-          border: '2px solid #e2e8f0',
+          border: '2px solid #3b82f6',
           borderRadius: '8px',
-          padding: '10px',
-          width: 280,
-          fontSize: '12px',
+          padding: '15px',
+          width: 300,
+          fontSize: '14px',
         },
       });
 
@@ -201,21 +227,21 @@ const ProductionQueueView = () => {
             id: stepNodeId,
             type: 'default',
             position: { 
-              x: 400,
-              y: orderIndex * 250 + 50
+              x: 50 + HORIZONTAL_SPACING,
+              y: yPosition
             },
             data: { 
               label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
               stepData: stepData
-            },
+            } as NodeData,
             style: {
               background: stepStatus === 'completed' ? '#dcfce7' : 
                          stepStatus === 'in_progress' ? '#fef3c7' : 
                          stepStatus === 'blocked' ? '#fee2e2' : '#f8fafc',
               border: '2px solid #e2e8f0',
               borderRadius: '8px',
-              padding: '10px',
-              width: 200,
+              padding: '15px',
+              width: 250,
               fontSize: '12px',
             },
           });
@@ -228,9 +254,6 @@ const ProductionQueueView = () => {
     return nodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
   // Update nodes when data changes
   React.useEffect(() => {
     console.log('🔄 Setting nodes with new data. Nodes count:', nodesData.length);
@@ -241,7 +264,7 @@ const ProductionQueueView = () => {
   // Create edges between connected nodes
   React.useEffect(() => {
     if (nodesData.length > 0) {
-      const newEdges: any[] = [];
+      const newEdges: Edge[] = [];
       
       manufacturingOrders?.forEach((order) => {
         const orderNodeId = `order-${order.id}`;
@@ -350,8 +373,11 @@ const ProductionQueueView = () => {
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('Node clicked:', node);
-    if (node.data?.stepData && isStepCardData(node.data.stepData)) {
-      handleStepClick(node.data.stepData);
+    if (node.data && typeof node.data === 'object' && 'stepData' in node.data) {
+      const nodeData = node.data as Record<string, unknown>;
+      if (nodeData.stepData && isStepCardData(nodeData.stepData)) {
+        handleStepClick(nodeData.stepData);
+      }
     }
   }, [handleStepClick]);
 
@@ -595,12 +621,14 @@ const ProductionQueueView = () => {
               onNodeClick={onNodeClick}
               fitView
               fitViewOptions={{
-                padding: 0.2,
+                padding: 0.1,
                 includeHiddenNodes: false,
+                minZoom: 0.5,
+                maxZoom: 1.5,
               }}
               className="bg-background"
               defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-              minZoom={0.1}
+              minZoom={0.2}
               maxZoom={2}
             >
               <Controls />
