@@ -326,6 +326,51 @@ export type Database = {
           },
         ]
       }
+      manufacturing_order_step_values: {
+        Row: {
+          created_at: string
+          field_id: string
+          field_value: string
+          id: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          field_value: string
+          id?: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          field_value?: string
+          id?: string
+          manufacturing_order_step_id?: string
+          merchant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_step_value_manufacturing_order_step_id_fkey"
+            columns: ["manufacturing_order_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_step_values_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manufacturing_order_steps: {
         Row: {
           assigned_worker_id: string | null

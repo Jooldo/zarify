@@ -27,11 +27,13 @@ import {
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import StepDetailsDialog from './StepDetailsDialog';
 import CreateStepDialog from './CreateStepDialog';
+import UpdateStepDialog from './UpdateStepDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
-import { useManufacturingSteps, ManufacturingStep } from '@/hooks/useManufacturingSteps';
+import { useManufacturingSteps, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const nodeTypes = {
@@ -57,6 +59,7 @@ const ProductionQueueView = () => {
   const { manufacturingSteps, orderSteps, stepFields, isLoading: stepsLoading } = useManufacturingSteps();
   const { workers } = useWorkers();
   const { createStep, isCreating } = useCreateManufacturingStep();
+  const { isLoading: valuesLoading } = useManufacturingStepValues();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -65,6 +68,7 @@ const ProductionQueueView = () => {
   const [selectedStepData, setSelectedStepData] = useState<StepCardData | null>(null);
   const [isStepDetailsOpen, setIsStepDetailsOpen] = useState(false);
   const [isCreateStepDialogOpen, setIsCreateStepDialogOpen] = useState(false);
+  const [isUpdateStepDialogOpen, setIsUpdateStepDialogOpen] = useState(false);
   const [targetStep, setTargetStep] = useState<ManufacturingStep | null>(null);
 
   console.log('Manufacturing Orders:', manufacturingOrders);
@@ -326,8 +330,16 @@ const ProductionQueueView = () => {
 
   const handleStepClick = useCallback((stepData: StepCardData) => {
     console.log('Step clicked:', stepData);
-    setSelectedStepData(stepData);
-    setIsStepDetailsOpen(true);
+    
+    // If it's a manufacturing order or a step that doesn't exist yet, open details
+    if (stepData.stepName === 'Manufacturing Order' || stepData.stepOrder === 0) {
+      setSelectedStepData(stepData);
+      setIsStepDetailsOpen(true);
+    } else {
+      // For actual manufacturing steps, open update dialog
+      setSelectedStepData(stepData);
+      setIsUpdateStepDialogOpen(true);
+    }
   }, []);
 
   const handleCreateStep = useCallback((stepData: any) => {
@@ -414,10 +426,30 @@ const ProductionQueueView = () => {
     };
   }, [nodes]);
 
+  // Get current order step and previous steps for update dialog
+  const getCurrentOrderStep = () => {
+    if (!selectedStepData) return null;
+    return orderSteps.find(step => 
+      step.manufacturing_order_id === selectedStepData.orderId && 
+      step.manufacturing_steps?.step_order === selectedStepData.stepOrder
+    ) || null;
+  };
+
+  const getPreviousSteps = () => {
+    if (!selectedStepData) return [];
+    return orderSteps
+      .filter(step => 
+        step.manufacturing_order_id === selectedStepData.orderId && 
+        step.manufacturing_steps && 
+        step.manufacturing_steps.step_order < selectedStepData.stepOrder
+      )
+      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+  };
+
   console.log('Final filtered step nodes:', filteredNodes);
   console.log('Step Stats:', stats);
 
-  if (ordersLoading || stepsLoading) {
+  if (ordersLoading || stepsLoading || valuesLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -543,6 +575,7 @@ const ProductionQueueView = () => {
                 <ManufacturingStepCard
                   {...props}
                   manufacturingSteps={manufacturingSteps}
+                  orderSteps={orderSteps}
                   onAddStep={handleAddStep}
                   onStepClick={handleStepClick}
                 />
@@ -586,6 +619,15 @@ const ProductionQueueView = () => {
         targetStep={targetStep}
         stepFields={targetStep ? getStepFields(targetStep.id) : []}
         onCreateStep={handleCreateStep}
+      />
+
+      <UpdateStepDialog
+        open={isUpdateStepDialogOpen}
+        onOpenChange={setIsUpdateStepDialogOpen}
+        stepData={selectedStepData}
+        currentOrderStep={getCurrentOrderStep()}
+        stepFields={selectedStepData ? getStepFields(manufacturingSteps.find(s => s.step_name === selectedStepData.stepName)?.id || '') : []}
+        previousSteps={getPreviousSteps()}
       />
     </>
   );

@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { ManufacturingStepField, ManufacturingStep } from '@/hooks/useManufacturingSteps';
+import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useWorkers } from '@/hooks/useWorkers';
 
 export interface RawMaterial {
   name: string;
@@ -37,6 +39,7 @@ export interface StepCardData extends Record<string, unknown> {
 interface ManufacturingStepCardProps {
   data: StepCardData;
   manufacturingSteps?: ManufacturingStep[];
+  orderSteps?: ManufacturingOrderStep[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
 }
@@ -44,9 +47,13 @@ interface ManufacturingStepCardProps {
 const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({ 
   data, 
   manufacturingSteps = [],
+  orderSteps = [],
   onAddStep,
   onStepClick 
 }) => {
+  const { getStepValue } = useManufacturingStepValues();
+  const { workers } = useWorkers();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-gray-100 text-gray-800';
@@ -59,7 +66,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   const getNextStepName = () => {
     if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
-      // Get the first step from manufacturing steps configuration
       const firstStep = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
@@ -67,10 +73,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       if (firstStep) {
         return `Move to ${firstStep.step_name}`;
       }
-      return 'Start Production'; // Fallback
+      return 'Start Production';
     }
     
-    // For other steps, get the next step in sequence
     const currentStepOrder = data.stepOrder;
     const nextStep = manufacturingSteps
       .filter(step => step.is_active)
@@ -83,9 +88,40 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return `Start ${data.stepName}`;
   };
 
-  // Get required fields for this step
+  // Get the current order step from the database
+  const currentOrderStep = orderSteps.find(step => 
+    step.manufacturing_order_id === data.orderId && 
+    step.manufacturing_steps?.step_order === data.stepOrder
+  );
+
+  // Check if this step already exists in the database
+  const stepExists = currentOrderStep !== undefined;
+
+  // Get field values for display
+  const getDisplayFieldValues = () => {
+    if (!currentOrderStep || !data.stepFields) return [];
+    
+    return data.stepFields.map(field => {
+      const value = getStepValue(currentOrderStep.id, field.field_id);
+      let displayValue = value || 'Not set';
+      
+      // Format worker field to show worker name
+      if (field.field_type === 'worker' && value) {
+        const worker = workers.find(w => w.id === value);
+        displayValue = worker?.name || value;
+      }
+      
+      return {
+        label: field.field_label,
+        value: displayValue,
+        type: field.field_type
+      };
+    });
+  };
+
   const requiredFields = data.stepFields?.filter(field => field.is_required) || [];
   const workerFields = data.stepFields?.filter(field => field.field_type === 'worker') || [];
+  const displayFieldValues = getDisplayFieldValues();
 
   const cardClassName = data.isJhalaiStep 
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[320px] cursor-pointer hover:shadow-xl transition-shadow" 
@@ -100,11 +136,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // Determine if CTA button should be shown
-  const shouldShowCTA = data.status === 'pending' && (
-    data.stepName === 'Manufacturing Order' || 
-    (data.stepOrder > 0 && data.status === 'pending')
-  );
+  // Only show CTA for Manufacturing Order OR if step doesn't exist yet
+  const shouldShowCTA = (data.stepName === 'Manufacturing Order' && data.status === 'pending') ||
+    (data.stepOrder > 0 && !stepExists);
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
@@ -180,6 +214,26 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
+        {/* Display Field Values */}
+        {displayFieldValues.length > 0 && (
+          <div className="text-xs">
+            <span className="text-muted-foreground font-medium">Step Details:</span>
+            <div className="mt-1 space-y-1">
+              {displayFieldValues.slice(0, 3).map((field, index) => (
+                <div key={index} className="flex justify-between bg-green-50 px-2 py-1 rounded text-xs border border-green-200">
+                  <span className="font-medium text-green-700">{field.label}:</span>
+                  <span className="text-green-600">{field.value}</span>
+                </div>
+              ))}
+              {displayFieldValues.length > 3 && (
+                <div className="text-muted-foreground text-xs">
+                  +{displayFieldValues.length - 3} more fields
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Raw Materials Summary */}
         {data.rawMaterials && data.rawMaterials.length > 0 && (
           <div className="text-xs">
@@ -200,8 +254,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Required Fields Display */}
-        {requiredFields.length > 0 && (
+        {/* Required Fields Display - only show if step doesn't exist yet */}
+        {!stepExists && requiredFields.length > 0 && (
           <div className="text-xs">
             <span className="text-muted-foreground flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
@@ -247,8 +301,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Worker Field Requirements */}
-        {workerFields.length > 0 && data.status === 'pending' && !data.assignedWorker && (
+        {/* Worker Field Requirements - only show if step doesn't exist yet */}
+        {!stepExists && workerFields.length > 0 && data.status === 'pending' && !data.assignedWorker && (
           <div className="text-xs bg-blue-50 p-2 rounded border border-blue-200">
             <span className="text-blue-700 font-medium">Worker Assignment Required</span>
             <div className="text-blue-600 mt-1">

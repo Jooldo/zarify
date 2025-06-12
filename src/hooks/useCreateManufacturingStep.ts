@@ -55,6 +55,22 @@ export const useCreateManufacturingStep = () => {
 
         if (insertError) throw insertError;
 
+        // Store field values
+        if (data.fieldValues && Object.keys(data.fieldValues).length > 0) {
+          const fieldValuesToInsert = Object.entries(data.fieldValues).map(([fieldId, value]) => ({
+            manufacturing_order_step_id: step.id,
+            field_id: fieldId,
+            field_value: typeof value === 'string' ? value : JSON.stringify(value),
+            merchant_id: merchantId,
+          }));
+
+          const { error: valuesError } = await supabase
+            .from('manufacturing_order_step_values')
+            .insert(fieldValuesToInsert);
+
+          if (valuesError) throw valuesError;
+        }
+
         console.log('Manufacturing step created successfully:', step);
         return step;
       } catch (error) {
@@ -65,6 +81,7 @@ export const useCreateManufacturingStep = () => {
     onSuccess: (data) => {
       console.log('Step creation successful:', data);
       queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
       toast({
         title: 'Success',
