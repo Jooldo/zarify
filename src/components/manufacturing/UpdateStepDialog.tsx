@@ -1,20 +1,18 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Package, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Progress } from '@/components/ui/progress';
+import { useWorkers } from '@/hooks/useWorkers';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { StepCardData } from './ManufacturingStepCard';
 import { ManufacturingStepField, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
-import { useWorkers } from '@/hooks/useWorkers';
-import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
-import { useToast } from '@/hooks/use-toast';
 
 interface UpdateStepDialogProps {
   open: boolean;
@@ -31,204 +29,128 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   stepData,
   currentOrderStep,
   stepFields,
-  previousSteps,
+  previousSteps
 }) => {
   const { workers } = useWorkers();
+  const { getStepValue } = useManufacturingStepValues();
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
-  const { toast } = useToast();
+  
+  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [status, setStatus] = useState<string>('');
+  const [progress, setProgress] = useState<number>(0);
 
-  // Initialize form state
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState('');
-  const [assignedWorker, setAssignedWorker] = useState('');
-  const [progress, setProgress] = useState(0);
-  const [notes, setNotes] = useState('');
-
-  // Initialize form when dialog opens and data is available
   useEffect(() => {
-    if (open && stepData && currentOrderStep) {
-      console.log('Initializing UpdateStepDialog form');
+    if (currentOrderStep && stepFields.length > 0) {
+      const initialValues: Record<string, any> = {};
       
-      // Initialize basic fields
-      setStatus(currentOrderStep.status || 'pending');
-      setAssignedWorker(currentOrderStep.assigned_worker_id || 'unassigned');
-      setProgress(currentOrderStep.progress_percentage || 0);
-      setNotes(currentOrderStep.notes || '');
-      
-      // Initialize custom field values
-      const initialValues: Record<string, string> = {};
       stepFields.forEach(field => {
-        initialValues[field.field_id] = ''; // Default empty, will be populated from server if available
+        const savedValue = getStepValue(currentOrderStep.id, field.field_id);
+        if (savedValue) {
+          try {
+            initialValues[field.field_id] = field.field_type === 'worker' || field.field_type === 'text' || field.field_type === 'number' 
+              ? savedValue 
+              : JSON.parse(savedValue);
+          } catch {
+            initialValues[field.field_id] = savedValue;
+          }
+        }
       });
-      setFormValues(initialValues);
-    }
-  }, [open, stepData, currentOrderStep, stepFields]);
 
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setFormValues({});
-      setStatus('');
-      setAssignedWorker('');
-      setProgress(0);
-      setNotes('');
+      setFieldValues(initialValues);
+      setStatus(currentOrderStep.status);
+      setProgress(currentOrderStep.progress_percentage || 0);
     }
-  }, [open]);
+  }, [currentOrderStep, stepFields, getStepValue]);
 
-  const handleFieldChange = useCallback((fieldId: string, value: string) => {
-    setFormValues(prev => ({
+  const handleFieldChange = (fieldId: string, value: any) => {
+    setFieldValues(prev => ({
       ...prev,
       [fieldId]: value
     }));
-  }, []);
+  };
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!currentOrderStep || !stepData) {
-      toast({
-        title: 'Error',
-        description: 'Missing step data',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleSubmit = () => {
+    if (!currentOrderStep) return;
 
-    try {
-      const workerValue = assignedWorker === 'unassigned' ? undefined : assignedWorker;
-      
-      await updateStep({
-        stepId: currentOrderStep.id,
-        status,
-        progress,
-        fieldValues: {
-          ...formValues,
-          worker: workerValue,
-          notes: notes || undefined,
-        },
-      });
+    updateStep({
+      stepId: currentOrderStep.id,
+      fieldValues,
+      status,
+      progress
+    });
 
-      toast({
-        title: 'Success',
-        description: 'Step updated successfully',
-      });
-      
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error updating step:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update step',
-        variant: 'destructive',
-      });
-    }
-  }, [currentOrderStep, stepData, status, progress, notes, formValues, assignedWorker, updateStep, toast, onOpenChange]);
+    onOpenChange(false);
+  };
 
-  if (!stepData || !currentOrderStep) {
-    return null;
-  }
+  const renderField = (field: ManufacturingStepField) => {
+    const value = fieldValues[field.field_id] || '';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (field.field_type) {
+      case 'worker':
+        return (
+          <Select value={value} onValueChange={(val) => handleFieldChange(field.field_id, val)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select worker" />
+            </SelectTrigger>
+            <SelectContent>
+              {workers.map(worker => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      case 'text':
+        return (
+          <Input
+            type="text"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      default:
+        return (
+          <Input
+            type="text"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
     }
   };
+
+  if (!stepData || !currentOrderStep) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Update Manufacturing Step</DialogTitle>
+          <DialogTitle>Update {stepData.stepName} - {stepData.orderNumber}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Panel - Step Information */}
+        <div className="space-y-6">
+          {/* Current Step Information */}
           <div className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{stepData.stepName}</CardTitle>
-                <div className="flex gap-2">
-                  <Badge variant="secondary">Step {stepData.stepOrder}</Badge>
-                  <Badge className={getStatusColor(status)}>
-                    {status.replace('_', ' ').toUpperCase()}
-                  </Badge>
-                  {stepData.qcRequired && (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      QC Required
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  <span>{stepData.orderNumber} - {stepData.productName}</span>
-                </div>
-                
-                {stepData.dueDate && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>Due: {format(new Date(stepData.dueDate), 'MMM dd, yyyy')}</span>
-                  </div>
-                )}
-
-                {stepData.estimatedDuration && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span>Est. Duration: {stepData.estimatedDuration}h</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Previous Steps */}
-            {previousSteps.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Previous Steps</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {previousSteps.map((step) => (
-                      <div key={step.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            Step {step.manufacturing_steps?.step_order}
-                          </Badge>
-                          <span className="text-sm">{step.manufacturing_steps?.step_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {step.status === 'completed' ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <AlertCircle className="w-4 h-4 text-yellow-500" />
-                          )}
-                          <Badge className={getStatusColor(step.status || 'pending')} variant="secondary">
-                            {(step.status || 'pending').replace('_', ' ')}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Panel - Update Form */}
-          <div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+            <h3 className="text-lg font-semibold">Current Step Details</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
@@ -238,117 +160,95 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Worker Assignment */}
-              <div className="space-y-2">
-                <Label htmlFor="worker">Assigned Worker</Label>
-                <Select value={assignedWorker} onValueChange={setAssignedWorker}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select worker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">No worker assigned</SelectItem>
-                    {workers.map((worker) => (
-                      <SelectItem key={worker.id} value={worker.id}>
-                        {worker.name} - {worker.role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Progress */}
-              <div className="space-y-2">
-                <Label htmlFor="progress">Progress (%)</Label>
-                <Input
-                  id="progress"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={progress}
-                  onChange={(e) => setProgress(Number(e.target.value))}
-                />
-              </div>
-
-              {/* Custom Fields */}
-              {stepFields.map((field) => (
-                <div key={field.field_id} className="space-y-2">
-                  <Label htmlFor={field.field_id}>
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  
-                  {field.field_type === 'text' && (
-                    <Input
-                      id={field.field_id}
-                      value={formValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      required={field.is_required}
-                    />
-                  )}
-                  
-                  {field.field_type === 'number' && (
-                    <Input
-                      id={field.field_id}
-                      type="number"
-                      value={formValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      required={field.is_required}
-                    />
-                  )}
-                  
-                  {field.field_type === 'date' && (
-                    <Input
-                      id={field.field_id}
-                      type="date"
-                      value={formValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      required={field.is_required}
-                    />
-                  )}
-                  
-                  {field.field_type === 'multiselect' && field.field_options && (
-                    <Select
-                      value={formValues[field.field_id] || ''}
-                      onValueChange={(value) => handleFieldChange(field.field_id, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(field.field_options) && field.field_options.map((option: string, index: number) => (
-                          <SelectItem key={index} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+              
+              <div>
+                <Label>Progress (%)</Label>
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={progress}
+                    onChange={(e) => setProgress(Number(e.target.value))}
+                  />
+                  <Progress value={progress} className="h-2" />
                 </div>
-              ))}
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes or comments..."
-                  rows={3}
-                />
               </div>
+            </div>
 
-              {/* Submit Buttons */}
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={isUpdating} className="flex-1">
-                  {isUpdating ? 'Updating...' : 'Update Step'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
+            {/* Step Fields */}
+            {stepFields.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="font-medium">Step Configuration</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {stepFields.map(field => (
+                    <div key={field.id} className="space-y-2">
+                      <Label>
+                        {field.field_label}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {renderField(field)}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </form>
+            )}
+          </div>
+
+          {/* Previous Steps */}
+          {previousSteps.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Previous Steps</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Step</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Worker</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previousSteps.map(step => (
+                    <TableRow key={step.id}>
+                      <TableCell className="font-medium">
+                        {step.manufacturing_steps?.step_name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          step.status === 'completed' ? 'default' :
+                          step.status === 'in_progress' ? 'secondary' :
+                          step.status === 'blocked' ? 'destructive' : 'outline'
+                        }>
+                          {step.status.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{step.workers?.name || 'Not assigned'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
+                          <span className="text-xs">{step.progress_percentage || 0}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isUpdating}>
+              {isUpdating ? 'Updating...' : 'Update Step'}
+            </Button>
           </div>
         </div>
       </DialogContent>
