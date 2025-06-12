@@ -82,21 +82,21 @@ const ProductionQueueView = () => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
 
-  // Create initial nodes
-  const initialNodes = useMemo((): Node[] => {
-    console.log('🎯 GENERATING INITIAL NODES...');
+  // Create nodes data
+  const nodesData = useMemo(() => {
+    console.log('🎯 GENERATING NODES DATA...');
     
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
       console.log('❌ No manufacturing orders - returning empty array');
       return [];
     }
 
-    const nodes: Node[] = [];
+    const nodes: any[] = [];
 
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`📦 Processing order ${orderIndex + 1}: ${order.order_number}`);
       
-      // Manufacturing Order Card
+      // Manufacturing Order Node
       const manufacturingOrderData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -114,20 +114,31 @@ const ProductionQueueView = () => {
         dueDate: order.due_date,
       };
 
-      const orderNodeId = `${order.id}-manufacturing-order`;
+      const orderNodeId = `order-${order.id}`;
       console.log(`✅ Creating Manufacturing Order node: ${orderNodeId}`);
 
       nodes.push({
         id: orderNodeId,
-        type: 'stepCard',
+        type: 'default',
         position: { 
           x: 50, 
-          y: orderIndex * 200 + 50
+          y: orderIndex * 250 + 50
         },
-        data: manufacturingOrderData,
+        data: { 
+          label: `${order.order_number} - ${order.product_name}`,
+          stepData: manufacturingOrderData
+        },
+        style: {
+          background: '#ffffff',
+          border: '2px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '10px',
+          width: 280,
+          fontSize: '12px',
+        },
       });
 
-      // First Manufacturing Step Card (if available)
+      // First Manufacturing Step Node (if available)
       if (manufacturingSteps && manufacturingSteps.length > 0) {
         const firstStep = manufacturingSteps
           .filter(step => step.is_active)
@@ -165,50 +176,6 @@ const ProductionQueueView = () => {
             assignedWorker = actualStep.workers?.name;
           }
 
-          const stepFieldsConfig = getStepFields(firstStep.id);
-
-          // Get material and quantity values
-          let materialAssignedValue: number | undefined;
-          let materialReceivedValue: number | undefined;
-          let quantityAssignedValue: number | undefined;
-          let quantityReceivedValue: number | undefined;
-
-          if (actualStep && stepFieldsConfig.length > 0) {
-            const materialAssignedField = stepFieldsConfig.find(field => 
-              field.field_name.toLowerCase().includes('material') && 
-              field.field_name.toLowerCase().includes('assigned')
-            );
-            const materialReceivedField = stepFieldsConfig.find(field => 
-              field.field_name.toLowerCase().includes('material') && 
-              field.field_name.toLowerCase().includes('received')
-            );
-            const quantityAssignedField = stepFieldsConfig.find(field => 
-              field.field_name.toLowerCase().includes('quantity') && 
-              field.field_name.toLowerCase().includes('assigned')
-            );
-            const quantityReceivedField = stepFieldsConfig.find(field => 
-              field.field_name.toLowerCase().includes('quantity') && 
-              field.field_name.toLowerCase().includes('received')
-            );
-
-            if (materialAssignedField) {
-              const value = getStepValue(actualStep.id, materialAssignedField.field_id);
-              materialAssignedValue = value ? Number(value) : undefined;
-            }
-            if (materialReceivedField) {
-              const value = getStepValue(actualStep.id, materialReceivedField.field_id);
-              materialReceivedValue = value ? Number(value) : undefined;
-            }
-            if (quantityAssignedField) {
-              const value = getStepValue(actualStep.id, quantityAssignedField.field_id);
-              quantityAssignedValue = value ? Number(value) : undefined;
-            }
-            if (quantityReceivedField) {
-              const value = getStepValue(actualStep.id, quantityReceivedField.field_id);
-              quantityReceivedValue = value ? Number(value) : undefined;
-            }
-          }
-
           const stepData: StepCardData = {
             stepName: firstStep.step_name,
             stepOrder: firstStep.step_order,
@@ -222,78 +189,80 @@ const ProductionQueueView = () => {
             isJhalaiStep: firstStep.step_name.toLowerCase() === 'jhalai' || firstStep.step_name.toLowerCase().includes('jhalai'),
             quantityRequired: order.quantity_required,
             priority: order.priority,
-            stepFields: stepFieldsConfig,
+            stepFields: getStepFields(firstStep.id),
             qcRequired: firstStep.qc_required,
             dueDate: order.due_date,
-            materialAssignedValue,
-            materialReceivedValue,
-            quantityAssignedValue,
-            quantityReceivedValue,
           };
 
-          const nodeId = `${order.id}-step-${firstStep.step_order}`;
-          console.log(`✅ Creating step node: ${nodeId} - ${firstStep.step_name}`);
+          const stepNodeId = `step-${order.id}-${firstStep.step_order}`;
+          console.log(`✅ Creating step node: ${stepNodeId} - ${firstStep.step_name}`);
           
           nodes.push({
-            id: nodeId,
-            type: 'stepCard',
+            id: stepNodeId,
+            type: 'default',
             position: { 
-              x: 350,
-              y: orderIndex * 200 + 50
+              x: 400,
+              y: orderIndex * 250 + 50
             },
-            data: stepData,
+            data: { 
+              label: `${firstStep.step_name}\nStatus: ${stepStatus}`,
+              stepData: stepData
+            },
+            style: {
+              background: stepStatus === 'completed' ? '#dcfce7' : 
+                         stepStatus === 'in_progress' ? '#fef3c7' : 
+                         stepStatus === 'blocked' ? '#fee2e2' : '#f8fafc',
+              border: '2px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '10px',
+              width: 200,
+              fontSize: '12px',
+            },
           });
         }
       }
     });
 
     console.log(`🎯 Generated ${nodes.length} total nodes`);
+    console.log('📊 Nodes data:', nodes);
     return nodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const initialEdges = useMemo(() => {
-    const edges: any[] = [];
-    
-    if (manufacturingOrders) {
-      manufacturingOrders.forEach((order) => {
-        // Connect manufacturing order to first step if it exists
-        const firstStepInNodes = initialNodes.find(node => 
-          node.id.startsWith(`${order.id}-step-`) && 
-          isStepCardData(node.data) && 
-          node.data.stepOrder === 1
-        );
+  // Update nodes when data changes
+  React.useEffect(() => {
+    console.log('🔄 Setting nodes with new data. Nodes count:', nodesData.length);
+    console.log('🔄 Nodes to set:', nodesData);
+    setNodes(nodesData);
+  }, [nodesData, setNodes]);
 
-        if (firstStepInNodes) {
-          edges.push({
-            id: `${order.id}-manufacturing-to-first`,
-            source: `${order.id}-manufacturing-order`,
-            target: firstStepInNodes.id,
+  // Create edges between connected nodes
+  React.useEffect(() => {
+    if (nodesData.length > 0) {
+      const newEdges: any[] = [];
+      
+      manufacturingOrders?.forEach((order) => {
+        const orderNodeId = `order-${order.id}`;
+        const stepNodeId = `step-${order.id}-1`;
+        
+        if (nodesData.find(n => n.id === orderNodeId) && nodesData.find(n => n.id === stepNodeId)) {
+          newEdges.push({
+            id: `edge-${order.id}`,
+            source: orderNodeId,
+            target: stepNodeId,
             type: 'smoothstep',
             style: { stroke: '#3b82f6', strokeWidth: 2 },
             animated: true,
           });
         }
       });
+
+      console.log('🔗 Setting edges:', newEdges);
+      setEdges(newEdges);
     }
-
-    console.log(`🔗 Generated ${edges.length} edges`);
-    return edges;
-  }, [manufacturingOrders, initialNodes]);
-
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // Update nodes when data changes
-  React.useEffect(() => {
-    console.log('🔄 Updating nodes with new data. Nodes count:', initialNodes.length);
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
-
-  React.useEffect(() => {
-    console.log('🔄 Updating edges with new data. Edges count:', initialEdges.length);
-    setEdges(initialEdges);
-  }, [initialEdges, setEdges]);
+  }, [nodesData, manufacturingOrders, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -379,22 +348,10 @@ const ProductionQueueView = () => {
     }
   }, [manufacturingSteps, toast]);
 
-  // FIXED: Memoize nodeTypes to prevent React Flow warning
-  const nodeTypes = useMemo(() => ({
-    stepCard: (props: any) => (
-      <ManufacturingStepCard
-        {...props}
-        manufacturingSteps={manufacturingSteps}
-        orderSteps={orderSteps}
-        onAddStep={handleAddStep}
-        onStepClick={handleStepClick}
-      />
-    ),
-  }), [manufacturingSteps, orderSteps, handleAddStep, handleStepClick]);
-
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    if (isStepCardData(node.data)) {
-      handleStepClick(node.data);
+    console.log('Node clicked:', node);
+    if (node.data?.stepData && isStepCardData(node.data.stepData)) {
+      handleStepClick(node.data.stepData);
     }
   }, [handleStepClick]);
 
@@ -405,13 +362,18 @@ const ProductionQueueView = () => {
     console.log('- Search term:', searchTerm);
     console.log('- Selected status:', selectedStatus);
     
+    if (searchTerm === '' && selectedStatus === 'all') {
+      console.log('✅ No filters applied, returning all nodes');
+      return nodes;
+    }
+    
     const filtered = nodes.filter(node => {
-      if (!isStepCardData(node.data)) {
+      if (!node.data?.stepData || !isStepCardData(node.data.stepData)) {
         console.log('❌ Node failed StepCardData check:', node.id);
         return false;
       }
       
-      const nodeData = node.data;
+      const nodeData = node.data.stepData;
       const matchesSearch = searchTerm === '' || 
                            nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -442,7 +404,10 @@ const ProductionQueueView = () => {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const validNodeData = filteredNodes.map(n => n.data).filter(isStepCardData);
+    const validNodeData = filteredNodes
+      .map(n => n.data?.stepData)
+      .filter((data): data is StepCardData => Boolean(data && isStepCardData(data)));
+    
     return {
       total: validNodeData.length,
       inProgress: validNodeData.filter(n => n.status === 'in_progress').length,
@@ -628,21 +593,23 @@ const ProductionQueueView = () => {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
-              nodeTypes={nodeTypes}
               fitView
               fitViewOptions={{
                 padding: 0.2,
                 includeHiddenNodes: false,
               }}
               className="bg-background"
-              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+              minZoom={0.1}
+              maxZoom={2}
             >
               <Controls />
               <MiniMap 
                 nodeColor={(node) => {
-                  if (isStepCardData(node.data)) {
-                    if (node.data.isJhalaiStep) return '#3b82f6';
-                    switch (node.data.status) {
+                  const stepData = node.data?.stepData;
+                  if (stepData && isStepCardData(stepData)) {
+                    if (stepData.isJhalaiStep) return '#3b82f6';
+                    switch (stepData.status) {
                       case 'completed': return '#22c55e';
                       case 'in_progress': return '#eab308';
                       case 'blocked': return '#ef4444';
