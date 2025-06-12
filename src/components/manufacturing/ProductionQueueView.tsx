@@ -26,10 +26,10 @@ import {
 } from 'lucide-react';
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import StepDetailsDialog from './StepDetailsDialog';
-import CreateJhalaiStepDialog, { JhalaiStepData } from './CreateJhalaiStepDialog';
+import CreateStepDialog from './CreateStepDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingSteps, ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
@@ -62,7 +62,8 @@ const ProductionQueueView = () => {
   // Dialog states
   const [selectedStepData, setSelectedStepData] = useState<StepCardData | null>(null);
   const [isStepDetailsOpen, setIsStepDetailsOpen] = useState(false);
-  const [isJhalaiDialogOpen, setIsJhalaiDialogOpen] = useState(false);
+  const [isCreateStepDialogOpen, setIsCreateStepDialogOpen] = useState(false);
+  const [targetStep, setTargetStep] = useState<ManufacturingStep | null>(null);
 
   console.log('Manufacturing Orders:', manufacturingOrders);
   console.log('Order Steps:', orderSteps);
@@ -327,18 +328,12 @@ const ProductionQueueView = () => {
     setIsStepDetailsOpen(true);
   }, []);
 
-  const handleMoveToJhalai = useCallback((stepData: StepCardData) => {
-    console.log('Moving to Jhalai:', stepData);
-    setSelectedStepData(stepData);
-    setIsJhalaiDialogOpen(true);
-  }, []);
-
-  const handleCreateJhalaiStep = useCallback((jhalaiStepData: JhalaiStepData) => {
-    console.log('Creating Jhalai step:', jhalaiStepData);
+  const handleCreateStep = useCallback((stepData: any) => {
+    console.log('Creating step:', stepData);
     
     // Find the manufacturing order position
     const manufacturingOrderNode = nodes.find(n => 
-      n.id === `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`
+      n.id === `${stepData.manufacturingOrderId}-manufacturing-order`
     );
     
     if (!manufacturingOrderNode) {
@@ -346,89 +341,80 @@ const ProductionQueueView = () => {
       return;
     }
 
-    // Get step fields for Jhalai step
-    const jhalaiStep = manufacturingSteps.find(step => 
-      step.step_name.toLowerCase() === 'jhalai'
-    );
-    const jhalaiStepFields = jhalaiStep ? getStepFields(jhalaiStep.id) : [];
+    // Get step fields for the target step
+    const stepFieldsConfig = getStepFields(stepData.stepId);
 
-    // Create new Jhalai step node data
-    const jhalaiNodeData: StepCardData = {
-      stepName: 'Jhalai',
-      stepOrder: 1,
-      orderId: jhalaiStepData.manufacturingOrderId,
-      orderNumber: selectedStepData?.orderNumber || '',
-      productName: selectedStepData?.productName || '',
+    // Create new step node data
+    const newStepNodeData: StepCardData = {
+      stepName: stepData.stepName,
+      stepOrder: targetStep?.step_order || 1,
+      orderId: stepData.manufacturingOrderId,
+      orderNumber: stepData.orderContext.orderNumber,
+      productName: stepData.orderContext.productName,
       status: 'in_progress',
       progress: 0,
-      assignedWorker: jhalaiStepData.assignedWorkerName,
-      estimatedDuration: jhalaiStep?.estimated_duration_hours || 8,
-      isJhalaiStep: true,
-      productCode: selectedStepData?.productCode,
-      category: selectedStepData?.category,
-      quantityRequired: selectedStepData?.quantityRequired,
-      priority: selectedStepData?.priority,
-      rawMaterials: selectedStepData?.rawMaterials,
-      stepFields: jhalaiStepFields,
-      qcRequired: jhalaiStep?.qc_required || false,
+      assignedWorker: stepData.fieldValues.worker ? workers.find(w => w.id === stepData.fieldValues.worker)?.name : undefined,
+      estimatedDuration: targetStep?.estimated_duration_hours || 24,
+      isJhalaiStep: stepData.stepName.toLowerCase() === 'jhalai',
+      productCode: stepData.orderContext.productCode,
+      category: stepData.orderContext.category,
+      quantityRequired: stepData.orderContext.quantityRequired,
+      priority: stepData.orderContext.priority,
+      rawMaterials: stepData.orderContext.rawMaterials,
+      stepFields: stepFieldsConfig,
+      qcRequired: targetStep?.qc_required || false,
     };
 
-    const newJhalaiNode: Node = {
-      id: `${jhalaiStepData.manufacturingOrderId}-step-1`,
+    const newStepNode: Node = {
+      id: `${stepData.manufacturingOrderId}-step-${targetStep?.step_order || 1}`,
       type: 'stepCard',
       position: { 
         x: manufacturingOrderNode.position.x + 340, 
         y: manufacturingOrderNode.position.y
       },
-      data: jhalaiNodeData,
+      data: newStepNodeData,
     };
 
-    // Add the new node
+    // Add or update the node
     setNodes(prevNodes => {
-      // Check if node already exists
-      const existingNodeIndex = prevNodes.findIndex(n => n.id === newJhalaiNode.id);
+      const existingNodeIndex = prevNodes.findIndex(n => n.id === newStepNode.id);
       if (existingNodeIndex >= 0) {
-        // Update existing node
         const updatedNodes = [...prevNodes];
-        updatedNodes[existingNodeIndex] = newJhalaiNode;
+        updatedNodes[existingNodeIndex] = newStepNode;
         return updatedNodes;
       } else {
-        // Add new node
-        return [...prevNodes, newJhalaiNode];
+        return [...prevNodes, newStepNode];
       }
     });
 
-    // Add edge from manufacturing order to Jhalai step
+    // Add edge from manufacturing order to new step
     const newEdge = {
-      id: `${jhalaiStepData.manufacturingOrderId}-manufacturing-to-jhalai`,
-      source: `${jhalaiStepData.manufacturingOrderId}-manufacturing-order`,
-      target: newJhalaiNode.id,
+      id: `${stepData.manufacturingOrderId}-manufacturing-to-${targetStep?.step_order || 1}`,
+      source: `${stepData.manufacturingOrderId}-manufacturing-order`,
+      target: newStepNode.id,
       type: 'smoothstep',
       style: { stroke: '#3b82f6', strokeWidth: 2 },
       animated: true,
     };
 
     setEdges(prevEdges => {
-      // Check if edge already exists
       const existingEdgeIndex = prevEdges.findIndex(e => e.id === newEdge.id);
       if (existingEdgeIndex >= 0) {
-        // Update existing edge
         const updatedEdges = [...prevEdges];
         updatedEdges[existingEdgeIndex] = newEdge;
         return updatedEdges;
       } else {
-        // Add new edge
         return [...prevEdges, newEdge];
       }
     });
 
-    // TODO: Here you would typically make an API call to create the actual Jhalai step in the backend
+    // TODO: Here you would typically make an API call to create the actual step in the backend
     
     toast({
-      title: 'Jhalai Step Created',
-      description: `Jhalai step created and assigned to ${jhalaiStepData.assignedWorkerName}`,
+      title: `${stepData.stepName} Step Created`,
+      description: `${stepData.stepName} step created for ${stepData.orderContext.orderNumber}`,
     });
-  }, [selectedStepData, setNodes, setEdges, toast, nodes, manufacturingSteps, getStepFields]);
+  }, [targetStep, setNodes, setEdges, toast, nodes, workers, getStepFields]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
     console.log('Add step clicked for:', stepData);
@@ -439,21 +425,36 @@ const ProductionQueueView = () => {
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
       
-      if (firstStep && firstStep.step_name.toLowerCase() === 'jhalai') {
-        // For Jhalai steps, trigger the Jhalai creation flow
+      if (firstStep) {
         setSelectedStepData(stepData);
-        setIsJhalaiDialogOpen(true);
+        setTargetStep(firstStep);
+        setIsCreateStepDialogOpen(true);
       } else {
-        // For other first steps, open the step details dialog
-        setSelectedStepData(stepData);
-        setIsStepDetailsOpen(true);
+        toast({
+          title: 'No Steps Configured',
+          description: 'No manufacturing steps are configured for this workflow',
+          variant: 'destructive',
+        });
       }
     } else {
-      // For non-manufacturing order steps, open step details dialog
-      setSelectedStepData(stepData);
-      setIsStepDetailsOpen(true);
+      // For non-manufacturing order steps, get the next step
+      const currentStepOrder = stepData.stepOrder;
+      const nextStep = manufacturingSteps
+        .filter(step => step.is_active)
+        .find(step => step.step_order === currentStepOrder + 1);
+      
+      if (nextStep) {
+        setSelectedStepData(stepData);
+        setTargetStep(nextStep);
+        setIsCreateStepDialogOpen(true);
+      } else {
+        toast({
+          title: 'No Next Step',
+          description: 'This is the final step in the workflow',
+        });
+      }
     }
-  }, [manufacturingSteps]);
+  }, [manufacturingSteps, toast]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (isStepCardData(node.data)) {
@@ -507,7 +508,6 @@ const ProductionQueueView = () => {
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <div className="border-b bg-card p-4">
-          
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">Production Queue</h1>
@@ -650,14 +650,15 @@ const ProductionQueueView = () => {
         open={isStepDetailsOpen}
         onOpenChange={setIsStepDetailsOpen}
         stepData={selectedStepData}
-        onMoveToJhalai={handleMoveToJhalai}
       />
 
-      <CreateJhalaiStepDialog
-        open={isJhalaiDialogOpen}
-        onOpenChange={setIsJhalaiDialogOpen}
-        manufacturingStepData={selectedStepData}
-        onCreateJhalaiStep={handleCreateJhalaiStep}
+      <CreateStepDialog
+        open={isCreateStepDialogOpen}
+        onOpenChange={setIsCreateStepDialogOpen}
+        manufacturingOrderData={selectedStepData}
+        targetStep={targetStep}
+        stepFields={targetStep ? getStepFields(targetStep.id) : []}
+        onCreateStep={handleCreateStep}
       />
     </>
   );

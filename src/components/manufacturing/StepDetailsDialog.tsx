@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,14 +11,12 @@ interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stepData: StepCardData | null;
-  onMoveToJhalai?: (stepData: StepCardData) => void;
 }
 
 const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   open,
   onOpenChange,
-  stepData,
-  onMoveToJhalai
+  stepData
 }) => {
   if (!stepData) return null;
 
@@ -30,8 +29,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const canMoveToJhalai = stepData.status === 'pending' && stepData.stepName === 'Manufacturing Order';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,6 +137,23 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
+          {/* Step Fields */}
+          {stepData.stepFields && stepData.stepFields.length > 0 && (
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <h3 className="text-xs font-medium text-purple-900 mb-2">Step Configuration</h3>
+              <div className="space-y-1">
+                {stepData.stepFields.map((field, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white px-2 py-1 rounded border">
+                    <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
+                    <span className="text-xs text-purple-700">
+                      {field.field_type} {field.is_required && '(Required)'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Worker and Duration */}
           <div className="grid grid-cols-2 gap-2">
             {stepData.assignedWorker && (
@@ -167,18 +181,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            {canMoveToJhalai && (
-              <Button 
-                size="sm"
-                onClick={() => {
-                  onMoveToJhalai?.(stepData);
-                  onOpenChange(false);
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Move to Jhalai
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>

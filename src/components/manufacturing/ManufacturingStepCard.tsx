@@ -41,19 +41,6 @@ interface ManufacturingStepCardProps {
   onStepClick?: (stepData: StepCardData) => void;
 }
 
-// Dummy worker data for display
-const getDummyWorkerForStep = (stepName: string) => {
-  const workers = {
-    'Jhalai': 'Rajesh Kumar',
-    'Dhol': 'Amit Patel',
-    'Stone Setting': 'Priya Sharma',
-    'Polish': 'Manoj Singh',
-    'QC Check': 'Sunita Verma',
-    'Final Inspection': 'Deepak Gupta'
-  };
-  return workers[stepName as keyof typeof workers] || 'Unassigned';
-};
-
 const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({ 
   data, 
   manufacturingSteps = [],
@@ -80,7 +67,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       if (firstStep) {
         return `Move to ${firstStep.step_name}`;
       }
-      return 'Move to Jhalai'; // Fallback
+      return 'Start Production'; // Fallback
     }
     
     // For other steps, get the next step in sequence
@@ -99,10 +86,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Get required fields for this step
   const requiredFields = data.stepFields?.filter(field => field.is_required) || [];
   const workerFields = data.stepFields?.filter(field => field.field_type === 'worker') || [];
-
-  // Use actual assigned worker or dummy worker based on step
-  const displayWorker = data.assignedWorker || 
-    (data.status !== 'pending' ? getDummyWorkerForStep(data.stepName) : undefined);
 
   const cardClassName = data.isJhalaiStep 
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[320px] cursor-pointer hover:shadow-xl transition-shadow" 
@@ -250,21 +233,16 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         </div>
 
         {/* Worker Assignment */}
-        {displayWorker && (
+        {data.assignedWorker && (
           <div className="flex items-center gap-2 text-xs">
             <User className="h-3 w-3 text-muted-foreground" />
             <span className="text-muted-foreground">Assigned to:</span>
-            <span className="font-medium">{displayWorker}</span>
-            {!data.assignedWorker && data.status !== 'pending' && (
-              <Badge variant="outline" className="text-xs py-0 px-1">
-                Demo
-              </Badge>
-            )}
+            <span className="font-medium">{data.assignedWorker}</span>
           </div>
         )}
 
         {/* Worker Field Requirements */}
-        {workerFields.length > 0 && data.status === 'pending' && (
+        {workerFields.length > 0 && data.status === 'pending' && !data.assignedWorker && (
           <div className="text-xs bg-blue-50 p-2 rounded border border-blue-200">
             <span className="text-blue-700 font-medium">Worker Assignment Required</span>
             <div className="text-blue-600 mt-1">
