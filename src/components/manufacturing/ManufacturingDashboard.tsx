@@ -67,7 +67,7 @@ const ManufacturingDashboard = () => {
     setShowDetailsDialog(true);
   };
 
-  const handleStatusUpdate = (orderId: string, status: "pending" | "in_progress" | "completed" | "qc_failed" | "cancelled") => {
+  const handleStatusUpdate = (orderId: string, status: string) => {
     updateOrder(orderId, { status });
   };
 

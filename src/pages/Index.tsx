@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { useNavigation } from "@/contexts/NavigationContext";
 import AppSidebar from "@/components/AppSidebar";
-import PageHeader from "@/components/PageHeader";
 import OrdersTab from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
@@ -13,7 +11,6 @@ import FinishedGoodManagement from "@/components/FinishedGoodManagement";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { hideNavbar } = useNavigation();
 
   console.log('Index component rendered with activeTab:', activeTab);
 
@@ -86,7 +83,7 @@ const Index = () => {
   });
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${hideNavbar ? '' : 'pt-0'}`}>
+    <div className="min-h-screen bg-gray-50">
       <SidebarProvider defaultOpen={true}>
         <div className="flex w-full min-h-screen">
           <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
@@ -133,8 +130,14 @@ const Index = () => {
             {/* Other tabs with optimized layout */}
             {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && (
               <div className="px-4 sm:px-6 lg:px-8 py-6">
-                {/* Header - using PageHeader component */}
-                <PageHeader title={pageTitle} />
+                {/* Header - only show if there's a title */}
+                {pageTitle && (
+                  <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-2xl font-semibold text-gray-900">
+                      {pageTitle}
+                    </h1>
+                  </div>
+                )}
 
                 {/* Main Content */}
                 <Tabs value={activeTab} className="w-full">
