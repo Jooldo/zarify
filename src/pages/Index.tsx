@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import OrdersTab from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
@@ -93,6 +94,16 @@ const Index = () => {
           <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
           <SidebarInset className="overflow-auto">
+            {/* Header with Sidebar Toggle */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              {pageTitle && (
+                <div className="flex flex-1 items-center gap-2 px-3">
+                  <h1 className="text-lg font-semibold">{pageTitle}</h1>
+                </div>
+              )}
+            </header>
+
             {/* Raw Material Management - Full width with its own layout */}
             {isRawMaterialTab() && (
               <Tabs value={activeTab} className="w-full">
@@ -146,15 +157,6 @@ const Index = () => {
             {/* Other tabs with optimized layout */}
             {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && (
               <div className="px-4 sm:px-6 lg:px-8 py-6">
-                {/* Header - only show if there's a title */}
-                {pageTitle && (
-                  <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-2xl font-semibold text-gray-900">
-                      {pageTitle}
-                    </h1>
-                  </div>
-                )}
-
                 {/* Main Content */}
                 <Tabs value={activeTab} className="w-full">
                   <TabsContent value="dashboard" className="space-y-6 mt-0">
