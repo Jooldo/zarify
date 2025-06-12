@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -78,9 +77,42 @@ const ProductionQueueView = () => {
     { name: 'QC Check', order: 5, duration: 1, isJhalai: false },
   ];
 
-  // Generate step nodes from manufacturing orders
+  // Helper function to determine the furthest progressed step for an order
+  const getFurthestProgressedStep = (orderId: string) => {
+    const orderStepsForOrder = orderSteps.filter(step => step.manufacturing_order_id === orderId);
+    
+    if (orderStepsForOrder.length === 0) {
+      return 0; // Only show Manufacturing Order card
+    }
+
+    // Find the furthest step that has been started (in_progress or completed)
+    let furthestStep = 0;
+    for (const step of orderStepsForOrder) {
+      const standardStep = standardSteps.find(s => s.name === step.manufacturing_steps?.step_name);
+      if (standardStep && (step.status === 'in_progress' || step.status === 'completed')) {
+        furthestStep = Math.max(furthestStep, standardStep.order);
+      }
+    }
+
+    // If we have any completed steps, show up to the next pending step
+    const hasCompletedSteps = orderStepsForOrder.some(step => step.status === 'completed');
+    if (hasCompletedSteps) {
+      return furthestStep + 1; // Show next step after completed ones
+    }
+
+    // If we have in-progress steps, show up to that step
+    const hasInProgressSteps = orderStepsForOrder.some(step => step.status === 'in_progress');
+    if (hasInProgressSteps) {
+      return furthestStep;
+    }
+
+    // If no steps are started yet, only show Manufacturing Order
+    return 0;
+  };
+
+  // Generate step nodes from manufacturing orders with progressive display
   const generateStepNodes = useMemo((): Node[] => {
-    console.log('Generating step nodes...');
+    console.log('Generating step nodes with progressive display...');
     
     if (!manufacturingOrders.length) {
       console.log('No manufacturing orders found');
@@ -100,7 +132,11 @@ const ProductionQueueView = () => {
         unit: material.unit
       })) || [];
       
-      // First, add the manufacturing order card with enhanced data
+      // Determine how many steps to show for this order
+      const maxStepToShow = getFurthestProgressedStep(order.id);
+      console.log(`Order ${order.order_number} - showing steps up to: ${maxStepToShow}`);
+
+      // Always add the manufacturing order card
       const manufacturingOrderData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -129,19 +165,26 @@ const ProductionQueueView = () => {
         data: manufacturingOrderData,
       });
 
-      // Then add actual manufacturing steps that have been started
+      // Add manufacturing steps only up to the determined max step
       standardSteps.slice(1).forEach((standardStep, stepIndex) => {
+        // Only show steps up to the max step to show
+        if (standardStep.order > maxStepToShow) {
+          return; // Skip this step - don't show it yet
+        }
+
         const actualStep = orderSteps.find(step => 
           step.manufacturing_order_id === order.id && 
           step.manufacturing_steps?.step_name === standardStep.name
         );
 
+        // If we're showing this step but it doesn't exist in orderSteps yet, 
+        // create a pending step placeholder (for the next step to be started)
+        let stepStatus: StepCardData['status'] = 'pending';
+        let progress = 0;
+        let assignedWorker = undefined;
+
         if (actualStep) {
           console.log(`Step ${standardStep.name} for order ${order.id}:`, actualStep);
-
-          let stepStatus: StepCardData['status'] = 'pending';
-          let progress = 0;
-          let assignedWorker = undefined;
 
           switch (actualStep.status) {
             case 'in_progress':
@@ -161,37 +204,37 @@ const ProductionQueueView = () => {
               progress = 0;
           }
           assignedWorker = actualStep.workers?.name;
-
-          const stepData: StepCardData = {
-            stepName: standardStep.name,
-            stepOrder: standardStep.order,
-            orderId: order.id,
-            orderNumber: order.order_number,
-            productName: order.product_name,
-            status: stepStatus,
-            progress: progress,
-            assignedWorker: assignedWorker,
-            estimatedDuration: standardStep.duration,
-            isJhalaiStep: standardStep.isJhalai,
-            productCode: order.product_configs?.product_code,
-            category: order.product_configs?.category,
-            quantityRequired: order.quantity_required,
-            priority: order.priority,
-            rawMaterials: standardStep.isJhalai ? rawMaterials : undefined,
-          };
-
-          const nodeId = `${order.id}-step-${standardStep.order}`;
-          
-          stepNodes.push({
-            id: nodeId,
-            type: 'stepCard',
-            position: { 
-              x: (stepIndex + 1) * 340 + 50, 
-              y: orderIndex * 280 + 50 
-            },
-            data: stepData,
-          });
         }
+
+        const stepData: StepCardData = {
+          stepName: standardStep.name,
+          stepOrder: standardStep.order,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          productName: order.product_name,
+          status: stepStatus,
+          progress: progress,
+          assignedWorker: assignedWorker,
+          estimatedDuration: standardStep.duration,
+          isJhalaiStep: standardStep.isJhalai,
+          productCode: order.product_configs?.product_code,
+          category: order.product_configs?.category,
+          quantityRequired: order.quantity_required,
+          priority: order.priority,
+          rawMaterials: standardStep.isJhalai ? rawMaterials : undefined,
+        };
+
+        const nodeId = `${order.id}-step-${standardStep.order}`;
+        
+        stepNodes.push({
+          id: nodeId,
+          type: 'stepCard',
+          position: { 
+            x: (stepIndex + 1) * 340 + 50, 
+            y: orderIndex * 280 + 50 
+          },
+          data: stepData,
+        });
       });
 
       nodeIndex++;
