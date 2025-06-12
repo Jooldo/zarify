@@ -326,6 +326,78 @@ export type Database = {
           },
         ]
       }
+      manufacturing_orders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          merchant_id: string
+          order_number: string
+          priority: string
+          product_config_id: string | null
+          product_name: string
+          product_type: string | null
+          quantity_required: number
+          special_instructions: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          merchant_id: string
+          order_number: string
+          priority: string
+          product_config_id?: string | null
+          product_name: string
+          product_type?: string | null
+          quantity_required: number
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          merchant_id?: string
+          order_number?: string
+          priority?: string
+          product_config_id?: string | null
+          product_name?: string
+          product_type?: string | null
+          quantity_required?: number
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_orders_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_product_config_id_fkey"
+            columns: ["product_config_id"]
+            isOneToOne: false
+            referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_types: {
         Row: {
           created_at: string
@@ -1055,6 +1127,10 @@ export type Database = {
     }
     Functions: {
       get_next_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_manufacturing_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

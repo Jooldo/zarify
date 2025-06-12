@@ -61,7 +61,7 @@ export const useManufacturingOrders = () => {
       try {
         // First, get manufacturing orders
         const { data: orders, error: ordersError } = await supabase
-          .from('manufacturing_orders' as any)
+          .from('manufacturing_orders')
           .select('*')
           .order('created_at', { ascending: false });
 
@@ -74,10 +74,30 @@ export const useManufacturingOrders = () => {
           return [];
         }
 
+        // Type the orders properly
+        const typedOrders = orders as Array<{
+          id: string;
+          order_number: string;
+          product_name: string;
+          product_type?: string;
+          product_config_id?: string;
+          quantity_required: number;
+          priority: 'low' | 'medium' | 'high' | 'urgent';
+          status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled';
+          due_date?: string;
+          special_instructions?: string;
+          created_by?: string;
+          merchant_id: string;
+          created_at: string;
+          updated_at: string;
+          started_at?: string;
+          completed_at?: string;
+        }>;
+
         // Get unique product config IDs
-        const productConfigIds = orders
+        const productConfigIds = typedOrders
           .map(order => order.product_config_id)
-          .filter(id => id);
+          .filter((id): id is string => Boolean(id));
 
         let productConfigsMap: Record<string, any> = {};
 
@@ -114,12 +134,12 @@ export const useManufacturingOrders = () => {
         }
 
         // Combine orders with their product configs
-        const ordersWithConfigs = orders.map(order => ({
+        const ordersWithConfigs: ManufacturingOrder[] = typedOrders.map(order => ({
           ...order,
-          product_configs: order.product_config_id ? productConfigsMap[order.product_config_id] : null
+          product_configs: order.product_config_id ? productConfigsMap[order.product_config_id] : undefined
         }));
 
-        return ordersWithConfigs as ManufacturingOrder[];
+        return ordersWithConfigs;
       } catch (error) {
         console.error('Error in manufacturing orders query:', error);
         throw error;
@@ -131,7 +151,7 @@ export const useManufacturingOrders = () => {
     mutationFn: async (orderData: CreateManufacturingOrderData) => {
       // Get next order number using raw RPC call
       const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
-        'get_next_manufacturing_order_number' as any
+        'get_next_manufacturing_order_number'
       );
 
       if (orderNumberError) throw orderNumberError;
@@ -144,13 +164,13 @@ export const useManufacturingOrders = () => {
 
       // Create the manufacturing order
       const { data: order, error } = await supabase
-        .from('manufacturing_orders' as any)
+        .from('manufacturing_orders')
         .insert({
           ...orderData,
           order_number: orderNumber,
           merchant_id: merchantId,
           created_by: (await supabase.auth.getUser()).data.user?.id
-        } as any)
+        })
         .select()
         .single();
 
@@ -178,7 +198,7 @@ export const useManufacturingOrders = () => {
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ManufacturingOrder> }) => {
       const { data, error } = await supabase
-        .from('manufacturing_orders' as any)
+        .from('manufacturing_orders')
         .update(updates)
         .eq('id', id)
         .select()
@@ -207,7 +227,7 @@ export const useManufacturingOrders = () => {
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
       const { error } = await supabase
-        .from('manufacturing_orders' as any)
+        .from('manufacturing_orders')
         .delete()
         .eq('id', orderId);
 
