@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -14,7 +13,7 @@ import MerchantConfigurations from "@/components/settings/MerchantConfigurations
 import GeneralSettings from "@/components/settings/GeneralSettings";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("orders");
 
   console.log('Index component rendered with activeTab:', activeTab);
 
@@ -25,8 +24,6 @@ const Index = () => {
 
   const getPageTitle = () => {
     switch (activeTab) {
-      case "dashboard":
-        return "";
       case "orders":
         return "Orders";
       case "rm-home":
@@ -159,10 +156,6 @@ const Index = () => {
               <div className="px-4 sm:px-6 lg:px-8 py-6">
                 {/* Main Content */}
                 <Tabs value={activeTab} className="w-full">
-                  <TabsContent value="dashboard" className="space-y-6 mt-0">
-                    <VisualDashboard onNavigateToTab={handleNavigateToTab} />
-                  </TabsContent>
-
                   <TabsContent value="orders" className="space-y-6 mt-0">
                     <OrdersTab />
                   </TabsContent>
