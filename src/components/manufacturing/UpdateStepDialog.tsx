@@ -37,22 +37,21 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
   const { toast } = useToast();
 
-  // Initialize form state only when dialog opens and data is available
+  // Initialize form state
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [status, setStatus] = useState('');
   const [assignedWorker, setAssignedWorker] = useState('');
   const [progress, setProgress] = useState(0);
   const [notes, setNotes] = useState('');
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize form when dialog opens and data is available
   useEffect(() => {
-    if (open && stepData && currentOrderStep && !isInitialized) {
+    if (open && stepData && currentOrderStep) {
       console.log('Initializing UpdateStepDialog form');
       
       // Initialize basic fields
       setStatus(currentOrderStep.status || 'pending');
-      setAssignedWorker(currentOrderStep.worker_id || '');
+      setAssignedWorker(currentOrderStep.assigned_worker_id || '');
       setProgress(currentOrderStep.progress_percentage || 0);
       setNotes(currentOrderStep.notes || '');
       
@@ -62,9 +61,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         initialValues[field.field_id] = ''; // Default empty, will be populated from server if available
       });
       setFormValues(initialValues);
-      setIsInitialized(true);
     }
-  }, [open, stepData, currentOrderStep, stepFields, isInitialized]);
+  }, [open, stepData, currentOrderStep, stepFields]);
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -74,7 +72,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setAssignedWorker('');
       setProgress(0);
       setNotes('');
-      setIsInitialized(false);
     }
   }, [open]);
 
@@ -101,7 +98,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       await updateStep({
         stepId: currentOrderStep.id,
         status,
-        workerId: assignedWorker || null,
+        assignedWorkerId: assignedWorker || null,
         progressPercentage: progress,
         notes: notes || null,
         fieldValues: formValues,
@@ -274,7 +271,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 <div key={field.field_id} className="space-y-2">
                   <Label htmlFor={field.field_id}>
                     {field.field_label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
                   </Label>
                   
                   {field.field_type === 'text' && (
@@ -282,8 +279,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       id={field.field_id}
                       value={formValues[field.field_id] || ''}
                       onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      placeholder={field.placeholder_text || ''}
-                      required={field.required}
+                      required={field.is_required}
                     />
                   )}
                   
@@ -293,42 +289,36 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       type="number"
                       value={formValues[field.field_id] || ''}
                       onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      placeholder={field.placeholder_text || ''}
-                      required={field.required}
+                      required={field.is_required}
                     />
                   )}
                   
-                  {field.field_type === 'textarea' && (
-                    <Textarea
+                  {field.field_type === 'date' && (
+                    <Input
                       id={field.field_id}
+                      type="date"
                       value={formValues[field.field_id] || ''}
                       onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      placeholder={field.placeholder_text || ''}
-                      required={field.required}
-                      rows={3}
+                      required={field.is_required}
                     />
                   )}
                   
-                  {field.field_type === 'select' && field.options && (
+                  {field.field_type === 'multiselect' && field.field_options && (
                     <Select
                       value={formValues[field.field_id] || ''}
                       onValueChange={(value) => handleFieldChange(field.field_id, value)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={field.placeholder_text || 'Select an option'} />
+                        <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
                       <SelectContent>
-                        {field.options.map((option, index) => (
+                        {Array.isArray(field.field_options) && field.field_options.map((option: string, index: number) => (
                           <SelectItem key={index} value={option}>
                             {option}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  )}
-                  
-                  {field.help_text && (
-                    <p className="text-xs text-muted-foreground">{field.help_text}</p>
                   )}
                 </div>
               ))}
