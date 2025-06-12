@@ -3,16 +3,9 @@ import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
+import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
 
 // Placeholder components for removed functionality
-const FGManufacturingPlaceholder = () => (
-  <div className="p-8 text-center">
-    <Factory className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold mb-2">Manufacturing</h3>
-    <p className="text-gray-500">Manufacturing functionality will be implemented here</p>
-  </div>
-);
-
 const FGAnalyticsPlaceholder = () => (
   <div className="p-8 text-center">
     <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -40,7 +33,7 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
       case 'fg-inventory':
         return <FinishedGoodsInventory />;
       case 'fg-manufacturing':
-        return <FGManufacturingPlaceholder />;
+        return <ManufacturingDashboard />;
       case 'fg-analytics':
         return <FGAnalyticsPlaceholder />;
       case 'fg-workers':
