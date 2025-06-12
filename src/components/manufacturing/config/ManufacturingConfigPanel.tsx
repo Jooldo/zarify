@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import {
 import StepFieldsConfig from './StepFieldsConfig';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useMerchant } from '@/hooks/useMerchant';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RequiredField {
@@ -60,6 +60,7 @@ const defaultRequiredFields: RequiredField[] = [
 const ManufacturingConfigPanel = () => {
   const { toast } = useToast();
   const { manufacturingSteps, isLoading } = useManufacturingSteps();
+  const { merchant } = useMerchant();
   const [steps, setSteps] = useState<ManufacturingStepConfig[]>([]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
@@ -103,6 +104,15 @@ const ManufacturingConfigPanel = () => {
   }, [manufacturingSteps]);
 
   const handleAddStep = useCallback(async () => {
+    if (!merchant?.id) {
+      toast({
+        title: 'Error',
+        description: 'Merchant information not available',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const newOrder = steps.length + 1;
     const newStepName = `Step ${newOrder}`;
     
@@ -114,7 +124,8 @@ const ManufacturingConfigPanel = () => {
           step_order: newOrder,
           estimated_duration_hours: 1,
           description: '',
-          is_active: true
+          is_active: true,
+          merchant_id: merchant.id
         })
         .select()
         .single();
@@ -145,7 +156,7 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [steps.length, toast]);
+  }, [steps.length, toast, merchant?.id]);
 
   const handleDeleteStep = useCallback(async (stepId: string) => {
     try {
