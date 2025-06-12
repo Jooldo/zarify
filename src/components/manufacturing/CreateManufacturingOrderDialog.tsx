@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Package2, Calculator, Info } from 'lucide-react';
+import { Package2, Calculator, Info, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
@@ -24,6 +24,7 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
   const { productConfigs, loading: configsLoading } = useProductConfigs();
   const { createOrder, isCreating } = useManufacturingOrders();
@@ -31,38 +32,85 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
   const selectedConfig = productConfigs.find(config => config.id === productConfigId);
   const quantity = parseInt(quantityRequired) || 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+
+    if (!productConfigId) {
+      errors.productConfig = 'Please select a product configuration';
+    }
+
+    if (!quantityRequired || quantity <= 0) {
+      errors.quantity = 'Please enter a valid quantity greater than 0';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!productConfigId || !quantityRequired) {
+    if (!validateForm()) {
       return;
     }
 
-    // Use the product code as product name and category as product type
-    const productName = selectedConfig?.product_code || '';
-    const productType = selectedConfig?.category || '';
+    try {
+      // Use the product code as product name and category as product type
+      const productName = selectedConfig?.product_code || '';
+      const productType = selectedConfig?.category || '';
 
-    createOrder({
-      product_name: productName,
-      product_type: productType,
-      product_config_id: productConfigId,
-      quantity_required: quantity,
-      priority,
-      due_date: dueDate || undefined,
-      special_instructions: specialInstructions || undefined,
-    });
+      console.log('Submitting manufacturing order:', {
+        product_name: productName,
+        product_type: productType,
+        product_config_id: productConfigId,
+        quantity_required: quantity,
+        priority,
+        due_date: dueDate || undefined,
+        special_instructions: specialInstructions || undefined,
+      });
 
-    // Reset form
+      await createOrder({
+        product_name: productName,
+        product_type: productType,
+        product_config_id: productConfigId,
+        quantity_required: quantity,
+        priority,
+        due_date: dueDate || undefined,
+        special_instructions: specialInstructions || undefined,
+      });
+
+      // Reset form on success
+      setProductConfigId('');
+      setQuantityRequired('');
+      setPriority('medium');
+      setDueDate('');
+      setSpecialInstructions('');
+      setFormErrors({});
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      // Error handling is done in the hook
+    }
+  };
+
+  const handleFormReset = () => {
     setProductConfigId('');
     setQuantityRequired('');
     setPriority('medium');
     setDueDate('');
     setSpecialInstructions('');
-    onOpenChange(false);
+    setFormErrors({});
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      handleFormReset();
+    }
+    onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -77,14 +125,16 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
             <h3 className="font-semibold text-lg">Product Selection</h3>
             
             <div className="space-y-2">
-              <Label htmlFor="productConfig">Product Code *</Label>
+              <Label htmlFor="productConfig">Product Configuration *</Label>
               <Select value={productConfigId} onValueChange={setProductConfigId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product code" />
+                <SelectTrigger className={formErrors.productConfig ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select product configuration" />
                 </SelectTrigger>
                 <SelectContent>
                   {configsLoading ? (
                     <SelectItem value="" disabled>Loading configurations...</SelectItem>
+                  ) : productConfigs.length === 0 ? (
+                    <SelectItem value="" disabled>No product configurations found</SelectItem>
                   ) : (
                     productConfigs.map((config) => (
                       <SelectItem key={config.id} value={config.id}>
@@ -94,6 +144,12 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
                   )}
                 </SelectContent>
               </Select>
+              {formErrors.productConfig && (
+                <div className="flex items-center gap-1 text-sm text-red-600">
+                  <AlertTriangle className="h-3 w-3" />
+                  {formErrors.productConfig}
+                </div>
+              )}
             </div>
 
             {/* Product Information Display */}
@@ -150,7 +206,14 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
                   placeholder="0"
                   min="1"
                   required
+                  className={formErrors.quantity ? 'border-red-500' : ''}
                 />
+                {formErrors.quantity && (
+                  <div className="flex items-center gap-1 text-sm text-red-600">
+                    <AlertTriangle className="h-3 w-3" />
+                    {formErrors.quantity}
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -243,10 +306,14 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
           )}
 
           <div className="flex gap-3 pt-4 border-t">
-            <Button type="submit" className="flex-1" disabled={isCreating || !productConfigId}>
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={isCreating || configsLoading}
+            >
               {isCreating ? 'Creating...' : 'Create Manufacturing Order'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
           </div>
