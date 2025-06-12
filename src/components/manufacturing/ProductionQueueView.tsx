@@ -148,12 +148,10 @@ const ProductionQueueView = () => {
         assignedWorker: undefined,
         estimatedDuration: 0,
         isJhalaiStep: false,
-        productCode: order.product_configs?.product_code,
-        category: order.product_configs?.category,
         quantityRequired: order.quantity_required,
         priority: order.priority,
-        rawMaterials: rawMaterials,
         stepFields: [], // Manufacturing order doesn't have custom fields
+        dueDate: order.due_date,
       };
 
       stepNodes.push({
@@ -161,7 +159,7 @@ const ProductionQueueView = () => {
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 280 + 50 
+          y: orderIndex * 220 + 50 // Reduced from 280 to 220
         },
         data: manufacturingOrderData,
       });
@@ -225,13 +223,13 @@ const ProductionQueueView = () => {
           assignedWorker: assignedWorker,
           estimatedDuration: configStep.estimated_duration_hours,
           isJhalaiStep: configStep.step_name.toLowerCase() === 'jhalai',
-          productCode: order.product_configs?.product_code,
-          category: order.product_configs?.category,
           quantityRequired: order.quantity_required,
           priority: order.priority,
-          rawMaterials: configStep.step_name.toLowerCase() === 'jhalai' ? rawMaterials : undefined,
           stepFields: stepFieldsConfig,
           qcRequired: configStep.qc_required,
+          dueDate: order.due_date,
+          materialAssigned: Math.random() > 0.5, // Mock data - replace with actual field values
+          materialReceived: Math.random() > 0.5, // Mock data - replace with actual field values
         };
 
         const nodeId = `${order.id}-step-${configStep.step_order}`;
@@ -240,8 +238,8 @@ const ProductionQueueView = () => {
           id: nodeId,
           type: 'stepCard',
           position: { 
-            x: (stepIndex + 1) * 340 + 50, 
-            y: orderIndex * 280 + 50 
+            x: (stepIndex + 1) * 300 + 50, // Reduced from 340 to 300
+            y: orderIndex * 220 + 50 // Reduced from 280 to 220
           },
           data: stepData,
         });
@@ -488,7 +486,6 @@ const ProductionQueueView = () => {
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <div className="border-b bg-card p-4">
-          {/* ... keep existing code (header content) */}
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">Production Queue</h1>

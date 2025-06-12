@@ -4,8 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -34,6 +33,9 @@ export interface StepCardData extends Record<string, unknown> {
   rawMaterials?: RawMaterial[];
   stepFields?: ManufacturingStepField[];
   qcRequired?: boolean;
+  dueDate?: string;
+  materialAssigned?: boolean;
+  materialReceived?: boolean;
 }
 
 interface ManufacturingStepCardProps {
@@ -97,36 +99,21 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
-  console.log(`Step ${data.stepName} for order ${data.orderId}: stepExists=${stepExists}, currentOrderStep=`, currentOrderStep);
-
-  // Get field values for display
-  const getDisplayFieldValues = () => {
-    if (!currentOrderStep || !data.stepFields) return [];
+  // Get user-defined status from step values
+  const getUserDefinedStatus = () => {
+    if (!currentOrderStep || !data.stepFields) return null;
     
-    return data.stepFields.map(field => {
-      const value = getStepValue(currentOrderStep.id, field.field_id);
-      let displayValue = value || 'Not set';
-      
-      // Format worker field to show worker name
-      if (field.field_type === 'worker' && value) {
-        const worker = workers.find(w => w.id === value);
-        displayValue = worker?.name || value;
-      }
-      
-      return {
-        label: field.field_label,
-        value: displayValue,
-        type: field.field_type
-      };
-    }).filter(field => field.value !== 'Not set'); // Only show fields with values
+    const statusField = data.stepFields.find(field => field.field_type === 'select' && field.field_name.toLowerCase().includes('status'));
+    if (statusField) {
+      const value = getStepValue(currentOrderStep.id, statusField.field_id);
+      return value;
+    }
+    return null;
   };
 
-  const requiredFields = data.stepFields?.filter(field => field.is_required) || [];
-  const displayFieldValues = getDisplayFieldValues();
-
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[320px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[320px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,17 +124,18 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // FIXED: Show CTA only for Manufacturing Order OR if step doesn't exist yet
-  const shouldShowCTA = (data.stepName === 'Manufacturing Order' && data.status === 'pending') ||
-    (data.stepOrder > 0 && !stepExists);
+  // FIXED: Only show CTA for Manufacturing Order if no steps exist yet
+  const shouldShowCTA = data.stepName === 'Manufacturing Order' && 
+    data.status === 'pending' && 
+    !orderSteps.some(step => step.manufacturing_order_id === data.orderId);
 
-  console.log(`CTA logic for ${data.stepName}: shouldShowCTA=${shouldShowCTA}, stepName=${data.stepName}, status=${data.status}, stepOrder=${data.stepOrder}, stepExists=${stepExists}`);
+  const userDefinedStatus = getUserDefinedStatus();
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
       <Handle type="target" position={Position.Left} className="!bg-gray-400" />
       
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 p-4">
         <div className="flex items-center justify-between">
           <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
             {data.stepName}
@@ -176,23 +164,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 p-4 pt-0">
         {/* Order Information */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Package className="h-3 w-3" />
           <span>{data.orderNumber} - {data.productName}</span>
         </div>
-
-        {/* Product Code */}
-        {data.productCode && (
-          <div className="flex items-center gap-2 text-xs">
-            <Settings className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground">Code:</span>
-            <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">
-              {data.productCode}
-            </span>
-          </div>
-        )}
 
         {/* Quantity and Priority for Manufacturing Orders */}
         {data.stepName === 'Manufacturing Order' && (
@@ -217,83 +194,28 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Display Field Values - FIXED: Only show if step exists and has values */}
-        {stepExists && displayFieldValues.length > 0 && (
-          <div className="text-xs">
-            <span className="text-muted-foreground font-medium">Step Details:</span>
-            <div className="mt-1 space-y-1">
-              {displayFieldValues.slice(0, 3).map((field, index) => (
-                <div key={index} className="flex justify-between bg-green-50 px-2 py-1 rounded text-xs border border-green-200">
-                  <span className="font-medium text-green-700">{field.label}:</span>
-                  <span className="text-green-600">{field.value}</span>
-                </div>
-              ))}
-              {displayFieldValues.length > 3 && (
-                <div className="text-muted-foreground text-xs">
-                  +{displayFieldValues.length - 3} more fields
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Raw Materials Summary */}
-        {data.rawMaterials && data.rawMaterials.length > 0 && (
-          <div className="text-xs">
-            <span className="text-muted-foreground">Materials:</span>
-            <div className="mt-1 space-y-1">
-              {data.rawMaterials.slice(0, 2).map((material, index) => (
-                <div key={index} className="flex justify-between bg-gray-50 px-2 py-1 rounded text-xs">
-                  <span className="truncate">{material.name}</span>
-                  <span>{material.quantity}{material.unit}</span>
-                </div>
-              ))}
-              {data.rawMaterials.length > 2 && (
-                <div className="text-muted-foreground text-xs">
-                  +{data.rawMaterials.length - 2} more materials
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Required Fields Display - only show if step doesn't exist yet */}
-        {!stepExists && requiredFields.length > 0 && (
-          <div className="text-xs">
-            <span className="text-muted-foreground flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
-              Required Fields:
-            </span>
-            <div className="mt-1 space-y-1">
-              {requiredFields.slice(0, 3).map((field, index) => (
-                <div key={index} className="bg-yellow-50 px-2 py-1 rounded text-xs border border-yellow-200">
-                  <span className="font-medium">{field.field_label}</span>
-                  <span className="text-muted-foreground ml-1">({field.field_type})</span>
-                </div>
-              ))}
-              {requiredFields.length > 3 && (
-                <div className="text-muted-foreground text-xs">
-                  +{requiredFields.length - 3} more required fields
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Status and Progress */}
-        <div className="space-y-2">
+        {/* Status Pills - Show user-defined status instead of default status */}
+        {data.stepOrder > 0 && (
           <div className="flex items-center justify-between">
-            <Badge className={getStatusColor(data.status)}>
-              {data.status.replace('_', ' ').toUpperCase()}
-            </Badge>
-            {data.progress > 0 && (
-              <span className="text-xs text-muted-foreground">{data.progress}%</span>
+            {userDefinedStatus ? (
+              <Badge className="bg-purple-100 text-purple-800 capitalize">
+                {userDefinedStatus}
+              </Badge>
+            ) : (
+              <Badge className={getStatusColor(data.status)}>
+                {data.status.replace('_', ' ').toUpperCase()}
+              </Badge>
             )}
           </div>
-          {data.progress > 0 && (
-            <Progress value={data.progress} className="h-2" />
-          )}
-        </div>
+        )}
+
+        {/* Due Date instead of hours estimated */}
+        {data.dueDate && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>Due: {new Date(data.dueDate).toLocaleDateString()}</span>
+          </div>
+        )}
 
         {/* Worker Assignment */}
         {data.assignedWorker && (
@@ -304,20 +226,34 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Duration */}
-        {data.estimatedDuration && data.estimatedDuration > 0 && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{data.estimatedDuration}h estimated</span>
+        {/* Material Assigned */}
+        {data.stepOrder > 0 && data.materialAssigned !== undefined && (
+          <div className="flex items-center gap-2 text-xs">
+            <Truck className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Material Assigned:</span>
+            <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
+              {data.materialAssigned ? 'Yes' : 'No'}
+            </span>
           </div>
         )}
 
-        {/* Add Step Button - FIXED: Only show if shouldShowCTA is true */}
+        {/* Material Received */}
+        {data.stepOrder > 0 && data.materialReceived !== undefined && (
+          <div className="flex items-center gap-2 text-xs">
+            <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Material Received:</span>
+            <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
+              {data.materialReceived ? 'Yes' : 'No'}
+            </span>
+          </div>
+        )}
+
+        {/* Add Step Button - FIXED: Only show for Manufacturing Order when no steps exist */}
         {shouldShowCTA && (
           <Button 
             variant="outline" 
             size="sm" 
-            className={`w-full mt-3 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
+            className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
             onClick={handleAddStep}
           >
             <Plus className="h-3 w-3 mr-1" />
