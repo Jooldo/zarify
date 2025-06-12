@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -435,17 +434,26 @@ const ProductionQueueView = () => {
     console.log('Add step clicked for:', stepData);
     
     if (stepData.stepName === 'Manufacturing Order' && stepData.status === 'pending') {
-      // For manufacturing orders, trigger the Jhalai creation flow
-      setSelectedStepData(stepData);
-      setIsJhalaiDialogOpen(true);
+      // Get the first step from manufacturing steps configuration
+      const firstStep = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+      
+      if (firstStep && firstStep.step_name.toLowerCase() === 'jhalai') {
+        // For Jhalai steps, trigger the Jhalai creation flow
+        setSelectedStepData(stepData);
+        setIsJhalaiDialogOpen(true);
+      } else {
+        // For other first steps, open the step details dialog
+        setSelectedStepData(stepData);
+        setIsStepDetailsOpen(true);
+      }
     } else {
-      toast({
-        title: "Add Step",
-        description: `Adding new step after ${stepData.stepName} for ${stepData.orderNumber}`,
-      });
-      // TODO: Implement add step functionality for other step types
+      // For non-manufacturing order steps, open step details dialog
+      setSelectedStepData(stepData);
+      setIsStepDetailsOpen(true);
     }
-  }, [toast]);
+  }, [manufacturingSteps]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (isStepCardData(node.data)) {
@@ -499,6 +507,7 @@ const ProductionQueueView = () => {
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
         <div className="border-b bg-card p-4">
+          
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">Production Queue</h1>
@@ -606,6 +615,7 @@ const ProductionQueueView = () => {
               stepCard: (props) => (
                 <ManufacturingStepCard
                   {...props}
+                  manufacturingSteps={manufacturingSteps}
                   onAddStep={handleAddStep}
                   onStepClick={handleStepClick}
                 />

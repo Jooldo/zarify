@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
-import { ManufacturingStepField } from '@/hooks/useManufacturingSteps';
+import { ManufacturingStepField, ManufacturingStep } from '@/hooks/useManufacturingSteps';
 
 export interface RawMaterial {
   name: string;
@@ -36,6 +36,7 @@ export interface StepCardData extends Record<string, unknown> {
 
 interface ManufacturingStepCardProps {
   data: StepCardData;
+  manufacturingSteps?: ManufacturingStep[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
 }
@@ -55,6 +56,7 @@ const getDummyWorkerForStep = (stepName: string) => {
 
 const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({ 
   data, 
+  manufacturingSteps = [],
   onAddStep,
   onStepClick 
 }) => {
@@ -70,8 +72,27 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   const getNextStepName = () => {
     if (data.stepName === 'Manufacturing Order' && data.status === 'pending') {
-      return 'Move to Jhalai';
+      // Get the first step from manufacturing steps configuration
+      const firstStep = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+      
+      if (firstStep) {
+        return `Move to ${firstStep.step_name}`;
+      }
+      return 'Move to Jhalai'; // Fallback
     }
+    
+    // For other steps, get the next step in sequence
+    const currentStepOrder = data.stepOrder;
+    const nextStep = manufacturingSteps
+      .filter(step => step.is_active)
+      .find(step => step.step_order === currentStepOrder + 1);
+    
+    if (nextStep) {
+      return `Move to ${nextStep.step_name}`;
+    }
+    
     return `Start ${data.stepName}`;
   };
 
