@@ -1,5 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import {
   BarChart3, 
   ShoppingCart, 
@@ -16,7 +17,9 @@ import {
   ShoppingBag,
   Building2,
   Factory,
-  Home
+  Home,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 import {
@@ -33,6 +36,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarSeparator,
   useSidebar
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -45,6 +49,7 @@ interface AppSidebarProps {
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const { signOut } = useAuth();
   const { state, toggleSidebar } = useSidebar();
+  const { showPageHeaders, showTabNavigation, togglePageHeaders, toggleTabNavigation } = useNavigation();
   const isCollapsed = state === "collapsed";
 
   const handleSignOut = async () => {
@@ -208,6 +213,34 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                   )}
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* View Controls Section */}
+        <SidebarSeparator />
+        <SidebarGroup>
+          {!isCollapsed && <SidebarGroupLabel>View Controls</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={togglePageHeaders}
+                  tooltip={isCollapsed ? (showPageHeaders ? "Hide Headers" : "Show Headers") : undefined}
+                >
+                  {showPageHeaders ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {!isCollapsed && <span>{showPageHeaders ? "Hide Headers" : "Show Headers"}</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={toggleTabNavigation}
+                  tooltip={isCollapsed ? (showTabNavigation ? "Hide Tab Nav" : "Show Tab Nav") : undefined}
+                >
+                  {showTabNavigation ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {!isCollapsed && <span>{showTabNavigation ? "Hide Tab Navigation" : "Show Tab Navigation"}</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

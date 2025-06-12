@@ -1,6 +1,7 @@
 
 import { Package, Settings, ShoppingBag, Home, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigation } from '@/contexts/NavigationContext';
 import RawMaterialInventory from './RawMaterialInventory';
 import RawMaterialsConfig from './config/RawMaterialsConfig';
 import RMProcurementTab from './procurement/RMProcurementTab';
@@ -13,6 +14,8 @@ interface RawMaterialManagementProps {
 }
 
 const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagementProps) => {
+  const { showPageHeaders, showTabNavigation } = useNavigation();
+
   const renderActiveContent = () => {
     switch (activeTab) {
       case 'rm-inventory':
@@ -32,44 +35,48 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed Header Section */}
-      <div className="bg-card border-b border-border">
-        <div className="flex items-center justify-between py-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Raw Material Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage inventory, procurement, suppliers, and analytics
-            </p>
+      {/* Conditional Header Section */}
+      {showPageHeaders && (
+        <div className="bg-card border-b border-border">
+          <div className="flex items-center justify-between py-6">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Raw Material Management
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage inventory, procurement, suppliers, and analytics
+              </p>
+            </div>
           </div>
-        </div>
 
-        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
-            <TabsTrigger value="rm-home" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Home className="h-4 w-4" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Package className="h-4 w-4" />
-              Inventory
-            </TabsTrigger>
-            <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <ShoppingBag className="h-4 w-4" />
-              Procurement
-            </TabsTrigger>
-            <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Users className="h-4 w-4" />
-              Suppliers
-            </TabsTrigger>
-            <TabsTrigger value="rm-config" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Settings className="h-4 w-4" />
-              Config
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+          {showTabNavigation && (
+            <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+                <TabsTrigger value="rm-home" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Home className="h-4 w-4" />
+                  Home
+                </TabsTrigger>
+                <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Package className="h-4 w-4" />
+                  Inventory
+                </TabsTrigger>
+                <TabsTrigger value="rm-procurement" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <ShoppingBag className="h-4 w-4" />
+                  Procurement
+                </TabsTrigger>
+                <TabsTrigger value="rm-suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Users className="h-4 w-4" />
+                  Suppliers
+                </TabsTrigger>
+                <TabsTrigger value="rm-config" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Settings className="h-4 w-4" />
+                  Config
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+      )}
 
       {/* Content Section */}
       <div className="bg-background py-6">

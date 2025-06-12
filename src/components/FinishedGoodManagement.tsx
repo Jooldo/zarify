@@ -1,6 +1,7 @@
 
 import { Package, Wrench, Factory, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import FinishedGoodsConfig from './config/FinishedGoodsConfig';
 import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
@@ -28,6 +29,8 @@ interface FinishedGoodManagementProps {
 }
 
 const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManagementProps) => {
+  const { showPageHeaders, showTabNavigation } = useNavigation();
+
   const renderActiveContent = () => {
     switch (activeTab) {
       case 'fg-inventory':
@@ -47,44 +50,48 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed Header Section */}
-      <div className="bg-card border-b border-border">
-        <div className="flex items-center justify-between py-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Finished Good Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage inventory, manufacturing, analytics, workforce, and configuration
-            </p>
+      {/* Conditional Header Section */}
+      {showPageHeaders && (
+        <div className="bg-card border-b border-border">
+          <div className="flex items-center justify-between py-6">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Finished Good Management
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage inventory, manufacturing, analytics, workforce, and configuration
+              </p>
+            </div>
           </div>
-        </div>
 
-        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
-            <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Package className="h-4 w-4" />
-              Inventory
-            </TabsTrigger>
-            <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Factory className="h-4 w-4" />
-              Manufacturing
-            </TabsTrigger>
-            <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Users className="h-4 w-4" />
-              Workers
-            </TabsTrigger>
-            <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
-              <Wrench className="h-4 w-4" />
-              Config
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+          {showTabNavigation && (
+            <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 bg-muted h-12">
+                <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Package className="h-4 w-4" />
+                  Inventory
+                </TabsTrigger>
+                <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Factory className="h-4 w-4" />
+                  Manufacturing
+                </TabsTrigger>
+                <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="fg-workers" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Users className="h-4 w-4" />
+                  Workers
+                </TabsTrigger>
+                <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Wrench className="h-4 w-4" />
+                  Config
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+      )}
 
       {/* Content Section */}
       <div className="bg-background py-6">
