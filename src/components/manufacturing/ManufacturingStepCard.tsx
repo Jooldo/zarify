@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Clock, User, Package, Settings, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep } from '@/hooks/useManufacturingSteps';
 
 export interface RawMaterial {
@@ -99,6 +99,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const handleCardClick = () => {
     onStepClick?.(data);
   };
+
+  // Determine if CTA button should be shown
+  const shouldShowCTA = data.status === 'pending' && (
+    data.stepName === 'Manufacturing Order' || 
+    (data.stepOrder > 0 && data.status === 'pending')
+  );
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
@@ -198,7 +204,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         {requiredFields.length > 0 && (
           <div className="text-xs">
             <span className="text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
+              <AlertTriangle className="w-3 h-3" />
               Required Fields:
             </span>
             <div className="mt-1 space-y-1">
@@ -259,8 +265,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Add Step Button */}
-        {data.status === 'pending' && (
+        {/* Add Step Button - Only show if shouldShowCTA is true */}
+        {shouldShowCTA && (
           <Button 
             variant="outline" 
             size="sm" 

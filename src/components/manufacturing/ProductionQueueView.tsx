@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps, ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
+import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
 const nodeTypes = {
@@ -55,6 +56,7 @@ const ProductionQueueView = () => {
   const { manufacturingOrders, loading: ordersLoading } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps, stepFields, isLoading: stepsLoading } = useManufacturingSteps();
   const { workers } = useWorkers();
+  const { createStep, isCreating } = useCreateManufacturingStep();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -331,90 +333,15 @@ const ProductionQueueView = () => {
   const handleCreateStep = useCallback((stepData: any) => {
     console.log('Creating step:', stepData);
     
-    // Find the manufacturing order position
-    const manufacturingOrderNode = nodes.find(n => 
-      n.id === `${stepData.manufacturingOrderId}-manufacturing-order`
-    );
+    // Create the step using the new hook
+    createStep({
+      manufacturingOrderId: stepData.manufacturingOrderId,
+      stepId: stepData.stepId,
+      fieldValues: stepData.fieldValues,
+    });
     
-    if (!manufacturingOrderNode) {
-      console.error('Manufacturing order node not found');
-      return;
-    }
-
-    // Get step fields for the target step
-    const stepFieldsConfig = getStepFields(stepData.stepId);
-
-    // Create new step node data
-    const newStepNodeData: StepCardData = {
-      stepName: stepData.stepName,
-      stepOrder: targetStep?.step_order || 1,
-      orderId: stepData.manufacturingOrderId,
-      orderNumber: stepData.orderContext.orderNumber,
-      productName: stepData.orderContext.productName,
-      status: 'in_progress',
-      progress: 0,
-      assignedWorker: stepData.fieldValues.worker ? workers.find(w => w.id === stepData.fieldValues.worker)?.name : undefined,
-      estimatedDuration: targetStep?.estimated_duration_hours || 24,
-      isJhalaiStep: stepData.stepName.toLowerCase() === 'jhalai',
-      productCode: stepData.orderContext.productCode,
-      category: stepData.orderContext.category,
-      quantityRequired: stepData.orderContext.quantityRequired,
-      priority: stepData.orderContext.priority,
-      rawMaterials: stepData.orderContext.rawMaterials,
-      stepFields: stepFieldsConfig,
-      qcRequired: targetStep?.qc_required || false,
-    };
-
-    const newStepNode: Node = {
-      id: `${stepData.manufacturingOrderId}-step-${targetStep?.step_order || 1}`,
-      type: 'stepCard',
-      position: { 
-        x: manufacturingOrderNode.position.x + 340, 
-        y: manufacturingOrderNode.position.y
-      },
-      data: newStepNodeData,
-    };
-
-    // Add or update the node
-    setNodes(prevNodes => {
-      const existingNodeIndex = prevNodes.findIndex(n => n.id === newStepNode.id);
-      if (existingNodeIndex >= 0) {
-        const updatedNodes = [...prevNodes];
-        updatedNodes[existingNodeIndex] = newStepNode;
-        return updatedNodes;
-      } else {
-        return [...prevNodes, newStepNode];
-      }
-    });
-
-    // Add edge from manufacturing order to new step
-    const newEdge = {
-      id: `${stepData.manufacturingOrderId}-manufacturing-to-${targetStep?.step_order || 1}`,
-      source: `${stepData.manufacturingOrderId}-manufacturing-order`,
-      target: newStepNode.id,
-      type: 'smoothstep',
-      style: { stroke: '#3b82f6', strokeWidth: 2 },
-      animated: true,
-    };
-
-    setEdges(prevEdges => {
-      const existingEdgeIndex = prevEdges.findIndex(e => e.id === newEdge.id);
-      if (existingEdgeIndex >= 0) {
-        const updatedEdges = [...prevEdges];
-        updatedEdges[existingEdgeIndex] = newEdge;
-        return updatedEdges;
-      } else {
-        return [...prevEdges, newEdge];
-      }
-    });
-
-    // TODO: Here you would typically make an API call to create the actual step in the backend
-    
-    toast({
-      title: `${stepData.stepName} Step Created`,
-      description: `${stepData.stepName} step created for ${stepData.orderContext.orderNumber}`,
-    });
-  }, [targetStep, setNodes, setEdges, toast, nodes, workers, getStepFields]);
+    setIsCreateStepDialogOpen(false);
+  }, [createStep]);
 
   const handleAddStep = useCallback((stepData: StepCardData) => {
     console.log('Add step clicked for:', stepData);
