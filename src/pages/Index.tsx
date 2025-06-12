@@ -9,6 +9,8 @@ import VisualDashboard from "@/components/dashboard/VisualDashboard";
 import RawMaterialManagement from "@/components/RawMaterialManagement";
 import FinishedGoodManagement from "@/components/FinishedGoodManagement";
 import ManufacturingSettings from "@/components/manufacturing/config/ManufacturingSettings";
+import MerchantConfigurations from "@/components/settings/MerchantConfigurations";
+import GeneralSettings from "@/components/settings/GeneralSettings";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -30,22 +32,14 @@ const Index = () => {
         return "Raw Material Home";
       case "rm-inventory":
         return "Raw Material Inventory";
-      case "rm-config":
-        return "Raw Material Configuration";
       case "rm-procurement":
         return "Raw Material Procurement";
-      case "rm-suppliers":
-        return "Supplier Management";
       case "fg-inventory":
         return "Finished Goods Inventory";
-      case "fg-config":
-        return "Finished Goods Configuration";
       case "fg-manufacturing":
         return "Finished Goods Manufacturing";
       case "fg-analytics":
         return "Finished Goods Analytics";
-      case "fg-workers":
-        return "Manufacturing Workers";
       case "customers":
         return "Customers";
       case "suppliers":
@@ -54,8 +48,8 @@ const Index = () => {
         return "Workers";
       case "activity":
         return "Activity Logs";
-      case "manufacturing-settings":
-        return "Manufacturing Settings";
+      case "merchant-configurations":
+        return "Merchant Configurations";
       case "general-settings":
         return "General Settings";
       default:
@@ -64,11 +58,11 @@ const Index = () => {
   };
 
   const isRawMaterialTab = () => {
-    return ['rm-home', 'rm-inventory', 'rm-config', 'rm-procurement', 'rm-suppliers'].includes(activeTab);
+    return ['rm-home', 'rm-inventory', 'rm-procurement'].includes(activeTab);
   };
 
   const isFinishedGoodTab = () => {
-    return ['fg-inventory', 'fg-config', 'fg-manufacturing', 'fg-analytics', 'fg-workers'].includes(activeTab);
+    return ['fg-inventory', 'fg-manufacturing', 'fg-analytics'].includes(activeTab);
   };
 
   const isUsersTab = () => {
@@ -79,7 +73,7 @@ const Index = () => {
   };
 
   const isSettingsTab = () => {
-    return ['manufacturing-settings', 'general-settings'].includes(activeTab);
+    return ['merchant-configurations', 'general-settings'].includes(activeTab);
   };
 
   const pageTitle = getPageTitle();
@@ -140,13 +134,11 @@ const Index = () => {
             {/* Settings Management - Full width with its own layout */}
             {isSettingsTab() && (
               <div className="px-4 sm:px-6 lg:px-8 py-6">
-                {activeTab === 'manufacturing-settings' && (
-                  <ManufacturingSettings />
+                {activeTab === 'merchant-configurations' && (
+                  <MerchantConfigurations />
                 )}
                 {activeTab === 'general-settings' && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p>General settings coming soon...</p>
-                  </div>
+                  <GeneralSettings />
                 )}
               </div>
             )}

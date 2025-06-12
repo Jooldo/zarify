@@ -1,9 +1,8 @@
 
-import { Package, Wrench, Factory, BarChart3 } from 'lucide-react';
+import { Package, Factory, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
-import FinishedGoodsConfig from './config/FinishedGoodsConfig';
 import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
 
 // Placeholder component for analytics
@@ -31,8 +30,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
         return <ManufacturingDashboard />;
       case 'fg-analytics':
         return <FGAnalyticsPlaceholder />;
-      case 'fg-config':
-        return <FinishedGoodsConfig />;
       default:
         return <FinishedGoodsInventory />;
     }
@@ -49,14 +46,14 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 Finished Good Management
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage inventory, manufacturing, analytics, and configuration
+                Manage inventory, manufacturing, and analytics
               </p>
             </div>
           </div>
 
           {showTabNavigation && (
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-muted h-12">
+              <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
                 <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory
@@ -68,10 +65,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <BarChart3 className="h-4 w-4" />
                   Analytics
-                </TabsTrigger>
-                <TabsTrigger value="fg-config" className="flex items-center gap-2 data-[state=active]:bg-background">
-                  <Wrench className="h-4 w-4" />
-                  Config
                 </TabsTrigger>
               </TabsList>
             </Tabs>

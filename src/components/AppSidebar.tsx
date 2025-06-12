@@ -106,11 +106,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           tab: "rm-inventory",
         },
         {
-          title: "Configuration",
-          icon: Settings,
-          tab: "rm-config",
-        },
-        {
           title: "Procurement",
           icon: Truck,
           tab: "rm-procurement",
@@ -125,11 +120,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "Inventory",
           icon: Boxes,
           tab: "fg-inventory",
-        },
-        {
-          title: "Configuration",
-          icon: Settings,
-          tab: "fg-config",
         },
         {
           title: "Manufacturing",
@@ -179,13 +169,13 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       id: "settings",
       items: [
         {
-          title: "Manufacturing",
-          icon: Workflow,
-          tab: "manufacturing-settings",
+          title: "Merchant Configurations",
+          icon: Settings,
+          tab: "merchant-configurations",
         },
         {
-          title: "General",
-          icon: Settings,
+          title: "General Settings",
+          icon: Workflow,
           tab: "general-settings",
         },
       ],
