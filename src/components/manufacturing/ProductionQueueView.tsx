@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -82,40 +83,7 @@ const ProductionQueueView = () => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
 
-  // Helper function to determine the furthest progressed step for an order
-  const getFurthestProgressedStep = (orderId: string) => {
-    const orderStepsForOrder = orderSteps.filter(step => step.manufacturing_order_id === orderId);
-    
-    if (orderStepsForOrder.length === 0) {
-      return 0; // Only show Manufacturing Order card
-    }
-
-    // Find the furthest step that has been started (in_progress or completed)
-    let furthestStep = 0;
-    for (const step of orderStepsForOrder) {
-      const configStep = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
-      if (configStep && (step.status === 'in_progress' || step.status === 'completed')) {
-        furthestStep = Math.max(furthestStep, configStep.step_order);
-      }
-    }
-
-    // If we have any completed steps, show up to the next pending step
-    const hasCompletedSteps = orderStepsForOrder.some(step => step.status === 'completed');
-    if (hasCompletedSteps) {
-      return furthestStep + 1; // Show next step after completed ones
-    }
-
-    // If we have in-progress steps, show up to that step
-    const hasInProgressSteps = orderStepsForOrder.some(step => step.status === 'in_progress');
-    if (hasInProgressSteps) {
-      return furthestStep;
-    }
-
-    // If no steps are started yet, only show Manufacturing Order
-    return 0;
-  };
-
-  // Generate step nodes from manufacturing orders with progressive display
+  // Simplified logic: show all manufacturing order cards and first step for each order
   const generateStepNodes = useMemo((): Node[] => {
     console.log('🎯 GENERATING STEP NODES...');
     console.log('Input validation:');
@@ -130,15 +98,10 @@ const ProductionQueueView = () => {
     }
 
     const stepNodes: Node[] = [];
-    let nodeIndex = 0;
 
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`📦 Processing order ${orderIndex + 1}: ${order.order_number}`);
       
-      // Determine how many steps to show for this order
-      const maxStepToShow = getFurthestProgressedStep(order.id);
-      console.log(`📊 Order ${order.order_number} - max step to show: ${maxStepToShow}`);
-
       // Always add the manufacturing order card
       const manufacturingOrderData: StepCardData = {
         stepName: 'Manufacturing Order',
@@ -165,28 +128,23 @@ const ProductionQueueView = () => {
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 140 + 50
+          y: orderIndex * 180 + 50
         },
         data: manufacturingOrderData,
       });
 
-      // Add manufacturing steps if available and within display limit
+      // Add first manufacturing step for each order if it has been started
       if (manufacturingSteps && manufacturingSteps.length > 0) {
-        const sortedSteps = manufacturingSteps
+        const orderStepsForOrder = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+        
+        // Get first step that has been started or show first available step
+        const firstStep = manufacturingSteps
           .filter(step => step.is_active)
-          .sort((a, b) => a.step_order - b.step_order);
+          .sort((a, b) => a.step_order - b.step_order)[0];
 
-        console.log(`📋 Processing ${sortedSteps.length} manufacturing steps for order ${order.order_number}`);
-
-        sortedSteps.forEach((configStep, stepIndex) => {
-          if (configStep.step_order > maxStepToShow) {
-            console.log(`⏭️ Skipping step ${configStep.step_name} (order ${configStep.step_order} > max ${maxStepToShow})`);
-            return;
-          }
-
-          const actualStep = orderSteps.find(step => 
-            step.manufacturing_order_id === order.id && 
-            step.manufacturing_step_id === configStep.id
+        if (firstStep) {
+          const actualStep = orderStepsForOrder.find(step => 
+            step.manufacturing_step_id === firstStep.id
           );
 
           let stepStatus: StepCardData['status'] = 'pending';
@@ -194,7 +152,7 @@ const ProductionQueueView = () => {
           let assignedWorker = undefined;
 
           if (actualStep) {
-            console.log(`📌 Found actual step data for ${configStep.step_name}`);
+            console.log(`📌 Found actual step data for ${firstStep.step_name}`);
             switch (actualStep.status) {
               case 'in_progress':
                 stepStatus = 'in_progress';
@@ -213,11 +171,9 @@ const ProductionQueueView = () => {
                 progress = 0;
             }
             assignedWorker = actualStep.workers?.name;
-          } else {
-            console.log(`📝 Creating placeholder for step ${configStep.step_name}`);
           }
 
-          const stepFieldsConfig = getStepFields(configStep.id);
+          const stepFieldsConfig = getStepFields(firstStep.id);
 
           // Get material and quantity values
           let materialAssignedValue: number | undefined;
@@ -262,20 +218,20 @@ const ProductionQueueView = () => {
           }
 
           const stepData: StepCardData = {
-            stepName: configStep.step_name,
-            stepOrder: configStep.step_order,
+            stepName: firstStep.step_name,
+            stepOrder: firstStep.step_order,
             orderId: order.id,
             orderNumber: order.order_number,
             productName: order.product_name,
             status: stepStatus,
             progress: progress,
             assignedWorker: assignedWorker,
-            estimatedDuration: configStep.estimated_duration_hours,
-            isJhalaiStep: configStep.step_name.toLowerCase() === 'jhalai',
+            estimatedDuration: firstStep.estimated_duration_hours,
+            isJhalaiStep: firstStep.step_name.toLowerCase() === 'jhalai' || firstStep.step_name.toLowerCase().includes('jhalai'),
             quantityRequired: order.quantity_required,
             priority: order.priority,
             stepFields: stepFieldsConfig,
-            qcRequired: configStep.qc_required,
+            qcRequired: firstStep.qc_required,
             dueDate: order.due_date,
             materialAssignedValue,
             materialReceivedValue,
@@ -283,24 +239,20 @@ const ProductionQueueView = () => {
             quantityReceivedValue,
           };
 
-          const nodeId = `${order.id}-step-${configStep.step_order}`;
-          console.log(`✅ Creating step node: ${nodeId} - ${configStep.step_name}`);
+          const nodeId = `${order.id}-step-${firstStep.step_order}`;
+          console.log(`✅ Creating step node: ${nodeId} - ${firstStep.step_name}`);
           
           stepNodes.push({
             id: nodeId,
             type: 'stepCard',
             position: { 
-              x: (stepIndex + 1) * 240 + 50,
-              y: orderIndex * 140 + 50
+              x: 320,
+              y: orderIndex * 180 + 50
             },
             data: stepData,
           });
-        });
-      } else {
-        console.log('⚠️ No manufacturing steps available to process');
+        }
       }
-
-      nodeIndex++;
     });
 
     console.log(`🎯 Generated ${stepNodes.length} total nodes`);
@@ -313,7 +265,7 @@ const ProductionQueueView = () => {
     const edges: any[] = [];
     
     manufacturingOrders.forEach((order) => {
-      // Connect manufacturing order to first actual step
+      // Connect manufacturing order to first step if it exists
       const firstStepInOrder = nodes.find(node => 
         node.id.startsWith(`${order.id}-step-`) && 
         isStepCardData(node.data) && 
@@ -328,30 +280,6 @@ const ProductionQueueView = () => {
           type: 'smoothstep',
           style: { stroke: '#3b82f6', strokeWidth: 2 },
           animated: true,
-        });
-      }
-
-      // Connect sequential steps within the same order
-      const orderStepNodes = nodes.filter(node => 
-        node.id.startsWith(`${order.id}-step-`) && 
-        isStepCardData(node.data)
-      ).sort((a, b) => {
-        const aData = a.data as StepCardData;
-        const bData = b.data as StepCardData;
-        return aData.stepOrder - bData.stepOrder;
-      });
-
-      for (let i = 0; i < orderStepNodes.length - 1; i++) {
-        const sourceNode = orderStepNodes[i];
-        const targetNode = orderStepNodes[i + 1];
-        
-        edges.push({
-          id: `${sourceNode.id}-to-${targetNode.id}`,
-          source: sourceNode.id,
-          target: targetNode.id,
-          type: 'smoothstep',
-          style: { stroke: '#9ca3af', strokeWidth: 2 },
-          animated: false,
         });
       }
     });
@@ -475,7 +403,7 @@ const ProductionQueueView = () => {
     }
   }, [handleStepClick]);
 
-  // Filter nodes based on search and status
+  // Filter nodes based on search and status - with better logging
   const filteredNodes = useMemo(() => {
     console.log('🔍 Filtering nodes...');
     console.log('- Total nodes before filtering:', nodes.length);
@@ -489,7 +417,8 @@ const ProductionQueueView = () => {
       }
       
       const nodeData = node.data;
-      const matchesSearch = nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = searchTerm === '' || 
+                           nodeData.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nodeData.stepName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = selectedStatus === 'all' || nodeData.status === selectedStatus;
@@ -497,6 +426,8 @@ const ProductionQueueView = () => {
       const passes = matchesSearch && matchesStatus;
       if (!passes) {
         console.log(`🚫 Node ${node.id} filtered out - search: ${matchesSearch}, status: ${matchesStatus}`);
+      } else {
+        console.log(`✅ Node ${node.id} passed filters`);
       }
       
       return passes;
@@ -508,14 +439,14 @@ const ProductionQueueView = () => {
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const validNodeData = nodes.map(n => n.data).filter(isStepCardData);
+    const validNodeData = filteredNodes.map(n => n.data).filter(isStepCardData);
     return {
       total: validNodeData.length,
       inProgress: validNodeData.filter(n => n.status === 'in_progress').length,
       completed: validNodeData.filter(n => n.status === 'completed').length,
       blocked: validNodeData.filter(n => n.status === 'blocked').length,
     };
-  }, [nodes]);
+  }, [filteredNodes]);
 
   // Get current order step and previous steps for update dialog
   const getCurrentOrderStep = () => {
@@ -538,6 +469,7 @@ const ProductionQueueView = () => {
   };
 
   console.log('🎨 Final render state:');
+  console.log('- Generated nodes count:', nodes.length);
   console.log('- Filtered nodes count:', filteredNodes.length);
   console.log('- Stats:', stats);
   console.log('- Loading states:', { ordersLoading, stepsLoading, valuesLoading });
@@ -672,11 +604,15 @@ const ProductionQueueView = () => {
                     "No production steps are currently visible."
                   )}
                 </p>
-                <div className="mt-4 text-sm text-muted-foreground">
-                  <p>Debug info:</p>
+                <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                  <p><strong>Debug info:</strong></p>
                   <p>Manufacturing Orders: {manufacturingOrders?.length || 0}</p>
                   <p>Generated Nodes: {nodes.length}</p>
                   <p>Filtered Nodes: {filteredNodes.length}</p>
+                  <p>Manufacturing Steps: {manufacturingSteps?.length || 0}</p>
+                  <p>Order Steps: {orderSteps?.length || 0}</p>
+                  <p>Search Term: "{searchTerm}"</p>
+                  <p>Selected Status: {selectedStatus}</p>
                 </div>
               </div>
             </div>
