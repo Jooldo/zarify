@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -83,26 +82,21 @@ const ProductionQueueView = () => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
   };
 
-  // Simplified logic: show all manufacturing order cards and first step for each order
-  const generateStepNodes = useMemo((): Node[] => {
-    console.log('🎯 GENERATING STEP NODES...');
-    console.log('Input validation:');
-    console.log('- manufacturingOrders available:', !!manufacturingOrders);
-    console.log('- manufacturingOrders count:', manufacturingOrders?.length || 0);
-    console.log('- manufacturingSteps available:', !!manufacturingSteps);
-    console.log('- manufacturingSteps count:', manufacturingSteps?.length || 0);
+  // Create initial nodes
+  const initialNodes = useMemo((): Node[] => {
+    console.log('🎯 GENERATING INITIAL NODES...');
     
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
       console.log('❌ No manufacturing orders - returning empty array');
       return [];
     }
 
-    const stepNodes: Node[] = [];
+    const nodes: Node[] = [];
 
     manufacturingOrders.forEach((order, orderIndex) => {
       console.log(`📦 Processing order ${orderIndex + 1}: ${order.order_number}`);
       
-      // Always add the manufacturing order card
+      // Manufacturing Order Card
       const manufacturingOrderData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -123,27 +117,25 @@ const ProductionQueueView = () => {
       const orderNodeId = `${order.id}-manufacturing-order`;
       console.log(`✅ Creating Manufacturing Order node: ${orderNodeId}`);
 
-      stepNodes.push({
+      nodes.push({
         id: orderNodeId,
         type: 'stepCard',
         position: { 
           x: 50, 
-          y: orderIndex * 180 + 50
+          y: orderIndex * 200 + 50
         },
         data: manufacturingOrderData,
       });
 
-      // Add first manufacturing step for each order if it has been started
+      // First Manufacturing Step Card (if available)
       if (manufacturingSteps && manufacturingSteps.length > 0) {
-        const orderStepsForOrder = orderSteps.filter(step => step.manufacturing_order_id === order.id);
-        
-        // Get first step that has been started or show first available step
         const firstStep = manufacturingSteps
           .filter(step => step.is_active)
           .sort((a, b) => a.step_order - b.step_order)[0];
 
         if (firstStep) {
-          const actualStep = orderStepsForOrder.find(step => 
+          const actualStep = orderSteps.find(step => 
+            step.manufacturing_order_id === order.id && 
             step.manufacturing_step_id === firstStep.id
           );
 
@@ -242,12 +234,12 @@ const ProductionQueueView = () => {
           const nodeId = `${order.id}-step-${firstStep.step_order}`;
           console.log(`✅ Creating step node: ${nodeId} - ${firstStep.step_name}`);
           
-          stepNodes.push({
+          nodes.push({
             id: nodeId,
             type: 'stepCard',
             position: { 
-              x: 320,
-              y: orderIndex * 180 + 50
+              x: 350,
+              y: orderIndex * 200 + 50
             },
             data: stepData,
           });
@@ -255,50 +247,53 @@ const ProductionQueueView = () => {
       }
     });
 
-    console.log(`🎯 Generated ${stepNodes.length} total nodes`);
-    return stepNodes;
+    console.log(`🎯 Generated ${nodes.length} total nodes`);
+    return nodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepValue]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(generateStepNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 
-  const generateStepEdges = useMemo(() => {
+  const initialEdges = useMemo(() => {
     const edges: any[] = [];
     
-    manufacturingOrders.forEach((order) => {
-      // Connect manufacturing order to first step if it exists
-      const firstStepInOrder = nodes.find(node => 
-        node.id.startsWith(`${order.id}-step-`) && 
-        isStepCardData(node.data) && 
-        node.data.stepOrder === 1
-      );
+    if (manufacturingOrders) {
+      manufacturingOrders.forEach((order) => {
+        // Connect manufacturing order to first step if it exists
+        const firstStepInNodes = initialNodes.find(node => 
+          node.id.startsWith(`${order.id}-step-`) && 
+          isStepCardData(node.data) && 
+          node.data.stepOrder === 1
+        );
 
-      if (firstStepInOrder) {
-        edges.push({
-          id: `${order.id}-manufacturing-to-first`,
-          source: `${order.id}-manufacturing-order`,
-          target: firstStepInOrder.id,
-          type: 'smoothstep',
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
-          animated: true,
-        });
-      }
-    });
+        if (firstStepInNodes) {
+          edges.push({
+            id: `${order.id}-manufacturing-to-first`,
+            source: `${order.id}-manufacturing-order`,
+            target: firstStepInNodes.id,
+            type: 'smoothstep',
+            style: { stroke: '#3b82f6', strokeWidth: 2 },
+            animated: true,
+          });
+        }
+      });
+    }
 
+    console.log(`🔗 Generated ${edges.length} edges`);
     return edges;
-  }, [manufacturingOrders, nodes]);
+  }, [manufacturingOrders, initialNodes]);
 
-  const [edges, setEdges, onEdgesChange] = useEdgesState(generateStepEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Update nodes when data changes
   React.useEffect(() => {
-    console.log('🔄 Updating nodes with generated step data. New nodes count:', generateStepNodes.length);
-    setNodes(generateStepNodes);
-  }, [generateStepNodes, setNodes]);
+    console.log('🔄 Updating nodes with new data. Nodes count:', initialNodes.length);
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
   React.useEffect(() => {
-    console.log('🔄 Updating edges with generated step edges. New edges count:', generateStepEdges.length);
-    setEdges(generateStepEdges);
-  }, [generateStepEdges, setEdges]);
+    console.log('🔄 Updating edges with new data. Edges count:', initialEdges.length);
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -403,7 +398,7 @@ const ProductionQueueView = () => {
     }
   }, [handleStepClick]);
 
-  // Filter nodes based on search and status - with better logging
+  // Filter nodes based on search and status
   const filteredNodes = useMemo(() => {
     console.log('🔍 Filtering nodes...');
     console.log('- Total nodes before filtering:', nodes.length);
@@ -436,6 +431,14 @@ const ProductionQueueView = () => {
     console.log(`✅ Filtered to ${filtered.length} nodes`);
     return filtered;
   }, [nodes, searchTerm, selectedStatus]);
+
+  // Filter edges to match filtered nodes
+  const filteredEdges = useMemo(() => {
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+    return edges.filter(edge => 
+      filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target)
+    );
+  }, [edges, filteredNodes]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -471,6 +474,7 @@ const ProductionQueueView = () => {
   console.log('🎨 Final render state:');
   console.log('- Generated nodes count:', nodes.length);
   console.log('- Filtered nodes count:', filteredNodes.length);
+  console.log('- Filtered edges count:', filteredEdges.length);
   console.log('- Stats:', stats);
   console.log('- Loading states:', { ordersLoading, stepsLoading, valuesLoading });
   console.log('- Component about to render with', filteredNodes.length, 'nodes');
@@ -619,14 +623,19 @@ const ProductionQueueView = () => {
           ) : (
             <ReactFlow
               nodes={filteredNodes}
-              edges={edges}
+              edges={filteredEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
               nodeTypes={nodeTypes}
               fitView
+              fitViewOptions={{
+                padding: 0.2,
+                includeHiddenNodes: false,
+              }}
               className="bg-background"
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             >
               <Controls />
               <MiniMap 
