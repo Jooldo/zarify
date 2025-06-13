@@ -19,7 +19,7 @@ import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package2, Calendar, Play, RotateCcw } from 'lucide-react';
+import { Package2, Calendar, Play, RotateCcw, Maximize2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -206,6 +206,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
@@ -329,7 +330,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           source: `order-${order.id}`,
           target: `step-${orderStepsFiltered[0].id}`,
           type: 'smoothstep',
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
+          animated: true,
+          style: { 
+            stroke: '#3b82f6', 
+            strokeWidth: 2,
+            strokeDasharray: '5,5'
+          },
         });
 
         // Connect steps to each other
@@ -339,7 +345,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             source: `step-${orderStepsFiltered[i].id}`,
             target: `step-${orderStepsFiltered[i + 1].id}`,
             type: 'smoothstep',
-            style: { stroke: '#3b82f6', strokeWidth: 2 },
+            animated: true,
+            style: { 
+              stroke: '#3b82f6', 
+              strokeWidth: 2,
+              strokeDasharray: '5,5'
+            },
           });
         }
       }
@@ -388,11 +399,122 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return steps;
   }, [orderSteps, currentOrderStep]);
 
+  const FlowContent = () => (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onNodeDragStop={onNodeDragStop}
+      nodeTypes={nodeTypes}
+      fitView
+      attributionPosition="bottom-left"
+      className="bg-background"
+    >
+      <Controls />
+      <MiniMap 
+        className="bg-background border"
+        nodeClassName={() => 'fill-primary/20'}
+      />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+    </ReactFlow>
+  );
+
+  if (isFullScreen) {
+    return (
+      <>
+        <div className="fixed inset-0 z-50 bg-background">
+          {/* Full-screen controls */}
+          <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <Button
+              onClick={resetPositions}
+              variant="outline"
+              size="sm"
+              className="bg-background/80 backdrop-blur-sm"
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset Layout
+            </Button>
+            <Button
+              onClick={() => setIsFullScreen(false)}
+              variant="outline"
+              size="sm"
+              className="bg-background/80 backdrop-blur-sm"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Exit Full Screen
+            </Button>
+          </div>
+          <FlowContent />
+        </div>
+
+        {/* Dialogs remain accessible in full screen */}
+        <ManufacturingOrderDetailsDialog
+          order={selectedOrder}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          getPriorityColor={(priority: string) => {
+            switch (priority.toLowerCase()) {
+              case 'urgent': return 'bg-red-500 text-white';
+              case 'high': return 'bg-orange-500 text-white';
+              case 'medium': return 'bg-yellow-500 text-white';
+              case 'low': return 'bg-green-500 text-white';
+              default: return 'bg-gray-500 text-white';
+            }
+          }}
+          getStatusColor={(status: string) => {
+            switch (status.toLowerCase()) {
+              case 'pending': return 'bg-gray-100 text-gray-800';
+              case 'in_progress': return 'bg-blue-100 text-blue-800';
+              case 'completed': return 'bg-green-100 text-green-800';
+              default: return 'bg-gray-100 text-gray-800';
+            }
+          }}
+        />
+
+        <UpdateStepDialog
+          open={updateStepDialogOpen}
+          onOpenChange={setUpdateStepDialogOpen}
+          stepData={currentOrderStep ? {
+            stepName: currentOrderStep.manufacturing_steps?.step_name || '',
+            stepOrder: currentOrderStep.manufacturing_steps?.step_order || 0,
+            orderId: currentOrderStep.manufacturing_order_id,
+            orderNumber: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.order_number || '',
+            productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
+            status: currentOrderStep.status,
+            progress: currentOrderStep.progress_percentage || 0,
+            stepFields: currentStepFields, // Pass stepFields to UpdateStepDialog
+          } : null}
+          currentOrderStep={currentOrderStep}
+          stepFields={currentStepFields}
+          previousSteps={previousSteps}
+        />
+
+        <StartStepDialog
+          isOpen={startStepDialogOpen}
+          onClose={() => setStartStepDialogOpen(false)}
+          order={selectedOrder}
+          step={selectedStepForStart}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="w-full h-[600px] border rounded-lg bg-background relative">
-        {/* Reset Layout Button */}
-        <div className="absolute top-2 right-2 z-10">
+        {/* Control buttons */}
+        <div className="absolute top-2 right-2 z-10 flex gap-2">
+          <Button
+            onClick={() => setIsFullScreen(true)}
+            variant="outline"
+            size="sm"
+            className="bg-background/80 backdrop-blur-sm"
+          >
+            <Maximize2 className="h-4 w-4 mr-1" />
+            Full Screen
+          </Button>
           <Button
             onClick={resetPositions}
             variant="outline"
@@ -404,25 +526,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           </Button>
         </div>
 
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDragStop={onNodeDragStop}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-          className="bg-background"
-        >
-          <Controls />
-          <MiniMap 
-            className="bg-background border"
-            nodeClassName={() => 'fill-primary/20'}
-          />
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-        </ReactFlow>
+        <FlowContent />
       </div>
 
       {/* Dialogs */}
@@ -442,7 +546,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         getStatusColor={(status: string) => {
           switch (status.toLowerCase()) {
             case 'pending': return 'bg-gray-100 text-gray-800';
-            case 'in_progress': return 'bg-blue-100 text-blue-800';
+            case 'in_progress':return 'bg-blue-100 text-blue-800';
             case 'completed': return 'bg-green-100 text-green-800';
             default: return 'bg-gray-100 text-gray-800';
           }

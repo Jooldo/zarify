@@ -100,7 +100,7 @@ export const generateOrderRowLayout = (
 ): NodePosition => {
   if (userPosition) return userPosition;
 
-  const baseY = 50 + orderIndex * (DEFAULT_CARD_DIMENSIONS.order.height + MIN_SPACING.vertical + 50); // Extra space for steps
+  const baseY = 50 + orderIndex * (DEFAULT_CARD_DIMENSIONS.order.height + MIN_SPACING.vertical + 100); // Extra space for steps
   return { x: 50, y: baseY };
 };
 
@@ -112,7 +112,12 @@ export const generateStepLayout = (
   if (userPosition) return userPosition;
 
   const stepX = orderPosition.x + DEFAULT_CARD_DIMENSIONS.order.width + MIN_SPACING.horizontal + (stepIndex * (DEFAULT_CARD_DIMENSIONS.step.width + MIN_SPACING.horizontal));
-  return { x: stepX, y: orderPosition.y };
+  
+  // Center-align step cards vertically with the order card
+  const orderCenterY = orderPosition.y + (DEFAULT_CARD_DIMENSIONS.order.height / 2);
+  const stepCenterY = orderCenterY - (DEFAULT_CARD_DIMENSIONS.step.height / 2);
+  
+  return { x: stepX, y: stepCenterY };
 };
 
 export { DEFAULT_CARD_DIMENSIONS };
