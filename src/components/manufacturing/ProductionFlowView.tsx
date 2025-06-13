@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -12,16 +13,19 @@ import {
   Handle,
   Position,
   BackgroundVariant,
+  OnNodeDrag,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package2, Calendar, Play } from 'lucide-react';
+import { Package2, Calendar, Play, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useNodePositions } from '@/hooks/useNodePositions';
+import { generateOrderRowLayout, generateStepLayout } from '@/utils/nodeLayoutUtils';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
 import UpdateStepDialog from './UpdateStepDialog';
@@ -29,8 +33,6 @@ import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
   onViewDetails: (order: ManufacturingOrder) => void;
 }
 
@@ -193,12 +195,11 @@ const nodeTypes = {
 
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   manufacturingOrders,
-  getPriorityColor,
-  getStatusColor,
   onViewDetails
 }) => {
   const { orderSteps, manufacturingSteps, stepFields } = useManufacturingSteps();
   const { stepValues } = useManufacturingStepValues();
+  const { userNodePositions, updateNodePosition, resetPositions, hasUserPosition } = useNodePositions();
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -236,22 +237,32 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   };
 
+  // Handle node drag to save positions
+  const onNodeDragStop: OnNodeDrag = useCallback((event, node) => {
+    updateNodePosition(node.id, node.position);
+  }, [updateNodePosition]);
+
   // Convert manufacturing orders and their steps to React Flow nodes
   // Use timestamp to force re-render when data changes
   const initialNodes: Node[] = useMemo(() => {
     const timestamp = Date.now();
     console.log('Creating nodes with stepValues:', stepValues.length, 'stepFields:', stepFields.length, 'at timestamp:', timestamp);
     const nodes: Node[] = [];
-    let yOffset = 50;
     
     manufacturingOrders.forEach((order, orderIndex) => {
-      const xStart = 50;
+      // Calculate order node position
+      const orderNodeId = `order-${order.id}`;
+      const orderPosition = generateOrderRowLayout(
+        manufacturingOrders.length,
+        orderIndex,
+        hasUserPosition(orderNodeId) ? userNodePositions[orderNodeId] : undefined
+      );
       
       // Add manufacturing order node
       nodes.push({
-        id: `order-${order.id}`,
+        id: orderNodeId,
         type: 'manufacturingOrder',
-        position: { x: xStart, y: yOffset },
+        position: orderPosition,
         data: { 
           ...order, 
           onViewDetails: handleViewDetails,
@@ -266,7 +277,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
       orderStepsFiltered.forEach((orderStep, stepIndex) => {
-        const stepXOffset = xStart + 400 + (stepIndex * 320);
+        const stepNodeId = `step-${orderStep.id}`;
+        const stepPosition = generateStepLayout(
+          orderPosition,
+          stepIndex,
+          hasUserPosition(stepNodeId) ? userNodePositions[stepNodeId] : undefined
+        );
+        
         const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
         
         // Get step fields for this specific step
@@ -278,9 +295,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         console.log(`Step ${orderStep.id} - stepValues:`, stepStepValues);
         
         nodes.push({
-          id: `step-${orderStep.id}`,
+          id: stepNodeId,
           type: 'stepProgress',
-          position: { x: stepXOffset, y: yOffset },
+          position: stepPosition,
           data: { 
             orderStep, 
             onStepClick: handleStepClick,
@@ -291,12 +308,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           } as unknown as Record<string, unknown>,
         });
       });
-
-      yOffset += 250; // Space between order rows
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields]); // Include stepFields in dependencies
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition]); // Include stepFields in dependencies
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
@@ -375,13 +390,27 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   return (
     <>
-      <div className="w-full h-[600px] border rounded-lg bg-background">
+      <div className="w-full h-[600px] border rounded-lg bg-background relative">
+        {/* Reset Layout Button */}
+        <div className="absolute top-2 right-2 z-10">
+          <Button
+            onClick={resetPositions}
+            variant="outline"
+            size="sm"
+            className="bg-background/80 backdrop-blur-sm"
+          >
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Reset Layout
+          </Button>
+        </div>
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-left"
@@ -401,8 +430,23 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         order={selectedOrder}
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
+        getPriorityColor={(priority: string) => {
+          switch (priority.toLowerCase()) {
+            case 'urgent': return 'bg-red-500 text-white';
+            case 'high': return 'bg-orange-500 text-white';
+            case 'medium': return 'bg-yellow-500 text-white';
+            case 'low': return 'bg-green-500 text-white';
+            default: return 'bg-gray-500 text-white';
+          }
+        }}
+        getStatusColor={(status: string) => {
+          switch (status.toLowerCase()) {
+            case 'pending': return 'bg-gray-100 text-gray-800';
+            case 'in_progress': return 'bg-blue-100 text-blue-800';
+            case 'completed': return 'bg-green-100 text-green-800';
+            default: return 'bg-gray-100 text-gray-800';
+          }
+        }}
       />
 
       <UpdateStepDialog
