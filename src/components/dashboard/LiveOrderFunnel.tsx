@@ -8,9 +8,9 @@ const LiveOrderFunnel = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Live Order Funnel</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">Live Order Funnel</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">
@@ -29,31 +29,34 @@ const LiveOrderFunnel = () => {
     Delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'Created': return 'bg-gray-100 text-gray-800';
-      case 'Progress': return 'bg-blue-100 text-blue-800';
-      case 'Ready': return 'bg-yellow-100 text-yellow-800';
-      case 'Delivered': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Created': return { color: 'bg-gray-100 text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-l-gray-400' };
+      case 'Progress': return { color: 'bg-orange-100 text-orange-800', bgColor: 'bg-orange-50', borderColor: 'border-l-orange-400' };
+      case 'Ready': return { color: 'bg-yellow-100 text-yellow-800', bgColor: 'bg-yellow-50', borderColor: 'border-l-yellow-400' };
+      case 'Delivered': return { color: 'bg-green-100 text-green-800', bgColor: 'bg-green-50', borderColor: 'border-l-green-400' };
+      default: return { color: 'bg-gray-100 text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-l-gray-400' };
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Live Order Funnel</CardTitle>
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium text-gray-900">Live Order Funnel</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <div className="space-y-2">
-          {Object.entries(statusCounts).map(([status, count]) => (
-            <div key={status} className="flex items-center justify-between">
-              <Badge className={`text-xs px-2 py-1 ${getStatusColor(status)}`}>
-                {status}
-              </Badge>
-              <span className="text-sm font-medium">{count}</span>
-            </div>
-          ))}
+          {Object.entries(statusCounts).map(([status, count]) => {
+            const statusInfo = getStatusInfo(status);
+            return (
+              <div key={status} className={`flex items-center justify-between p-2 rounded-lg border-l-2 ${statusInfo.borderColor} ${statusInfo.bgColor} hover:shadow-sm transition-shadow`}>
+                <Badge className={`text-xs px-2 py-1 ${statusInfo.color}`}>
+                  {status}
+                </Badge>
+                <span className="text-sm font-semibold text-gray-900">{count}</span>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
