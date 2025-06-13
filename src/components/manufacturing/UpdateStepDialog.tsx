@@ -156,7 +156,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -218,8 +217,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       <TableCell>
                         <Badge variant={
                           step.status === 'completed' ? 'default' :
-                          step.status === 'in_progress' ? 'secondary' :
-                          step.status === 'blocked' ? 'destructive' : 'outline'
+                          step.status === 'in_progress' ? 'secondary' : 'outline'
                         }>
                           {step.status.replace('_', ' ')}
                         </Badge>
