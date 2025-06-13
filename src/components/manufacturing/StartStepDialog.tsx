@@ -40,18 +40,20 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get fields configured for this step
+  // Get fields configured for this step - use step?.id with proper null checking
   const currentStepFields = stepFields.filter(field => 
-    field.manufacturing_step_id === step?.id
+    step?.id && field.manufacturing_step_id === step.id
   );
 
   // Debug logging
   useEffect(() => {
     if (step && stepFields.length > 0) {
+      console.log('Step Object:', step);
       console.log('Step ID:', step.id);
       console.log('Step Name:', step.step_name);
       console.log('All Step Fields:', stepFields);
-      console.log('Current Step Fields:', currentStepFields);
+      console.log('Filtered Step Fields:', currentStepFields);
+      console.log('Filter condition:', step.id, stepFields.map(f => f.manufacturing_step_id));
     }
   }, [step, stepFields, currentStepFields]);
 
@@ -63,7 +65,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   // Reset form when dialog opens/closes
   useEffect(() => {
-    if (isOpen && step) {
+    if (isOpen && step && currentStepFields.length > 0) {
       const initialValues: Record<string, any> = {};
       currentStepFields.forEach(field => {
         if (field.field_type === 'status' && field.field_options) {
@@ -266,10 +268,12 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               </CardHeader>
               <CardContent className="text-xs text-yellow-700">
                 <p>Step ID: {step.id}</p>
+                <p>Step Name: {step.step_name}</p>
                 <p>Total Step Fields: {stepFields.length}</p>
                 <p>Current Step Fields: {currentStepFields.length}</p>
                 <p>Required Fields: {requiredFields.length}</p>
                 <p>Form Valid: {isFormValid ? 'Yes' : 'No'}</p>
+                <p>Fields for this step: {stepFields.filter(f => f.manufacturing_step_id === step.id).length}</p>
               </CardContent>
             </Card>
           )}
@@ -407,6 +411,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
                   <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No fields configured for this step</p>
                   <p className="text-sm">Configure fields in Manufacturing Settings to collect data for this step.</p>
+                  <div className="mt-4 p-4 bg-gray-50 rounded text-xs">
+                    <p><strong>Debug:</strong> Step ID = {step.id}</p>
+                    <p>Total fields in system: {stepFields.length}</p>
+                    <p>Matching fields: {stepFields.filter(f => f.manufacturing_step_id === step.id).length}</p>
+                  </div>
                 </div>
               ) : (
                 currentStepFields.map(field => (
