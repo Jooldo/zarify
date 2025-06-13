@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Package2, User, Truck } from 'lucide-react';
+import { Play, Package2, User } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -39,6 +39,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log('StartStepDialog render - fieldValues:', fieldValues);
+  console.log('StartStepDialog render - step:', step);
+  console.log('StartStepDialog render - isOpen:', isOpen);
+
   const stepId = step?.id ? String(step.id) : null;
   
   const currentStepFields = stepFields.filter(field => {
@@ -46,7 +50,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return stepId && fieldStepId === stepId;
   });
 
+  console.log('Current step fields:', currentStepFields);
+
   useEffect(() => {
+    console.log('useEffect triggered - isOpen:', isOpen, 'step:', step, 'currentStepFields:', currentStepFields);
+    
     if (isOpen && step && currentStepFields.length > 0) {
       const initialValues: Record<string, any> = {};
       currentStepFields.forEach(field => {
@@ -56,8 +64,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           initialValues[field.field_id] = '';
         }
       });
+      console.log('Setting initial values:', initialValues);
       setFieldValues(initialValues);
     } else {
+      console.log('Resetting field values');
       setFieldValues({});
     }
   }, [isOpen, step, currentStepFields]);
@@ -67,13 +77,20 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   }
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
+    console.log('Field change - fieldId:', fieldId, 'value:', value);
+    setFieldValues(prev => {
+      const newValues = {
+        ...prev,
+        [fieldId]: value
+      };
+      console.log('Updated field values:', newValues);
+      return newValues;
+    });
   };
 
   const handleStartStep = async () => {
+    console.log('Starting step with values:', fieldValues);
+    
     if (!merchant?.id) {
       toast({
         title: 'Error',
@@ -139,13 +156,17 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   const renderField = (field: any) => {
     const value = fieldValues[field.field_id] || '';
+    console.log('Rendering field:', field.field_id, 'with value:', value);
 
     switch (field.field_type) {
       case 'worker':
         return (
           <Select
             value={value}
-            onValueChange={(val) => handleFieldChange(field.field_id, val)}
+            onValueChange={(val) => {
+              console.log('Worker select change:', val);
+              handleFieldChange(field.field_id, val);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
@@ -165,7 +186,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Input
             type="date"
             value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            onChange={(e) => {
+              console.log('Date input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
           />
         );
 
@@ -174,7 +198,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Input
             type="number"
             value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            onChange={(e) => {
+              console.log('Number input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
             placeholder="Enter number"
           />
         );
@@ -183,7 +210,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Select
             value={value}
-            onValueChange={(val) => handleFieldChange(field.field_id, val)}
+            onValueChange={(val) => {
+              console.log('Status select change:', val);
+              handleFieldChange(field.field_id, val);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
@@ -202,7 +232,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Textarea
             value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            onChange={(e) => {
+              console.log('Textarea change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
             placeholder="Enter text"
             rows={3}
           />
@@ -212,7 +245,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Input
             value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            onChange={(e) => {
+              console.log('Default input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
             placeholder={`Enter ${field.field_label}`}
           />
         );
@@ -225,9 +261,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return value !== undefined && value !== null && value !== '';
   });
 
+  console.log('Form validation - requiredFields:', requiredFields, 'isFormValid:', isFormValid);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
