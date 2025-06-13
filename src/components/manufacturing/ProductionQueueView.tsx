@@ -1,14 +1,20 @@
+
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Factory } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 
 const ProductionQueueView = () => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
+  const { manufacturingSteps } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
+  console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
 
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
