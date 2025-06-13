@@ -42,6 +42,7 @@ interface ManufacturingStepCardProps {
   data: StepCardData;
   manufacturingSteps?: ManufacturingStep[];
   orderSteps?: ManufacturingOrderStep[];
+  stepFields?: ManufacturingStepField[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
 }
@@ -50,6 +51,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   data, 
   manufacturingSteps = [],
   orderSteps = [],
+  stepFields = [],
   onAddStep,
   onStepClick 
 }) => {
@@ -57,8 +59,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const { workers } = useWorkers();
 
   console.log('ManufacturingStepCard - data:', data);
-  console.log('ManufacturingStepCard - stepFields:', data.stepFields);
-  console.log('ManufacturingStepCard - manufacturingSteps:', manufacturingSteps);
+  console.log('ManufacturingStepCard - stepFields prop:', stepFields);
+  console.log('ManufacturingStepCard - data.stepFields:', data.stepFields);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -130,7 +132,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
-  // Get step fields from manufacturing steps if not provided in data
+  // Get step fields from available sources
   const getStepFields = () => {
     console.log('Getting step fields for stepOrder:', data.stepOrder);
     
@@ -140,24 +142,21 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return data.stepFields;
     }
     
-    // Otherwise, try to get them from manufacturing steps
+    // Otherwise, try to get them from stepFields prop by matching manufacturing step
     const manufacturingStep = manufacturingSteps.find(step => 
       step.step_order === data.stepOrder && step.is_active
     );
     
     console.log('Found manufacturing step:', manufacturingStep);
     
-    if (manufacturingStep && manufacturingStep.manufacturing_step_fields) {
-      console.log('Using fields from manufacturing step:', manufacturingStep.manufacturing_step_fields);
-      return manufacturingStep.manufacturing_step_fields.map(stepField => ({
-        field_id: stepField.id,
-        field_name: stepField.field_name,
-        field_label: stepField.field_label,
-        field_type: stepField.field_type as 'text' | 'number' | 'date' | 'worker',
-        is_required: stepField.is_required,
-        field_options: stepField.field_options,
-        step_order: stepField.step_order
-      }));
+    if (manufacturingStep) {
+      // Find step fields that belong to this manufacturing step
+      const relevantStepFields = stepFields.filter(field => 
+        field.manufacturing_step_id === manufacturingStep.id
+      );
+      
+      console.log('Using fields from stepFields prop:', relevantStepFields);
+      return relevantStepFields;
     }
     
     return [];
@@ -165,17 +164,17 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   // Get configured field values for display - show all fields
   const getConfiguredFieldValues = () => {
-    const stepFields = getStepFields();
+    const stepFieldsToUse = getStepFields();
     
-    if (!stepFields || stepFields.length === 0) {
+    if (!stepFieldsToUse || stepFieldsToUse.length === 0) {
       console.log('No step fields found');
       return [];
     }
     
-    console.log('Step fields for card:', stepFields);
+    console.log('Step fields for card:', stepFieldsToUse);
     console.log('Current order step:', currentOrderStep);
     
-    const fieldValues = stepFields
+    const fieldValues = stepFieldsToUse
       .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
       .map(field => {
         let value = 'Not set';
