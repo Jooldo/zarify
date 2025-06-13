@@ -12,6 +12,7 @@ import {
   NodeProps,
   Handle,
   Position,
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,8 +30,11 @@ interface ProductionFlowViewProps {
   onViewDetails: (order: ManufacturingOrder) => void;
 }
 
+// Type for React Flow Node with ManufacturingOrder data
+type ManufacturingOrderNode = Node<ManufacturingOrder>;
+
 // Custom node component for manufacturing orders
-const ManufacturingOrderNode: React.FC<NodeProps<ManufacturingOrder>> = ({ data }) => {
+const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   
   const getPriorityColor = (priority: string) => {
@@ -135,7 +139,7 @@ const ManufacturingOrderNode: React.FC<NodeProps<ManufacturingOrder>> = ({ data 
 };
 
 const nodeTypes = {
-  manufacturingOrder: ManufacturingOrderNode,
+  manufacturingOrder: ManufacturingOrderNodeComponent,
 };
 
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
@@ -145,12 +149,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   onViewDetails
 }) => {
   // Convert manufacturing orders to React Flow nodes
-  const initialNodes: Node<ManufacturingOrder>[] = useMemo(() => {
+  const initialNodes: ManufacturingOrderNode[] = useMemo(() => {
     const pendingOrders = manufacturingOrders.filter(order => order.status === 'pending');
     const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
     const completedOrders = manufacturingOrders.filter(order => order.status === 'completed');
 
-    const nodes: Node<ManufacturingOrder>[] = [];
+    const nodes: ManufacturingOrderNode[] = [];
     
     // Layout pending orders in first column
     pendingOrders.forEach((order, index) => {
@@ -216,7 +220,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           className="bg-background border"
           nodeClassName={() => 'fill-primary/20'}
         />
-        <Background variant="dots" gap={20} size={1} color="#e2e8f0" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
       </ReactFlow>
     </div>
   );
