@@ -38,6 +38,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const { toast } = useToast();
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
   console.log('StartStepDialog render - fieldValues:', fieldValues);
   console.log('StartStepDialog render - step:', step);
@@ -52,10 +53,12 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   console.log('Current step fields:', currentStepFields);
 
+  // Initialize field values only when dialog opens with a new step
   useEffect(() => {
-    console.log('useEffect triggered - isOpen:', isOpen, 'step:', step, 'currentStepFields:', currentStepFields);
+    console.log('useEffect triggered - isOpen:', isOpen, 'stepId:', stepId, 'initializedStepId:', initializedStepId);
     
-    if (isOpen && step && currentStepFields.length > 0) {
+    if (isOpen && stepId && stepId !== initializedStepId && currentStepFields.length > 0) {
+      console.log('Initializing field values for step:', stepId);
       const initialValues: Record<string, any> = {};
       currentStepFields.forEach(field => {
         if (field.field_type === 'status' && field.field_options) {
@@ -66,11 +69,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       });
       console.log('Setting initial values:', initialValues);
       setFieldValues(initialValues);
-    } else {
-      console.log('Resetting field values');
+      setInitializedStepId(stepId);
+    } else if (!isOpen) {
+      console.log('Dialog closed - resetting state');
       setFieldValues({});
+      setInitializedStepId(null);
     }
-  }, [isOpen, step, currentStepFields]);
+  }, [isOpen, stepId, currentStepFields.length]);
 
   if (!order || !step) {
     return null;
@@ -156,7 +161,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   const renderField = (field: any) => {
     const value = fieldValues[field.field_id] || '';
-    console.log('Rendering field:', field.field_id, 'with value:', value);
+    console.log('Rendering field:', field.field_id, 'with value:', value, 'type:', field.field_type);
 
     switch (field.field_type) {
       case 'worker':
@@ -261,7 +266,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return value !== undefined && value !== null && value !== '';
   });
 
-  console.log('Form validation - requiredFields:', requiredFields, 'isFormValid:', isFormValid);
+  console.log('Form validation - requiredFields:', requiredFields.map(f => f.field_id), 'isFormValid:', isFormValid);
+  console.log('Field values for validation:', fieldValues);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
