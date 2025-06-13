@@ -16,56 +16,79 @@ export const useUpdateManufacturingStep = () => {
 
   const updateStepMutation = useMutation({
     mutationFn: async (data: UpdateManufacturingStepData) => {
-      console.log('Updating manufacturing step:', data);
+      console.log('Updating manufacturing step with data:', data);
       
       try {
         // Get merchant ID
         const { data: merchantId, error: merchantError } = await supabase
           .rpc('get_user_merchant_id');
 
-        if (merchantError) throw merchantError;
+        if (merchantError) {
+          console.error('Error getting merchant ID:', merchantError);
+          throw merchantError;
+        }
 
         // Update the manufacturing order step if status or progress changed
         if (data.status !== undefined || data.progress !== undefined) {
           const updates: any = {};
           if (data.status !== undefined) updates.status = data.status;
           if (data.progress !== undefined) updates.progress_percentage = data.progress;
-          if (data.fieldValues.worker) updates.assigned_worker_id = data.fieldValues.worker;
+          
+          // Handle worker assignment from field values
+          if (data.fieldValues.worker) {
+            updates.assigned_worker_id = data.fieldValues.worker;
+          }
+
+          console.log('Updating step with:', updates);
 
           const { error: updateError } = await supabase
             .from('manufacturing_order_steps')
             .update(updates)
             .eq('id', data.stepId);
 
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error('Error updating order step:', updateError);
+            throw updateError;
+          }
         }
 
-        // Update field values
+        // Always update field values - first delete existing ones
+        console.log('Deleting existing field values for step:', data.stepId);
+        const { error: deleteError } = await supabase
+          .from('manufacturing_order_step_values')
+          .delete()
+          .eq('manufacturing_order_step_id', data.stepId);
+
+        if (deleteError) {
+          console.error('Error deleting existing values:', deleteError);
+          throw deleteError;
+        }
+
+        // Insert new field values (only non-empty ones)
         if (data.fieldValues && Object.keys(data.fieldValues).length > 0) {
-          // Delete existing values for this step
-          const { error: deleteError } = await supabase
-            .from('manufacturing_order_step_values')
-            .delete()
-            .eq('manufacturing_order_step_id', data.stepId);
-
-          if (deleteError) throw deleteError;
-
-          // Insert new values - handle empty values properly
           const fieldValuesToInsert = Object.entries(data.fieldValues)
-            .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+            .filter(([_, value]) => {
+              // Only include non-empty values
+              return value !== '' && value !== null && value !== undefined;
+            })
             .map(([fieldId, value]) => ({
               manufacturing_order_step_id: data.stepId,
               field_id: fieldId,
-              field_value: String(value), // Always convert to string
+              field_value: String(value),
               merchant_id: merchantId,
             }));
+
+          console.log('Inserting field values:', fieldValuesToInsert);
 
           if (fieldValuesToInsert.length > 0) {
             const { error: valuesError } = await supabase
               .from('manufacturing_order_step_values')
               .insert(fieldValuesToInsert);
 
-            if (valuesError) throw valuesError;
+            if (valuesError) {
+              console.error('Error inserting field values:', valuesError);
+              throw valuesError;
+            }
           }
         }
 
@@ -76,20 +99,13 @@ export const useUpdateManufacturingStep = () => {
         throw error;
       }
     },
-    onSuccess: async (data) => {
-      console.log('Update successful, invalidating queries...');
+    onSuccess: async () => {
+      console.log('Update successful, refreshing data...');
       
-      // Invalidate and refetch all related queries immediately
+      // Invalidate all related queries
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      
-      // Force immediate refetch
-      await queryClient.refetchQueries({ 
-        queryKey: ['manufacturing-order-step-values'],
-      });
-      
-      console.log('All queries refreshed');
       
       toast({
         title: 'Success',
