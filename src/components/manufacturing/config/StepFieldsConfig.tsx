@@ -1,22 +1,15 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { 
-  User, 
-  Calendar, 
-  Hash, 
-  FileText, 
-  Activity, 
-  CheckSquare,
-  Plus,
-  X
-} from 'lucide-react';
-import { ManufacturingStepConfig, RequiredField } from './ManufacturingConfigPanel';
+import { Plus, Trash2, GripVertical, User, Calendar, Hash, Type, Weight, Package } from 'lucide-react';
+import { RequiredField, ManufacturingStepConfig } from './ManufacturingConfigPanel';
 
 interface StepFieldsConfigProps {
   step: ManufacturingStepConfig;
@@ -24,204 +17,264 @@ interface StepFieldsConfigProps {
   onFieldsUpdate: (stepId: string, fields: RequiredField[]) => void;
 }
 
-const getFieldIcon = (type: string) => {
-  switch (type) {
-    case 'worker': return User;
-    case 'date': return Calendar;
-    case 'number': return Hash;
-    case 'text': return FileText;
-    case 'status': return Activity;
-    case 'multiselect': return CheckSquare;
-    default: return FileText;
-  }
-};
-
-const getFieldTypeColor = (type: string) => {
-  switch (type) {
-    case 'worker': return 'bg-blue-100 text-blue-800';
-    case 'date': return 'bg-green-100 text-green-800';
-    case 'number': return 'bg-purple-100 text-purple-800';
-    case 'text': return 'bg-gray-100 text-gray-800';
-    case 'status': return 'bg-orange-100 text-orange-800';
-    case 'multiselect': return 'bg-cyan-100 text-cyan-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
-
 const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
   step,
   availableFields,
   onFieldsUpdate
 }) => {
-  const [selectedFields, setSelectedFields] = useState<RequiredField[]>([]);
+  const [fields, setFields] = useState<RequiredField[]>(step.requiredFields);
 
-  // Update local state when step changes - this fixes the refresh issue
   useEffect(() => {
-    console.log('StepFieldsConfig: Step changed', step.id, step.requiredFields);
-    setSelectedFields([...step.requiredFields]);
-  }, [step.id, step.requiredFields]);
+    setFields(step.requiredFields);
+  }, [step.requiredFields]);
 
-  const handleFieldToggle = useCallback((field: RequiredField, isEnabled: boolean) => {
-    let updatedFields: RequiredField[];
-    
-    if (isEnabled) {
-      // Add field if not already present
-      if (!selectedFields.find(f => f.id === field.id)) {
-        updatedFields = [...selectedFields, field];
-      } else {
-        updatedFields = selectedFields;
-      }
-    } else {
-      // Remove field
-      updatedFields = selectedFields.filter(f => f.id !== field.id);
-    }
-    
-    console.log('Field toggle - updating fields for step:', step.id, updatedFields);
-    setSelectedFields(updatedFields);
+  const handleAddField = () => {
+    const newField: RequiredField = {
+      id: `field_${Date.now()}`,
+      name: '',
+      label: '',
+      type: 'text',
+      required: false,
+      options: []
+    };
+    const updatedFields = [...fields, newField];
+    setFields(updatedFields);
     onFieldsUpdate(step.id, updatedFields);
-  }, [selectedFields, step.id, onFieldsUpdate]);
+  };
 
-  const handleRequiredToggle = useCallback((fieldId: string, required: boolean) => {
-    const updatedFields = selectedFields.map(field =>
-      field.id === fieldId ? { ...field, required } : field
+  const handleRemoveField = (fieldId: string) => {
+    const updatedFields = fields.filter(field => field.id !== fieldId);
+    setFields(updatedFields);
+    onFieldsUpdate(step.id, updatedFields);
+  };
+
+  const handleFieldUpdate = (fieldId: string, updates: Partial<RequiredField>) => {
+    const updatedFields = fields.map(field => 
+      field.id === fieldId ? { ...field, ...updates } : field
     );
-    
-    console.log('Required toggle - updating fields for step:', step.id, updatedFields);
-    setSelectedFields(updatedFields);
+    setFields(updatedFields);
     onFieldsUpdate(step.id, updatedFields);
-  }, [selectedFields, step.id, onFieldsUpdate]);
+  };
 
-  const isFieldSelected = useCallback((fieldId: string) => {
-    return selectedFields.some(f => f.id === fieldId);
-  }, [selectedFields]);
+  const handleAddFromTemplate = (templateField: RequiredField) => {
+    const newField: RequiredField = {
+      ...templateField,
+      id: `${templateField.id}_${Date.now()}`,
+    };
+    const updatedFields = [...fields, newField];
+    setFields(updatedFields);
+    onFieldsUpdate(step.id, updatedFields);
+  };
 
-  const getSelectedField = useCallback((fieldId: string) => {
-    return selectedFields.find(f => f.id === fieldId);
-  }, [selectedFields]);
+  const getFieldIcon = (type: string, name: string) => {
+    if (type === 'worker') return <User className="h-4 w-4" />;
+    if (type === 'date') return <Calendar className="h-4 w-4" />;
+    if (type === 'number') {
+      if (name.toLowerCase().includes('weight')) return <Weight className="h-4 w-4" />;
+      if (name.toLowerCase().includes('quantity')) return <Hash className="h-4 w-4" />;
+      return <Hash className="h-4 w-4" />;
+    }
+    return <Type className="h-4 w-4" />;
+  };
+
+  const isWeightField = (fieldName: string) => {
+    return fieldName.toLowerCase().includes('weight');
+  };
+
+  const isQuantityField = (fieldName: string) => {
+    return fieldName.toLowerCase().includes('quantity');
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Required Fields for {step.name}</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Select which fields are required for this manufacturing step. Workers will need to fill these out when completing the step.
-        </p>
-      </div>
-
+      {/* Current Fields */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="font-medium">Available Fields</h4>
-          <Badge variant="outline">
-            {selectedFields.length} of {availableFields.length} selected
-          </Badge>
+          <h4 className="font-medium">Configured Fields</h4>
+          <Button onClick={handleAddField} size="sm" variant="outline">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Custom Field
+          </Button>
         </div>
 
-        <div className="space-y-3">
-          {availableFields.map((field) => {
-            const Icon = getFieldIcon(field.type);
-            const isSelected = isFieldSelected(field.id);
-            const selectedField = getSelectedField(field.id);
-            
-            return (
-              <div key={field.id} className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleFieldToggle(field, checked)}
-                    />
-                    
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{field.label}</span>
-                    </div>
-                    
-                    <Badge className={`text-xs ${getFieldTypeColor(field.type)}`}>
-                      {field.type}
-                    </Badge>
-                  </div>
+        {fields.map((field, index) => (
+          <Card key={field.id} className="p-4">
+            <CardContent className="p-0 space-y-4">
+              <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                {getFieldIcon(field.type, field.name)}
+                <Badge variant="outline" className="text-xs">
+                  {field.type}
+                </Badge>
+                <span className="flex-1 font-medium">{field.label || 'Untitled Field'}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveField(field.id)}
+                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
 
-                  {isSelected && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`required-${field.id}`} className="text-xs">
-                        Required
-                      </Label>
-                      <Switch
-                        id={`required-${field.id}`}
-                        checked={selectedField?.required || false}
-                        onCheckedChange={(required) => handleRequiredToggle(field.id, required)}
-                      />
-                    </div>
-                  )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Field Name</Label>
+                  <Input
+                    value={field.name}
+                    onChange={(e) => handleFieldUpdate(field.id, { name: e.target.value })}
+                    placeholder="field_name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="text-xs">Display Label</Label>
+                  <Input
+                    value={field.label}
+                    onChange={(e) => handleFieldUpdate(field.id, { label: e.target.value })}
+                    placeholder="Display Label"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Field Type</Label>
+                  <Select 
+                    value={field.type} 
+                    onValueChange={(value) => handleFieldUpdate(field.id, { type: value as RequiredField['type'] })}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="worker">Worker</SelectItem>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="text">Text</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Show field options for status/multiselect types */}
-                {isSelected && field.type === 'status' && field.options && (
-                  <div className="ml-8 p-2 bg-gray-50 rounded text-xs">
-                    <div className="font-medium mb-1">Status Options:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {field.options.map((option, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {option}
-                        </Badge>
-                      ))}
-                    </div>
+                {/* Unit Selection for Weight and Quantity Fields */}
+                {(isWeightField(field.name) || isQuantityField(field.name)) && (
+                  <div>
+                    <Label className="text-xs flex items-center gap-1">
+                      {isWeightField(field.name) ? (
+                        <>
+                          <Weight className="h-3 w-3" />
+                          Weight Unit
+                        </>
+                      ) : (
+                        <>
+                          <Package className="h-3 w-3" />
+                          Quantity Unit
+                        </>
+                      )}
+                    </Label>
+                    <Select 
+                      value={field.options?.unit || (isWeightField(field.name) ? 'Kg' : 'pieces')}
+                      onValueChange={(value) => handleFieldUpdate(field.id, { 
+                        options: { ...field.options, unit: value }
+                      })}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isWeightField(field.name) ? (
+                          <>
+                            <SelectItem value="Kg">
+                              <div className="flex items-center gap-2">
+                                <Weight className="h-3 w-3" />
+                                Kilograms (Kg)
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="G">
+                              <div className="flex items-center gap-2">
+                                <Weight className="h-3 w-3" />
+                                Grams (G)
+                              </div>
+                            </SelectItem>
+                          </>
+                        ) : (
+                          <SelectItem value="pieces">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-3 w-3" />
+                              Pieces
+                            </div>
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id={`required-${field.id}`}
+                    checked={field.required}
+                    onCheckedChange={(checked) => handleFieldUpdate(field.id, { required: checked })}
+                  />
+                  <Label htmlFor={`required-${field.id}`} className="text-xs">
+                    Required
+                  </Label>
+                </div>
               </div>
-            );
-          })}
-        </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {fields.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No fields configured for this step.</p>
+            <p className="text-sm">Add fields from templates below or create custom fields.</p>
+          </div>
+        )}
       </div>
 
       <Separator />
 
-      <div className="space-y-3">
-        <h4 className="font-medium">Step Summary</h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <Label className="text-xs text-muted-foreground">QC Required</Label>
-            <div className="flex items-center gap-1 mt-1">
-              {step.qcRequired ? (
-                <Badge className="bg-orange-100 text-orange-800 text-xs">Yes</Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs">No</Badge>
-              )}
-            </div>
-          </div>
-          
-          <div>
-            <Label className="text-xs text-muted-foreground">Estimated Duration</Label>
-            <div className="mt-1 text-sm font-medium">
-              {step.estimatedDuration} hours
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <Label className="text-xs text-muted-foreground">Required Fields ({selectedFields.filter(f => f.required).length})</Label>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {selectedFields
-              .filter(field => field.required)
-              .map(field => (
-                <Badge key={field.id} className="text-xs bg-red-100 text-red-800">
-                  {field.label} *
-                </Badge>
-              ))}
-          </div>
-        </div>
-
-        <div>
-          <Label className="text-xs text-muted-foreground">Optional Fields ({selectedFields.filter(f => !f.required).length})</Label>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {selectedFields
-              .filter(field => !field.required)
-              .map(field => (
-                <Badge key={field.id} variant="outline" className="text-xs">
-                  {field.label}
-                </Badge>
-              ))}
-          </div>
+      {/* Field Templates */}
+      <div className="space-y-4">
+        <h4 className="font-medium">Add from Templates</h4>
+        <div className="grid grid-cols-1 gap-2">
+          {availableFields.map((templateField) => {
+            const isAlreadyAdded = fields.some(field => field.name === templateField.name);
+            return (
+              <div
+                key={templateField.id}
+                className={`flex items-center justify-between p-3 border rounded-lg ${
+                  isAlreadyAdded ? 'bg-muted/50 border-muted' : 'hover:bg-muted/30 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {getFieldIcon(templateField.type, templateField.name)}
+                  <div>
+                    <div className="font-medium text-sm">{templateField.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {templateField.type} • {templateField.required ? 'Required' : 'Optional'}
+                      {(isWeightField(templateField.name) || isQuantityField(templateField.name)) && (
+                        <span className="ml-1">
+                          • {isWeightField(templateField.name) ? 'Kg/G units' : 'Pieces unit'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => handleAddFromTemplate(templateField)}
+                  disabled={isAlreadyAdded}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isAlreadyAdded ? 'Added' : 'Add'}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

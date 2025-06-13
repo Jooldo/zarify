@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck } from 'lucide-react';
+import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -106,18 +106,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     step.manufacturing_steps.step_order > data.stepOrder
   );
 
-  // Get user-defined status from step values
-  const getUserDefinedStatus = () => {
-    if (!currentOrderStep || !data.stepFields) return null;
-    
-    const statusField = data.stepFields.find(field => field.field_type === 'status' && field.field_name.toLowerCase().includes('status'));
-    if (statusField) {
-      const value = getStepValue(currentOrderStep.id, statusField.field_id);
-      return value;
-    }
-    return null;
-  };
-
   // Get assigned worker name from step values or order step
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
@@ -138,32 +126,59 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
-  // Get configured field values for display
+  // Get configured field values for display - show all fields
   const getConfiguredFieldValues = () => {
-    if (!data.stepFields) return [];
+    if (!data.stepFields || data.stepFields.length === 0) return [];
+    
+    console.log('Step fields for card:', data.stepFields);
+    console.log('Current order step:', currentOrderStep);
     
     const fieldValues = data.stepFields
-      .filter(field => !['worker', 'status'].includes(field.field_type)) // Exclude worker and status as they're shown separately
+      .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
       .map(field => {
         let value = 'Not set';
+        let displayValue = 'Not set';
         
         // Get value from database if step exists
         if (currentOrderStep) {
           const savedValue = getStepValue(currentOrderStep.id, field.field_id);
-          if (savedValue) {
+          console.log(`Field ${field.field_label} (${field.field_id}) value:`, savedValue);
+          if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
             value = savedValue;
+            displayValue = savedValue;
           }
+        }
+        
+        // Add unit information for specific field types
+        if (field.field_name.toLowerCase().includes('weight') && value !== 'Not set') {
+          const unit = field.field_options?.unit || 'Kg';
+          displayValue = `${value} ${unit}`;
+        } else if (field.field_name.toLowerCase().includes('quantity') && value !== 'Not set') {
+          displayValue = `${value} pieces`;
         }
         
         return {
           label: field.field_label,
-          value: value,
+          value: displayValue,
           type: field.field_type,
-          isEmpty: value === 'Not set'
+          isEmpty: value === 'Not set',
+          fieldName: field.field_name
         };
       });
     
+    console.log('Configured field values:', fieldValues);
     return fieldValues;
+  };
+
+  // Get icon for field type
+  const getFieldIcon = (fieldName: string, fieldType: string) => {
+    if (fieldName.toLowerCase().includes('weight')) {
+      return <Weight className="h-3 w-3 text-muted-foreground" />;
+    }
+    if (fieldName.toLowerCase().includes('quantity')) {
+      return <Hash className="h-3 w-3 text-muted-foreground" />;
+    }
+    return <Settings className="h-3 w-3 text-muted-foreground" />;
   };
 
   const cardClassName = data.isJhalaiStep 
@@ -185,7 +200,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     !orderSteps.some(step => step.manufacturing_order_id === data.orderId)) ||
     (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentSteps);
 
-  const userDefinedStatus = getUserDefinedStatus();
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
 
@@ -252,22 +266,16 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Status Pills - Show user-defined status instead of default status */}
+        {/* Status Pills */}
         {data.stepOrder > 0 && (
           <div className="flex items-center justify-between">
-            {userDefinedStatus ? (
-              <Badge className="bg-purple-100 text-purple-800 capitalize">
-                {userDefinedStatus}
-              </Badge>
-            ) : (
-              <Badge className={getStatusColor(data.status)}>
-                {data.status.replace('_', ' ').toUpperCase()}
-              </Badge>
-            )}
+            <Badge className={getStatusColor(data.status)}>
+              {data.status.replace('_', ' ').toUpperCase()}
+            </Badge>
           </div>
         )}
 
-        {/* Due Date instead of hours estimated */}
+        {/* Due Date */}
         {data.dueDate && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
@@ -284,12 +292,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Configured Field Values */}
+        {/* Configured Field Values - Show ALL configured fields */}
         {configuredFieldValues.length > 0 && (
           <div className="space-y-1">
             {configuredFieldValues.map((field, index) => (
               <div key={index} className="flex items-center gap-2 text-xs">
-                <Settings className="h-3 w-3 text-muted-foreground" />
+                {getFieldIcon(field.fieldName, field.type)}
                 <span className="text-muted-foreground">{field.label}:</span>
                 <span className={`font-medium ${field.isEmpty ? 'text-muted-foreground italic' : ''}`}>
                   {field.value}

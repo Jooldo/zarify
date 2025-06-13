@@ -12,7 +12,9 @@ import {
   Settings, 
   CheckCircle, 
   AlertCircle,
-  Save
+  Save,
+  Weight,
+  Package
 } from 'lucide-react';
 import StepFieldsConfig from './StepFieldsConfig';
 import { useToast } from '@/hooks/use-toast';
@@ -25,9 +27,11 @@ export interface RequiredField {
   id: string;
   name: string;
   label: string;
-  type: 'worker' | 'date' | 'number' | 'text' | 'status' | 'multiselect';
+  type: 'worker' | 'date' | 'number' | 'text';
   required: boolean;
-  options?: string[];
+  options?: {
+    unit?: string;
+  };
 }
 
 export interface ManufacturingStepConfig {
@@ -43,10 +47,38 @@ export interface ManufacturingStepConfig {
 const defaultRequiredFields: RequiredField[] = [
   { id: 'worker', name: 'assignedWorker', label: 'Assigned Worker', type: 'worker', required: true },
   { id: 'dueDate', name: 'dueDate', label: 'Due Date', type: 'date', required: true },
-  { id: 'rawMaterialWeight', name: 'rawMaterialWeightAssigned', label: 'Material Weight Assigned', type: 'number', required: false },
-  { id: 'rawMaterialReceived', name: 'rawMaterialReceived', label: 'Material Weight Received', type: 'number', required: false },
-  { id: 'quantityAssigned', name: 'quantityAssigned', label: 'Quantity Assigned', type: 'number', required: false },
-  { id: 'quantityReceived', name: 'quantityReceived', label: 'Quantity Received', type: 'number', required: false },
+  { 
+    id: 'rawMaterialWeight', 
+    name: 'rawMaterialWeightAssigned', 
+    label: 'Material Weight Assigned', 
+    type: 'number', 
+    required: false,
+    options: { unit: 'Kg' }
+  },
+  { 
+    id: 'rawMaterialReceived', 
+    name: 'rawMaterialWeightReceived', 
+    label: 'Material Weight Received', 
+    type: 'number', 
+    required: false,
+    options: { unit: 'Kg' }
+  },
+  { 
+    id: 'quantityAssigned', 
+    name: 'quantityAssigned', 
+    label: 'Quantity Assigned', 
+    type: 'number', 
+    required: false,
+    options: { unit: 'pieces' }
+  },
+  { 
+    id: 'quantityReceived', 
+    name: 'quantityReceived', 
+    label: 'Quantity Received', 
+    type: 'number', 
+    required: false,
+    options: { unit: 'pieces' }
+  },
   { id: 'notes', name: 'notes', label: 'Notes / Instructions', type: 'text', required: false }
 ];
 
