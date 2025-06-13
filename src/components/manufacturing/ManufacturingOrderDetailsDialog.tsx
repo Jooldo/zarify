@@ -13,16 +13,17 @@ import StartStepDialog from './StartStepDialog';
 
 interface ManufacturingOrderDetailsDialogProps {
   order: ManufacturingOrder | null;
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
+  onStatusUpdate?: (orderId: string, status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled') => void;
 }
 
 const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogProps> = ({
   order,
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   getPriorityColor,
   getStatusColor
 }) => {
@@ -63,7 +64,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">

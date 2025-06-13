@@ -2,15 +2,19 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Factory, Package, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Factory, Package, AlertCircle, LayoutGrid, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import ManufacturingOrderCard from './ManufacturingOrderCard';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
+import ProductionFlowView from './ProductionFlowView';
 
 const ProductionQueueView = () => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'flow'>('cards');
 
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -79,101 +83,133 @@ const ProductionQueueView = () => {
         </div>
       </div>
 
-      {/* Production Stages */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Orders */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-gray-500" />
-              Pending Orders
-              <Badge variant="secondary">{pendingOrders.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {pendingOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No pending orders</p>
-              </div>
-            ) : (
-              pendingOrders.map(order => (
-                <ManufacturingOrderCard
-                  key={order.id}
-                  order={order}
-                  getPriorityColor={getPriorityColor}
-                  getStatusColor={getStatusColor}
-                  onViewDetails={handleViewDetails}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* In Progress Orders */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Factory className="h-5 w-5 text-blue-500" />
-              In Progress
-              <Badge variant="secondary">{inProgressOrders.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {inProgressOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Factory className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No orders in progress</p>
-              </div>
-            ) : (
-              inProgressOrders.map(order => (
-                <ManufacturingOrderCard
-                  key={order.id}
-                  order={order}
-                  getPriorityColor={getPriorityColor}
-                  getStatusColor={getStatusColor}
-                  onViewDetails={handleViewDetails}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Completed Orders */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-green-500" />
-              Completed
-              <Badge variant="secondary">{completedOrders.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {completedOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No completed orders</p>
-              </div>
-            ) : (
-              completedOrders.slice(0, 5).map(order => (
-                <ManufacturingOrderCard
-                  key={order.id}
-                  order={order}
-                  getPriorityColor={getPriorityColor}
-                  getStatusColor={getStatusColor}
-                  onViewDetails={handleViewDetails}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={viewMode === 'cards' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setViewMode('cards')}
+          className="flex items-center gap-2"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Cards View
+        </Button>
+        <Button
+          variant={viewMode === 'flow' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setViewMode('flow')}
+          className="flex items-center gap-2"
+        >
+          <Workflow className="h-4 w-4" />
+          Flow View
+        </Button>
       </div>
+
+      {/* Content based on view mode */}
+      {viewMode === 'flow' ? (
+        <ProductionFlowView
+          manufacturingOrders={manufacturingOrders}
+          getPriorityColor={getPriorityColor}
+          getStatusColor={getStatusColor}
+          onViewDetails={handleViewDetails}
+        />
+      ) : (
+        /* Production Stages - Cards View */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Pending Orders */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-gray-500" />
+                Pending Orders
+                <Badge variant="secondary">{pendingOrders.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+              {pendingOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No pending orders</p>
+                </div>
+              ) : (
+                pendingOrders.map(order => (
+                  <ManufacturingOrderCard
+                    key={order.id}
+                    order={order}
+                    getPriorityColor={getPriorityColor}
+                    getStatusColor={getStatusColor}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* In Progress Orders */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Factory className="h-5 w-5 text-blue-500" />
+                In Progress
+                <Badge variant="secondary">{inProgressOrders.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+              {inProgressOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Factory className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No orders in progress</p>
+                </div>
+              ) : (
+                inProgressOrders.map(order => (
+                  <ManufacturingOrderCard
+                    key={order.id}
+                    order={order}
+                    getPriorityColor={getPriorityColor}
+                    getStatusColor={getStatusColor}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Completed Orders */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-green-500" />
+                Completed
+                <Badge variant="secondary">{completedOrders.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+              {completedOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No completed orders</p>
+                </div>
+              ) : (
+                completedOrders.slice(0, 10).map(order => (
+                  <ManufacturingOrderCard
+                    key={order.id}
+                    order={order}
+                    getPriorityColor={getPriorityColor}
+                    getStatusColor={getStatusColor}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Manufacturing Order Details Dialog */}
       <ManufacturingOrderDetailsDialog
         order={selectedOrder}
-        isOpen={detailsDialogOpen}
-        onClose={() => setDetailsDialogOpen(false)}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
         getPriorityColor={getPriorityColor}
         getStatusColor={getStatusColor}
       />
