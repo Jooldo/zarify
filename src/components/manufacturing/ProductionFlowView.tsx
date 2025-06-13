@@ -35,7 +35,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   
   // Cast data to ManufacturingOrder since we know the structure
-  const orderData = data as ManufacturingOrder;
+  const orderData = data as unknown as ManufacturingOrder;
   
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -162,7 +162,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `pending-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 50, y: 50 + index * 250 },
-        data: order as Record<string, unknown>,
+        data: order as unknown as Record<string, unknown>,
       });
     });
 
@@ -172,7 +172,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `progress-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 400, y: 50 + index * 250 },
-        data: order as Record<string, unknown>,
+        data: order as unknown as Record<string, unknown>,
       });
     });
 
@@ -182,7 +182,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `completed-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 750, y: 50 + index * 250 },
-        data: order as Record<string, unknown>,
+        data: order as unknown as Record<string, unknown>,
       });
     });
 
