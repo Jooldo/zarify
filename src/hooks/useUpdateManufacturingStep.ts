@@ -73,16 +73,21 @@ export const useUpdateManufacturingStep = () => {
       }
     },
     onSuccess: async () => {
-      // Invalidate all related queries immediately and force refetch
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] })
-      ]);
-      
-      // Force refetch to ensure UI updates immediately
+      // Invalidate and refetch all related queries for immediate UI updates
+      const queryKeys = [
+        ['manufacturing-order-steps'],
+        ['manufacturing-order-step-values'],
+        ['manufacturing-orders'],
+        ['manufacturing-steps'],
+        ['manufacturing-step-fields']
+      ];
+
+      // First invalidate all queries
+      await Promise.all(
+        queryKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
+      );
+
+      // Then force refetch the most critical ones
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['manufacturing-order-steps'] }),
         queryClient.refetchQueries({ queryKey: ['manufacturing-order-step-values'] }),

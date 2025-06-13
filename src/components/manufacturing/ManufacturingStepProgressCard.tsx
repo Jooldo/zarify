@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { User, Calendar, Package, CheckCircle2, Clock, Truck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Calendar, Package, CheckCircle2, Clock, Truck, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -10,11 +12,13 @@ import { useWorkers } from '@/hooks/useWorkers';
 interface ManufacturingStepProgressCardProps {
   orderStep: ManufacturingOrderStep;
   onClick: () => void;
+  onNextStepClick?: () => void;
 }
 
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({
   orderStep,
-  onClick
+  onClick,
+  onNextStepClick
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
@@ -39,10 +43,23 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
   const qtyReceived = getStepValue(orderStep.id, 'quantity_received');
   const userStatus = getStepValue(orderStep.id, 'status');
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent card click when button is clicked
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    onClick();
+  };
+
+  const handleNextStepClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onNextStepClick?.();
+  };
+
   return (
     <Card 
       className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500 min-w-[280px]"
-      onClick={onClick}
+      onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -138,6 +155,19 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
             </div>
           )}
         </div>
+
+        {/* Next Step CTA - Show when this step is completed */}
+        {orderStep.status === 'completed' && onNextStepClick && (
+          <div className="pt-2 border-t">
+            <Button 
+              onClick={handleNextStepClick}
+              className="w-full text-xs h-7 bg-green-600 hover:bg-green-700"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Start Next Step
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

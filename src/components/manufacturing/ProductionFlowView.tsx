@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -24,7 +23,7 @@ import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
-import StepProgressDialog from './StepProgressDialog';
+import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 
 interface ProductionFlowViewProps {
@@ -58,8 +57,6 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
       case 'pending': return 'bg-gray-100 text-gray-800';
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
-      case 'qc_failed': return 'bg-red-100 text-red-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -163,7 +160,11 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
 // Custom node component for step progress cards
 const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const stepData = data as unknown as { orderStep: any; onStepClick: (orderStep: any) => void };
+  const stepData = data as unknown as { 
+    orderStep: any; 
+    onStepClick: (orderStep: any) => void;
+    onNextStepClick: (orderStep: any) => void;
+  };
   
   return (
     <>
@@ -171,6 +172,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
       <ManufacturingStepProgressCard
         orderStep={stepData.orderStep}
         onClick={() => stepData.onStepClick(stepData.orderStep)}
+        onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
       />
       <Handle type="source" position={Position.Right} />
     </>
@@ -188,11 +190,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   getStatusColor,
   onViewDetails
 }) => {
-  const { orderSteps } = useManufacturingSteps();
+  const { orderSteps, manufacturingSteps, stepFields } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
-  const [selectedOrderForSteps, setSelectedOrderForSteps] = useState<ManufacturingOrder | null>(null);
+  const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [stepProgressDialogOpen, setStepProgressDialogOpen] = useState(false);
+  const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
+  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
 
   const handleViewDetails = (order: ManufacturingOrder) => {
     setSelectedOrder(order);
@@ -200,10 +204,24 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   };
 
   const handleStepClick = (orderStep: any) => {
-    const order = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
-    if (order) {
-      setSelectedOrderForSteps(order);
-      setStepProgressDialogOpen(true);
+    setSelectedOrderStep(orderStep);
+    setUpdateStepDialogOpen(true);
+  };
+
+  const handleNextStepClick = (orderStep: any) => {
+    // Find the next step after this completed step
+    const currentOrder = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
+    if (!currentOrder) return;
+
+    const currentStepOrder = orderStep.manufacturing_steps?.step_order;
+    const nextStep = manufacturingSteps
+      .filter(step => step.is_active && step.step_order > currentStepOrder)
+      .sort((a, b) => a.step_order - b.step_order)[0];
+
+    if (nextStep) {
+      setSelectedOrder(currentOrder);
+      setSelectedStepForStart(nextStep);
+      setStartStepDialogOpen(true);
     }
   };
 
@@ -238,7 +256,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           position: { x: stepXOffset, y: yOffset },
           data: { 
             orderStep, 
-            onStepClick: handleStepClick 
+            onStepClick: handleStepClick,
+            onNextStepClick: handleNextStepClick
           } as unknown as Record<string, unknown>,
         });
       });
@@ -247,7 +266,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps]);
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
@@ -292,6 +311,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     [setEdges]
   );
 
+  // Get current order step data for update dialog
+  const currentOrderStep = selectedOrderStep;
+  const currentStepFields = stepFields.filter(field => 
+    field.manufacturing_step_id === currentOrderStep?.manufacturing_step_id
+  );
+  const previousSteps = orderSteps
+    .filter(step => 
+      step.manufacturing_order_id === currentOrderStep?.manufacturing_order_id &&
+      (step.manufacturing_steps?.step_order || 0) < (currentOrderStep?.manufacturing_steps?.step_order || 0)
+    )
+    .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+
   return (
     <>
       <div className="w-full h-[600px] border rounded-lg bg-background">
@@ -324,13 +355,28 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         getStatusColor={getStatusColor}
       />
 
-      <StepProgressDialog
-        order={selectedOrderForSteps}
-        orderSteps={orderSteps.filter(step => 
-          selectedOrderForSteps ? step.manufacturing_order_id === selectedOrderForSteps.id : false
-        )}
-        open={stepProgressDialogOpen}
-        onOpenChange={setStepProgressDialogOpen}
+      <UpdateStepDialog
+        open={updateStepDialogOpen}
+        onOpenChange={setUpdateStepDialogOpen}
+        stepData={currentOrderStep ? {
+          stepName: currentOrderStep.manufacturing_steps?.step_name || '',
+          stepOrder: currentOrderStep.manufacturing_steps?.step_order || 0,
+          orderId: currentOrderStep.manufacturing_order_id,
+          orderNumber: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.order_number || '',
+          productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
+          status: currentOrderStep.status,
+          progress: currentOrderStep.progress_percentage || 0,
+        } : null}
+        currentOrderStep={currentOrderStep}
+        stepFields={currentStepFields}
+        previousSteps={previousSteps}
+      />
+
+      <StartStepDialog
+        isOpen={startStepDialogOpen}
+        onClose={() => setStartStepDialogOpen(false)}
+        order={selectedOrder}
+        step={selectedStepForStart}
       />
     </>
   );
