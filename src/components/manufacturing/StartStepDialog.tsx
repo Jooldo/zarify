@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Play, Package2, User, Truck } from 'lucide-react';
@@ -60,6 +59,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         }
       });
       setFieldValues(initialValues);
+    } else {
+      setFieldValues({});
     }
   }, [isOpen, step, currentStepFields]);
 
@@ -68,10 +69,15 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   }
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
+    console.log('Field change:', fieldId, value);
+    setFieldValues(prev => {
+      const updated = {
+        ...prev,
+        [fieldId]: value
+      };
+      console.log('Updated field values:', updated);
+      return updated;
+    });
   };
 
   const handleStartStep = async () => {
@@ -208,7 +214,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder="Enter text"
-            rows={2}
+            rows={3}
           />
         );
 
@@ -225,13 +231,14 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   // Check if all required fields are filled
   const requiredFields = currentStepFields.filter(field => field.is_required);
-  const isFormValid = requiredFields.every(field => 
-    fieldValues[field.field_id] && fieldValues[field.field_id] !== ''
-  );
+  const isFormValid = requiredFields.every(field => {
+    const value = fieldValues[field.field_id];
+    return value !== undefined && value !== null && value !== '';
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
@@ -242,17 +249,17 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Order Information - Compact */}
+        <div className="space-y-6">
+          {/* Order Information */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
                 <Package2 className="h-4 w-4" />
                 Order Information
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Product:</span>
                   <div className="font-medium">{order.product_name}</div>
@@ -275,17 +282,17 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </CardContent>
           </Card>
 
-          {/* Raw Material Requirements - Compact */}
+          {/* Materials Required */}
           {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
                   <Truck className="h-4 w-4" />
                   Materials Required
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {order.product_configs.product_config_materials.slice(0, 3).map((material, index) => {
                     const totalRequired = material.quantity_required * order.quantity_required;
                     return (
@@ -311,23 +318,23 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
           {/* Step Configuration */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
                 {step.step_name} Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 space-y-3">
+            <CardContent className="pt-0 space-y-4">
               {currentStepFields.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
+                <div className="text-center py-6 text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No fields configured for this step</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {currentStepFields.map(field => (
-                    <div key={field.field_id} className="space-y-1">
-                      <Label htmlFor={field.field_id} className="text-sm flex items-center gap-1">
+                    <div key={field.field_id} className="space-y-2">
+                      <Label htmlFor={field.field_id} className="text-sm flex items-center gap-2">
                         {field.field_label}
                         {field.is_required && (
                           <Badge variant="outline" className="text-xs h-4 px-1">Required</Badge>
@@ -342,7 +349,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-2 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
