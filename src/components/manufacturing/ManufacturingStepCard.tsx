@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
+import { Plus, Calendar, User, Package, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -138,7 +138,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return [];
   };
 
-  // Get configured field values for display - show all non-worker fields
+  // Get configured field values for display - exclude text fields and remove units
   const getConfiguredFieldValues = () => {
     const stepFields = getStepFields();
     
@@ -147,7 +147,11 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
+      .filter(field => 
+        field.field_type !== 'worker' && 
+        field.field_type !== 'text' && 
+        field.field_type !== 'textarea'
+      ) // Exclude worker and text fields
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -157,13 +161,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           const savedValue = getStepValue(currentOrderStep.id, field.field_id);
           if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
             value = savedValue;
-            displayValue = savedValue;
+            displayValue = savedValue; // Don't add unit here
           }
-        }
-        
-        // Add unit information for specific field types
-        if (field.field_options?.unit && value !== 'Not set') {
-          displayValue = `${value} ${field.field_options.unit}`;
         }
         
         return {
@@ -171,8 +170,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           value: displayValue,
           type: field.field_type,
           isEmpty: value === 'Not set',
-          fieldName: field.field_name,
-          unit: field.field_options?.unit
+          fieldName: field.field_name
         };
       });
     
@@ -197,8 +195,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[260px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[260px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -224,7 +222,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <Card className={cardClassName} onClick={handleCardClick}>
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
-        <CardHeader className="pb-2 p-4">
+        <CardHeader className="pb-2 p-3">
           <div className="flex items-center justify-between">
             <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
               {data.stepName}
@@ -253,7 +251,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2 p-4 pt-0">
+        <CardContent className="space-y-2 p-3 pt-0">
           {/* Order Information */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Package className="h-3 w-3" />
@@ -309,26 +307,26 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             </div>
           )}
 
-          {/* Configured Field Values - Enhanced Display */}
+          {/* Configured Field Values - More compact display without units */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
                 Field Values
               </div>
-              {configuredFieldValues.map((field, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
+              {configuredFieldValues.slice(0, 3).map((field, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
                   {getFieldIcon(field.fieldName, field.type)}
                   <span className="text-muted-foreground font-medium">{field.label}:</span>
                   <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                     {field.value}
                   </span>
-                  {field.unit && !field.isEmpty && (
-                    <Badge variant="outline" className="text-xs px-1 py-0">
-                      {field.unit}
-                    </Badge>
-                  )}
                 </div>
               ))}
+              {configuredFieldValues.length > 3 && (
+                <div className="text-xs text-muted-foreground text-center">
+                  +{configuredFieldValues.length - 3} more fields
+                </div>
+              )}
             </div>
           )}
 

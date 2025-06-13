@@ -47,7 +47,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     return 'bg-gray-300';
   };
 
-  // Get configured field values for display
+  // Get configured field values for display - exclude text fields and remove units
   const getConfiguredFieldValues = () => {
     console.log('Getting configured field values for step:', orderStep.id);
     console.log('Available stepFields:', stepFields);
@@ -58,7 +58,11 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
+      .filter(field => 
+        field.field_type !== 'worker' && 
+        field.field_type !== 'text' && 
+        field.field_type !== 'textarea'
+      ) // Exclude worker and text fields
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -69,12 +73,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         
         if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
           value = savedValue;
-          displayValue = savedValue;
-        }
-        
-        // Add unit information from field options
-        if (field.field_options?.unit && value !== 'Not set') {
-          displayValue = `${value} ${field.field_options.unit}`;
+          displayValue = savedValue; // Don't add unit here
         }
         
         return {
@@ -82,8 +81,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           value: displayValue,
           type: field.field_type,
           isEmpty: value === 'Not set',
-          fieldName: field.field_name,
-          unit: field.field_options?.unit
+          fieldName: field.field_name
         };
       });
     
@@ -145,7 +143,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
   return (
     <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 p-3">
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-sm font-semibold">
@@ -165,7 +163,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 p-3 pt-0">
         {/* Progress Bar */}
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
@@ -189,26 +187,26 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           </div>
         )}
 
-        {/* Configured Field Values */}
+        {/* Configured Field Values - More compact without units */}
         {configuredFieldValues.length > 0 && (
           <div className="space-y-1">
             <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
               Field Values
             </div>
-            {configuredFieldValues.map((field, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
+            {configuredFieldValues.slice(0, 3).map((field, index) => (
+              <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
                 {getFieldIcon(field.fieldName, field.type)}
                 <span className="text-muted-foreground font-medium">{field.label}:</span>
                 <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                   {field.value}
                 </span>
-                {field.unit && !field.isEmpty && (
-                  <Badge variant="outline" className="text-xs px-1 py-0">
-                    {field.unit}
-                  </Badge>
-                )}
               </div>
             ))}
+            {configuredFieldValues.length > 3 && (
+              <div className="text-xs text-muted-foreground text-center">
+                +{configuredFieldValues.length - 3} more fields
+              </div>
+            )}
           </div>
         )}
 
