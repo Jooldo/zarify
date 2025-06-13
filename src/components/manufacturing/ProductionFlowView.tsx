@@ -23,6 +23,9 @@ import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import StartStepDialog from './StartStepDialog';
+import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
+import StepProgressDialog from './StepProgressDialog';
+import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
@@ -38,7 +41,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const [selectedStep, setSelectedStep] = useState<any>(null);
   
   // Cast data to ManufacturingOrder since we know the structure
-  const orderData = data as unknown as ManufacturingOrder;
+  const orderData = data as unknown as ManufacturingOrder & { onViewDetails: (order: ManufacturingOrder) => void };
   
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -85,8 +88,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    // Open detailed view - we'll need to get this from parent props
-    console.log('Open detailed view for order:', orderData.id);
+    orderData.onViewDetails(orderData);
   };
 
   const handleStartStep = (e: React.MouseEvent) => {
@@ -159,8 +161,25 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   );
 };
 
+// Custom node component for step progress cards
+const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
+  const stepData = data as unknown as { orderStep: any; onStepClick: (orderStep: any) => void };
+  
+  return (
+    <>
+      <Handle type="target" position={Position.Left} />
+      <ManufacturingStepProgressCard
+        orderStep={stepData.orderStep}
+        onClick={() => stepData.onStepClick(stepData.orderStep)}
+      />
+      <Handle type="source" position={Position.Right} />
+    </>
+  );
+};
+
 const nodeTypes = {
   manufacturingOrder: ManufacturingOrderNodeComponent,
+  stepProgress: StepProgressNodeComponent,
 };
 
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
@@ -169,51 +188,101 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   getStatusColor,
   onViewDetails
 }) => {
-  // Convert manufacturing orders to React Flow nodes
+  const { orderSteps } = useManufacturingSteps();
+  const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
+  const [selectedOrderForSteps, setSelectedOrderForSteps] = useState<ManufacturingOrder | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [stepProgressDialogOpen, setStepProgressDialogOpen] = useState(false);
+
+  const handleViewDetails = (order: ManufacturingOrder) => {
+    setSelectedOrder(order);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleStepClick = (orderStep: any) => {
+    const order = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
+    if (order) {
+      setSelectedOrderForSteps(order);
+      setStepProgressDialogOpen(true);
+    }
+  };
+
+  // Convert manufacturing orders and their steps to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
-    const pendingOrders = manufacturingOrders.filter(order => order.status === 'pending');
-    const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
-    const completedOrders = manufacturingOrders.filter(order => order.status === 'completed');
-
     const nodes: Node[] = [];
+    let yOffset = 50;
     
-    // Layout pending orders in first column
-    pendingOrders.forEach((order, index) => {
+    manufacturingOrders.forEach((order, orderIndex) => {
+      const xStart = 50;
+      
+      // Add manufacturing order node
       nodes.push({
-        id: `pending-${order.id}`,
+        id: `order-${order.id}`,
         type: 'manufacturingOrder',
-        position: { x: 50, y: 50 + index * 250 },
-        data: order as unknown as Record<string, unknown>,
+        position: { x: xStart, y: yOffset },
+        data: { ...order, onViewDetails: handleViewDetails } as unknown as Record<string, unknown>,
       });
-    });
 
-    // Layout in-progress orders in second column
-    inProgressOrders.forEach((order, index) => {
-      nodes.push({
-        id: `progress-${order.id}`,
-        type: 'manufacturingOrder',
-        position: { x: 400, y: 50 + index * 250 },
-        data: order as unknown as Record<string, unknown>,
-      });
-    });
+      // Add step progress nodes for this order
+      const orderStepsFiltered = orderSteps.filter(step => 
+        step.manufacturing_order_id === order.id && 
+        step.status !== 'pending'
+      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
-    // Layout completed orders in third column
-    completedOrders.forEach((order, index) => {
-      nodes.push({
-        id: `completed-${order.id}`,
-        type: 'manufacturingOrder',
-        position: { x: 750, y: 50 + index * 250 },
-        data: order as unknown as Record<string, unknown>,
+      orderStepsFiltered.forEach((orderStep, stepIndex) => {
+        const stepXOffset = xStart + 400 + (stepIndex * 320);
+        
+        nodes.push({
+          id: `step-${orderStep.id}`,
+          type: 'stepProgress',
+          position: { x: stepXOffset, y: yOffset },
+          data: { 
+            orderStep, 
+            onStepClick: handleStepClick 
+          } as unknown as Record<string, unknown>,
+        });
       });
+
+      yOffset += 250; // Space between order rows
     });
 
     return nodes;
-  }, [manufacturingOrders]);
+  }, [manufacturingOrders, orderSteps]);
 
   const initialEdges: Edge[] = useMemo(() => {
-    // Create simple flow edges between status columns
-    return [];
-  }, []);
+    const edges: Edge[] = [];
+    
+    manufacturingOrders.forEach((order) => {
+      const orderStepsFiltered = orderSteps.filter(step => 
+        step.manufacturing_order_id === order.id && 
+        step.status !== 'pending'
+      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+
+      if (orderStepsFiltered.length > 0) {
+        // Connect order to first step
+        edges.push({
+          id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
+          source: `order-${order.id}`,
+          target: `step-${orderStepsFiltered[0].id}`,
+          type: 'smoothstep',
+          style: { stroke: '#3b82f6', strokeWidth: 2 },
+        });
+
+        // Connect steps to each other
+        for (let i = 0; i < orderStepsFiltered.length - 1; i++) {
+          edges.push({
+            id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
+            source: `step-${orderStepsFiltered[i].id}`,
+            target: `step-${orderStepsFiltered[i + 1].id}`,
+            type: 'smoothstep',
+            style: { stroke: '#3b82f6', strokeWidth: 2 },
+          });
+        }
+      }
+    });
+
+    return edges;
+  }, [manufacturingOrders, orderSteps]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -224,26 +293,46 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   );
 
   return (
-    <div className="w-full h-[600px] border rounded-lg bg-background">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        className="bg-background"
-      >
-        <Controls />
-        <MiniMap 
-          className="bg-background border"
-          nodeClassName={() => 'fill-primary/20'}
-        />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-      </ReactFlow>
-    </div>
+    <>
+      <div className="w-full h-[600px] border rounded-lg bg-background">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="bottom-left"
+          className="bg-background"
+        >
+          <Controls />
+          <MiniMap 
+            className="bg-background border"
+            nodeClassName={() => 'fill-primary/20'}
+          />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+        </ReactFlow>
+      </div>
+
+      {/* Dialogs */}
+      <ManufacturingOrderDetailsDialog
+        order={selectedOrder}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
+      />
+
+      <StepProgressDialog
+        order={selectedOrderForSteps}
+        orderSteps={orderSteps.filter(step => 
+          selectedOrderForSteps ? step.manufacturing_order_id === selectedOrderForSteps.id : false
+        )}
+        open={stepProgressDialogOpen}
+        onOpenChange={setStepProgressDialogOpen}
+      />
+    </>
   );
 };
 

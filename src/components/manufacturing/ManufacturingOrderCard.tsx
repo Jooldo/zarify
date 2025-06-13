@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import StartStepDialog from './StartStepDialog';
+import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 
 interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
@@ -20,6 +21,7 @@ interface ManufacturingOrderCardProps {
 const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onViewDetails }: ManufacturingOrderCardProps) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
 
   // Get the next step that should be started
@@ -60,7 +62,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    onViewDetails(order);
+    setDetailsDialogOpen(true);
   };
 
   const handleStartStep = (e: React.MouseEvent) => {
@@ -195,6 +197,14 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
         onClose={() => setStartStepDialogOpen(false)}
         order={order}
         step={selectedStep}
+      />
+
+      <ManufacturingOrderDetailsDialog
+        order={order}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
       />
     </>
   );
