@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -130,36 +131,17 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
-  // Get step fields from manufacturing steps if not provided in data
+  // Get step fields - use the fields passed in data
   const getStepFields = () => {
     console.log('Getting step fields for stepOrder:', data.stepOrder);
     
-    // If step fields are provided in data, use them
+    // Use step fields from data if available
     if (data.stepFields && data.stepFields.length > 0) {
       console.log('Using stepFields from data:', data.stepFields);
       return data.stepFields;
     }
     
-    // Otherwise, try to get them from manufacturing steps
-    const manufacturingStep = manufacturingSteps.find(step => 
-      step.step_order === data.stepOrder && step.is_active
-    );
-    
-    console.log('Found manufacturing step:', manufacturingStep);
-    
-    if (manufacturingStep && manufacturingStep.manufacturing_step_fields) {
-      console.log('Using fields from manufacturing step:', manufacturingStep.manufacturing_step_fields);
-      return manufacturingStep.manufacturing_step_fields.map(stepField => ({
-        field_id: stepField.id,
-        field_name: stepField.field_name,
-        field_label: stepField.field_label,
-        field_type: stepField.field_type as 'text' | 'number' | 'date' | 'worker',
-        is_required: stepField.is_required,
-        field_options: stepField.field_options,
-        step_order: stepField.step_order
-      }));
-    }
-    
+    console.log('No step fields found in data');
     return [];
   };
 

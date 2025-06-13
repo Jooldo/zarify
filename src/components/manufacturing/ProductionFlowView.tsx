@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -167,6 +166,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     onStepClick: (orderStep: any) => void;
     onNextStepClick: (orderStep: any) => void;
     stepValues: any[];
+    stepFields: any[];
     timestamp: number; // Force re-render when this changes
   };
   
@@ -266,6 +266,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         const stepXOffset = xStart + 400 + (stepIndex * 320);
         const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
         
+        // Get step fields for this specific step
+        const stepStepFields = stepFields.filter(field => 
+          field.manufacturing_step_id === orderStep.manufacturing_step_id
+        );
+        
         nodes.push({
           id: `step-${orderStep.id}`,
           type: 'stepProgress',
@@ -275,6 +280,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             onStepClick: handleStepClick,
             onNextStepClick: handleNextStepClick,
             stepValues: stepStepValues,
+            stepFields: stepStepFields, // Pass step fields to the node
             timestamp // Force re-render when this changes
           } as unknown as Record<string, unknown>,
         });
@@ -284,7 +290,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues]); // Include all dependencies
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields]); // Include stepFields in dependencies
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
