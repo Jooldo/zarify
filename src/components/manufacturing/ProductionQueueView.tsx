@@ -2,12 +2,15 @@
 import React, { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Factory, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Factory, Search, ChartGantt, Kanban, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionQueueFilter from './ProductionQueueFilter';
+import ProductionGanttView from './ProductionGanttView';
+import ProductionKanbanView from './ProductionKanbanView';
 
 interface ProductionQueueFilters {
   status: string;
@@ -25,6 +28,7 @@ const ProductionQueueView = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeView, setActiveView] = useState('flow');
   const [filters, setFilters] = useState<ProductionQueueFilters>({
     status: '',
     priority: '',
@@ -156,11 +160,44 @@ const ProductionQueueView = () => {
         </div>
       </div>
 
-      {/* Production Flow View */}
-      <ProductionFlowView
-        manufacturingOrders={filteredOrders}
-        onViewDetails={handleViewDetails}
-      />
+      {/* View Tabs */}
+      <Tabs value={activeView} onValueChange={setActiveView} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="flow" className="flex items-center gap-2">
+            <Workflow className="h-4 w-4" />
+            Flow View
+          </TabsTrigger>
+          <TabsTrigger value="gantt" className="flex items-center gap-2">
+            <ChartGantt className="h-4 w-4" />
+            Gantt View
+          </TabsTrigger>
+          <TabsTrigger value="kanban" className="flex items-center gap-2">
+            <Kanban className="h-4 w-4" />
+            Kanban View
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="flow" className="mt-6">
+          <ProductionFlowView
+            manufacturingOrders={filteredOrders}
+            onViewDetails={handleViewDetails}
+          />
+        </TabsContent>
+
+        <TabsContent value="gantt" className="mt-6">
+          <ProductionGanttView
+            manufacturingOrders={filteredOrders}
+            onViewDetails={handleViewDetails}
+          />
+        </TabsContent>
+
+        <TabsContent value="kanban" className="mt-6">
+          <ProductionKanbanView
+            manufacturingOrders={filteredOrders}
+            onViewDetails={handleViewDetails}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Manufacturing Order Details Dialog */}
       <ManufacturingOrderDetailsDialog
