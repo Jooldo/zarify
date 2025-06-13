@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Package2, User } from 'lucide-react';
+import { Play, Package2, User, Truck, Calculator } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -44,6 +44,12 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const currentStepFields = stepFields.filter(field => 
     field.manufacturing_step_id === step?.id
   );
+
+  // Get previous step data for this order
+  const previousSteps = orderSteps.filter(orderStep => 
+    orderStep.manufacturing_order_id === order?.id && 
+    orderStep.status === 'completed'
+  ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -226,7 +232,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
@@ -271,6 +277,88 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               </Table>
             </CardContent>
           </Card>
+
+          {/* Raw Material Requirements */}
+          {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Raw Material Requirements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Per Unit</TableHead>
+                      <TableHead>Total Required</TableHead>
+                      <TableHead>Unit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {order.product_configs.product_config_materials.map((material, index) => {
+                      const totalRequired = material.quantity_required * order.quantity_required;
+                      
+                      return (
+                        <TableRow key={material.id || index}>
+                          <TableCell className="font-medium">
+                            {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
+                          </TableCell>
+                          <TableCell>{material.quantity_required}</TableCell>
+                          <TableCell className="font-semibold">{totalRequired.toFixed(1)}</TableCell>
+                          <TableCell>{material.unit}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Previous Steps Data */}
+          {previousSteps.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Previous Steps Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Step</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Worker</TableHead>
+                      <TableHead>Completed At</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previousSteps.map(prevStep => (
+                      <TableRow key={prevStep.id}>
+                        <TableCell className="font-medium">
+                          {prevStep.manufacturing_steps?.step_name || 'Unknown Step'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            {prevStep.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{prevStep.workers?.name || 'N/A'}</TableCell>
+                        <TableCell>
+                          {prevStep.completed_at ? new Date(prevStep.completed_at).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Step Configuration */}
           {currentStepFields.length > 0 && (
