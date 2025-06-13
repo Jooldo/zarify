@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +63,20 @@ export const useManufacturingSteps = () => {
         .order('step_order', { ascending: true });
 
       if (error) throw error;
-      return data as ManufacturingStep[];
+      
+      // Ensure proper ID casting and add debug logging
+      const processedData = data.map(step => {
+        console.log('Processing step:', step);
+        console.log('Step ID raw:', step.id, 'Type:', typeof step.id);
+        
+        return {
+          ...step,
+          id: String(step.id), // Ensure ID is always a string
+        } as ManufacturingStep;
+      });
+      
+      console.log('Processed manufacturing steps:', processedData);
+      return processedData;
     },
   });
 
@@ -77,7 +89,16 @@ export const useManufacturingSteps = () => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return data as ManufacturingStepField[];
+      
+      // Ensure proper ID casting
+      const processedData = data.map(field => ({
+        ...field,
+        id: String(field.id),
+        manufacturing_step_id: String(field.manufacturing_step_id),
+      })) as ManufacturingStepField[];
+      
+      console.log('Processed step fields:', processedData);
+      return processedData;
     },
   });
 
@@ -89,11 +110,16 @@ export const useManufacturingSteps = () => {
         .select(`
           *,
           manufacturing_steps (
+            id,
             step_name,
             step_order,
             description,
             qc_required,
-            estimated_duration_hours
+            estimated_duration_hours,
+            merchant_id,
+            is_active,
+            created_at,
+            updated_at
           ),
           workers (
             id,
@@ -103,7 +129,28 @@ export const useManufacturingSteps = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ManufacturingOrderStep[];
+      
+      // Ensure proper ID casting for nested data
+      const processedData = data.map(orderStep => {
+        const processed = {
+          ...orderStep,
+          id: String(orderStep.id),
+          manufacturing_order_id: String(orderStep.manufacturing_order_id),
+          manufacturing_step_id: String(orderStep.manufacturing_step_id),
+        };
+        
+        if (processed.manufacturing_steps) {
+          processed.manufacturing_steps = {
+            ...processed.manufacturing_steps,
+            id: String(processed.manufacturing_steps.id),
+          };
+        }
+        
+        return processed;
+      }) as ManufacturingOrderStep[];
+      
+      console.log('Processed order steps:', processedData);
+      return processedData;
     },
   });
 

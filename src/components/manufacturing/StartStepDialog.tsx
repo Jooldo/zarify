@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -40,24 +39,35 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get fields configured for this step - use step?.id with proper null checking
-  const currentStepFields = stepFields.filter(field => 
-    step?.id && field.manufacturing_step_id === step.id
-  );
+  // Enhanced step ID validation and field filtering
+  const stepId = step?.id ? String(step.id) : null;
+  console.log('Dialog step ID processed:', stepId, 'from step:', step);
+  
+  const currentStepFields = stepFields.filter(field => {
+    const fieldStepId = String(field.manufacturing_step_id);
+    const match = stepId && fieldStepId === stepId;
+    console.log('Field step ID:', fieldStepId, 'Current step ID:', stepId, 'Match:', match);
+    return match;
+  });
 
   // Debug logging
   useEffect(() => {
     if (step && stepFields.length > 0) {
+      console.log('=== DIALOG DEBUG INFO ===');
       console.log('Step Object:', step);
-      console.log('Step ID:', step.id);
+      console.log('Step ID (raw):', step.id, 'Type:', typeof step.id);
+      console.log('Step ID (processed):', stepId);
       console.log('Step Name:', step.step_name);
       console.log('All Step Fields:', stepFields);
-      console.log('Filtered Step Fields:', currentStepFields);
-      console.log('Filter condition:', step.id, stepFields.map(f => f.manufacturing_step_id));
+      console.log('Current Step Fields:', currentStepFields);
+      console.log('Field mapping check:');
+      stepFields.forEach(field => {
+        console.log(`  Field ${field.field_id}: step_id=${field.manufacturing_step_id}, matches=${String(field.manufacturing_step_id) === stepId}`);
+      });
+      console.log('=== END DEBUG ===');
     }
-  }, [step, stepFields, currentStepFields]);
+  }, [step, stepFields, currentStepFields, stepId]);
 
-  // Get previous step data for this order
   const previousSteps = orderSteps.filter(orderStep => 
     orderStep.manufacturing_order_id === order?.id && 
     orderStep.status === 'completed'
@@ -79,7 +89,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     }
   }, [isOpen, step, currentStepFields]);
 
-  if (!order || !step) return null;
+  if (!order || !step) {
+    console.log('Dialog not rendering - missing order or step:', { order: !!order, step: !!step });
+    return null;
+  }
 
   const handleFieldChange = (fieldId: string, value: any) => {
     console.log('Field changed:', fieldId, value);
@@ -106,10 +119,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       // Check if this order step already exists
       let orderStep = orderSteps.find(os => 
         os.manufacturing_order_id === order.id && 
-        os.manufacturing_step_id === step.id
+        os.manufacturing_step_id === stepId
       );
 
-      let stepId = orderStep?.id;
+      let stepIdForUpdate = orderStep?.id;
 
       // If no order step exists, create it
       if (!orderStep) {
@@ -117,7 +130,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           .from('manufacturing_order_steps')
           .insert({
             manufacturing_order_id: order.id,
-            manufacturing_step_id: step.id,
+            manufacturing_step_id: stepId,
             status: 'in_progress',
             merchant_id: merchant.id,
             started_at: new Date().toISOString()
@@ -126,14 +139,14 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           .single();
 
         if (createError) throw createError;
-        stepId = newOrderStep.id;
+        stepIdForUpdate = newOrderStep.id;
         console.log('Created new order step:', newOrderStep);
       }
 
-      if (stepId) {
+      if (stepIdForUpdate) {
         // Update the step with field values
         await updateStep({
-          stepId,
+          stepId: stepIdForUpdate,
           fieldValues,
           status: 'in_progress',
           progress: 0
@@ -260,25 +273,33 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Debug Information - Remove this in production */}
+          {/* Enhanced Debug Information */}
           {process.env.NODE_ENV === 'development' && (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-yellow-800">Debug Info (Dev Only)</CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-yellow-700">
-                <p>Step ID: {step.id}</p>
+                <p>Step ID (raw): {JSON.stringify(step.id)}</p>
+                <p>Step ID (processed): {stepId}</p>
                 <p>Step Name: {step.step_name}</p>
                 <p>Total Step Fields: {stepFields.length}</p>
                 <p>Current Step Fields: {currentStepFields.length}</p>
                 <p>Required Fields: {requiredFields.length}</p>
                 <p>Form Valid: {isFormValid ? 'Yes' : 'No'}</p>
-                <p>Fields for this step: {stepFields.filter(f => f.manufacturing_step_id === step.id).length}</p>
+                <div className="mt-2">
+                  <p className="font-semibold">Field Matching Details:</p>
+                  {stepFields.slice(0, 5).map(field => (
+                    <p key={field.id} className="ml-2">
+                      Field: {field.field_id} → Step: {field.manufacturing_step_id} (Match: {String(field.manufacturing_step_id) === stepId ? 'YES' : 'NO'})
+                    </p>
+                  ))}
+                  {stepFields.length > 5 && <p className="ml-2">... and {stepFields.length - 5} more</p>}
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Order Information */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -312,7 +333,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </CardContent>
           </Card>
 
-          {/* Raw Material Requirements */}
           {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -352,7 +372,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </Card>
           )}
 
-          {/* Previous Steps Data */}
           {previousSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
@@ -411,11 +430,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
                   <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No fields configured for this step</p>
                   <p className="text-sm">Configure fields in Manufacturing Settings to collect data for this step.</p>
-                  <div className="mt-4 p-4 bg-gray-50 rounded text-xs">
-                    <p><strong>Debug:</strong> Step ID = {step.id}</p>
-                    <p>Total fields in system: {stepFields.length}</p>
-                    <p>Matching fields: {stepFields.filter(f => f.manufacturing_step_id === step.id).length}</p>
-                  </div>
                 </div>
               ) : (
                 currentStepFields.map(field => (
