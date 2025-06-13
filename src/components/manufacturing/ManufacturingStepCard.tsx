@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash } from 'lucide-react';
+import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -154,7 +154,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           const unit = field.field_options?.unit || 'Kg';
           displayValue = `${value} ${unit}`;
         } else if (field.field_name.toLowerCase().includes('quantity') && value !== 'Not set') {
-          displayValue = `${value} pieces`;
+          const unit = field.field_options?.unit || 'pieces';
+          displayValue = `${value} ${unit}`;
         }
         
         return {
@@ -162,7 +163,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           value: displayValue,
           type: field.field_type,
           isEmpty: value === 'Not set',
-          fieldName: field.field_name
+          fieldName: field.field_name,
+          unit: field.field_options?.unit
         };
       });
     
@@ -178,7 +180,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     if (fieldName.toLowerCase().includes('quantity')) {
       return <Hash className="h-3 w-3 text-muted-foreground" />;
     }
-    return <Settings className="h-3 w-3 text-muted-foreground" />;
+    if (fieldType === 'date') {
+      return <Calendar className="h-3 w-3 text-muted-foreground" />;
+    }
+    if (fieldType === 'number') {
+      return <Hash className="h-3 w-3 text-muted-foreground" />;
+    }
+    return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
   const cardClassName = data.isJhalaiStep 
@@ -292,40 +300,50 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Configured Field Values - Show ALL configured fields */}
+        {/* Configured Field Values - Enhanced Display */}
         {configuredFieldValues.length > 0 && (
           <div className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
+              Field Values
+            </div>
             {configuredFieldValues.map((field, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs">
+              <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
                 {getFieldIcon(field.fieldName, field.type)}
-                <span className="text-muted-foreground">{field.label}:</span>
-                <span className={`font-medium ${field.isEmpty ? 'text-muted-foreground italic' : ''}`}>
+                <span className="text-muted-foreground font-medium">{field.label}:</span>
+                <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                   {field.value}
                 </span>
+                {field.unit && !field.isEmpty && (
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    {field.unit}
+                  </Badge>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Material Assigned */}
-        {data.stepOrder > 0 && data.materialAssigned !== undefined && (
-          <div className="flex items-center gap-2 text-xs">
-            <Truck className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground">Material Assigned:</span>
-            <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
-              {data.materialAssigned ? 'Yes' : 'No'}
-            </span>
-          </div>
-        )}
-
-        {/* Material Received */}
-        {data.stepOrder > 0 && data.materialReceived !== undefined && (
-          <div className="flex items-center gap-2 text-xs">
-            <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground">Material Received:</span>
-            <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
-              {data.materialReceived ? 'Yes' : 'No'}
-            </span>
+        {/* Material Status */}
+        {data.stepOrder > 0 && (data.materialAssigned !== undefined || data.materialReceived !== undefined) && (
+          <div className="space-y-1">
+            {data.materialAssigned !== undefined && (
+              <div className="flex items-center gap-2 text-xs">
+                <Truck className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Material Assigned:</span>
+                <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
+                  {data.materialAssigned ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
+            {data.materialReceived !== undefined && (
+              <div className="flex items-center gap-2 text-xs">
+                <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Material Received:</span>
+                <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
+                  {data.materialReceived ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

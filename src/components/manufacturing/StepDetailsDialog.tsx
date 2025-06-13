@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Package, Clock, Scale, Settings } from 'lucide-react';
+import { Calendar, User, Package, Clock, Scale, Settings, Weight, Hash, Type } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
 
 interface StepDetailsDialogProps {
@@ -28,6 +28,26 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       case 'blocked': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Get icon for field type
+  const getFieldIcon = (fieldName: string, fieldType: string) => {
+    if (fieldName.toLowerCase().includes('weight')) {
+      return <Weight className="h-4 w-4 text-purple-600" />;
+    }
+    if (fieldName.toLowerCase().includes('quantity')) {
+      return <Hash className="h-4 w-4 text-purple-600" />;
+    }
+    if (fieldType === 'date') {
+      return <Calendar className="h-4 w-4 text-purple-600" />;
+    }
+    if (fieldType === 'worker') {
+      return <User className="h-4 w-4 text-purple-600" />;
+    }
+    if (fieldType === 'number') {
+      return <Hash className="h-4 w-4 text-purple-600" />;
+    }
+    return <Type className="h-4 w-4 text-purple-600" />;
   };
 
   return (
@@ -137,17 +157,37 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
-          {/* Step Fields */}
+          {/* Step Fields - Enhanced with Icons and Units */}
           {stepData.stepFields && stepData.stepFields.length > 0 && (
             <div className="bg-purple-50 p-3 rounded-lg">
-              <h3 className="text-xs font-medium text-purple-900 mb-2">Step Configuration</h3>
-              <div className="space-y-1">
+              <h3 className="text-xs font-medium text-purple-900 mb-2 flex items-center gap-1">
+                <Settings className="h-3 w-3" />
+                Step Configuration Fields
+              </h3>
+              <div className="space-y-2">
                 {stepData.stepFields.map((field, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white px-2 py-1 rounded border">
-                    <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
-                    <span className="text-xs text-purple-700">
-                      {field.field_type} {field.is_required && '(Required)'}
-                    </span>
+                  <div key={index} className="flex items-center justify-between bg-white px-3 py-2 rounded border">
+                    <div className="flex items-center gap-2">
+                      {getFieldIcon(field.field_name, field.field_type)}
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
+                        <span className="text-xs text-purple-600">
+                          {field.field_type}
+                          {field.is_required && ' • Required'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Show unit if available */}
+                      {field.field_options?.unit && (
+                        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
+                          {field.field_options.unit}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-xs">
+                        {field.field_type}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
