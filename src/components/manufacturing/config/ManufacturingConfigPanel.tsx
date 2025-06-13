@@ -27,7 +27,7 @@ export interface RequiredField {
   id: string;
   name: string;
   label: string;
-  type: 'worker' | 'date' | 'number' | 'text';
+  type: 'worker' | 'date' | 'number' | 'text' | 'status' | 'multiselect';
   required: boolean;
   options?: {
     unit?: string;
@@ -101,9 +101,9 @@ const ManufacturingConfigPanel = () => {
             id: field.field_id,
             name: field.field_name,
             label: field.field_label,
-            type: field.field_type,
+            type: field.field_type as RequiredField['type'], // Type assertion for compatibility
             required: field.is_required,
-            options: field.field_options
+            options: field.field_options || {}
           }));
 
         // Use saved fields if available, otherwise use defaults (worker only)

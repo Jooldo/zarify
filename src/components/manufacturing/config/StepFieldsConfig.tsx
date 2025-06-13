@@ -35,7 +35,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
       label: '',
       type: 'text',
       required: false,
-      options: []
+      options: {}
     };
     const updatedFields = [...fields, newField];
     setFields(updatedFields);
