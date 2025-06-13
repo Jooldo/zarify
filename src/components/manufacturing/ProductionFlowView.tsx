@@ -1,5 +1,7 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   addEdge,
   useNodesState,
   useEdgesState,
@@ -11,11 +13,9 @@ import ReactFlow, {
   OnNodesChange,
   OnEdgesChange,
   NodeTypes,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { StepCardNode } from './StepCardNode';
-import { initialNodes } from './initial-nodes';
-import { initialEdges } from './initial-edges';
 import { StepCardData } from './ManufacturingStepCard';
 import { ManufacturingStep, ManufacturingOrderStep, ManufacturingStepField } from '@/hooks/useManufacturingSteps';
 
@@ -26,7 +26,7 @@ interface ManufacturingOrder {
   status: string;
   quantity_required: number;
   priority: string;
-  due_date: string;
+  due_date?: string; // Make optional to match the hook interface
 }
 
 interface ProductionFlowViewProps {
@@ -44,21 +44,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   stepFields,
   onAddStep 
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
-
   const nodeTypes: NodeTypes = useMemo(() => ({
     stepCard: StepCardNode,
   }), []);
 
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
   const createFlowEdges = useCallback(() => {
-    const edges: Edge[] = [];
+    const flowEdges: Edge[] = [];
 
     manufacturingOrders.forEach(order => {
       const activeSteps = manufacturingSteps
@@ -68,7 +59,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       activeSteps.forEach((step, stepIndex) => {
         if (stepIndex === 0) {
           // Connect Manufacturing Order to the first step
-          edges.push({
+          flowEdges.push({
             id: `edge-order-${order.id}-to-${step.id}`,
             source: `order-${order.id}`,
             target: `step-${order.id}-${step.id}`,
@@ -78,7 +69,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         } else {
           // Connect previous step to current step
           const previousStep = activeSteps[stepIndex - 1];
-          edges.push({
+          flowEdges.push({
             id: `edge-${previousStep.id}-to-${step.id}`,
             source: `step-${order.id}-${previousStep.id}`,
             target: `step-${order.id}-${step.id}`,
@@ -89,7 +80,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       });
     });
 
-    return edges;
+    return flowEdges;
   }, [manufacturingOrders, manufacturingSteps]);
 
   const createFlowNodes = useCallback(() => {
@@ -99,7 +90,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       orderSteps: orderSteps.length
     });
 
-    const nodes: Node[] = [];
+    const flowNodes: Node[] = [];
     const verticalSpacing = 200; // Increased spacing to prevent overlap
     const horizontalSpacing = 320; // Increased horizontal spacing for wider cards
     let currentY = 50;
@@ -129,7 +120,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         data: orderNodeData,
       };
 
-      nodes.push(orderNode);
+      flowNodes.push(orderNode);
 
       // Create step nodes for this order
       const activeSteps = manufacturingSteps
@@ -175,91 +166,43 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           data: stepNodeData,
         };
 
-        nodes.push(stepNode);
+        flowNodes.push(stepNode);
       });
 
       currentY += verticalSpacing;
     });
 
-    return nodes;
+    return flowNodes;
   }, [manufacturingOrders, manufacturingSteps, orderSteps, stepFields]);
 
-  const onNodesChangeMemo: OnNodesChange = useCallback(
-    (changes) => {
-      setNodes((prevNodes) =>
-        changes.reduce((acc, change) => {
-          switch (change.type) {
-            case 'dimensions':
-              return acc.map((node) => {
-                if (node.id === change.id) {
-                  return { ...node, ...change };
-                }
-                return node;
-              });
-            case 'position':
-              return acc.map((node) => {
-                if (node.id === change.id) {
-                  return { ...node, position: change.position };
-                }
-                return node;
-              });
-            case 'select':
-              return acc.map((node) => {
-                if (node.id === change.id) {
-                  return { ...node, selected: change.selected };
-                }
-                return node;
-              });
-            case 'remove':
-              return acc.filter((node) => node.id !== change.id);
-            case 'reset':
-              return initialNodes;
-            case 'add':
-              return [...acc, change.node];
-          }
-          return acc;
-        }, prevNodes)
-      );
-    },
-    [setNodes]
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState(createFlowNodes());
+  const [edges, setEdges, onEdgesChange] = useEdgesState(createFlowEdges());
 
-  const onEdgesChangeMemo: OnEdgesChange = useCallback(
-    (changes) => {
-      setEdges((prevEdges) =>
-        changes.reduce((acc, change) => {
-          switch (change.type) {
-            case 'add':
-              return [...acc, change.edge];
-            case 'remove':
-              return acc.filter((edge) => edge.id !== change.id);
-            case 'reset':
-              return initialEdges;
-            case 'update':
-              return acc.map((edge) => {
-                if (edge.id === change.id) {
-                  return { ...edge, ...change.data };
-                }
-                return edge;
-              });
-          }
-          return acc;
-        }, prevEdges)
-      );
-    },
+  const onConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  const nodes = useMemo(() => createFlowNodes(), [createFlowNodes]);
-  const edges = useMemo(() => createFlowEdges(), [createFlowEdges]);
+  // Update nodes when data changes
+  React.useEffect(() => {
+    const newNodes = createFlowNodes();
+    setNodes(newNodes);
+  }, [createFlowNodes, setNodes]);
+
+  // Update edges when data changes
+  React.useEffect(() => {
+    const newEdges = createFlowEdges();
+    setEdges(newEdges);
+  }, [createFlowEdges, setEdges]);
 
   return (
     <div className="h-[calc(100vh-200px)] w-full bg-gray-50">
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChangeMemo}
-        onEdgesChange={onEdgesChangeMemo}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ 

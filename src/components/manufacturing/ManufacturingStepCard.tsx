@@ -1,22 +1,16 @@
-
 import React, { useState } from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
-import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
+import { Calendar, User, Package, Truck, ClipboardCheck, Plus, CheckCircle2, Weight, Hash, Type } from 'lucide-react';
+import { Handle, Position } from '@xyflow/react';
+import { Button } from '@/components/ui/button';
+import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
+import { ManufacturingOrderStepValue } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsDialog from './StepDetailsDialog';
 
-export interface RawMaterial {
-  name: string;
-  quantity: number;
-  unit: string;
-}
-
-export interface StepCardData extends Record<string, unknown> {
+export interface StepCardData {
   stepName: string;
   stepOrder: number;
   orderId: string;
@@ -24,26 +18,26 @@ export interface StepCardData extends Record<string, unknown> {
   productName: string;
   status: 'pending' | 'in_progress' | 'completed' | 'blocked';
   progress: number;
-  assignedWorker?: string;
   estimatedDuration?: number;
-  isJhalaiStep?: boolean;
+  qcRequired?: boolean;
+  rawMaterials?: { name: string; quantity: number; unit: string }[];
   productCode?: string;
   category?: string;
-  quantityRequired?: number;
-  priority?: string;
-  rawMaterials?: RawMaterial[];
-  stepFields?: ManufacturingStepField[];
-  qcRequired?: boolean;
-  dueDate?: string;
+  assignedWorker?: string;
   materialAssigned?: boolean;
   materialReceived?: boolean;
+  isJhalaiStep?: boolean;
+  stepFields?: any[];
+  quantityRequired?: number;
+  priority?: string;
+  dueDate?: string;
   manufacturingStepId?: string;
 }
 
 interface ManufacturingStepCardProps {
   data: StepCardData;
   manufacturingSteps?: ManufacturingStep[];
-  orderSteps?: ManufacturingOrderStep[];
+  orderSteps?: any[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
 }
@@ -149,9 +143,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     const fieldValues = stepFields
       .filter(field => 
         field.field_type !== 'worker' && 
-        field.field_type !== 'text' && 
-        field.field_type !== 'textarea'
-      ) // Exclude worker and text fields
+        field.field_type !== 'text'
+      ) // Exclude worker and text fields only
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
