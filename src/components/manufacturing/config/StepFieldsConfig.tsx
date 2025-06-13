@@ -73,13 +73,14 @@ const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
     <Card ref={setNodeRef} style={style} className="p-4">
       <CardContent className="p-0 space-y-4">
         <div className="flex items-center gap-2">
-          <div
-            className="cursor-grab active:cursor-grabbing hover:bg-muted rounded p-1"
+          <button
+            className="cursor-grab active:cursor-grabbing hover:bg-muted rounded p-1 touch-none"
             {...attributes}
             {...listeners}
+            type="button"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
+          </button>
           {getFieldIcon(field.type, field.name)}
           <Badge variant="outline" className="text-xs">
             {field.type}
@@ -216,7 +217,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -231,7 +232,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    console.log('Drag end event:', { active: active.id, over: over?.id });
+    console.log('Drag end event:', { activeId: active.id, overId: over?.id });
 
     if (over && active.id !== over.id) {
       setFields((items) => {
@@ -240,12 +241,15 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
         
         console.log('Moving from index', oldIndex, 'to index', newIndex);
         
+        if (oldIndex === -1 || newIndex === -1) {
+          console.log('Invalid indices found');
+          return items;
+        }
+        
         const reorderedFields = arrayMove(items, oldIndex, newIndex);
         
-        // Call the parent update function with the reordered fields
-        setTimeout(() => {
-          onFieldsUpdate(step.id, reorderedFields);
-        }, 0);
+        // Update parent component with reordered fields
+        onFieldsUpdate(step.id, reorderedFields);
         
         return reorderedFields;
       });
@@ -327,7 +331,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={fields} strategy={verticalListSortingStrategy}>
+            <SortableContext items={fields.map(field => field.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-4">
                 {fields.map((field) => (
                   <SortableFieldItem
