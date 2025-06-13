@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +26,18 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const getNextStep = () => {
     const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
     
+    console.log('Order ID:', order.id);
+    console.log('Current order steps:', currentOrderSteps);
+    console.log('All manufacturing steps:', manufacturingSteps);
+    
     if (currentOrderSteps.length === 0) {
       // No steps exist, get the first manufacturing step
       const firstStep = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
       
-      console.log('First manufacturing step:', firstStep);
+      console.log('First manufacturing step found:', firstStep);
+      console.log('First step ID:', firstStep?.id);
       return firstStep;
     }
     
@@ -41,11 +47,15 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
       .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
     
     console.log('Next pending step:', nextPendingStep);
+    console.log('Manufacturing step from pending:', nextPendingStep?.manufacturing_steps);
     return nextPendingStep?.manufacturing_steps;
   };
 
   const nextStep = getNextStep();
   const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+
+  console.log('Next step to show:', nextStep);
+  console.log('Next step ID check:', nextStep?.id);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -58,11 +68,17 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (nextStep) {
+      console.log('=== DIALOG OPENING DEBUG ===');
       console.log('Selected step for dialog:', nextStep);
       console.log('Step ID:', nextStep.id);
       console.log('Step name:', nextStep.step_name);
+      console.log('Step object keys:', Object.keys(nextStep));
+      console.log('Full step object:', JSON.stringify(nextStep, null, 2));
+      console.log('=== END DEBUG ===');
       setSelectedStep(nextStep);
       setStartStepDialogOpen(true);
+    } else {
+      console.log('No next step available');
     }
   };
 
