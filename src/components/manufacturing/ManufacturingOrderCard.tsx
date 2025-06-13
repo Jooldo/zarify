@@ -37,25 +37,32 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
         .sort((a, b) => a.step_order - b.step_order)[0];
       
       console.log('First manufacturing step found:', firstStep);
-      console.log('First step ID:', firstStep?.id);
       return firstStep;
     }
     
-    // Find the next pending step
-    const nextPendingStep = currentOrderSteps
+    // Find the next pending step and get the corresponding manufacturing step
+    const nextPendingOrderStep = currentOrderSteps
       .filter(step => step.status === 'pending')
       .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
     
-    console.log('Next pending step:', nextPendingStep);
-    console.log('Manufacturing step from pending:', nextPendingStep?.manufacturing_steps);
-    return nextPendingStep?.manufacturing_steps;
+    if (nextPendingOrderStep) {
+      // Find the full manufacturing step object using the manufacturing_step_id
+      const fullManufacturingStep = manufacturingSteps.find(step => 
+        step.id === nextPendingOrderStep.manufacturing_step_id
+      );
+      
+      console.log('Next pending order step:', nextPendingOrderStep);
+      console.log('Found full manufacturing step:', fullManufacturingStep);
+      return fullManufacturingStep;
+    }
+    
+    return null;
   };
 
   const nextStep = getNextStep();
   const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
 
   console.log('Next step to show:', nextStep);
-  console.log('Next step ID check:', nextStep?.id);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -72,8 +79,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
       console.log('Selected step for dialog:', nextStep);
       console.log('Step ID:', nextStep.id);
       console.log('Step name:', nextStep.step_name);
-      console.log('Step object keys:', Object.keys(nextStep));
-      console.log('Full step object:', JSON.stringify(nextStep, null, 2));
       console.log('=== END DEBUG ===');
       setSelectedStep(nextStep);
       setStartStepDialogOpen(true);
