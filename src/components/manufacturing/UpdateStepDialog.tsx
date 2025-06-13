@@ -168,13 +168,46 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
   };
 
+  // Get all unique configured fields from previous steps for dynamic table columns
+  const getAllConfiguredFields = () => {
+    const allFields = new Map();
+    
+    previousSteps.forEach(step => {
+      if (step.manufacturing_steps?.id) {
+        const stepFieldsForStep = stepData?.stepFields?.filter(field => 
+          field.manufacturing_step_id === step.manufacturing_steps?.id
+        ) || [];
+        
+        stepFieldsForStep.forEach(field => {
+          if (!['worker'].includes(field.field_type)) { // Exclude worker as it's shown separately
+            allFields.set(field.field_id, {
+              id: field.field_id,
+              label: field.field_label,
+              type: field.field_type
+            });
+          }
+        });
+      }
+    });
+    
+    return Array.from(allFields.values());
+  };
+
+  // Get field value for a specific step and field
+  const getFieldValueForStep = (stepId: string, fieldId: string) => {
+    const value = getStepValue(stepId, fieldId);
+    return value || '-';
+  };
+
+  const allConfiguredFields = getAllConfiguredFields();
+
   if (!stepData || !currentOrderStep || !initialized) {
     return null;
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update {stepData.stepName} - {stepData.orderNumber}</DialogTitle>
         </DialogHeader>
@@ -244,66 +277,80 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             
             {previousSteps.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Step</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Worker</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead>Completed</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previousSteps.map(step => (
-                      <TableRow key={step.id}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div className="font-medium">
-                              {step.manufacturing_steps?.step_name || 'Unknown Step'}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Order #{step.manufacturing_steps?.step_order || 'N/A'}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            step.status === 'completed' ? 'default' :
-                            step.status === 'in_progress' ? 'secondary' : 'outline'
-                          }>
-                            {step.status.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {step.workers?.name || 
-                             (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
-                            <span className="text-xs font-mono">
-                              {step.progress_percentage || 0}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
-                          </div>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Step</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Worker</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Completed</TableHead>
+                        {/* Dynamic columns for configured fields */}
+                        {allConfiguredFields.map(field => (
+                          <TableHead key={field.id}>{field.label}</TableHead>
+                        ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {previousSteps.map(step => (
+                        <TableRow key={step.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div className="font-medium">
+                                {step.manufacturing_steps?.step_name || 'Unknown Step'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Order #{step.manufacturing_steps?.step_order || 'N/A'}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              step.status === 'completed' ? 'default' :
+                              step.status === 'in_progress' ? 'secondary' : 'outline'
+                            }>
+                              {step.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {step.workers?.name || 
+                               (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
+                              <span className="text-xs font-mono">
+                                {step.progress_percentage || 0}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
+                            </div>
+                          </TableCell>
+                          {/* Dynamic field values */}
+                          {allConfiguredFields.map(field => (
+                            <TableCell key={field.id}>
+                              <div className="text-sm">
+                                {getFieldValueForStep(step.id, field.id)}
+                              </div>
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/30">

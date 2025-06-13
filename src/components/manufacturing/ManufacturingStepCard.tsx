@@ -140,22 +140,28 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   // Get configured field values for display
   const getConfiguredFieldValues = () => {
-    if (!currentOrderStep || !data.stepFields) return [];
+    if (!data.stepFields) return [];
     
     const fieldValues = data.stepFields
       .filter(field => !['worker', 'status'].includes(field.field_type)) // Exclude worker and status as they're shown separately
       .map(field => {
-        const value = getStepValue(currentOrderStep.id, field.field_id);
-        if (value) {
-          return {
-            label: field.field_label,
-            value: value,
-            type: field.field_type
-          };
+        let value = 'Not set';
+        
+        // Get value from database if step exists
+        if (currentOrderStep) {
+          const savedValue = getStepValue(currentOrderStep.id, field.field_id);
+          if (savedValue) {
+            value = savedValue;
+          }
         }
-        return null;
-      })
-      .filter(Boolean);
+        
+        return {
+          label: field.field_label,
+          value: value,
+          type: field.field_type,
+          isEmpty: value === 'Not set'
+        };
+      });
     
     return fieldValues;
   };
@@ -285,7 +291,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
               <div key={index} className="flex items-center gap-2 text-xs">
                 <Settings className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">{field.label}:</span>
-                <span className="font-medium">{field.value}</span>
+                <span className={`font-medium ${field.isEmpty ? 'text-muted-foreground italic' : ''}`}>
+                  {field.value}
+                </span>
               </div>
             ))}
           </div>

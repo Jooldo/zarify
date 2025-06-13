@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,14 +47,6 @@ const defaultRequiredFields: RequiredField[] = [
   { id: 'rawMaterialReceived', name: 'rawMaterialReceived', label: 'Material Weight Received', type: 'number', required: false },
   { id: 'quantityAssigned', name: 'quantityAssigned', label: 'Quantity Assigned', type: 'number', required: false },
   { id: 'quantityReceived', name: 'quantityReceived', label: 'Quantity Received', type: 'number', required: false },
-  { 
-    id: 'status', 
-    name: 'status', 
-    label: 'Status', 
-    type: 'status', 
-    required: true, 
-    options: ['Progress', 'Partially Completed', 'Completed', 'Pending'] 
-  },
   { id: 'notes', name: 'notes', label: 'Notes / Instructions', type: 'text', required: false }
 ];
 
@@ -83,10 +74,10 @@ const ManufacturingConfigPanel = () => {
             options: field.field_options
           }));
 
-        // Use saved fields if available, otherwise use defaults
+        // Use saved fields if available, otherwise use defaults (worker only)
         const requiredFields = savedFields.length > 0 
           ? savedFields 
-          : [defaultRequiredFields[0], defaultRequiredFields[6]]; // Worker and Status by default
+          : [defaultRequiredFields[0]]; // Only Worker by default
 
         return {
           id: step.id,
@@ -144,7 +135,7 @@ const ManufacturingConfigPanel = () => {
         name: newStepName,
         order: newOrder,
         qcRequired: false,
-        requiredFields: [defaultRequiredFields[0], defaultRequiredFields[6]], // Worker and Status by default
+        requiredFields: [defaultRequiredFields[0]], // Only Worker by default
         estimatedDuration: 1
       };
       
