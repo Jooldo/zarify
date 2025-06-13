@@ -99,6 +99,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
+  // Check if there are subsequent steps that have been started
+  const hasSubsequentSteps = orderSteps.some(step => 
+    step.manufacturing_order_id === data.orderId && 
+    step.manufacturing_steps?.step_order && 
+    step.manufacturing_steps.step_order > data.stepOrder
+  );
+
   // Get user-defined status from step values
   const getUserDefinedStatus = () => {
     if (!currentOrderStep || !data.stepFields) return null;
@@ -131,6 +138,28 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
+  // Get configured field values for display
+  const getConfiguredFieldValues = () => {
+    if (!currentOrderStep || !data.stepFields) return [];
+    
+    const fieldValues = data.stepFields
+      .filter(field => !['worker', 'status'].includes(field.field_type)) // Exclude worker and status as they're shown separately
+      .map(field => {
+        const value = getStepValue(currentOrderStep.id, field.field_id);
+        if (value) {
+          return {
+            label: field.field_label,
+            value: value,
+            type: field.field_type
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+    
+    return fieldValues;
+  };
+
   const cardClassName = data.isJhalaiStep 
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
@@ -144,13 +173,15 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // FIXED: Only show CTA for Manufacturing Order if no steps exist yet
-  const shouldShowCTA = data.stepName === 'Manufacturing Order' && 
+  // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps
+  const shouldShowCTA = (data.stepName === 'Manufacturing Order' && 
     data.status === 'pending' && 
-    !orderSteps.some(step => step.manufacturing_order_id === data.orderId);
+    !orderSteps.some(step => step.manufacturing_order_id === data.orderId)) ||
+    (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentSteps);
 
   const userDefinedStatus = getUserDefinedStatus();
   const assignedWorkerName = getAssignedWorkerName();
+  const configuredFieldValues = getConfiguredFieldValues();
 
   return (
     <Card className={cardClassName} onClick={handleCardClick}>
@@ -247,6 +278,19 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
+        {/* Configured Field Values */}
+        {configuredFieldValues.length > 0 && (
+          <div className="space-y-1">
+            {configuredFieldValues.map((field, index) => (
+              <div key={index} className="flex items-center gap-2 text-xs">
+                <Settings className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">{field.label}:</span>
+                <span className="font-medium">{field.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Material Assigned */}
         {data.stepOrder > 0 && data.materialAssigned !== undefined && (
           <div className="flex items-center gap-2 text-xs">
@@ -269,7 +313,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         )}
 
-        {/* Add Step Button - FIXED: Only show for Manufacturing Order when no steps exist */}
+        {/* Add Step Button - Only show when appropriate and no subsequent steps exist */}
         {shouldShowCTA && (
           <Button 
             variant="outline" 
