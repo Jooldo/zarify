@@ -2,34 +2,29 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { User, Calendar, Package, CheckCircle2, Clock, Truck, Play } from 'lucide-react';
+import { User, Calendar, Package, CheckCircle2, Clock, Truck } from 'lucide-react';
 import { format } from 'date-fns';
-import { ManufacturingOrderStep, useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 
 interface ManufacturingStepProgressCardProps {
   orderStep: ManufacturingOrderStep;
   onClick: () => void;
-  onStartNextStep?: () => void;
 }
 
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({
   orderStep,
-  onClick,
-  onStartNextStep
+  onClick
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-gray-100 text-gray-800';
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
-      case 'partially_completed': return 'bg-yellow-100 text-yellow-800';
       case 'blocked': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -46,47 +41,10 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
   const qtyReceived = getStepValue(orderStep.id, 'quantity_received');
   const userStatus = getStepValue(orderStep.id, 'status');
 
-  // Check if we should show the next step CTA
-  const shouldShowNextStepCTA = orderStep.status === 'completed' || orderStep.status === 'partially_completed';
-  
-  // Get the next step
-  const getNextStep = () => {
-    const currentStepOrder = orderStep.manufacturing_steps?.step_order || 0;
-    const nextStep = manufacturingSteps.find(step => 
-      step.step_order === currentStepOrder + 1 && step.is_active
-    );
-    
-    // Check if next step is already started
-    const nextStepStarted = orderSteps.some(os => 
-      os.manufacturing_order_id === orderStep.manufacturing_order_id &&
-      os.manufacturing_step_id === nextStep?.id &&
-      os.status !== 'pending'
-    );
-    
-    return nextStepStarted ? null : nextStep;
-  };
-
-  const nextStep = shouldShowNextStepCTA ? getNextStep() : null;
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when button is clicked
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    onClick();
-  };
-
-  const handleStartNextStep = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onStartNextStep) {
-      onStartNextStep();
-    }
-  };
-
   return (
     <Card 
-      className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500 min-w-[320px]"
-      onClick={handleCardClick}
+      className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500 min-w-[280px]"
+      onClick={onClick}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -182,20 +140,6 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
             </div>
           )}
         </div>
-
-        {/* Next Step CTA */}
-        {nextStep && (
-          <div className="pt-2 border-t">
-            <Button 
-              onClick={handleStartNextStep}
-              size="sm"
-              className="w-full text-xs bg-green-600 hover:bg-green-700"
-            >
-              <Play className="h-3 w-3 mr-1" />
-              Start {nextStep.step_name}
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

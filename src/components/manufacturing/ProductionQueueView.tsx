@@ -79,7 +79,12 @@ const ProductionQueueView = () => {
       </div>
 
       {/* Production Flow View */}
-      <ProductionFlowView />
+      <ProductionFlowView
+        manufacturingOrders={manufacturingOrders}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
+        onViewDetails={handleViewDetails}
+      />
 
       {/* Manufacturing Order Details Dialog */}
       <ManufacturingOrderDetailsDialog
