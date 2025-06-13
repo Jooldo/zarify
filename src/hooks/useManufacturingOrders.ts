@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +11,7 @@ export interface ManufacturingOrder {
   product_config_id?: string;
   quantity_required: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'completed';
   due_date?: string;
   special_instructions?: string;
   created_by?: string;
@@ -86,7 +85,7 @@ export const useManufacturingOrders = () => {
           product_config_id?: string;
           quantity_required: number;
           priority: 'low' | 'medium' | 'high' | 'urgent';
-          status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled';
+          status: 'pending' | 'in_progress' | 'completed';
           due_date?: string;
           special_instructions?: string;
           created_by?: string;

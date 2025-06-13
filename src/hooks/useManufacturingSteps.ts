@@ -33,7 +33,7 @@ export interface ManufacturingOrderStep {
   id: string;
   manufacturing_order_id: string;
   manufacturing_step_id: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'blocked' | 'skipped';
+  status: 'pending' | 'in_progress' | 'completed';
   assigned_worker_id?: string;
   started_at?: string;
   completed_at?: string;
