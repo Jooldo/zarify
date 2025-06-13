@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -21,6 +22,7 @@ import { Package2, Calendar, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
 import UpdateStepDialog from './UpdateStepDialog';
@@ -191,6 +193,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   onViewDetails
 }) => {
   const { orderSteps, manufacturingSteps, stepFields } = useManufacturingSteps();
+  const { stepValues } = useManufacturingStepValues();
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -198,12 +201,15 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
 
+  console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length);
+
   const handleViewDetails = (order: ManufacturingOrder) => {
     setSelectedOrder(order);
     setDetailsDialogOpen(true);
   };
 
   const handleStepClick = (orderStep: any) => {
+    console.log('Step clicked:', orderStep);
     setSelectedOrderStep(orderStep);
     setUpdateStepDialogOpen(true);
   };
@@ -226,7 +232,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   };
 
   // Convert manufacturing orders and their steps to React Flow nodes
+  // Include stepValues in dependencies to trigger re-render when step values change
   const initialNodes: Node[] = useMemo(() => {
+    console.log('Creating nodes with stepValues:', stepValues.length);
     const nodes: Node[] = [];
     let yOffset = 50;
     
@@ -257,7 +265,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           data: { 
             orderStep, 
             onStepClick: handleStepClick,
-            onNextStepClick: handleNextStepClick
+            onNextStepClick: handleNextStepClick,
+            // Include current step values to trigger updates
+            stepValues: stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id)
           } as unknown as Record<string, unknown>,
         });
       });
@@ -266,7 +276,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues]); // Added stepValues to dependencies
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
@@ -306,22 +316,36 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Update nodes when initialNodes change (this ensures real-time updates)
+  React.useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),
     [setEdges]
   );
 
-  // Get current order step data for update dialog
+  // Get current order step data for update dialog with improved debugging
   const currentOrderStep = selectedOrderStep;
   const currentStepFields = stepFields.filter(field => 
     field.manufacturing_step_id === currentOrderStep?.manufacturing_step_id
   );
-  const previousSteps = orderSteps
-    .filter(step => 
-      step.manufacturing_order_id === currentOrderStep?.manufacturing_order_id &&
-      (step.manufacturing_steps?.step_order || 0) < (currentOrderStep?.manufacturing_steps?.step_order || 0)
-    )
-    .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+  
+  // Improved previous steps calculation with debugging
+  const previousSteps = useMemo(() => {
+    if (!currentOrderStep) return [];
+    
+    const steps = orderSteps
+      .filter(step => 
+        step.manufacturing_order_id === currentOrderStep.manufacturing_order_id &&
+        (step.manufacturing_steps?.step_order || 0) < (currentOrderStep.manufacturing_steps?.step_order || 0)
+      )
+      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+    
+    console.log('Previous steps for step', currentOrderStep.id, ':', steps);
+    return steps;
+  }, [orderSteps, currentOrderStep]);
 
   return (
     <>

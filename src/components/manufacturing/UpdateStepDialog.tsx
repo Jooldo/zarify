@@ -39,6 +39,25 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [status, setStatus] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('UpdateStepDialog props:', {
+      currentOrderStep,
+      stepFields: stepFields.length,
+      previousSteps: previousSteps.length
+    });
+    
+    if (previousSteps.length > 0) {
+      console.log('Previous steps details:', previousSteps.map(step => ({
+        id: step.id,
+        stepName: step.manufacturing_steps?.step_name,
+        status: step.status,
+        worker: step.workers?.name,
+        progress: step.progress_percentage
+      })));
+    }
+  }, [currentOrderStep, stepFields, previousSteps]);
+
   useEffect(() => {
     if (currentOrderStep && stepFields.length > 0) {
       const initialValues: Record<string, any> = {};
@@ -71,6 +90,13 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
   const handleSubmit = () => {
     if (!currentOrderStep) return;
+
+    console.log('Submitting update with:', {
+      stepId: currentOrderStep.id,
+      fieldValues,
+      status,
+      progress
+    });
 
     updateStep({
       stepId: currentOrderStep.id,
@@ -194,10 +220,10 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             )}
           </div>
 
-          {/* Previous Steps */}
-          {previousSteps.length > 0 && (
+          {/* Previous Steps - Enhanced with better debugging */}
+          {previousSteps.length > 0 ? (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Previous Steps</h3>
+              <h3 className="text-lg font-semibold">Previous Steps ({previousSteps.length})</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -205,6 +231,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <TableHead>Status</TableHead>
                     <TableHead>Worker</TableHead>
                     <TableHead>Progress</TableHead>
+                    <TableHead>Started</TableHead>
                     <TableHead>Completed</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -212,7 +239,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                   {previousSteps.map(step => (
                     <TableRow key={step.id}>
                       <TableCell className="font-medium">
-                        {step.manufacturing_steps?.step_name}
+                        {step.manufacturing_steps?.step_name || 'Unknown Step'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={
@@ -230,12 +257,20 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                         </div>
                       </TableCell>
                       <TableCell>
+                        {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
+                      </TableCell>
+                      <TableCell>
                         {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Previous Steps</h3>
+              <p className="text-muted-foreground text-sm">No previous steps found for this order.</p>
             </div>
           )}
 

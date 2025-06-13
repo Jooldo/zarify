@@ -105,6 +105,8 @@ export const useManufacturingSteps = () => {
   const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery({
     queryKey: ['manufacturing-order-steps'],
     queryFn: async () => {
+      console.log('Fetching manufacturing order steps...');
+      
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
         .select(`
@@ -128,7 +130,10 @@ export const useManufacturingSteps = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching order steps:', error);
+        throw error;
+      }
       
       // Ensure proper ID casting for nested data
       const processedData = data.map(orderStep => {
@@ -152,6 +157,7 @@ export const useManufacturingSteps = () => {
       console.log('Processed order steps:', processedData);
       return processedData;
     },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   const saveStepFieldsMutation = useMutation({
