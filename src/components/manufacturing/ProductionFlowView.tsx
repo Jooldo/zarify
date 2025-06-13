@@ -30,12 +30,12 @@ interface ProductionFlowViewProps {
   onViewDetails: (order: ManufacturingOrder) => void;
 }
 
-// Type for React Flow Node with ManufacturingOrder data
-type ManufacturingOrderNode = Node<ManufacturingOrder>;
-
 // Custom node component for manufacturing orders
-const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> = ({ data }) => {
+const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  
+  // Cast data to ManufacturingOrder since we know the structure
+  const orderData = data as ManufacturingOrder;
   
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -59,7 +59,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> =
   };
 
   const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === data.id);
+    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === orderData.id);
     
     if (currentOrderSteps.length === 0) {
       return manufacturingSteps
@@ -75,7 +75,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> =
   };
 
   const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === data.id && step.status !== 'pending');
+  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === orderData.id && step.status !== 'pending');
 
   return (
     <Card className="w-80 hover:shadow-lg transition-shadow">
@@ -83,15 +83,15 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> =
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-sm font-semibold">{data.product_name}</CardTitle>
-            <p className="text-xs text-gray-600 font-mono">{data.order_number}</p>
+            <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
+            <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
           </div>
           <div className="flex flex-col gap-1">
-            <Badge className={`text-xs ${getPriorityColor(data.priority)}`}>
-              {data.priority}
+            <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
+              {orderData.priority}
             </Badge>
-            <Badge className={`text-xs ${getStatusColor(data.status)}`}>
-              {data.status.replace('_', ' ')}
+            <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
+              {orderData.status.replace('_', ' ')}
             </Badge>
           </div>
         </div>
@@ -101,13 +101,13 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps<ManufacturingOrder>> =
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Package2 className="h-3 w-3 text-gray-500" />
-            <span className="text-xs">Qty: <span className="font-semibold">{data.quantity_required}</span></span>
+            <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
           </div>
           
-          {data.due_date && (
+          {orderData.due_date && (
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">Due: {format(new Date(data.due_date), 'MMM dd')}</span>
+              <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
             </div>
           )}
         </div>
@@ -149,12 +149,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   onViewDetails
 }) => {
   // Convert manufacturing orders to React Flow nodes
-  const initialNodes: ManufacturingOrderNode[] = useMemo(() => {
+  const initialNodes: Node[] = useMemo(() => {
     const pendingOrders = manufacturingOrders.filter(order => order.status === 'pending');
     const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
     const completedOrders = manufacturingOrders.filter(order => order.status === 'completed');
 
-    const nodes: ManufacturingOrderNode[] = [];
+    const nodes: Node[] = [];
     
     // Layout pending orders in first column
     pendingOrders.forEach((order, index) => {
@@ -162,7 +162,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `pending-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 50, y: 50 + index * 250 },
-        data: order,
+        data: order as Record<string, unknown>,
       });
     });
 
@@ -172,7 +172,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `progress-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 400, y: 50 + index * 250 },
-        data: order,
+        data: order as Record<string, unknown>,
       });
     });
 
@@ -182,7 +182,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `completed-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: 750, y: 50 + index * 250 },
-        data: order,
+        data: order as Record<string, unknown>,
       });
     });
 
