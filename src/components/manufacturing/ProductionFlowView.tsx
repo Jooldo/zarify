@@ -411,13 +411,19 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       fitView
       attributionPosition="bottom-left"
       className="bg-background"
+      panOnScroll={true}
+      panOnScrollSpeed={0.5}
+      zoomOnScroll={true}
+      zoomOnPinch={true}
+      minZoom={0.5}
+      maxZoom={1.5}
     >
-      <Controls />
+      <Controls showZoom={true} showFitView={true} />
       <MiniMap 
         className="bg-background border"
         nodeClassName={() => 'fill-primary/20'}
       />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
     </ReactFlow>
   );
 
