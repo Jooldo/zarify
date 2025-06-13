@@ -45,6 +45,16 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     field.manufacturing_step_id === step?.id
   );
 
+  // Debug logging
+  useEffect(() => {
+    if (step && stepFields.length > 0) {
+      console.log('Step ID:', step.id);
+      console.log('Step Name:', step.step_name);
+      console.log('All Step Fields:', stepFields);
+      console.log('Current Step Fields:', currentStepFields);
+    }
+  }, [step, stepFields, currentStepFields]);
+
   // Get previous step data for this order
   const previousSteps = orderSteps.filter(orderStep => 
     orderStep.manufacturing_order_id === order?.id && 
@@ -63,12 +73,14 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         }
       });
       setFieldValues(initialValues);
+      console.log('Initial field values:', initialValues);
     }
   }, [isOpen, step, currentStepFields]);
 
   if (!order || !step) return null;
 
   const handleFieldChange = (fieldId: string, value: any) => {
+    console.log('Field changed:', fieldId, value);
     setFieldValues(prev => ({
       ...prev,
       [fieldId]: value
@@ -85,6 +97,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       return;
     }
 
+    console.log('Starting step with field values:', fieldValues);
     setIsSubmitting(true);
 
     try {
@@ -112,6 +125,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
         if (createError) throw createError;
         stepId = newOrderStep.id;
+        console.log('Created new order step:', newOrderStep);
       }
 
       if (stepId) {
@@ -244,6 +258,22 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Debug Information - Remove this in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-yellow-800">Debug Info (Dev Only)</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-yellow-700">
+                <p>Step ID: {step.id}</p>
+                <p>Total Step Fields: {stepFields.length}</p>
+                <p>Current Step Fields: {currentStepFields.length}</p>
+                <p>Required Fields: {requiredFields.length}</p>
+                <p>Form Valid: {isFormValid ? 'Yes' : 'No'}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Order Information */}
           <Card>
             <CardHeader className="pb-3">
@@ -361,29 +391,41 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           )}
 
           {/* Step Configuration */}
-          {currentStepFields.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Step Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentStepFields.map(field => (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5" />
+                {step.step_name} Configuration
+                <Badge variant="secondary" className="ml-2">
+                  {currentStepFields.length} fields configured
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {currentStepFields.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No fields configured for this step</p>
+                  <p className="text-sm">Configure fields in Manufacturing Settings to collect data for this step.</p>
+                </div>
+              ) : (
+                currentStepFields.map(field => (
                   <div key={field.field_id} className="space-y-2">
                     <Label htmlFor={field.field_id} className="flex items-center gap-2">
                       {field.field_label}
                       {field.is_required && (
                         <Badge variant="outline" className="text-xs">Required</Badge>
                       )}
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {field.field_type}
+                      </Badge>
                     </Label>
                     {renderField(field)}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                ))
+              )}
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
@@ -392,7 +434,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </Button>
             <Button 
               onClick={handleStartStep} 
-              disabled={!isFormValid || isSubmitting}
+              disabled={!isFormValid || isSubmitting || currentStepFields.length === 0}
               className="bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
