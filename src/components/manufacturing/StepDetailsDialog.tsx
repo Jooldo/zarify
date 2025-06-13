@@ -30,7 +30,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
     }
   };
 
-  // Get icon for field type
+  // Get icon for field type with enhanced logic
   const getFieldIcon = (fieldName: string, fieldType: string) => {
     if (fieldName.toLowerCase().includes('weight')) {
       return <Weight className="h-4 w-4 text-purple-600" />;
@@ -178,7 +178,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Show unit if available */}
+                      {/* Show unit if available in field options */}
                       {field.field_options?.unit && (
                         <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
                           {field.field_options.unit}

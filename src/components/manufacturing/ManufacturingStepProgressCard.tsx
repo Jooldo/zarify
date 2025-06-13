@@ -64,13 +64,9 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           displayValue = savedValue;
         }
         
-        // Add unit information for specific field types
-        if (field.field_name.toLowerCase().includes('weight') && value !== 'Not set') {
-          const unit = field.field_options?.unit || 'Kg';
-          displayValue = `${value} ${unit}`;
-        } else if (field.field_name.toLowerCase().includes('quantity') && value !== 'Not set') {
-          const unit = field.field_options?.unit || 'pieces';
-          displayValue = `${value} ${unit}`;
+        // Add unit information from field options
+        if (field.field_options?.unit && value !== 'Not set') {
+          displayValue = `${value} ${field.field_options.unit}`;
         }
         
         return {

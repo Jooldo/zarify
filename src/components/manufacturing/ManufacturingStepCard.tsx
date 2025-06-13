@@ -36,7 +36,7 @@ export interface StepCardData extends Record<string, unknown> {
   dueDate?: string;
   materialAssigned?: boolean;
   materialReceived?: boolean;
-  manufacturingStepId?: string; // Add this to help identify the step
+  manufacturingStepId?: string;
 }
 
 interface ManufacturingStepCardProps {
@@ -56,10 +56,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
-
-  console.log('ManufacturingStepCard - data:', data);
-  console.log('ManufacturingStepCard - stepFields:', data.stepFields);
-  console.log('ManufacturingStepCard - manufacturingSteps:', manufacturingSteps);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,11 +100,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
-  // Check if there are subsequent steps that have been started
+  // Check if there are subsequent steps that have been started (fix CTA logic)
   const hasSubsequentSteps = orderSteps.some(step => 
     step.manufacturing_order_id === data.orderId && 
     step.manufacturing_steps?.step_order && 
-    step.manufacturing_steps.step_order > data.stepOrder
+    step.manufacturing_steps.step_order > data.stepOrder &&
+    (step.status === 'in_progress' || step.status === 'completed')
   );
 
   // Get assigned worker name from step values or order step
@@ -133,29 +130,19 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   // Get step fields - use the fields passed in data
   const getStepFields = () => {
-    console.log('Getting step fields for stepOrder:', data.stepOrder);
-    
-    // Use step fields from data if available
     if (data.stepFields && data.stepFields.length > 0) {
-      console.log('Using stepFields from data:', data.stepFields);
       return data.stepFields;
     }
-    
-    console.log('No step fields found in data');
     return [];
   };
 
-  // Get configured field values for display - show all fields
+  // Get configured field values for display - show all non-worker fields
   const getConfiguredFieldValues = () => {
     const stepFields = getStepFields();
     
     if (!stepFields || stepFields.length === 0) {
-      console.log('No step fields found');
       return [];
     }
-    
-    console.log('Step fields for card:', stepFields);
-    console.log('Current order step:', currentOrderStep);
     
     const fieldValues = stepFields
       .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
@@ -166,7 +153,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         // Get value from database if step exists
         if (currentOrderStep) {
           const savedValue = getStepValue(currentOrderStep.id, field.field_id);
-          console.log(`Field ${field.field_label} (${field.field_id}) value:`, savedValue);
           if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
             value = savedValue;
             displayValue = savedValue;
@@ -174,12 +160,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         }
         
         // Add unit information for specific field types
-        if (field.field_name.toLowerCase().includes('weight') && value !== 'Not set') {
-          const unit = field.field_options?.unit || 'Kg';
-          displayValue = `${value} ${unit}`;
-        } else if (field.field_name.toLowerCase().includes('quantity') && value !== 'Not set') {
-          const unit = field.field_options?.unit || 'pieces';
-          displayValue = `${value} ${unit}`;
+        if (field.field_options?.unit && value !== 'Not set') {
+          displayValue = `${value} ${field.field_options.unit}`;
         }
         
         return {
@@ -192,7 +174,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         };
       });
     
-    console.log('Configured field values:', fieldValues);
     return fieldValues;
   };
 
@@ -226,7 +207,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onStepClick?.(data);
   };
 
-  // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps
+  // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps started
   const shouldShowCTA = (data.stepName === 'Manufacturing Order' && 
     data.status === 'pending' && 
     !orderSteps.some(step => step.manufacturing_order_id === data.orderId)) ||
