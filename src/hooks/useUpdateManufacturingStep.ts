@@ -50,13 +50,15 @@ export const useUpdateManufacturingStep = () => {
 
           if (deleteError) throw deleteError;
 
-          // Insert new values
-          const fieldValuesToInsert = Object.entries(data.fieldValues).map(([fieldId, value]) => ({
-            manufacturing_order_step_id: data.stepId,
-            field_id: fieldId,
-            field_value: typeof value === 'string' ? value : JSON.stringify(value),
-            merchant_id: merchantId,
-          }));
+          // Insert new values - handle empty values properly
+          const fieldValuesToInsert = Object.entries(data.fieldValues)
+            .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+            .map(([fieldId, value]) => ({
+              manufacturing_order_step_id: data.stepId,
+              field_id: fieldId,
+              field_value: String(value), // Always convert to string
+              merchant_id: merchantId,
+            }));
 
           if (fieldValuesToInsert.length > 0) {
             const { error: valuesError } = await supabase
@@ -77,26 +79,17 @@ export const useUpdateManufacturingStep = () => {
     onSuccess: async (data) => {
       console.log('Update successful, invalidating queries...');
       
-      // Force invalidate all related queries with explicit refetch
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] }),
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] }),
-      ]);
+      // Invalidate and refetch all related queries immediately
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
       
-      // Force refetch to ensure immediate updates
-      await Promise.all([
-        queryClient.refetchQueries({ 
-          queryKey: ['manufacturing-order-step-values'],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ['manufacturing-order-steps'],
-          type: 'active'
-        }),
-      ]);
+      // Force immediate refetch
+      await queryClient.refetchQueries({ 
+        queryKey: ['manufacturing-order-step-values'],
+      });
       
-      console.log('All queries invalidated and refetched');
+      console.log('All queries refreshed');
       
       toast({
         title: 'Success',
@@ -107,7 +100,7 @@ export const useUpdateManufacturingStep = () => {
       console.error('Step update failed:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update manufacturing step',
+        description: error.message || 'Failed to update manufacturing step',
         variant: 'destructive',
       });
     },

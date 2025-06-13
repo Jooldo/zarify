@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,52 +39,35 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [status, setStatus] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
 
-  // Enhanced debug logging for troubleshooting
-  React.useEffect(() => {
-    console.log('UpdateStepDialog props changed:', {
-      open,
-      currentOrderStep: currentOrderStep ? {
-        id: currentOrderStep.id,
-        stepName: currentOrderStep.manufacturing_steps?.step_name,
-        status: currentOrderStep.status,
-        manufacturing_step_id: currentOrderStep.manufacturing_step_id
-      } : null,
-      stepFields: stepFields.map(f => ({ id: f.id, label: f.field_label, type: f.field_type })),
-      previousStepsCount: previousSteps.length
-    });
-    
-    if (previousSteps.length > 0) {
-      console.log('Previous steps detailed view:', previousSteps.map(step => ({
-        id: step.id,
-        stepName: step.manufacturing_steps?.step_name,
-        stepOrder: step.manufacturing_steps?.step_order,
-        status: step.status,
-        worker: step.workers?.name,
-        progress: step.progress_percentage,
-        started_at: step.started_at,
-        completed_at: step.completed_at
-      })));
-    } else {
-      console.log('No previous steps found');
-    }
-  }, [open, currentOrderStep, stepFields, previousSteps]);
-
+  // Initialize values only when dialog opens or currentOrderStep changes
   useEffect(() => {
-    if (currentOrderStep && stepFields.length > 0) {
+    if (open && currentOrderStep && stepFields.length > 0) {
       console.log('Initializing field values for step:', currentOrderStep.id);
       const initialValues: Record<string, any> = {};
       
       stepFields.forEach(field => {
         const savedValue = getStepValue(currentOrderStep.id, field.field_id);
         console.log(`Field ${field.field_id} (${field.field_label}):`, savedValue);
-        if (savedValue) {
-          try {
-            initialValues[field.field_id] = field.field_type === 'worker' || field.field_type === 'text' || field.field_type === 'number' 
-              ? savedValue 
-              : JSON.parse(savedValue);
-          } catch {
+        
+        if (savedValue !== undefined && savedValue !== null) {
+          // Handle different field types properly
+          if (field.field_type === 'number') {
             initialValues[field.field_id] = savedValue;
+          } else if (field.field_type === 'worker' || field.field_type === 'text') {
+            initialValues[field.field_id] = savedValue;
+          } else {
+            try {
+              // Try to parse JSON for complex values
+              initialValues[field.field_id] = typeof savedValue === 'string' && savedValue.startsWith('{') 
+                ? JSON.parse(savedValue) 
+                : savedValue;
+            } catch {
+              initialValues[field.field_id] = savedValue;
+            }
           }
+        } else {
+          // Set default empty values based on field type
+          initialValues[field.field_id] = field.field_type === 'number' ? '' : '';
         }
       });
 
@@ -93,17 +76,18 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setStatus(currentOrderStep.status);
       setProgress(currentOrderStep.progress_percentage || 0);
     }
-  }, [currentOrderStep, stepFields, getStepValue]);
+  }, [open, currentOrderStep?.id, stepFields, getStepValue]);
 
-  const handleFieldChange = (fieldId: string, value: any) => {
+  // Stable field change handler to prevent cursor reset
+  const handleFieldChange = useCallback((fieldId: string, value: any) => {
     console.log('Field changed:', fieldId, value);
     setFieldValues(prev => ({
       ...prev,
       [fieldId]: value
     }));
-  };
+  }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (!currentOrderStep) return;
 
     console.log('Submitting update with:', {
@@ -121,15 +105,18 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     });
 
     onOpenChange(false);
-  };
+  }, [currentOrderStep, fieldValues, status, progress, updateStep, onOpenChange]);
 
-  const renderField = (field: ManufacturingStepField) => {
+  const renderField = useCallback((field: ManufacturingStepField) => {
     const value = fieldValues[field.field_id] || '';
 
     switch (field.field_type) {
       case 'worker':
         return (
-          <Select value={value} onValueChange={(val) => handleFieldChange(field.field_id, val)}>
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleFieldChange(field.field_id, val)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
@@ -170,7 +157,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           />
         );
     }
-  };
+  }, [fieldValues, handleFieldChange, workers]);
 
   if (!stepData || !currentOrderStep) return null;
 
@@ -235,7 +222,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             )}
           </div>
 
-          {/* Previous Steps - Enhanced display */}
+          {/* Previous Steps */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
               Previous Steps 
