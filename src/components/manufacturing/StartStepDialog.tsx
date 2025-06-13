@@ -39,7 +39,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get step ID and ensure it's a string
   const stepId = step?.id ? String(step.id) : null;
   
   const currentStepFields = stepFields.filter(field => {
@@ -47,7 +46,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return stepId && fieldStepId === stepId;
   });
 
-  // Reset form when dialog opens/closes
   useEffect(() => {
     if (isOpen && step && currentStepFields.length > 0) {
       const initialValues: Record<string, any> = {};
@@ -69,15 +67,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   }
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    console.log('Field change:', fieldId, value);
-    setFieldValues(prev => {
-      const updated = {
-        ...prev,
-        [fieldId]: value
-      };
-      console.log('Updated field values:', updated);
-      return updated;
-    });
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
   };
 
   const handleStartStep = async () => {
@@ -93,7 +86,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Check if this order step already exists
       let orderStep = orderSteps.find(os => 
         os.manufacturing_order_id === order.id && 
         os.manufacturing_step_id === stepId
@@ -101,7 +93,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
       let stepIdForUpdate = orderStep?.id;
 
-      // If no order step exists, create it
       if (!orderStep) {
         const { data: newOrderStep, error: createError } = await supabase
           .from('manufacturing_order_steps')
@@ -120,7 +111,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       }
 
       if (stepIdForUpdate) {
-        // Update the step with field values
         await updateStep({
           stepId: stepIdForUpdate,
           fieldValues,
@@ -229,7 +219,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     }
   };
 
-  // Check if all required fields are filled
   const requiredFields = currentStepFields.filter(field => field.is_required);
   const isFormValid = requiredFields.every(field => {
     const value = fieldValues[field.field_id];
@@ -238,7 +227,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
@@ -249,17 +238,17 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Order Information */}
+        <div className="space-y-4">
+          {/* Order Summary */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Package2 className="h-4 w-4" />
-                Order Information
+                Order Summary
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Product:</span>
                   <div className="font-medium">{order.product_name}</div>
@@ -268,76 +257,31 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
                   <span className="text-muted-foreground">Quantity:</span>
                   <div className="font-medium">{order.quantity_required}</div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Priority:</span>
-                  <Badge variant={order.priority === 'high' || order.priority === 'urgent' ? 'destructive' : 'default'} className="text-xs">
-                    {order.priority}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Product Code:</span>
-                  <div className="font-mono text-xs">{order.product_configs?.product_code || 'N/A'}</div>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Materials Required */}
-          {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Truck className="h-4 w-4" />
-                  Materials Required
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2">
-                  {order.product_configs.product_config_materials.slice(0, 3).map((material, index) => {
-                    const totalRequired = material.quantity_required * order.quantity_required;
-                    return (
-                      <div key={material.id || index} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
-                        </span>
-                        <span className="font-medium">
-                          {totalRequired.toFixed(1)} {material.unit}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {order.product_configs.product_config_materials.length > 3 && (
-                    <div className="text-xs text-muted-foreground text-center pt-1">
-                      +{order.product_configs.product_config_materials.length - 3} more materials
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step Configuration */}
+          {/* Step Fields */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
-                {step.step_name} Details
+                {step.step_name} Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 space-y-4">
+            <CardContent className="pt-0">
               {currentStepFields.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No fields configured for this step</p>
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  No configuration required for this step
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
                   {currentStepFields.map(field => (
-                    <div key={field.field_id} className="space-y-2">
-                      <Label htmlFor={field.field_id} className="text-sm flex items-center gap-2">
+                    <div key={field.field_id} className="space-y-1">
+                      <Label htmlFor={field.field_id} className="text-sm font-medium">
                         {field.field_label}
                         {field.is_required && (
-                          <Badge variant="outline" className="text-xs h-4 px-1">Required</Badge>
+                          <span className="text-red-500 ml-1">*</span>
                         )}
                       </Label>
                       {renderField(field)}
@@ -349,13 +293,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button 
               onClick={handleStartStep} 
-              disabled={!isFormValid || isSubmitting || currentStepFields.length === 0}
+              disabled={!isFormValid || isSubmitting}
               className="bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
