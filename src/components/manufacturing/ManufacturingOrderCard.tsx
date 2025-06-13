@@ -26,6 +26,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const getNextStep = () => {
     const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
     
+    console.log('=== NEXT STEP CALCULATION ===');
     console.log('Order ID:', order.id);
     console.log('Current order steps:', currentOrderSteps);
     console.log('All manufacturing steps:', manufacturingSteps);
@@ -36,7 +37,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
       
-      console.log('First manufacturing step found:', firstStep);
+      console.log('No order steps found, returning first manufacturing step:', firstStep);
       return firstStep;
     }
     
@@ -53,16 +54,16 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
       
       console.log('Next pending order step:', nextPendingOrderStep);
       console.log('Found full manufacturing step:', fullManufacturingStep);
+      console.log('=== END NEXT STEP CALCULATION ===');
       return fullManufacturingStep;
     }
     
+    console.log('=== END NEXT STEP CALCULATION ===');
     return null;
   };
 
   const nextStep = getNextStep();
   const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
-
-  console.log('Next step to show:', nextStep);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -74,16 +75,24 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
 
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (nextStep) {
-      console.log('=== DIALOG OPENING DEBUG ===');
-      console.log('Selected step for dialog:', nextStep);
+    if (nextStep && nextStep.id) {
+      console.log('=== STARTING STEP ===');
+      console.log('Step being passed to dialog:', nextStep);
       console.log('Step ID:', nextStep.id);
       console.log('Step name:', nextStep.step_name);
-      console.log('=== END DEBUG ===');
-      setSelectedStep(nextStep);
+      console.log('Step type of ID:', typeof nextStep.id);
+      console.log('=== END STARTING STEP ===');
+      
+      // Ensure we have a clean step object with proper ID
+      const stepToPass = {
+        ...nextStep,
+        id: String(nextStep.id) // Ensure ID is always a string
+      };
+      
+      setSelectedStep(stepToPass);
       setStartStepDialogOpen(true);
     } else {
-      console.log('No next step available');
+      console.log('No next step available or missing ID:', nextStep);
     }
   };
 

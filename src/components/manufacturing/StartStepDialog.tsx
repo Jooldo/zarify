@@ -39,34 +39,23 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Enhanced step ID validation and field filtering
+  // Get step ID and ensure it's a string
   const stepId = step?.id ? String(step.id) : null;
-  console.log('Dialog step ID processed:', stepId, 'from step:', step);
+  
+  console.log('=== DIALOG STEP PROCESSING ===');
+  console.log('Raw step object:', step);
+  console.log('Step ID extracted:', stepId);
+  console.log('Step ID type:', typeof stepId);
   
   const currentStepFields = stepFields.filter(field => {
     const fieldStepId = String(field.manufacturing_step_id);
     const match = stepId && fieldStepId === stepId;
-    console.log('Field step ID:', fieldStepId, 'Current step ID:', stepId, 'Match:', match);
+    console.log(`Field ${field.field_id}: field_step_id=${fieldStepId}, current_step_id=${stepId}, match=${match}`);
     return match;
   });
-
-  // Debug logging
-  useEffect(() => {
-    if (step && stepFields.length > 0) {
-      console.log('=== DIALOG DEBUG INFO ===');
-      console.log('Step Object:', step);
-      console.log('Step ID (raw):', step.id, 'Type:', typeof step.id);
-      console.log('Step ID (processed):', stepId);
-      console.log('Step Name:', step.step_name);
-      console.log('All Step Fields:', stepFields);
-      console.log('Current Step Fields:', currentStepFields);
-      console.log('Field mapping check:');
-      stepFields.forEach(field => {
-        console.log(`  Field ${field.field_id}: step_id=${field.manufacturing_step_id}, matches=${String(field.manufacturing_step_id) === stepId}`);
-      });
-      console.log('=== END DEBUG ===');
-    }
-  }, [step, stepFields, currentStepFields, stepId]);
+  
+  console.log('Filtered step fields:', currentStepFields);
+  console.log('=== END DIALOG STEP PROCESSING ===');
 
   const previousSteps = orderSteps.filter(orderStep => 
     orderStep.manufacturing_order_id === order?.id && 
@@ -85,7 +74,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         }
       });
       setFieldValues(initialValues);
-      console.log('Initial field values:', initialValues);
+      console.log('Initial field values set:', initialValues);
     }
   }, [isOpen, step, currentStepFields]);
 
@@ -273,7 +262,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Enhanced Debug Information */}
+          {/* Debug Information */}
           {process.env.NODE_ENV === 'development' && (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader className="pb-2">
