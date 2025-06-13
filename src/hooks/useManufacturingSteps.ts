@@ -115,6 +115,8 @@ export const useManufacturingSteps = () => {
       stepId: string; 
       fields: any[] 
     }) => {
+      console.log('Saving step fields:', stepId, fields);
+      
       // Get merchant ID first
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
@@ -149,10 +151,17 @@ export const useManufacturingSteps = () => {
         if (insertError) throw insertError;
       }
 
+      console.log('Step fields saved successfully');
       return true;
     },
     onSuccess: () => {
+      // Invalidate all related queries immediately
       queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      toast({
+        title: 'Success',
+        description: 'Step fields saved successfully',
+      });
     },
     onError: (error) => {
       console.error('Error saving step fields:', error);
@@ -172,6 +181,8 @@ export const useManufacturingSteps = () => {
       stepId: string; 
       updates: Partial<ManufacturingStep> 
     }) => {
+      console.log('Updating manufacturing step:', stepId, updates);
+      
       const { data, error } = await supabase
         .from('manufacturing_steps')
         .update(updates)
@@ -180,10 +191,13 @@ export const useManufacturingSteps = () => {
         .single();
 
       if (error) throw error;
+      console.log('Manufacturing step updated successfully');
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries immediately
       queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] });
       toast({
         title: 'Success',
         description: 'Manufacturing step updated successfully',

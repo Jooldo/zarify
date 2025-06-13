@@ -72,10 +72,23 @@ export const useUpdateManufacturingStep = () => {
         throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+    onSuccess: async () => {
+      // Invalidate all related queries immediately and force refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] })
+      ]);
+      
+      // Force refetch to ensure UI updates immediately
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['manufacturing-order-steps'] }),
+        queryClient.refetchQueries({ queryKey: ['manufacturing-order-step-values'] }),
+        queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] })
+      ]);
+      
       toast({
         title: 'Success',
         description: 'Manufacturing step updated successfully',

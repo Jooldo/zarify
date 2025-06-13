@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useMerchant } from '@/hooks/useMerchant';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface RequiredField {
   id: string;
@@ -60,6 +61,7 @@ const defaultRequiredFields: RequiredField[] = [
 
 const ManufacturingConfigPanel = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { manufacturingSteps, stepFields, isLoading, updateStep, saveStepFields } = useManufacturingSteps();
   const { merchant } = useMerchant();
   const [steps, setSteps] = useState<ManufacturingStepConfig[]>([]);
@@ -117,6 +119,8 @@ const ManufacturingConfigPanel = () => {
     const newStepName = `Step ${newOrder}`;
     
     try {
+      console.log('Adding new manufacturing step:', newStepName, newOrder);
+      
       const { data, error } = await supabase
         .from('manufacturing_steps')
         .insert({
@@ -133,6 +137,8 @@ const ManufacturingConfigPanel = () => {
 
       if (error) throw error;
 
+      console.log('Manufacturing step created:', data);
+
       const newStep: ManufacturingStepConfig = {
         id: data.id,
         name: newStepName,
@@ -142,11 +148,16 @@ const ManufacturingConfigPanel = () => {
         estimatedDuration: 1
       };
       
+      // Update local state immediately
       setSteps(prev => [...prev, newStep]);
       setSelectedStepId(newStep.id);
 
       // Save default fields to database
       await saveStepFields(newStep.id, newStep.requiredFields);
+
+      // Force refresh of manufacturing steps data
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      await queryClient.refetchQueries({ queryKey: ['manufacturing-steps'] });
 
       toast({
         title: 'Success',
@@ -160,10 +171,12 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [steps.length, toast, merchant?.id, saveStepFields]);
+  }, [steps.length, toast, merchant?.id, saveStepFields, queryClient]);
 
   const handleDeleteStep = useCallback(async (stepId: string) => {
     try {
+      console.log('Deleting manufacturing step:', stepId);
+      
       const { error } = await supabase
         .from('manufacturing_steps')
         .delete()
@@ -184,6 +197,10 @@ const ManufacturingConfigPanel = () => {
         setSelectedStepId(null);
       }
 
+      // Force refresh of manufacturing steps data
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] });
+
       toast({
         title: 'Success',
         description: 'Manufacturing step deleted successfully',
@@ -196,9 +213,11 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [selectedStepId, toast]);
+  }, [selectedStepId, toast, queryClient]);
 
   const handleStepNameChange = useCallback(async (stepId: string, name: string) => {
+    console.log('Updating step name:', stepId, name);
+    
     // Update local state immediately for better UX
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, name } : step
@@ -211,6 +230,11 @@ const ManufacturingConfigPanel = () => {
         .eq('id', stepId);
 
       if (error) throw error;
+
+      // Force refresh queries
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      
+      console.log('Step name updated successfully');
     } catch (error) {
       console.error('Error updating step name:', error);
       // Revert local state on error
@@ -223,9 +247,11 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [toast, manufacturingSteps]);
+  }, [toast, manufacturingSteps, queryClient]);
 
   const handleQCToggle = useCallback(async (stepId: string, qcRequired: boolean) => {
+    console.log('Updating QC requirement:', stepId, qcRequired);
+    
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, qcRequired } : step
     ));
@@ -235,6 +261,8 @@ const ManufacturingConfigPanel = () => {
   }, [updateStep]);
 
   const handleFieldsUpdate = useCallback(async (stepId: string, fields: RequiredField[]) => {
+    console.log('Updating step fields:', stepId, fields);
+    
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, requiredFields: fields } : step
     ));
@@ -244,6 +272,8 @@ const ManufacturingConfigPanel = () => {
   }, [saveStepFields]);
 
   const handleDurationChange = useCallback(async (stepId: string, duration: number) => {
+    console.log('Updating step duration:', stepId, duration);
+    
     try {
       const { error } = await supabase
         .from('manufacturing_steps')
@@ -255,6 +285,11 @@ const ManufacturingConfigPanel = () => {
       setSteps(prev => prev.map(step => 
         step.id === stepId ? { ...step, estimatedDuration: duration } : step
       ));
+
+      // Force refresh queries
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      
+      console.log('Step duration updated successfully');
     } catch (error) {
       console.error('Error updating duration:', error);
       toast({
@@ -263,7 +298,7 @@ const ManufacturingConfigPanel = () => {
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   const handleSaveConfiguration = async () => {
     try {
