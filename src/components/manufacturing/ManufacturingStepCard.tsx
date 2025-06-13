@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, Clipboard
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
+import StepDetailsDialog from './StepDetailsDialog';
 
 export interface RawMaterial {
   name: string;
@@ -56,6 +57,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -204,7 +206,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const handleCardClick = () => {
-    onStepClick?.(data);
+    // Open details dialog instead of calling onStepClick
+    setDetailsDialogOpen(true);
   };
 
   // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps started
@@ -217,157 +220,167 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const configuredFieldValues = getConfiguredFieldValues();
 
   return (
-    <Card className={cardClassName} onClick={handleCardClick}>
-      <Handle type="target" position={Position.Left} className="!bg-gray-400" />
-      
-      <CardHeader className="pb-2 p-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
-            {data.stepName}
-            {data.isJhalaiStep && (
-              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
-                Jhalai
-              </Badge>
-            )}
-            {data.stepName === 'Manufacturing Order' && (
-              <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
-                Order
-              </Badge>
-            )}
-            {data.qcRequired && (
-              <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                QC
-              </Badge>
-            )}
-          </CardTitle>
-          {data.stepOrder > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              Step {data.stepOrder}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 p-4 pt-0">
-        {/* Order Information */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Package className="h-3 w-3" />
-          <span>{data.orderNumber} - {data.productName}</span>
-        </div>
-
-        {/* Quantity and Priority for Manufacturing Orders */}
-        {data.stepName === 'Manufacturing Order' && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {data.quantityRequired && (
-              <div>
-                <span className="text-muted-foreground">Qty:</span>
-                <span className="font-medium ml-1">{data.quantityRequired}</span>
-              </div>
-            )}
-            {data.priority && (
-              <div>
-                <span className="text-muted-foreground">Priority:</span>
-                <span className={`font-medium ml-1 capitalize ${
-                  data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
-                  data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                  {data.priority}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Status Pills */}
-        {data.stepOrder > 0 && (
+    <>
+      <Card className={cardClassName} onClick={handleCardClick}>
+        <Handle type="target" position={Position.Left} className="!bg-gray-400" />
+        
+        <CardHeader className="pb-2 p-4">
           <div className="flex items-center justify-between">
-            <Badge className={getStatusColor(data.status)}>
-              {data.status.replace('_', ' ').toUpperCase()}
-            </Badge>
+            <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
+              {data.stepName}
+              {data.isJhalaiStep && (
+                <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
+                  Jhalai
+                </Badge>
+              )}
+              {data.stepName === 'Manufacturing Order' && (
+                <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
+                  Order
+                </Badge>
+              )}
+              {data.qcRequired && (
+                <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  QC
+                </Badge>
+              )}
+            </CardTitle>
+            {data.stepOrder > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                Step {data.stepOrder}
+              </Badge>
+            )}
           </div>
-        )}
+        </CardHeader>
 
-        {/* Due Date */}
-        {data.dueDate && (
+        <CardContent className="space-y-2 p-4 pt-0">
+          {/* Order Information */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>Due: {new Date(data.dueDate).toLocaleDateString()}</span>
+            <Package className="h-3 w-3" />
+            <span>{data.orderNumber} - {data.productName}</span>
           </div>
-        )}
 
-        {/* Worker Assignment */}
-        {assignedWorkerName && (
-          <div className="flex items-center gap-2 text-xs">
-            <User className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground">Assigned to:</span>
-            <span className="font-medium">{assignedWorkerName}</span>
-          </div>
-        )}
-
-        {/* Configured Field Values - Enhanced Display */}
-        {configuredFieldValues.length > 0 && (
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
-              Field Values
+          {/* Quantity and Priority for Manufacturing Orders */}
+          {data.stepName === 'Manufacturing Order' && (
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {data.quantityRequired && (
+                <div>
+                  <span className="text-muted-foreground">Qty:</span>
+                  <span className="font-medium ml-1">{data.quantityRequired}</span>
+                </div>
+              )}
+              {data.priority && (
+                <div>
+                  <span className="text-muted-foreground">Priority:</span>
+                  <span className={`font-medium ml-1 capitalize ${
+                    data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
+                    data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {data.priority}
+                  </span>
+                </div>
+              )}
             </div>
-            {configuredFieldValues.map((field, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
-                {getFieldIcon(field.fieldName, field.type)}
-                <span className="text-muted-foreground font-medium">{field.label}:</span>
-                <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
-                  {field.value}
-                </span>
-                {field.unit && !field.isEmpty && (
-                  <Badge variant="outline" className="text-xs px-1 py-0">
-                    {field.unit}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+          )}
 
-        {/* Material Status */}
-        {data.stepOrder > 0 && (data.materialAssigned !== undefined || data.materialReceived !== undefined) && (
-          <div className="space-y-1">
-            {data.materialAssigned !== undefined && (
-              <div className="flex items-center gap-2 text-xs">
-                <Truck className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Material Assigned:</span>
-                <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
-                  {data.materialAssigned ? 'Yes' : 'No'}
-                </span>
-              </div>
-            )}
-            {data.materialReceived !== undefined && (
-              <div className="flex items-center gap-2 text-xs">
-                <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Material Received:</span>
-                <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
-                  {data.materialReceived ? 'Yes' : 'No'}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+          {/* Status Pills */}
+          {data.stepOrder > 0 && (
+            <div className="flex items-center justify-between">
+              <Badge className={getStatusColor(data.status)}>
+                {data.status.replace('_', ' ').toUpperCase()}
+              </Badge>
+            </div>
+          )}
 
-        {/* Add Step Button - Only show when appropriate and no subsequent steps exist */}
-        {shouldShowCTA && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
-            onClick={handleAddStep}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            {getNextStepName()}
-          </Button>
-        )}
-      </CardContent>
+          {/* Due Date */}
+          {data.dueDate && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>Due: {new Date(data.dueDate).toLocaleDateString()}</span>
+            </div>
+          )}
 
-      <Handle type="source" position={Position.Right} className="!bg-gray-400" />
-    </Card>
+          {/* Worker Assignment */}
+          {assignedWorkerName && (
+            <div className="flex items-center gap-2 text-xs">
+              <User className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Assigned to:</span>
+              <span className="font-medium">{assignedWorkerName}</span>
+            </div>
+          )}
+
+          {/* Configured Field Values - Enhanced Display */}
+          {configuredFieldValues.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
+                Field Values
+              </div>
+              {configuredFieldValues.map((field, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
+                  {getFieldIcon(field.fieldName, field.type)}
+                  <span className="text-muted-foreground font-medium">{field.label}:</span>
+                  <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
+                    {field.value}
+                  </span>
+                  {field.unit && !field.isEmpty && (
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      {field.unit}
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Material Status */}
+          {data.stepOrder > 0 && (data.materialAssigned !== undefined || data.materialReceived !== undefined) && (
+            <div className="space-y-1">
+              {data.materialAssigned !== undefined && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Truck className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Material Assigned:</span>
+                  <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
+                    {data.materialAssigned ? 'Yes' : 'No'}
+                  </span>
+                </div>
+              )}
+              {data.materialReceived !== undefined && (
+                <div className="flex items-center gap-2 text-xs">
+                  <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Material Received:</span>
+                  <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
+                    {data.materialReceived ? 'Yes' : 'No'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add Step Button - Only show when appropriate and no subsequent steps exist */}
+          {shouldShowCTA && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
+              onClick={handleAddStep}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              {getNextStepName()}
+            </Button>
+          )}
+        </CardContent>
+
+        <Handle type="source" position={Position.Right} className="!bg-gray-400" />
+      </Card>
+
+      <StepDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        stepData={data}
+        orderStep={currentOrderStep}
+        stepFields={getStepFields()}
+      />
+    </>
   );
 };
 

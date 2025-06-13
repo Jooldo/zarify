@@ -6,19 +6,30 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, User, Package, Clock, Scale, Settings, Weight, Hash, Type } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 
 interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stepData: StepCardData | null;
+  orderStep?: any; // Add orderStep prop to get field values
+  stepFields?: any[]; // Add stepFields prop
 }
 
 const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   open,
   onOpenChange,
-  stepData
+  stepData,
+  orderStep,
+  stepFields = []
 }) => {
+  const { getStepValue } = useManufacturingStepValues();
+
   if (!stepData) return null;
+
+  console.log('StepDetailsDialog - stepData:', stepData);
+  console.log('StepDetailsDialog - orderStep:', orderStep);
+  console.log('StepDetailsDialog - stepFields:', stepFields);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -49,6 +60,38 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
     }
     return <Type className="h-4 w-4 text-purple-600" />;
   };
+
+  // Get field values from database if orderStep is available
+  const getFieldValues = () => {
+    if (!orderStep || !stepFields || stepFields.length === 0) {
+      return [];
+    }
+
+    return stepFields.map(field => {
+      let value = 'Not set';
+      let displayValue = 'Not set';
+      
+      // Get value from database
+      const savedValue = getStepValue(orderStep.id, field.field_id);
+      if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+        value = savedValue;
+        displayValue = savedValue;
+      }
+      
+      // Add unit information from field options
+      if (field.field_options?.unit && value !== 'Not set') {
+        displayValue = `${value} ${field.field_options.unit}`;
+      }
+      
+      return {
+        ...field,
+        value: displayValue,
+        isEmpty: value === 'Not set'
+      };
+    });
+  };
+
+  const fieldValues = getFieldValues();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,8 +200,45 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
-          {/* Step Fields - Enhanced with Icons and Units */}
-          {stepData.stepFields && stepData.stepFields.length > 0 && (
+          {/* Step Field Values - Show actual values from database */}
+          {fieldValues.length > 0 && (
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <h3 className="text-xs font-medium text-purple-900 mb-2 flex items-center gap-1">
+                <Settings className="h-3 w-3" />
+                Step Field Values
+              </h3>
+              <div className="space-y-2">
+                {fieldValues.map((field, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white px-3 py-2 rounded border">
+                    <div className="flex items-center gap-2">
+                      {getFieldIcon(field.field_name, field.field_type)}
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
+                        <span className={`text-xs font-semibold ${field.isEmpty ? 'text-gray-500 italic' : 'text-purple-900'}`}>
+                          {field.value}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Show unit if available and value is set */}
+                      {field.field_options?.unit && !field.isEmpty && (
+                        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
+                          {field.field_options.unit}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-xs">
+                        {field.field_type}
+                        {field.is_required && ' • Required'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step Fields - Enhanced with Icons and Units (fallback if no values) */}
+          {fieldValues.length === 0 && stepData.stepFields && stepData.stepFields.length > 0 && (
             <div className="bg-purple-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-purple-900 mb-2 flex items-center gap-1">
                 <Settings className="h-3 w-3" />

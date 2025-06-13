@@ -170,11 +170,14 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     timestamp: number; // Force re-render when this changes
   };
   
+  console.log('StepProgressNodeComponent - stepData:', stepData);
+  
   return (
     <>
       <Handle type="target" position={Position.Left} />
       <ManufacturingStepProgressCard
         orderStep={stepData.orderStep}
+        stepFields={stepData.stepFields} // Pass stepFields here
         onClick={() => stepData.onStepClick(stepData.orderStep)}
         onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
       />
@@ -203,7 +206,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
 
-  console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length);
+  console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
   const handleViewDetails = (order: ManufacturingOrder) => {
     setSelectedOrder(order);
@@ -237,7 +240,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   // Use timestamp to force re-render when data changes
   const initialNodes: Node[] = useMemo(() => {
     const timestamp = Date.now();
-    console.log('Creating nodes with stepValues:', stepValues.length, 'at timestamp:', timestamp);
+    console.log('Creating nodes with stepValues:', stepValues.length, 'stepFields:', stepFields.length, 'at timestamp:', timestamp);
     const nodes: Node[] = [];
     let yOffset = 50;
     
@@ -270,6 +273,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         const stepStepFields = stepFields.filter(field => 
           field.manufacturing_step_id === orderStep.manufacturing_step_id
         );
+        
+        console.log(`Step ${orderStep.id} - stepFields:`, stepStepFields);
+        console.log(`Step ${orderStep.id} - stepValues:`, stepStepValues);
         
         nodes.push({
           id: `step-${orderStep.id}`,
@@ -410,6 +416,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
           status: currentOrderStep.status,
           progress: currentOrderStep.progress_percentage || 0,
+          stepFields: currentStepFields, // Pass stepFields to UpdateStepDialog
         } : null}
         currentOrderStep={currentOrderStep}
         stepFields={currentStepFields}

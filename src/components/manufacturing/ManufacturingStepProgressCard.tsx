@@ -10,17 +10,22 @@ import { useWorkers } from '@/hooks/useWorkers';
 
 interface ManufacturingStepProgressCardProps {
   orderStep: any;
+  stepFields: any[]; // Add stepFields prop
   onClick?: () => void;
   onNextStepClick?: () => void;
 }
 
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({
   orderStep,
+  stepFields = [], // Default to empty array
   onClick,
   onNextStepClick
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
+
+  console.log('ManufacturingStepProgressCard - orderStep:', orderStep);
+  console.log('ManufacturingStepProgressCard - stepFields:', stepFields);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -42,12 +47,13 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     return 'bg-gray-300';
   };
 
-  // Get step fields from the orderStep data (passed from parent)
-  const stepFields = orderStep.stepFields || [];
-
   // Get configured field values for display
   const getConfiguredFieldValues = () => {
+    console.log('Getting configured field values for step:', orderStep.id);
+    console.log('Available stepFields:', stepFields);
+    
     if (!stepFields || stepFields.length === 0) {
+      console.log('No stepFields available');
       return [];
     }
     
@@ -59,6 +65,8 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         
         // Get value from database
         const savedValue = getStepValue(orderStep.id, field.field_id);
+        console.log(`Field ${field.field_id} value:`, savedValue);
+        
         if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
           value = savedValue;
           displayValue = savedValue;
@@ -79,6 +87,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         };
       });
     
+    console.log('Configured field values:', fieldValues);
     return fieldValues;
   };
 
