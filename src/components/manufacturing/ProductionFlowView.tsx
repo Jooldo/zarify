@@ -1,435 +1,288 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
+import ReactFlow, {
+  addEdge,
   useNodesState,
   useEdgesState,
+  Controls,
+  Background,
   Node,
   Edge,
-  NodeProps,
-  Handle,
-  Position,
-  BackgroundVariant,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Package2, Calendar, Play } from 'lucide-react';
-import { format } from 'date-fns';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import StartStepDialog from './StartStepDialog';
-import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
-import UpdateStepDialog from './UpdateStepDialog';
-import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
+  MiniMap,
+  OnNodesChange,
+  OnEdgesChange,
+  NodeTypes,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { StepCardNode } from './StepCardNode';
+import { initialNodes } from './initial-nodes';
+import { initialEdges } from './initial-edges';
+import { StepCardData } from './ManufacturingStepCard';
+import { ManufacturingStep, ManufacturingOrderStep, ManufacturingStepField } from '@/hooks/useManufacturingSteps';
+
+interface ManufacturingOrder {
+  id: string;
+  order_number: string;
+  product_name: string;
+  status: string;
+  quantity_required: number;
+  priority: string;
+  due_date: string;
+}
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
-  onViewDetails: (order: ManufacturingOrder) => void;
+  manufacturingSteps: ManufacturingStep[];
+  orderSteps: ManufacturingOrderStep[];
+  stepFields: ManufacturingStepField[];
+  onAddStep?: (stepData: StepCardData) => void;
 }
 
-// Custom node component for manufacturing orders
-const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
-  
-  // Cast data to ManufacturingOrder since we know the structure
-  const orderData = data as unknown as ManufacturingOrder & { onViewDetails: (order: ManufacturingOrder) => void };
-  
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === orderData.id);
-    
-    if (currentOrderSteps.length === 0) {
-      return manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)[0];
-    }
-    
-    const nextPendingStep = currentOrderSteps
-      .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
-    
-    return nextPendingStep?.manufacturing_steps;
-  };
-
-  const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === orderData.id && step.status !== 'pending');
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when button is clicked
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    orderData.onViewDetails(orderData);
-  };
-
-  const handleStartStep = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (nextStep) {
-      setSelectedStep(nextStep);
-      setStartStepDialogOpen(true);
-    }
-  };
-
-  return (
-    <>
-      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-        <Handle type="target" position={Position.Left} />
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
-              <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
-                {orderData.priority}
-              </Badge>
-              <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
-                {orderData.status.replace('_', ' ')}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Package2 className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
-            </div>
-            
-            {orderData.due_date && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 text-gray-500" />
-                <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Single CTA Button */}
-          {nextStep && !hasStarted && (
-            <div className="pt-2 border-t">
-              <Button 
-                onClick={handleStartStep}
-                className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
-              >
-                <Play className="h-3 w-3 mr-1" />
-                Start {nextStep.step_name}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-        <Handle type="source" position={Position.Right} />
-      </Card>
-
-      <StartStepDialog
-        isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={orderData}
-        step={selectedStep}
-      />
-    </>
-  );
-};
-
-// Custom node component for step progress cards
-const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const stepData = data as unknown as { 
-    orderStep: any; 
-    onStepClick: (orderStep: any) => void;
-    onNextStepClick: (orderStep: any) => void;
-    stepValues: any[];
-    stepFields: any[];
-    timestamp: number; // Force re-render when this changes
-  };
-  
-  console.log('StepProgressNodeComponent - stepData:', stepData);
-  
-  return (
-    <>
-      <Handle type="target" position={Position.Left} />
-      <ManufacturingStepProgressCard
-        orderStep={stepData.orderStep}
-        stepFields={stepData.stepFields} // Pass stepFields here
-        onClick={() => stepData.onStepClick(stepData.orderStep)}
-        onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
-      />
-      <Handle type="source" position={Position.Right} />
-    </>
-  );
-};
-
-const nodeTypes = {
-  manufacturingOrder: ManufacturingOrderNodeComponent,
-  stepProgress: StepProgressNodeComponent,
-};
-
-const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
-  manufacturingOrders,
-  getPriorityColor,
-  getStatusColor,
-  onViewDetails
+const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({ 
+  manufacturingOrders, 
+  manufacturingSteps, 
+  orderSteps,
+  stepFields,
+  onAddStep 
 }) => {
-  const { orderSteps, manufacturingSteps, stepFields } = useManufacturingSteps();
-  const { stepValues } = useManufacturingStepValues();
-  const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
-  const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
-
-  console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
-
-  const handleViewDetails = (order: ManufacturingOrder) => {
-    setSelectedOrder(order);
-    setDetailsDialogOpen(true);
-  };
-
-  const handleStepClick = (orderStep: any) => {
-    console.log('Step clicked:', orderStep);
-    setSelectedOrderStep(orderStep);
-    setUpdateStepDialogOpen(true);
-  };
-
-  const handleNextStepClick = (orderStep: any) => {
-    // Find the next step after this completed step
-    const currentOrder = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
-    if (!currentOrder) return;
-
-    const currentStepOrder = orderStep.manufacturing_steps?.step_order;
-    const nextStep = manufacturingSteps
-      .filter(step => step.is_active && step.step_order > currentStepOrder)
-      .sort((a, b) => a.step_order - b.step_order)[0];
-
-    if (nextStep) {
-      setSelectedOrder(currentOrder);
-      setSelectedStepForStart(nextStep);
-      setStartStepDialogOpen(true);
-    }
-  };
-
-  // Convert manufacturing orders and their steps to React Flow nodes
-  // Use timestamp to force re-render when data changes
-  const initialNodes: Node[] = useMemo(() => {
-    const timestamp = Date.now();
-    console.log('Creating nodes with stepValues:', stepValues.length, 'stepFields:', stepFields.length, 'at timestamp:', timestamp);
-    const nodes: Node[] = [];
-    let yOffset = 50;
-    
-    manufacturingOrders.forEach((order, orderIndex) => {
-      const xStart = 50;
-      
-      // Add manufacturing order node
-      nodes.push({
-        id: `order-${order.id}`,
-        type: 'manufacturingOrder',
-        position: { x: xStart, y: yOffset },
-        data: { 
-          ...order, 
-          onViewDetails: handleViewDetails,
-          timestamp
-        } as unknown as Record<string, unknown>,
-      });
-
-      // Add step progress nodes for this order
-      const orderStepsFiltered = orderSteps.filter(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status !== 'pending'
-      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
-
-      orderStepsFiltered.forEach((orderStep, stepIndex) => {
-        const stepXOffset = xStart + 400 + (stepIndex * 320);
-        const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
-        
-        // Get step fields for this specific step
-        const stepStepFields = stepFields.filter(field => 
-          field.manufacturing_step_id === orderStep.manufacturing_step_id
-        );
-        
-        console.log(`Step ${orderStep.id} - stepFields:`, stepStepFields);
-        console.log(`Step ${orderStep.id} - stepValues:`, stepStepValues);
-        
-        nodes.push({
-          id: `step-${orderStep.id}`,
-          type: 'stepProgress',
-          position: { x: stepXOffset, y: yOffset },
-          data: { 
-            orderStep, 
-            onStepClick: handleStepClick,
-            onNextStepClick: handleNextStepClick,
-            stepValues: stepStepValues,
-            stepFields: stepStepFields, // Pass step fields to the node
-            timestamp // Force re-render when this changes
-          } as unknown as Record<string, unknown>,
-        });
-      });
-
-      yOffset += 250; // Space between order rows
-    });
-
-    return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields]); // Include stepFields in dependencies
-
-  const initialEdges: Edge[] = useMemo(() => {
-    const edges: Edge[] = [];
-    
-    manufacturingOrders.forEach((order) => {
-      const orderStepsFiltered = orderSteps.filter(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status !== 'pending'
-      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
-
-      if (orderStepsFiltered.length > 0) {
-        // Connect order to first step
-        edges.push({
-          id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
-          source: `order-${order.id}`,
-          target: `step-${orderStepsFiltered[0].id}`,
-          type: 'smoothstep',
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
-        });
-
-        // Connect steps to each other
-        for (let i = 0; i < orderStepsFiltered.length - 1; i++) {
-          edges.push({
-            id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
-            source: `step-${orderStepsFiltered[i].id}`,
-            target: `step-${orderStepsFiltered[i + 1].id}`,
-            type: 'smoothstep',
-            style: { stroke: '#3b82f6', strokeWidth: 2 },
-          });
-        }
-      }
-    });
-
-    return edges;
-  }, [manufacturingOrders, orderSteps]);
-
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-  // Update nodes when initialNodes change (this ensures real-time updates)
-  React.useEffect(() => {
-    console.log('Updating React Flow nodes due to data changes');
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
-
-  // Update edges when initialEdges change
-  React.useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges, setEdges]);
+  const nodeTypes: NodeTypes = useMemo(() => ({
+    stepCard: StepCardNode,
+  }), []);
 
   const onConnect = useCallback(
-    (params: any) => setEdges((eds) => [...eds]),
+    (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  // Get current order step data for update dialog with improved debugging
-  const currentOrderStep = selectedOrderStep;
-  const currentStepFields = stepFields.filter(field => 
-    field.manufacturing_step_id === currentOrderStep?.manufacturing_step_id
+  const createFlowEdges = useCallback(() => {
+    const edges: Edge[] = [];
+
+    manufacturingOrders.forEach(order => {
+      const activeSteps = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      activeSteps.forEach((step, stepIndex) => {
+        if (stepIndex === 0) {
+          // Connect Manufacturing Order to the first step
+          edges.push({
+            id: `edge-order-${order.id}-to-${step.id}`,
+            source: `order-${order.id}`,
+            target: `step-${order.id}-${step.id}`,
+            type: 'smoothstep',
+            animated: true,
+          });
+        } else {
+          // Connect previous step to current step
+          const previousStep = activeSteps[stepIndex - 1];
+          edges.push({
+            id: `edge-${previousStep.id}-to-${step.id}`,
+            source: `step-${order.id}-${previousStep.id}`,
+            target: `step-${order.id}-${step.id}`,
+            type: 'smoothstep',
+            animated: true,
+          });
+        }
+      });
+    });
+
+    return edges;
+  }, [manufacturingOrders, manufacturingSteps]);
+
+  const createFlowNodes = useCallback(() => {
+    console.log('Creating flow nodes with data:', {
+      manufacturingOrders: manufacturingOrders.length,
+      manufacturingSteps: manufacturingSteps.length,
+      orderSteps: orderSteps.length
+    });
+
+    const nodes: Node[] = [];
+    const verticalSpacing = 200; // Increased spacing to prevent overlap
+    const horizontalSpacing = 320; // Increased horizontal spacing for wider cards
+    let currentY = 50;
+
+    manufacturingOrders.forEach((order, orderIndex) => {
+      console.log(`Processing order ${order.id}:`, order);
+      
+      // Create Manufacturing Order node
+      const orderNodeData: StepCardData = {
+        stepName: 'Manufacturing Order',
+        stepOrder: 0,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName: order.product_name,
+        status: order.status as 'pending' | 'in_progress' | 'completed' | 'blocked',
+        progress: 0,
+        quantityRequired: order.quantity_required,
+        priority: order.priority,
+        dueDate: order.due_date,
+        manufacturingStepId: undefined
+      };
+
+      const orderNode: Node = {
+        id: `order-${order.id}`,
+        type: 'stepCard',
+        position: { x: 50, y: currentY },
+        data: orderNodeData,
+      };
+
+      nodes.push(orderNode);
+
+      // Create step nodes for this order
+      const activeSteps = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      console.log(`Active steps for order ${order.id}:`, activeSteps);
+
+      activeSteps.forEach((step, stepIndex) => {
+        // Get step fields for this step
+        const stepFieldsForStep = stepFields.filter(field => 
+          field.manufacturing_step_id === step.id
+        );
+
+        console.log(`Step fields for step ${step.id}:`, stepFieldsForStep);
+
+        // Check if this step exists in orderSteps for this order
+        const orderStep = orderSteps.find(os => 
+          os.manufacturing_order_id === order.id && 
+          os.manufacturing_step_id === step.id
+        );
+
+        console.log(`Order step for ${order.id} - ${step.id}:`, orderStep);
+
+        const stepNodeData: StepCardData = {
+          stepName: step.step_name,
+          stepOrder: step.step_order,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          productName: order.product_name,
+          status: orderStep?.status as 'pending' | 'in_progress' | 'completed' | 'blocked' || 'pending',
+          progress: orderStep?.progress_percentage || 0,
+          estimatedDuration: step.estimated_duration_hours,
+          qcRequired: step.qc_required,
+          stepFields: stepFieldsForStep, // Pass step fields to the card
+          manufacturingStepId: step.id
+        };
+
+        const stepNode: Node = {
+          id: `step-${order.id}-${step.id}`,
+          type: 'stepCard',
+          position: { x: 50 + (stepIndex + 1) * horizontalSpacing, y: currentY },
+          data: stepNodeData,
+        };
+
+        nodes.push(stepNode);
+      });
+
+      currentY += verticalSpacing;
+    });
+
+    return nodes;
+  }, [manufacturingOrders, manufacturingSteps, orderSteps, stepFields]);
+
+  const onNodesChangeMemo: OnNodesChange = useCallback(
+    (changes) => {
+      setNodes((prevNodes) =>
+        changes.reduce((acc, change) => {
+          switch (change.type) {
+            case 'dimensions':
+              return acc.map((node) => {
+                if (node.id === change.id) {
+                  return { ...node, ...change };
+                }
+                return node;
+              });
+            case 'position':
+              return acc.map((node) => {
+                if (node.id === change.id) {
+                  return { ...node, position: change.position };
+                }
+                return node;
+              });
+            case 'select':
+              return acc.map((node) => {
+                if (node.id === change.id) {
+                  return { ...node, selected: change.selected };
+                }
+                return node;
+              });
+            case 'remove':
+              return acc.filter((node) => node.id !== change.id);
+            case 'reset':
+              return initialNodes;
+            case 'add':
+              return [...acc, change.node];
+          }
+          return acc;
+        }, prevNodes)
+      );
+    },
+    [setNodes]
   );
-  
-  // Improved previous steps calculation with debugging
-  const previousSteps = useMemo(() => {
-    if (!currentOrderStep) return [];
-    
-    const steps = orderSteps
-      .filter(step => 
-        step.manufacturing_order_id === currentOrderStep.manufacturing_order_id &&
-        (step.manufacturing_steps?.step_order || 0) < (currentOrderStep.manufacturing_steps?.step_order || 0)
-      )
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
-    
-    console.log('Previous steps for step', currentOrderStep.id, ':', steps);
-    return steps;
-  }, [orderSteps, currentOrderStep]);
+
+  const onEdgesChangeMemo: OnEdgesChange = useCallback(
+    (changes) => {
+      setEdges((prevEdges) =>
+        changes.reduce((acc, change) => {
+          switch (change.type) {
+            case 'add':
+              return [...acc, change.edge];
+            case 'remove':
+              return acc.filter((edge) => edge.id !== change.id);
+            case 'reset':
+              return initialEdges;
+            case 'update':
+              return acc.map((edge) => {
+                if (edge.id === change.id) {
+                  return { ...edge, ...change.data };
+                }
+                return edge;
+              });
+          }
+          return acc;
+        }, prevEdges)
+      );
+    },
+    [setEdges]
+  );
+
+  const nodes = useMemo(() => createFlowNodes(), [createFlowNodes]);
+  const edges = useMemo(() => createFlowEdges(), [createFlowEdges]);
 
   return (
-    <>
-      <div className="w-full h-[600px] border rounded-lg bg-background">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-          className="bg-background"
-        >
-          <Controls />
-          <MiniMap 
-            className="bg-background border"
-            nodeClassName={() => 'fill-primary/20'}
-          />
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-        </ReactFlow>
-      </div>
-
-      {/* Dialogs */}
-      <ManufacturingOrderDetailsDialog
-        order={selectedOrder}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
-      />
-
-      <UpdateStepDialog
-        open={updateStepDialogOpen}
-        onOpenChange={setUpdateStepDialogOpen}
-        stepData={currentOrderStep ? {
-          stepName: currentOrderStep.manufacturing_steps?.step_name || '',
-          stepOrder: currentOrderStep.manufacturing_steps?.step_order || 0,
-          orderId: currentOrderStep.manufacturing_order_id,
-          orderNumber: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.order_number || '',
-          productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
-          status: currentOrderStep.status,
-          progress: currentOrderStep.progress_percentage || 0,
-          stepFields: currentStepFields, // Pass stepFields to UpdateStepDialog
-        } : null}
-        currentOrderStep={currentOrderStep}
-        stepFields={currentStepFields}
-        previousSteps={previousSteps}
-      />
-
-      <StartStepDialog
-        isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={selectedOrder}
-        step={selectedStepForStart}
-      />
-    </>
+    <div className="h-[calc(100vh-200px)] w-full bg-gray-50">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChangeMemo}
+        onEdgesChange={onEdgesChangeMemo}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ 
+          padding: 0.1,
+          minZoom: 0.5,
+          maxZoom: 1.5
+        }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        minZoom={0.3}
+        maxZoom={2}
+      >
+        <Background />
+        <Controls />
+        <MiniMap 
+          nodeColor={(node) => {
+            if (node.data?.isJhalaiStep) return '#3b82f6';
+            return '#64748b';
+          }}
+          nodeStrokeWidth={2}
+          className="bg-white border border-gray-200"
+        />
+      </ReactFlow>
+    </div>
   );
 };
 

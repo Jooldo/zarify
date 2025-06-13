@@ -37,17 +37,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     }
   };
 
-  const getProgressColor = (status: string, progress: number) => {
-    if (status === 'completed') return 'bg-green-500';
-    if (status === 'in_progress') {
-      if (progress > 75) return 'bg-blue-500';
-      if (progress > 50) return 'bg-yellow-500';
-      return 'bg-orange-500';
-    }
-    return 'bg-gray-300';
-  };
-
-  // Get configured field values for display - exclude text fields and remove units
+  // Get configured field values for display - exclude text fields and show units
   const getConfiguredFieldValues = () => {
     console.log('Getting configured field values for step:', orderStep.id);
     console.log('Available stepFields:', stepFields);
@@ -73,7 +63,12 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         
         if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
           value = savedValue;
-          displayValue = savedValue; // Don't add unit here
+          // Add unit to display value if available
+          if (field.field_options?.unit) {
+            displayValue = `${savedValue} ${field.field_options.unit}`;
+          } else {
+            displayValue = savedValue;
+          }
         }
         
         return {
@@ -126,7 +121,6 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
-  const progress = orderStep.progress_percentage || 0;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -142,15 +136,15 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
   };
 
   return (
-    <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-      <CardHeader className="pb-2 p-3">
+    <Card className="w-72 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
+      <CardHeader className="pb-1 p-2">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle className="text-xs font-semibold">
               {orderStep.manufacturing_steps?.step_name}
               {orderStep.manufacturing_steps?.qc_required && (
-                <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
+                  <CheckCircle2 className="w-2 h-2 mr-1" />
                   QC
                 </Badge>
               )}
@@ -163,41 +157,24 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-2 p-3 pt-0">
-        {/* Progress Bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span>Progress</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(orderStep.status, progress)}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
+      <CardContent className="space-y-1 p-2 pt-0">
         {/* Worker Assignment */}
         {assignedWorkerName && (
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-1 text-xs">
             <User className="h-3 w-3 text-gray-500" />
             <span className="text-gray-600">Assigned to:</span>
-            <span className="font-medium">{assignedWorkerName}</span>
+            <span className="font-medium truncate">{assignedWorkerName}</span>
           </div>
         )}
 
-        {/* Configured Field Values - More compact without units */}
+        {/* Configured Field Values - Show units */}
         {configuredFieldValues.length > 0 && (
           <div className="space-y-1">
-            <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
-              Field Values
-            </div>
             {configuredFieldValues.slice(0, 3).map((field, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
+              <div key={index} className="flex items-center gap-1 text-xs bg-gray-50 p-1 rounded">
                 {getFieldIcon(field.fieldName, field.type)}
                 <span className="text-muted-foreground font-medium">{field.label}:</span>
-                <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
+                <span className={`font-semibold flex-1 truncate ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                   {field.value}
                 </span>
               </div>
@@ -213,13 +190,13 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         {/* Timestamps */}
         <div className="space-y-1 text-xs text-gray-600">
           {orderStep.started_at && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               <span>Started: {format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</span>
             </div>
           )}
           {orderStep.completed_at && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               <span>Completed: {format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</span>
             </div>
@@ -228,10 +205,10 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
         {/* Next Step Button for completed steps */}
         {orderStep.status === 'completed' && (
-          <div className="pt-2 border-t">
+          <div className="pt-1 border-t">
             <Button 
               onClick={handleNextStepClick}
-              className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
+              className="w-full text-xs h-6 bg-primary hover:bg-primary/90"
             >
               <Play className="h-3 w-3 mr-1" />
               Start Next Step

@@ -138,7 +138,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return [];
   };
 
-  // Get configured field values for display - exclude text fields and remove units
+  // Get configured field values for display - exclude text fields and show units
   const getConfiguredFieldValues = () => {
     const stepFields = getStepFields();
     
@@ -161,7 +161,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           const savedValue = getStepValue(currentOrderStep.id, field.field_id);
           if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
             value = savedValue;
-            displayValue = savedValue; // Don't add unit here
+            // Add unit to display value if available
+            if (field.field_options?.unit) {
+              displayValue = `${savedValue} ${field.field_options.unit}`;
+            } else {
+              displayValue = savedValue;
+            }
           }
         }
         
@@ -195,8 +200,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[260px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[260px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[240px] max-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[240px] max-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -222,23 +227,23 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <Card className={cardClassName} onClick={handleCardClick}>
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
-        <CardHeader className="pb-2 p-3">
+        <CardHeader className="pb-1 p-2">
           <div className="flex items-center justify-between">
-            <CardTitle className={`text-sm font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
+            <CardTitle className={`text-xs font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
               {data.stepName}
               {data.isJhalaiStep && (
-                <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
+                <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-700 border-blue-300 text-xs">
                   Jhalai
                 </Badge>
               )}
               {data.stepName === 'Manufacturing Order' && (
-                <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-700">
+                <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-700 text-xs">
                   Order
                 </Badge>
               )}
               {data.qcRequired && (
-                <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
+                  <CheckCircle2 className="w-2 h-2 mr-1" />
                   QC
                 </Badge>
               )}
@@ -251,16 +256,16 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2 p-3 pt-0">
+        <CardContent className="space-y-1 p-2 pt-0">
           {/* Order Information */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Package className="h-3 w-3" />
-            <span>{data.orderNumber} - {data.productName}</span>
+            <span className="truncate">{data.orderNumber} - {data.productName}</span>
           </div>
 
           {/* Quantity and Priority for Manufacturing Orders */}
           {data.stepName === 'Manufacturing Order' && (
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-2 gap-1 text-xs">
               {data.quantityRequired && (
                 <div>
                   <span className="text-muted-foreground">Qty:</span>
@@ -292,7 +297,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
           {/* Due Date */}
           {data.dueDate && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
               <span>Due: {new Date(data.dueDate).toLocaleDateString()}</span>
             </div>
@@ -300,24 +305,21 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
           {/* Worker Assignment */}
           {assignedWorkerName && (
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1 text-xs">
               <User className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Assigned to:</span>
-              <span className="font-medium">{assignedWorkerName}</span>
+              <span className="font-medium truncate">{assignedWorkerName}</span>
             </div>
           )}
 
-          {/* Configured Field Values - More compact display without units */}
+          {/* Configured Field Values - Show units */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
-                Field Values
-              </div>
               {configuredFieldValues.slice(0, 3).map((field, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
+                <div key={index} className="flex items-center gap-1 text-xs bg-gray-50 p-1 rounded">
                   {getFieldIcon(field.fieldName, field.type)}
                   <span className="text-muted-foreground font-medium">{field.label}:</span>
-                  <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
+                  <span className={`font-semibold flex-1 truncate ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                     {field.value}
                   </span>
                 </div>
@@ -334,7 +336,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           {data.stepOrder > 0 && (data.materialAssigned !== undefined || data.materialReceived !== undefined) && (
             <div className="space-y-1">
               {data.materialAssigned !== undefined && (
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1 text-xs">
                   <Truck className="h-3 w-3 text-muted-foreground" />
                   <span className="text-muted-foreground">Material Assigned:</span>
                   <span className={`font-medium ${data.materialAssigned ? 'text-green-600' : 'text-red-600'}`}>
@@ -343,7 +345,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
                 </div>
               )}
               {data.materialReceived !== undefined && (
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1 text-xs">
                   <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
                   <span className="text-muted-foreground">Material Received:</span>
                   <span className={`font-medium ${data.materialReceived ? 'text-green-600' : 'text-red-600'}`}>
@@ -359,7 +361,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
+              className={`w-full mt-1 text-xs h-6 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
               onClick={handleAddStep}
             >
               <Plus className="h-3 w-3 mr-1" />
