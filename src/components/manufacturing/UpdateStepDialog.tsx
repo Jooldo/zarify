@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
@@ -40,7 +39,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [formData, setFormData] = useState({
     fieldValues: {} as Record<string, any>,
     status: '',
-    progress: 0,
   });
 
   // Initialize form data only once when dialog opens and we have all required data
@@ -57,7 +55,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setFormData({
         fieldValues: initialFieldValues,
         status: currentOrderStep.status,
-        progress: currentOrderStep.progress_percentage || 0,
       });
       
       setInitialized(true);
@@ -71,7 +68,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setFormData({
         fieldValues: {},
         status: '',
-        progress: 0,
       });
     }
   }, [open]);
@@ -94,13 +90,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }));
   };
 
-  const handleProgressChange = (value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      progress: value
-    }));
-  };
-
   const handleSubmit = () => {
     if (!currentOrderStep) return;
 
@@ -110,7 +99,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       stepId: currentOrderStep.id,
       fieldValues: formData.fieldValues,
       status: formData.status,
-      progress: formData.progress
+      progress: formData.status === 'completed' ? 100 : formData.status === 'in_progress' ? 50 : 0
     });
 
     onOpenChange(false);
@@ -183,7 +172,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             allFields.set(field.field_id, {
               id: field.field_id,
               label: field.field_label,
-              type: field.field_type
+              type: field.field_type,
+              unit: field.field_options?.unit
             });
           }
         });
@@ -217,7 +207,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Current Step Details</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label>Status</Label>
                 <Select value={formData.status} onValueChange={handleStatusChange}>
@@ -231,20 +221,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label>Progress (%)</Label>
-                <div className="space-y-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.progress}
-                    onChange={(e) => handleProgressChange(Number(e.target.value))}
-                  />
-                  <Progress value={formData.progress} className="h-2" />
-                </div>
-              </div>
             </div>
 
             {/* Step Fields */}
@@ -256,6 +232,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <div key={field.id} className="space-y-2">
                       <Label>
                         {field.field_label}
+                        {field.field_options?.unit && ` (${field.field_options.unit})`}
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
                       {renderField(field)}
@@ -284,12 +261,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                         <TableHead>Step</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Worker</TableHead>
-                        <TableHead>Progress</TableHead>
                         <TableHead>Started</TableHead>
                         <TableHead>Completed</TableHead>
                         {/* Dynamic columns for configured fields */}
                         {allConfiguredFields.map(field => (
-                          <TableHead key={field.id}>{field.label}</TableHead>
+                          <TableHead key={field.id}>
+                            {field.label}
+                            {field.unit && ` (${field.unit})`}
+                          </TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
@@ -318,14 +297,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                             <div className="text-sm">
                               {step.workers?.name || 
                                (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
-                              <span className="text-xs font-mono">
-                                {step.progress_percentage || 0}%
-                              </span>
                             </div>
                           </TableCell>
                           <TableCell>

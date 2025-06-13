@@ -138,7 +138,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return [];
   };
 
-  // Get configured field values for display - show all non-worker fields
+  // Get configured field values for display - only required fields, show all non-worker fields
   const getConfiguredFieldValues = () => {
     const stepFields = getStepFields();
     
@@ -147,7 +147,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
+      .filter(field => field.field_type !== 'worker' && field.is_required) // Only required fields, exclude worker
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -158,12 +158,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
             value = savedValue;
             displayValue = savedValue;
+            
+            // Add unit information for specific field types
+            if (field.field_options?.unit) {
+              displayValue = `${value} ${field.field_options.unit}`;
+            }
           }
-        }
-        
-        // Add unit information for specific field types
-        if (field.field_options?.unit && value !== 'Not set') {
-          displayValue = `${value} ${field.field_options.unit}`;
         }
         
         return {
@@ -171,8 +171,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           value: displayValue,
           type: field.field_type,
           isEmpty: value === 'Not set',
-          fieldName: field.field_name,
-          unit: field.field_options?.unit
+          fieldName: field.field_name
         };
       });
     
@@ -309,12 +308,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             </div>
           )}
 
-          {/* Configured Field Values - Enhanced Display */}
+          {/* Configured Field Values - Only Required Fields */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
-                Field Values
-              </div>
               {configuredFieldValues.map((field, index) => (
                 <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
                   {getFieldIcon(field.fieldName, field.type)}
@@ -322,11 +318,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
                   <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                     {field.value}
                   </span>
-                  {field.unit && !field.isEmpty && (
-                    <Badge variant="outline" className="text-xs px-1 py-0">
-                      {field.unit}
-                    </Badge>
-                  )}
                 </div>
               ))}
             </div>

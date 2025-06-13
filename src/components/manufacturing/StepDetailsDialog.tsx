@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Package, Clock, Scale, Settings, Weight, Hash, Type } from 'lucide-react';
+import { Calendar, User, Package, Settings, Weight, Hash, Type } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 
@@ -12,8 +12,8 @@ interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stepData: StepCardData | null;
-  orderStep?: any; // Add orderStep prop to get field values
-  stepFields?: any[]; // Add stepFields prop
+  orderStep?: any;
+  stepFields?: any[];
 }
 
 const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
@@ -76,11 +76,11 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
         value = savedValue;
         displayValue = savedValue;
-      }
-      
-      // Add unit information from field options
-      if (field.field_options?.unit && value !== 'Not set') {
-        displayValue = `${value} ${field.field_options.unit}`;
+        
+        // Add unit information from field options
+        if (field.field_options?.unit) {
+          displayValue = `${value} ${field.field_options.unit}`;
+        }
       }
       
       return {
@@ -142,17 +142,13 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
-          {/* Status and Progress */}
+          {/* Status */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Status</label>
               <Badge className={getStatusColor(stepData.status)}>
                 {stepData.status.replace('_', ' ').toUpperCase()}
               </Badge>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Progress</label>
-              <p className="text-sm font-semibold">{stepData.progress}%</p>
             </div>
           </div>
 
@@ -181,7 +177,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           {stepData.rawMaterials && stepData.rawMaterials.length > 0 && (
             <div className="bg-amber-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-amber-900 mb-2 flex items-center gap-1">
-                <Scale className="h-3 w-3" />
+                <Package className="h-3 w-3" />
                 Raw Materials Required
               </h3>
               <div className="space-y-1">
@@ -205,7 +201,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             <div className="bg-purple-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-purple-900 mb-2 flex items-center gap-1">
                 <Settings className="h-3 w-3" />
-                Step Field Values
+                Step Configuration
               </h3>
               <div className="space-y-2">
                 {fieldValues.map((field, index) => (
@@ -213,19 +209,16 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                     <div className="flex items-center gap-2">
                       {getFieldIcon(field.field_name, field.field_type)}
                       <div className="flex flex-col">
-                        <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
+                        <span className="text-xs font-medium text-purple-800">
+                          {field.field_label}
+                          {field.field_options?.unit && ` (${field.field_options.unit})`}
+                        </span>
                         <span className={`text-xs font-semibold ${field.isEmpty ? 'text-gray-500 italic' : 'text-purple-900'}`}>
                           {field.value}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Show unit if available and value is set */}
-                      {field.field_options?.unit && !field.isEmpty && (
-                        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
-                          {field.field_options.unit}
-                        </Badge>
-                      )}
                       <Badge variant="secondary" className="text-xs">
                         {field.field_type}
                         {field.is_required && ' • Required'}
@@ -250,7 +243,10 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                     <div className="flex items-center gap-2">
                       {getFieldIcon(field.field_name, field.field_type)}
                       <div className="flex flex-col">
-                        <span className="text-xs font-medium text-purple-800">{field.field_label}</span>
+                        <span className="text-xs font-medium text-purple-800">
+                          {field.field_label}
+                          {field.field_options?.unit && ` (${field.field_options.unit})`}
+                        </span>
                         <span className="text-xs text-purple-600">
                           {field.field_type}
                           {field.is_required && ' • Required'}
@@ -258,12 +254,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Show unit if available in field options */}
-                      {field.field_options?.unit && (
-                        <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
-                          {field.field_options.unit}
-                        </Badge>
-                      )}
                       <Badge variant="secondary" className="text-xs">
                         {field.field_type}
                       </Badge>
@@ -289,7 +279,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Duration</label>
                 <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
                   <p className="text-xs">{stepData.estimatedDuration}h</p>
                 </div>
               </div>

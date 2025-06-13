@@ -10,14 +10,14 @@ import { useWorkers } from '@/hooks/useWorkers';
 
 interface ManufacturingStepProgressCardProps {
   orderStep: any;
-  stepFields: any[]; // Add stepFields prop
+  stepFields: any[];
   onClick?: () => void;
   onNextStepClick?: () => void;
 }
 
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({
   orderStep,
-  stepFields = [], // Default to empty array
+  stepFields = [],
   onClick,
   onNextStepClick
 }) => {
@@ -37,17 +37,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     }
   };
 
-  const getProgressColor = (status: string, progress: number) => {
-    if (status === 'completed') return 'bg-green-500';
-    if (status === 'in_progress') {
-      if (progress > 75) return 'bg-blue-500';
-      if (progress > 50) return 'bg-yellow-500';
-      return 'bg-orange-500';
-    }
-    return 'bg-gray-300';
-  };
-
-  // Get configured field values for display
+  // Get configured field values for display - only required fields
   const getConfiguredFieldValues = () => {
     console.log('Getting configured field values for step:', orderStep.id);
     console.log('Available stepFields:', stepFields);
@@ -58,7 +48,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker') // Exclude worker as it's shown separately
+      .filter(field => field.field_type !== 'worker' && field.is_required) // Only required fields, exclude worker
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -70,11 +60,11 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
           value = savedValue;
           displayValue = savedValue;
-        }
-        
-        // Add unit information from field options
-        if (field.field_options?.unit && value !== 'Not set') {
-          displayValue = `${value} ${field.field_options.unit}`;
+          
+          // Add unit information from field options
+          if (field.field_options?.unit) {
+            displayValue = `${value} ${field.field_options.unit}`;
+          }
         }
         
         return {
@@ -82,8 +72,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           value: displayValue,
           type: field.field_type,
           isEmpty: value === 'Not set',
-          fieldName: field.field_name,
-          unit: field.field_options?.unit
+          fieldName: field.field_name
         };
       });
     
@@ -128,7 +117,6 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
-  const progress = orderStep.progress_percentage || 0;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -145,7 +133,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
   return (
     <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-sm font-semibold">
@@ -165,21 +153,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Progress Bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span>Progress</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(orderStep.status, progress)}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
+      <CardContent className="space-y-2">
         {/* Worker Assignment */}
         {assignedWorkerName && (
           <div className="flex items-center gap-2 text-xs">
@@ -189,12 +163,9 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           </div>
         )}
 
-        {/* Configured Field Values */}
+        {/* Configured Field Values - Only Required Fields */}
         {configuredFieldValues.length > 0 && (
           <div className="space-y-1">
-            <div className="text-xs font-medium text-muted-foreground mb-1 border-b border-gray-200 pb-1">
-              Field Values
-            </div>
             {configuredFieldValues.map((field, index) => (
               <div key={index} className="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
                 {getFieldIcon(field.fieldName, field.type)}
@@ -202,11 +173,6 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
                 <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-muted-foreground italic' : 'text-gray-900'}`}>
                   {field.value}
                 </span>
-                {field.unit && !field.isEmpty && (
-                  <Badge variant="outline" className="text-xs px-1 py-0">
-                    {field.unit}
-                  </Badge>
-                )}
               </div>
             ))}
           </div>
