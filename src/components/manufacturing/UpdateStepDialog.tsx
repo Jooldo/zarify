@@ -39,31 +39,44 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [status, setStatus] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
 
-  // Debug logging
+  // Enhanced debug logging for troubleshooting
   React.useEffect(() => {
-    console.log('UpdateStepDialog props:', {
-      currentOrderStep,
-      stepFields: stepFields.length,
-      previousSteps: previousSteps.length
+    console.log('UpdateStepDialog props changed:', {
+      open,
+      currentOrderStep: currentOrderStep ? {
+        id: currentOrderStep.id,
+        stepName: currentOrderStep.manufacturing_steps?.step_name,
+        status: currentOrderStep.status,
+        manufacturing_step_id: currentOrderStep.manufacturing_step_id
+      } : null,
+      stepFields: stepFields.map(f => ({ id: f.id, label: f.field_label, type: f.field_type })),
+      previousStepsCount: previousSteps.length
     });
     
     if (previousSteps.length > 0) {
-      console.log('Previous steps details:', previousSteps.map(step => ({
+      console.log('Previous steps detailed view:', previousSteps.map(step => ({
         id: step.id,
         stepName: step.manufacturing_steps?.step_name,
+        stepOrder: step.manufacturing_steps?.step_order,
         status: step.status,
         worker: step.workers?.name,
-        progress: step.progress_percentage
+        progress: step.progress_percentage,
+        started_at: step.started_at,
+        completed_at: step.completed_at
       })));
+    } else {
+      console.log('No previous steps found');
     }
-  }, [currentOrderStep, stepFields, previousSteps]);
+  }, [open, currentOrderStep, stepFields, previousSteps]);
 
   useEffect(() => {
     if (currentOrderStep && stepFields.length > 0) {
+      console.log('Initializing field values for step:', currentOrderStep.id);
       const initialValues: Record<string, any> = {};
       
       stepFields.forEach(field => {
         const savedValue = getStepValue(currentOrderStep.id, field.field_id);
+        console.log(`Field ${field.field_id} (${field.field_label}):`, savedValue);
         if (savedValue) {
           try {
             initialValues[field.field_id] = field.field_type === 'worker' || field.field_type === 'text' || field.field_type === 'number' 
@@ -75,6 +88,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         }
       });
 
+      console.log('Initialized field values:', initialValues);
       setFieldValues(initialValues);
       setStatus(currentOrderStep.status);
       setProgress(currentOrderStep.progress_percentage || 0);
@@ -82,6 +96,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   }, [currentOrderStep, stepFields, getStepValue]);
 
   const handleFieldChange = (fieldId: string, value: any) => {
+    console.log('Field changed:', fieldId, value);
     setFieldValues(prev => ({
       ...prev,
       [fieldId]: value
@@ -220,62 +235,88 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             )}
           </div>
 
-          {/* Previous Steps - Enhanced with better debugging */}
-          {previousSteps.length > 0 ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Previous Steps ({previousSteps.length})</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Step</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Worker</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Completed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {previousSteps.map(step => (
-                    <TableRow key={step.id}>
-                      <TableCell className="font-medium">
-                        {step.manufacturing_steps?.step_name || 'Unknown Step'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          step.status === 'completed' ? 'default' :
-                          step.status === 'in_progress' ? 'secondary' : 'outline'
-                        }>
-                          {step.status.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{step.workers?.name || 'Not assigned'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
-                          <span className="text-xs">{step.progress_percentage || 0}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
-                      </TableCell>
+          {/* Previous Steps - Enhanced display */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">
+              Previous Steps 
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                ({previousSteps.length} step{previousSteps.length !== 1 ? 's' : ''})
+              </span>
+            </h3>
+            
+            {previousSteps.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Step</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Worker</TableHead>
+                      <TableHead>Progress</TableHead>
+                      <TableHead>Started</TableHead>
+                      <TableHead>Completed</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Previous Steps</h3>
-              <p className="text-muted-foreground text-sm">No previous steps found for this order.</p>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {previousSteps.map(step => (
+                      <TableRow key={step.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div className="font-medium">
+                              {step.manufacturing_steps?.step_name || 'Unknown Step'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Order #{step.manufacturing_steps?.step_order || 'N/A'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            step.status === 'completed' ? 'default' :
+                            step.status === 'in_progress' ? 'secondary' : 'outline'
+                          }>
+                            {step.status.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {step.workers?.name || 
+                             (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
+                            <span className="text-xs font-mono">
+                              {step.progress_percentage || 0}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/30">
+                <p>No previous steps found for this manufacturing order.</p>
+                <p className="text-sm mt-1">This appears to be the first step in the process.</p>
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end border-t pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

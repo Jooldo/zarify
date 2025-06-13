@@ -166,6 +166,8 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     orderStep: any; 
     onStepClick: (orderStep: any) => void;
     onNextStepClick: (orderStep: any) => void;
+    stepValues: any[];
+    timestamp: number; // Force re-render when this changes
   };
   
   return (
@@ -232,9 +234,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   };
 
   // Convert manufacturing orders and their steps to React Flow nodes
-  // Include stepValues in dependencies to trigger re-render when step values change
+  // Use timestamp to force re-render when data changes
   const initialNodes: Node[] = useMemo(() => {
-    console.log('Creating nodes with stepValues:', stepValues.length);
+    const timestamp = Date.now();
+    console.log('Creating nodes with stepValues:', stepValues.length, 'at timestamp:', timestamp);
     const nodes: Node[] = [];
     let yOffset = 50;
     
@@ -246,7 +249,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         id: `order-${order.id}`,
         type: 'manufacturingOrder',
         position: { x: xStart, y: yOffset },
-        data: { ...order, onViewDetails: handleViewDetails } as unknown as Record<string, unknown>,
+        data: { 
+          ...order, 
+          onViewDetails: handleViewDetails,
+          timestamp
+        } as unknown as Record<string, unknown>,
       });
 
       // Add step progress nodes for this order
@@ -257,6 +264,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
       orderStepsFiltered.forEach((orderStep, stepIndex) => {
         const stepXOffset = xStart + 400 + (stepIndex * 320);
+        const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
         
         nodes.push({
           id: `step-${orderStep.id}`,
@@ -266,8 +274,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             orderStep, 
             onStepClick: handleStepClick,
             onNextStepClick: handleNextStepClick,
-            // Include current step values to trigger updates
-            stepValues: stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id)
+            stepValues: stepStepValues,
+            timestamp // Force re-render when this changes
           } as unknown as Record<string, unknown>,
         });
       });
@@ -276,7 +284,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues]); // Added stepValues to dependencies
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues]); // Include all dependencies
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
@@ -318,8 +326,14 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   // Update nodes when initialNodes change (this ensures real-time updates)
   React.useEffect(() => {
+    console.log('Updating React Flow nodes due to data changes');
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
+
+  // Update edges when initialEdges change
+  React.useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),

@@ -105,13 +105,13 @@ export const useManufacturingSteps = () => {
   const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery({
     queryKey: ['manufacturing-order-steps'],
     queryFn: async () => {
-      console.log('Fetching manufacturing order steps...');
+      console.log('Fetching manufacturing order steps with complete joins...');
       
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
         .select(`
           *,
-          manufacturing_steps (
+          manufacturing_steps!inner (
             id,
             step_name,
             step_order,
@@ -154,7 +154,8 @@ export const useManufacturingSteps = () => {
         return processed;
       }) as ManufacturingOrderStep[];
       
-      console.log('Processed order steps:', processedData);
+      console.log('Processed order steps with complete data:', processedData);
+      console.log('Sample order step with manufacturing_steps:', processedData[0]?.manufacturing_steps);
       return processedData;
     },
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates

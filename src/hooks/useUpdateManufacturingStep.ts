@@ -58,11 +58,13 @@ export const useUpdateManufacturingStep = () => {
             merchant_id: merchantId,
           }));
 
-          const { error: valuesError } = await supabase
-            .from('manufacturing_order_step_values')
-            .insert(fieldValuesToInsert);
+          if (fieldValuesToInsert.length > 0) {
+            const { error: valuesError } = await supabase
+              .from('manufacturing_order_step_values')
+              .insert(fieldValuesToInsert);
 
-          if (valuesError) throw valuesError;
+            if (valuesError) throw valuesError;
+          }
         }
 
         console.log('Manufacturing step updated successfully');
@@ -75,12 +77,14 @@ export const useUpdateManufacturingStep = () => {
     onSuccess: async (data) => {
       console.log('Update successful, invalidating queries...');
       
-      // Invalidate queries in the correct order to ensure fresh data
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      // Force invalidate all related queries with explicit refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] }),
+        queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] }),
+      ]);
       
-      // Force refetch the most critical queries for immediate UI updates
+      // Force refetch to ensure immediate updates
       await Promise.all([
         queryClient.refetchQueries({ 
           queryKey: ['manufacturing-order-step-values'],
@@ -89,10 +93,10 @@ export const useUpdateManufacturingStep = () => {
         queryClient.refetchQueries({ 
           queryKey: ['manufacturing-order-steps'],
           type: 'active'
-        })
+        }),
       ]);
       
-      console.log('Queries invalidated and refetched');
+      console.log('All queries invalidated and refetched');
       
       toast({
         title: 'Success',
