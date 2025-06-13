@@ -1,20 +1,79 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Factory } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Factory, Search } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
+import ProductionQueueFilter from './ProductionQueueFilter';
+
+interface ProductionQueueFilters {
+  status: string;
+  priority: string;
+  productName: string;
+  orderNumber: string;
+  hasInProgressSteps: boolean;
+  hasCompletedSteps: boolean;
+  urgentOnly: boolean;
+}
 
 const ProductionQueueView = () => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
-  const { manufacturingSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<ProductionQueueFilters>({
+    status: '',
+    priority: '',
+    productName: '',
+    orderNumber: '',
+    hasInProgressSteps: false,
+    hasCompletedSteps: false,
+    urgentOnly: false,
+  });
 
   console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
+
+  // Filter and search logic
+  const filteredOrders = useMemo(() => {
+    return manufacturingOrders.filter(order => {
+      // Text search filter
+      if (searchTerm) {
+        const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               order.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (order.product_configs?.product_code || '').toLowerCase().includes(searchTerm.toLowerCase());
+        if (!searchMatch) return false;
+      }
+
+      // Apply filters
+      if (filters.status && order.status !== filters.status) return false;
+      if (filters.priority && order.priority !== filters.priority) return false;
+      if (filters.productName && !order.product_name.toLowerCase().includes(filters.productName.toLowerCase())) return false;
+      if (filters.orderNumber && !order.order_number.toLowerCase().includes(filters.orderNumber.toLowerCase())) return false;
+      
+      // Get order steps for this order
+      const orderOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+      
+      // Quick filters
+      if (filters.hasInProgressSteps) {
+        const hasInProgress = orderOrderSteps.some(step => step.status === 'in_progress');
+        if (!hasInProgress) return false;
+      }
+      
+      if (filters.hasCompletedSteps) {
+        const hasCompleted = orderOrderSteps.some(step => step.status === 'completed');
+        if (!hasCompleted) return false;
+      }
+      
+      if (filters.urgentOnly && order.priority !== 'urgent') return false;
+
+      return true;
+    });
+  }, [manufacturingOrders, orderSteps, searchTerm, filters]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -51,9 +110,9 @@ const ProductionQueueView = () => {
     );
   }
 
-  const pendingOrders = manufacturingOrders.filter(order => order.status === 'pending');
-  const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
-  const completedOrders = manufacturingOrders.filter(order => order.status === 'completed');
+  const pendingOrders = filteredOrders.filter(order => order.status === 'pending');
+  const inProgressOrders = filteredOrders.filter(order => order.status === 'in_progress');
+  const completedOrders = filteredOrders.filter(order => order.status === 'completed');
 
   return (
     <div className="space-y-6">
@@ -81,9 +140,25 @@ const ProductionQueueView = () => {
         </div>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search production queue..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          <ProductionQueueFilter onFiltersChange={setFilters} />
+        </div>
+      </div>
+
       {/* Production Flow View */}
       <ProductionFlowView
-        manufacturingOrders={manufacturingOrders}
+        manufacturingOrders={filteredOrders}
         onViewDetails={handleViewDetails}
       />
 
