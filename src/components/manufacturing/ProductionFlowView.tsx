@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -23,6 +24,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 }) => {
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
   const [selectedStepData, setSelectedStepData] = useState<StepCardData | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [stepDetailsDialogOpen, setStepDetailsDialogOpen] = useState(false);
 
@@ -55,6 +57,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const handleAddStep = (stepData: StepCardData) => {
     setStartStepDialogOpen(true);
     setSelectedStepData(stepData);
+    // Find the corresponding order for the StartStepDialog
+    const order = manufacturingOrders.find(o => o.id === stepData.orderId);
+    setSelectedOrder(order);
   };
 
   const handleStepClick = (stepData: StepCardData) => {
@@ -122,14 +127,14 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         panOnScroll
       >
         <Controls />
-        <Background variant="dots" gap={12} size={1} />
+        <Background />
       </ReactFlow>
 
       <StartStepDialog
         open={startStepDialogOpen}
         onOpenChange={setStartStepDialogOpen}
         onStartStep={handleStartStep}
-        order={selectedStepData}
+        order={selectedOrder}
         manufacturingSteps={manufacturingSteps}
       />
 
