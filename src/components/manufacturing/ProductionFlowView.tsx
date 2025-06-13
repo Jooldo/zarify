@@ -75,15 +75,20 @@ const ProductionFlowView = () => {
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
 
-  // Filter for in-progress orders only
-  const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
+  // Show both pending and in-progress orders
+  const activeOrders = manufacturingOrders.filter(order => 
+    order.status === 'pending' || order.status === 'in_progress'
+  );
 
   const { nodes, edges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     let yPosition = 0;
 
-    inProgressOrders.forEach((order, orderIndex) => {
+    console.log('Active orders for flow:', activeOrders.length);
+    console.log('Order steps available:', orderSteps.length);
+
+    activeOrders.forEach((order, orderIndex) => {
       // Add manufacturing order node
       const orderNodeId = `order-${order.id}`;
       nodes.push({
@@ -103,11 +108,13 @@ const ProductionFlowView = () => {
         targetPosition: Position.Left,
       });
 
-      // Get active steps for this order
+      // Get active steps for this order (exclude pending steps for visual flow)
       const activeSteps = orderSteps.filter(step => 
         step.manufacturing_order_id === order.id && 
-        step.status !== 'pending'
+        (step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed')
       ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+
+      console.log(`Order ${order.order_number} has ${activeSteps.length} active steps`);
 
       // Add step progress nodes
       activeSteps.forEach((step, stepIndex) => {
@@ -157,8 +164,22 @@ const ProductionFlowView = () => {
       yPosition += 250; // Space between order rows
     });
 
+    console.log('Generated nodes:', nodes.length);
+    console.log('Generated edges:', edges.length);
+
     return { nodes, edges };
-  }, [inProgressOrders, orderSteps, manufacturingSteps]);
+  }, [activeOrders, orderSteps, manufacturingSteps]);
+
+  if (activeOrders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 border border-dashed border-gray-300 rounded-lg">
+        <div className="text-center">
+          <p className="text-muted-foreground">No active manufacturing orders found</p>
+          <p className="text-sm text-muted-foreground mt-1">Create a manufacturing order to get started</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[800px] w-full">
