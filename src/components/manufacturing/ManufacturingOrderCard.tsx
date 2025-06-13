@@ -26,18 +26,12 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const getNextStep = () => {
     const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
     
-    console.log('=== NEXT STEP CALCULATION ===');
-    console.log('Order ID:', order.id);
-    console.log('Current order steps:', currentOrderSteps);
-    console.log('All manufacturing steps:', manufacturingSteps);
-    
     if (currentOrderSteps.length === 0) {
       // No steps exist, get the first manufacturing step
       const firstStep = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
       
-      console.log('No order steps found, returning first manufacturing step:', firstStep);
       return firstStep;
     }
     
@@ -52,13 +46,9 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
         step.id === nextPendingOrderStep.manufacturing_step_id
       );
       
-      console.log('Next pending order step:', nextPendingOrderStep);
-      console.log('Found full manufacturing step:', fullManufacturingStep);
-      console.log('=== END NEXT STEP CALCULATION ===');
       return fullManufacturingStep;
     }
     
-    console.log('=== END NEXT STEP CALCULATION ===');
     return null;
   };
 
@@ -76,13 +66,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (nextStep && nextStep.id) {
-      console.log('=== STARTING STEP ===');
-      console.log('Step being passed to dialog:', nextStep);
-      console.log('Step ID:', nextStep.id);
-      console.log('Step name:', nextStep.step_name);
-      console.log('Step type of ID:', typeof nextStep.id);
-      console.log('=== END STARTING STEP ===');
-      
       // Ensure we have a clean step object with proper ID
       const stepToPass = {
         ...nextStep,
@@ -91,8 +74,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
       
       setSelectedStep(stepToPass);
       setStartStepDialogOpen(true);
-    } else {
-      console.log('No next step available or missing ID:', nextStep);
     }
   };
 
