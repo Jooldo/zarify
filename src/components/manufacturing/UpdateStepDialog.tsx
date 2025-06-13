@@ -35,16 +35,17 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const { getStepValue } = useManufacturingStepValues();
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
   
-  // Simple state management
+  // Initialize state once when dialog opens
+  const [initialized, setInitialized] = useState(false);
   const [formData, setFormData] = useState({
     fieldValues: {} as Record<string, any>,
     status: '',
     progress: 0,
   });
 
-  // Initialize form when dialog opens
+  // Initialize form data only once when dialog opens and we have all required data
   useEffect(() => {
-    if (open && currentOrderStep && stepFields.length > 0) {
+    if (open && currentOrderStep && stepFields.length > 0 && !initialized) {
       console.log('Initializing form data...');
       
       const initialFieldValues: Record<string, any> = {};
@@ -58,12 +59,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         status: currentOrderStep.status,
         progress: currentOrderStep.progress_percentage || 0,
       });
+      
+      setInitialized(true);
     }
-  }, [open, currentOrderStep?.id, stepFields, getStepValue]);
+  }, [open, currentOrderStep?.id, stepFields, getStepValue, initialized]);
 
-  // Reset form when dialog closes
+  // Reset initialization when dialog closes
   useEffect(() => {
     if (!open) {
+      setInitialized(false);
       setFormData({
         fieldValues: {},
         status: '',
@@ -73,6 +77,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   }, [open]);
 
   const handleFieldValueChange = (fieldId: string, value: any) => {
+    console.log('Field value changing:', fieldId, value);
     setFormData(prev => ({
       ...prev,
       fieldValues: {
@@ -163,7 +168,9 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
   };
 
-  if (!stepData || !currentOrderStep) return null;
+  if (!stepData || !currentOrderStep || !initialized) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
