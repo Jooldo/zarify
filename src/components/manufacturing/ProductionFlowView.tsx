@@ -18,10 +18,11 @@ import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package2, Calendar, Play, Eye } from 'lucide-react';
+import { Package2, Calendar, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import StartStepDialog from './StartStepDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
@@ -33,6 +34,8 @@ interface ProductionFlowViewProps {
 // Custom node component for manufacturing orders
 const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<any>(null);
   
   // Cast data to ManufacturingOrder since we know the structure
   const orderData = data as unknown as ManufacturingOrder;
@@ -77,64 +80,82 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const nextStep = getNextStep();
   const hasStarted = orderSteps.some(step => step.manufacturing_order_id === orderData.id && step.status !== 'pending');
 
-  return (
-    <Card className="w-80 hover:shadow-lg transition-shadow">
-      <Handle type="target" position={Position.Left} />
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
-            <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
-              {orderData.priority}
-            </Badge>
-            <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
-              {orderData.status.replace('_', ' ')}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent card click when button is clicked
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    // Open detailed view - we'll need to get this from parent props
+    console.log('Open detailed view for order:', orderData.id);
+  };
 
-      <CardContent className="space-y-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Package2 className="h-3 w-3 text-gray-500" />
-            <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
+  const handleStartStep = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (nextStep) {
+      setSelectedStep(nextStep);
+      setStartStepDialogOpen(true);
+    }
+  };
+
+  return (
+    <>
+      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
+        <Handle type="target" position={Position.Left} />
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
+              <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
+                {orderData.priority}
+              </Badge>
+              <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
+                {orderData.status.replace('_', ' ')}
+              </Badge>
+            </div>
           </div>
-          
-          {orderData.due_date && (
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Calendar className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
+              <Package2 className="h-3 w-3 text-gray-500" />
+              <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
+            </div>
+            
+            {orderData.due_date && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3 text-gray-500" />
+                <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Single CTA Button */}
+          {nextStep && !hasStarted && (
+            <div className="pt-2 border-t">
+              <Button 
+                onClick={handleStartStep}
+                className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Start {nextStep.step_name}
+              </Button>
             </div>
           )}
-        </div>
+        </CardContent>
+        <Handle type="source" position={Position.Right} />
+      </Card>
 
-        <div className="flex gap-2 pt-2 border-t">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 text-xs h-7"
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            View
-          </Button>
-          
-          {nextStep && !hasStarted && (
-            <Button 
-              size="sm" 
-              className="flex-1 text-xs h-7 bg-primary hover:bg-primary/90"
-            >
-              <Play className="h-3 w-3 mr-1" />
-              Start
-            </Button>
-          )}
-        </div>
-      </CardContent>
-      <Handle type="source" position={Position.Right} />
-    </Card>
+      <StartStepDialog
+        isOpen={startStepDialogOpen}
+        onClose={() => setStartStepDialogOpen(false)}
+        order={orderData}
+        step={selectedStep}
+      />
+    </>
   );
 };
 
