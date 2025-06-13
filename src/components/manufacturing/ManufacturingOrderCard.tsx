@@ -3,19 +3,45 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, Calendar, User, FileText, Eye, Calculator } from 'lucide-react';
+import { Package2, Calendar, User, FileText, Eye, Calculator, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
+  onViewDetails: (order: ManufacturingOrder) => void;
 }
 
-const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor }: ManufacturingOrderCardProps) => {
+const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onViewDetails }: ManufacturingOrderCardProps) => {
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+
+  // Get the next step that should be started
+  const getNextStep = () => {
+    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+    
+    if (currentOrderSteps.length === 0) {
+      // No steps exist, get the first manufacturing step
+      return manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+    }
+    
+    // Find the next pending step
+    const nextPendingStep = currentOrderSteps
+      .filter(step => step.status === 'pending')
+      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
+    
+    return nextPendingStep?.manufacturing_steps;
+  };
+
+  const nextStep = getNextStep();
+  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onViewDetails(order)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
@@ -69,7 +95,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor }: Man
           </div>
         )}
 
-        {/* Raw Material Requirements */}
+        {/* Raw Material Requirements - Show first 3 only */}
         {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-1">
@@ -85,7 +111,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor }: Man
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order.product_configs.product_config_materials.slice(0, 3).map((material, index) => {
+                  {order.product_configs.product_config_materials.slice(0, 2).map((material, index) => {
                     const totalRequired = material.quantity_required * order.quantity_required;
                     
                     return (
@@ -99,10 +125,10 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor }: Man
                       </TableRow>
                     );
                   })}
-                  {order.product_configs.product_config_materials.length > 3 && (
+                  {order.product_configs.product_config_materials.length > 2 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-xs p-2 text-center text-gray-500">
-                        +{order.product_configs.product_config_materials.length - 3} more materials
+                        +{order.product_configs.product_config_materials.length - 2} more materials
                       </TableCell>
                     </TableRow>
                   )}
@@ -119,16 +145,38 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor }: Man
               <FileText className="h-3 w-3 text-yellow-600" />
               <span className="text-xs font-medium text-yellow-700">Instructions</span>
             </div>
-            <p className="text-xs text-yellow-700">{order.special_instructions}</p>
+            <p className="text-xs text-yellow-700 line-clamp-2">{order.special_instructions}</p>
           </div>
         )}
 
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t">
-          <Button variant="outline" size="sm" className="flex-1 text-xs">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetails(order);
+            }}
+          >
             <Eye className="h-3 w-3 mr-1" />
             View Details
           </Button>
+          
+          {nextStep && !hasStarted && (
+            <Button 
+              size="sm" 
+              className="flex-1 text-xs bg-primary hover:bg-primary/90"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails(order);
+              }}
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Start {nextStep.step_name}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

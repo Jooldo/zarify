@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -53,7 +53,13 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
   availableFields,
   onFieldsUpdate
 }) => {
-  const [selectedFields, setSelectedFields] = useState<RequiredField[]>(step.requiredFields);
+  const [selectedFields, setSelectedFields] = useState<RequiredField[]>([]);
+
+  // Update local state when step changes - this fixes the refresh issue
+  useEffect(() => {
+    console.log('StepFieldsConfig: Step changed', step.id, step.requiredFields);
+    setSelectedFields([...step.requiredFields]);
+  }, [step.id, step.requiredFields]);
 
   const handleFieldToggle = useCallback((field: RequiredField, isEnabled: boolean) => {
     let updatedFields: RequiredField[];
@@ -70,6 +76,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
       updatedFields = selectedFields.filter(f => f.id !== field.id);
     }
     
+    console.log('Field toggle - updating fields for step:', step.id, updatedFields);
     setSelectedFields(updatedFields);
     onFieldsUpdate(step.id, updatedFields);
   }, [selectedFields, step.id, onFieldsUpdate]);
@@ -79,6 +86,7 @@ const StepFieldsConfig: React.FC<StepFieldsConfigProps> = ({
       field.id === fieldId ? { ...field, required } : field
     );
     
+    console.log('Required toggle - updating fields for step:', step.id, updatedFields);
     setSelectedFields(updatedFields);
     onFieldsUpdate(step.id, updatedFields);
   }, [selectedFields, step.id, onFieldsUpdate]);

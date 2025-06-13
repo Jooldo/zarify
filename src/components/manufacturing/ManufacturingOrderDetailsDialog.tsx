@@ -1,264 +1,220 @@
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Calendar, Package2, User, FileText, Save } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { useToast } from '@/hooks/use-toast';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import StartStepDialog from './StartStepDialog';
 
 interface ManufacturingOrderDetailsDialogProps {
   order: ManufacturingOrder | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onStatusUpdate: (orderId: string, status: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
 }
 
-const ManufacturingOrderDetailsDialog = ({ 
-  order, 
-  open, 
-  onOpenChange, 
-  onStatusUpdate,
-  getPriorityColor, 
-  getStatusColor 
-}: ManufacturingOrderDetailsDialogProps) => {
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const { toast } = useToast();
-
-  React.useEffect(() => {
-    if (order) {
-      setSelectedStatus(order.status);
-    }
-  }, [order]);
-
-  const handleStatusUpdate = () => {
-    if (order && selectedStatus !== order.status) {
-      onStatusUpdate(order.id, selectedStatus);
-      toast({
-        title: 'Success',
-        description: 'Manufacturing order status updated successfully',
-      });
-    }
-  };
+const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogProps> = ({
+  order,
+  isOpen,
+  onClose,
+  getPriorityColor,
+  getStatusColor
+}) => {
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<any>(null);
 
   if (!order) return null;
 
+  // Get the first step that should be started
+  const getNextStep = () => {
+    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+    
+    if (currentOrderSteps.length === 0) {
+      // No steps exist, get the first manufacturing step
+      return manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+    }
+    
+    // Find the next pending step
+    const nextPendingStep = currentOrderSteps
+      .filter(step => step.status === 'pending')
+      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
+    
+    return nextPendingStep?.manufacturing_steps;
+  };
+
+  const nextStep = getNextStep();
+  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+
+  const handleStartStep = () => {
+    if (nextStep) {
+      setSelectedStep(nextStep);
+      setStartStepDialogOpen(true);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package2 className="h-5 w-5" />
-            Manufacturing Order Details
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
               <div>
-                <Label className="text-sm font-medium">Order Number</Label>
-                <div className="text-lg font-mono">{order.order_number}</div>
+                <span className="text-xl font-semibold">{order.product_name}</span>
+                <p className="text-sm text-muted-foreground font-mono">{order.order_number}</p>
               </div>
-              
-              <div>
-                <Label className="text-sm font-medium">Product Name</Label>
-                <div className="text-lg font-semibold">{order.product_name}</div>
+              <div className="flex gap-2">
+                <Badge className={`${getPriorityColor(order.priority)}`}>
+                  {order.priority}
+                </Badge>
+                <Badge className={`${getStatusColor(order.status)}`}>
+                  {order.status.replace('_', ' ')}
+                </Badge>
               </div>
+            </DialogTitle>
+          </DialogHeader>
 
-              {order.product_type && (
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <Label className="text-sm font-medium">Product Type</Label>
-                  <div>{order.product_type}</div>
-                </div>
-              )}
-
-              <div>
-                <Label className="text-sm font-medium">Quantity Required</Label>
-                <div className="text-lg font-semibold">{order.quantity_required}</div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium">Priority</Label>
-                <div>
-                  <Badge className={`${getPriorityColor(order.priority)}`}>
-                    {order.priority}
-                  </Badge>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">Current Status</Label>
-                <div>
-                  <Badge className={`${getStatusColor(order.status)}`}>
-                    {order.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">Created Date</Label>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}
-                </div>
-              </div>
-
-              {order.due_date && (
-                <div>
-                  <Label className="text-sm font-medium">Due Date</Label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    {format(new Date(order.due_date), 'MMM dd, yyyy')}
+                  <div className="flex items-center gap-2 mb-1">
+                    <Package2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Quantity</span>
                   </div>
+                  <span className="font-semibold">{order.quantity_required}</span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Status Update Section */}
-          <div className="border-t pt-4">
-            <Label className="text-sm font-medium">Update Status</Label>
-            <div className="flex items-center gap-2 mt-2">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="qc_failed">QC Failed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={handleStatusUpdate} 
-                disabled={selectedStatus === order.status}
-                size="sm"
-              >
-                <Save className="h-4 w-4 mr-1" />
-                Update Status
-              </Button>
-            </div>
-          </div>
-
-          {/* Product Configuration */}
-          {order.product_configs && (
-            <div className="border-t pt-4">
-              <Label className="text-sm font-medium mb-3 block">Product Configuration</Label>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                
+                {order.due_date && (
                   <div>
-                    <span className="font-medium">Product Code:</span>
-                    <div className="font-mono">{order.product_configs.product_code}</div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Due Date</span>
+                    </div>
+                    <span className="font-semibold">{format(new Date(order.due_date), 'MMM dd, yyyy')}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Category:</span>
-                    <div>{order.product_configs.category}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Subcategory:</span>
-                    <div>{order.product_configs.subcategory}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Raw Material Requirements */}
-          {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
-            <div className="border-t pt-4">
-              <Label className="text-sm font-medium mb-3 block">Material Requirements</Label>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead>Material Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Unit Required</TableHead>
-                      <TableHead>Total Required</TableHead>
-                      <TableHead>Unit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.product_configs.product_config_materials.map((material, index) => {
-                      const totalRequired = material.quantity_required * order.quantity_required;
-                      
-                      return (
-                        <TableRow key={material.id || index}>
-                          <TableCell className="font-medium">
-                            {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
-                          </TableCell>
-                          <TableCell>
-                            {material.raw_materials?.type || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {material.quantity_required} {material.unit}
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {totalRequired.toFixed(2)} {material.unit}
-                          </TableCell>
-                          <TableCell>
-                            {material.raw_materials?.unit || material.unit}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {/* Special Instructions */}
-          {order.special_instructions && (
-            <div className="border-t pt-4">
-              <Label className="text-sm font-medium mb-2 block">Special Instructions</Label>
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <div className="flex items-start gap-2">
-                  <FileText className="h-4 w-4 text-yellow-600 mt-0.5" />
-                  <div className="text-sm text-yellow-800">{order.special_instructions}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Timeline Information */}
-          <div className="border-t pt-4">
-            <Label className="text-sm font-medium mb-3 block">Timeline</Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Created:</span>
-                <div>{format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}</div>
-              </div>
-              {order.started_at && (
+                )}
+                
                 <div>
-                  <span className="font-medium">Started:</span>
-                  <div>{format(new Date(order.started_at), 'MMM dd, yyyy HH:mm')}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Created</span>
+                  </div>
+                  <span className="font-semibold">{format(new Date(order.created_at), 'MMM dd, yyyy')}</span>
                 </div>
-              )}
-              {order.completed_at && (
-                <div>
-                  <span className="font-medium">Completed:</span>
-                  <div>{format(new Date(order.completed_at), 'MMM dd, yyyy HH:mm')}</div>
+
+                {order.product_configs && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calculator className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Product Code</span>
+                    </div>
+                    <span className="font-semibold font-mono">{order.product_configs.product_code}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Raw Material Requirements */}
+            {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Raw Material Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Per Unit</TableHead>
+                        <TableHead>Total Required</TableHead>
+                        <TableHead>Unit</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {order.product_configs.product_config_materials.map((material, index) => {
+                        const totalRequired = material.quantity_required * order.quantity_required;
+                        
+                        return (
+                          <TableRow key={material.id || index}>
+                            <TableCell className="font-medium">
+                              {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
+                            </TableCell>
+                            <TableCell>{material.quantity_required}</TableCell>
+                            <TableCell className="font-semibold">{totalRequired.toFixed(1)}</TableCell>
+                            <TableCell>{material.unit}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Special Instructions */}
+            {order.special_instructions && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Special Instructions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{order.special_instructions}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Start Production Button */}
+            {nextStep && !hasStarted && (
+              <div className="flex justify-center pt-4 border-t">
+                <Button 
+                  onClick={handleStartStep}
+                  className="bg-primary hover:bg-primary/90"
+                  size="lg"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Start {nextStep.step_name}
+                </Button>
+              </div>
+            )}
+
+            {hasStarted && (
+              <div className="flex justify-center pt-4 border-t">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Production Started</span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <StartStepDialog
+        isOpen={startStepDialogOpen}
+        onClose={() => setStartStepDialogOpen(false)}
+        order={order}
+        step={selectedStep}
+      />
+    </>
   );
 };
 
