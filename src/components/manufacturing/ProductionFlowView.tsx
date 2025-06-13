@@ -37,6 +37,9 @@ interface ProductionFlowViewProps {
   onAddStep?: (stepData: StepCardData) => void;
 }
 
+const initialNodes: Node[] = [];
+const initialEdges: Edge[] = [];
+
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({ 
   manufacturingOrders, 
   manufacturingSteps, 
@@ -90,9 +93,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       orderSteps: orderSteps.length
     });
 
-    const flowNodes: Node[] = [];
-    const verticalSpacing = 200; // Increased spacing to prevent overlap
-    const horizontalSpacing = 320; // Increased horizontal spacing for wider cards
+    const flowNodes: Node<StepCardData>[] = [];
+    const verticalSpacing = 250; // Increased spacing to prevent overlap
+    const horizontalSpacing = 280; // Adjusted horizontal spacing for compact cards
     let currentY = 50;
 
     manufacturingOrders.forEach((order, orderIndex) => {
@@ -113,7 +116,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         manufacturingStepId: undefined
       };
 
-      const orderNode: Node = {
+      const orderNode: Node<StepCardData> = {
         id: `order-${order.id}`,
         type: 'stepCard',
         position: { x: 50, y: currentY },
@@ -159,7 +162,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           manufacturingStepId: step.id
         };
 
-        const stepNode: Node = {
+        const stepNode: Node<StepCardData> = {
           id: `step-${order.id}-${step.id}`,
           type: 'stepCard',
           position: { x: 50 + (stepIndex + 1) * horizontalSpacing, y: currentY },
@@ -175,8 +178,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return flowNodes;
   }, [manufacturingOrders, manufacturingSteps, orderSteps, stepFields]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(createFlowNodes());
-  const [edges, setEdges, onEdgesChange] = useEdgesState(createFlowEdges());
+  const [reactFlowNodes, setNodes, onNodesChange] = useNodesState(createFlowNodes());
+  const [reactFlowEdges, setEdges, onEdgesChange] = useEdgesState(createFlowEdges());
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -198,8 +201,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   return (
     <div className="h-[calc(100vh-200px)] w-full bg-gray-50">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={reactFlowNodes}
+        edges={reactFlowEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

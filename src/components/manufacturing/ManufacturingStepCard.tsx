@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsDialog from './StepDetailsDialog';
 
-export interface StepCardData {
+export interface StepCardData extends Record<string, unknown> {
   stepName: string;
   stepOrder: number;
   orderId: string;
@@ -143,8 +144,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     const fieldValues = stepFields
       .filter(field => 
         field.field_type !== 'worker' && 
-        field.field_type !== 'text'
-      ) // Exclude worker and text fields only
+        field.field_type !== 'text' && 
+        field.field_type !== 'textarea'
+      ) // Exclude worker and text fields
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -193,8 +195,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[240px] max-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[240px] max-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[200px] max-w-[240px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[200px] max-w-[240px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -220,7 +222,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <Card className={cardClassName} onClick={handleCardClick}>
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
-        <CardHeader className="pb-1 p-2">
+        <CardHeader className="pb-1 p-1.5">
           <div className="flex items-center justify-between">
             <CardTitle className={`text-xs font-semibold ${data.isJhalaiStep ? 'text-blue-700' : 'text-foreground'}`}>
               {data.stepName}
@@ -249,7 +251,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-1 p-2 pt-0">
+        <CardContent className="space-y-1 p-1.5 pt-0">
           {/* Order Information */}
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Package className="h-3 w-3" />
@@ -308,7 +310,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           {/* Configured Field Values - Show units */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-1">
-              {configuredFieldValues.slice(0, 3).map((field, index) => (
+              {configuredFieldValues.slice(0, 2).map((field, index) => (
                 <div key={index} className="flex items-center gap-1 text-xs bg-gray-50 p-1 rounded">
                   {getFieldIcon(field.fieldName, field.type)}
                   <span className="text-muted-foreground font-medium">{field.label}:</span>
@@ -317,9 +319,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
                   </span>
                 </div>
               ))}
-              {configuredFieldValues.length > 3 && (
+              {configuredFieldValues.length > 2 && (
                 <div className="text-xs text-muted-foreground text-center">
-                  +{configuredFieldValues.length - 3} more fields
+                  +{configuredFieldValues.length - 2} more fields
                 </div>
               )}
             </div>
