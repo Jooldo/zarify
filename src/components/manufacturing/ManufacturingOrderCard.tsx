@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,9 +27,12 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
     
     if (currentOrderSteps.length === 0) {
       // No steps exist, get the first manufacturing step
-      return manufacturingSteps
+      const firstStep = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)[0];
+      
+      console.log('First manufacturing step:', firstStep);
+      return firstStep;
     }
     
     // Find the next pending step
@@ -38,6 +40,7 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
       .filter(step => step.status === 'pending')
       .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
     
+    console.log('Next pending step:', nextPendingStep);
     return nextPendingStep?.manufacturing_steps;
   };
 
@@ -55,6 +58,9 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (nextStep) {
+      console.log('Selected step for dialog:', nextStep);
+      console.log('Step ID:', nextStep.id);
+      console.log('Step name:', nextStep.step_name);
       setSelectedStep(nextStep);
       setStartStepDialogOpen(true);
     }
@@ -84,7 +90,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Order Details */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Package2 className="h-4 w-4 text-gray-500" />
