@@ -9,7 +9,7 @@ import ProductionFlowView from './ProductionFlowView';
 
 const ProductionQueueView = () => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
-  const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
+  const { manufacturingSteps } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
@@ -84,9 +84,9 @@ const ProductionQueueView = () => {
       {/* Production Flow View */}
       <ProductionFlowView
         manufacturingOrders={manufacturingOrders}
-        manufacturingSteps={manufacturingSteps}
-        orderSteps={orderSteps}
-        stepFields={stepFields}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
+        onViewDetails={handleViewDetails}
       />
 
       {/* Manufacturing Order Details Dialog */}

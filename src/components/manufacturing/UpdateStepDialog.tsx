@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
@@ -139,17 +140,12 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         );
       case 'number':
         return (
-          <div className="space-y-1">
-            <Input
-              type="number"
-              value={value}
-              onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-              placeholder={`Enter ${field.field_label.toLowerCase()}`}
-            />
-            {field.field_options?.unit && (
-              <p className="text-xs text-muted-foreground">Unit: {field.field_options.unit}</p>
-            )}
-          </div>
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
         );
       case 'text':
         return (
@@ -187,8 +183,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             allFields.set(field.field_id, {
               id: field.field_id,
               label: field.field_label,
-              type: field.field_type,
-              unit: field.field_options?.unit
+              type: field.field_type
             });
           }
         });
@@ -198,11 +193,10 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     return Array.from(allFields.values());
   };
 
-  // Get field value for a specific step and field with unit
-  const getFieldValueForStep = (stepId: string, fieldId: string, unit?: string) => {
+  // Get field value for a specific step and field
+  const getFieldValueForStep = (stepId: string, fieldId: string) => {
     const value = getStepValue(stepId, fieldId);
-    if (!value) return '-';
-    return unit ? `${value} ${unit}` : value;
+    return value || '-';
   };
 
   const allConfiguredFields = getAllConfiguredFields();
@@ -240,13 +234,16 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               
               <div>
                 <Label>Progress (%)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.progress}
-                  onChange={(e) => handleProgressChange(Number(e.target.value))}
-                />
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.progress}
+                    onChange={(e) => handleProgressChange(Number(e.target.value))}
+                  />
+                  <Progress value={formData.progress} className="h-2" />
+                </div>
               </div>
             </div>
 
@@ -260,9 +257,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       <Label>
                         {field.field_label}
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                        {field.field_options?.unit && (
-                          <span className="text-muted-foreground ml-1">({field.field_options.unit})</span>
-                        )}
                       </Label>
                       {renderField(field)}
                     </div>
@@ -295,10 +289,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                         <TableHead>Completed</TableHead>
                         {/* Dynamic columns for configured fields */}
                         {allConfiguredFields.map(field => (
-                          <TableHead key={field.id}>
-                            {field.label}
-                            {field.unit && <span className="text-muted-foreground"> ({field.unit})</span>}
-                          </TableHead>
+                          <TableHead key={field.id}>{field.label}</TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
@@ -330,8 +321,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm font-mono">
-                              {step.progress_percentage || 0}%
+                            <div className="flex items-center gap-2">
+                              <Progress value={step.progress_percentage || 0} className="h-2 w-16" />
+                              <span className="text-xs font-mono">
+                                {step.progress_percentage || 0}%
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -344,11 +338,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                               {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
                             </div>
                           </TableCell>
-                          {/* Dynamic field values with units */}
+                          {/* Dynamic field values */}
                           {allConfiguredFields.map(field => (
                             <TableCell key={field.id}>
                               <div className="text-sm">
-                                {getFieldValueForStep(step.id, field.id, field.unit)}
+                                {getFieldValueForStep(step.id, field.id)}
                               </div>
                             </TableCell>
                           ))}
