@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -98,7 +97,7 @@ const Index = () => {
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger className="-ml-1" />
               {pageTitle && (
-                <div className="flex flex-1 items-center gap-2 px-3">
+                <div className="flex items-center gap-2 px-3">
                   <h1 className="text-lg font-semibold">{pageTitle}</h1>
                 </div>
               )}
