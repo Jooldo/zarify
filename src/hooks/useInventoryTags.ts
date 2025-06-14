@@ -6,7 +6,7 @@ import { type OrderStatus } from '@/hooks/useOrders'; // Import OrderStatus type
 export interface InventoryTag {
   id: string;
   tag_id: string;
-  product_id: string;
+  product_id: string; // This is finished_goods.id
   quantity: number;
   status: string;
   qr_code_data: string | null;
@@ -20,7 +20,23 @@ export interface InventoryTag {
   customer_id: string | null;
   order_id: string | null;
   order_item_id: string | null;
+  finished_goods?: { // Added for processTagOperation context
+    product_code: string;
+    current_stock: number;
+    product_config_id?: string; // Ensure this is available if needed
+    product_configs?: { // if joining through finished_goods to product_configs
+        id: string;
+        product_code: string;
+    }
+  }
 }
+
+export interface TagProductInfo {
+  product_config_id: string;
+  product_code: string;
+  tag_quantity: number;
+}
+
 
 export const useInventoryTags = () => {
   const [tags, setTags] = useState<InventoryTag[]>([]);
@@ -47,6 +63,55 @@ export const useInventoryTags = () => {
       setLoading(false);
     }
   };
+
+  const getTagProductConfigByTagId = async (tagId: string): Promise<TagProductInfo | null> => {
+    try {
+      const { data: tagData, error: tagError } = await supabase
+        .from('inventory_tags')
+        .select(`
+          quantity,
+          finished_goods!inner (
+            product_config_id,
+            product_configs!inner (
+              id,
+              product_code
+            )
+          )
+        `)
+        .eq('tag_id', tagId)
+        .single();
+
+      if (tagError) {
+        console.error('Error fetching tag details by tag_id:', tagError);
+        if (tagError.code === 'PGRST116') { // Not found
+            toast({ title: 'Error', description: `Tag ID "${tagId}" not found.`, variant: 'destructive'});
+            return null;
+        }
+        throw tagError;
+      }
+      
+      if (!tagData || !tagData.finished_goods || !tagData.finished_goods.product_configs) {
+        toast({ title: 'Error', description: `Could not retrieve product information for Tag ID "${tagId}".`, variant: 'destructive'});
+        return null;
+      }
+
+      return {
+        product_config_id: tagData.finished_goods.product_config_id,
+        product_code: tagData.finished_goods.product_configs.product_code,
+        tag_quantity: tagData.quantity,
+      };
+
+    } catch (error) {
+      console.error('Error in getTagProductConfigByTagId:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to get product info for tag ${tagId}. ${error.message}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
 
   const generateTag = async (
     productId: string, 
@@ -520,6 +585,7 @@ export const useInventoryTags = () => {
     processTagOperation,
     manualTagIn,
     manualTagOut,
-    refetch: fetchTags
+    refetch: fetchTags,
+    getTagProductConfigByTagId, // Export new function
   };
 };
