@@ -13,33 +13,74 @@ interface OrdersStatsHeaderProps {
 }
 
 const OrdersStatsHeader = ({ orderStats }: OrdersStatsHeaderProps) => {
-  const stats = [
-    { title: "Total Orders", value: orderStats.total, icon: ClipboardList, color: "lp-blue", description: "All orders" },
-    { title: "Created", value: orderStats.created, icon: Clock, color: "gray", description: "New orders" }, // Keeping gray for neutral 'created'
-    { title: "In Progress", value: orderStats.inProgress, icon: Package, color: "lp-purple", description: "Being processed" },
-    { title: "Ready", value: orderStats.ready, icon: CheckCircle, color: "lp-emerald", description: "Ready to ship" }, // Using emerald for ready
-    { title: "Delivered", value: orderStats.delivered, icon: Truck, color: "green", description: "Completed" } // Keeping green for delivered
-  ];
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"> {/* Adjusted grid for responsiveness */}
-      {stats.map((stat) => (
-        <Card key={stat.title} className={`border-l-4 border-l-${stat.color}-500 shadow-sm hover:shadow-lg transition-shadow bg-gradient-to-br from-${stat.color}-50 via-white to-${stat.color}-100/50 dark:from-${stat.color}-900/30 dark:via-background dark:to-${stat.color}-800/20`}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4 border-b-0"> {/* Removed CardHeader border here */}
-            <CardTitle className={`text-xs font-medium text-${stat.color}-700 dark:text-${stat.color}-400`}>{stat.title}</CardTitle>
-            <div className={`p-1.5 bg-${stat.color}-100 dark:bg-${stat.color}-800/50 rounded-full`}>
-              <stat.icon className={`h-4 w-4 text-${stat.color}-600 dark:text-${stat.color}-300`} />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 pt-1">
-            <div className={`text-2xl font-bold text-${stat.color}-700 dark:text-${stat.color}-300`}>{stat.value}</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.description}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+      <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-blue-50 to-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+          <CardTitle className="text-xs font-medium text-gray-700">Total Orders</CardTitle>
+          <div className="p-1.5 bg-blue-100 rounded-full">
+            <ClipboardList className="h-3.5 w-3.5 text-blue-600" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <div className="text-xl font-bold text-blue-700">{orderStats.total}</div>
+          <p className="text-xs text-gray-500 mt-0.5">All orders</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-gray-400 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-gray-50 to-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+          <CardTitle className="text-xs font-medium text-gray-700">Created</CardTitle>
+          <div className="p-1.5 bg-gray-100 rounded-full">
+            <Clock className="h-3.5 w-3.5 text-gray-600" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <div className="text-xl font-bold text-gray-700">{orderStats.created}</div>
+          <p className="text-xs text-gray-500 mt-0.5">New orders</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-orange-50 to-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+          <CardTitle className="text-xs font-medium text-gray-700">In Progress</CardTitle>
+          <div className="p-1.5 bg-orange-100 rounded-full">
+            <Package className="h-3.5 w-3.5 text-orange-600" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <div className="text-xl font-bold text-orange-700">{orderStats.inProgress}</div>
+          <p className="text-xs text-gray-500 mt-0.5">Being processed</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-yellow-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-yellow-50 to-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+          <CardTitle className="text-xs font-medium text-gray-700">Ready</CardTitle>
+          <div className="p-1.5 bg-yellow-100 rounded-full">
+            <CheckCircle className="h-3.5 w-3.5 text-yellow-600" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <div className="text-xl font-bold text-yellow-700">{orderStats.ready}</div>
+          <p className="text-xs text-gray-500 mt-0.5">Ready to ship</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-green-50 to-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+          <CardTitle className="text-xs font-medium text-gray-700">Delivered</CardTitle>
+          <div className="p-1.5 bg-green-100 rounded-full">
+            <Truck className="h-3.5 w-3.5 text-green-600" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-3">
+          <div className="text-xl font-bold text-green-700">{orderStats.delivered}</div>
+          <p className="text-xs text-gray-500 mt-0.5">Completed</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default OrdersStatsHeader;
-
