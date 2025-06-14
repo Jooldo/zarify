@@ -92,27 +92,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       ],
     },
     {
-      label: "Raw Materials",
-      id: "raw-materials",
-      items: [
-        {
-          title: "Home",
-          icon: Factory,
-          tab: "rm-home",
-        },
-        {
-          title: "Inventory",
-          icon: Package,
-          tab: "rm-inventory",
-        },
-        {
-          title: "Procurement",
-          icon: Truck,
-          tab: "rm-procurement",
-        },
-      ],
-    },
-    {
       label: "Finished Goods",
       id: "finished-goods",
       items: [
@@ -130,6 +109,27 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "Analytics",
           icon: BarChart3,
           tab: "fg-analytics",
+        },
+      ],
+    },
+    {
+      label: "Raw Materials",
+      id: "raw-materials",
+      items: [
+        {
+          title: "Home",
+          icon: Factory,
+          tab: "rm-home",
+        },
+        {
+          title: "Inventory",
+          icon: Package,
+          tab: "rm-inventory",
+        },
+        {
+          title: "Procurement",
+          icon: Truck,
+          tab: "rm-procurement",
         },
       ],
     },

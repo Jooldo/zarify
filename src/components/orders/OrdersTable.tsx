@@ -1,28 +1,29 @@
 
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import OrdersTableRow from './OrdersTableRow';
-import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
+import { Order } from '@/hooks/useOrders';
+import { FinishedGood } from '@/hooks/useFinishedGoods'; // Import type
 
 interface OrdersTableProps {
-  filteredOrders: any[];
-  orders: any[];
+  filteredOrders: any[]; // These are flattened order items
+  orders: Order[]; // Original orders structure
+  finishedGoods: FinishedGood[]; // Pass finished goods data
   getOverallOrderStatus: (orderId: string) => string;
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
   getStockAvailable: (productCode: string) => number;
   onOrderUpdate: () => void;
   onFinishedGoodsUpdate?: () => void;
-  loading?: boolean;
 }
 
 const OrdersTable = ({ 
   filteredOrders, 
-  orders, 
+  orders,
+  finishedGoods,
   getOverallOrderStatus, 
   getStatusVariant, 
   getStockAvailable, 
-  onOrderUpdate, 
-  onFinishedGoodsUpdate,
-  loading = false
+  onOrderUpdate,
+  onFinishedGoodsUpdate 
 }: OrdersTableProps) => {
   
   if (loading) {
@@ -39,28 +40,29 @@ const OrdersTable = ({
   }
 
   return (
-    <div className="bg-white rounded-lg border">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow className="h-8">
-            <TableHead className="py-1 px-2 text-xs font-medium">Order ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium w-24">Suborder ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Customer</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Product Code</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Qty</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Stock Available</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Sub Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Order Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Expected Delivery</TableHead>
-            <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
+          <TableRow className="h-10 bg-gray-50">
+            <TableHead className="py-1 px-2 text-xs">Order ID</TableHead>
+            <TableHead className="py-1 px-2 text-xs w-24">Suborder ID</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Customer</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Product Code</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Qty</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Stock</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Item Status</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Order Status</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Delivery</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredOrders.map((item) => (
-            <OrdersTableRow
-              key={item.id}
-              item={item}
-              orders={orders}
+            <OrdersTableRow 
+              key={item.id} // item.id is the suborder_item_id, which should be unique
+              item={item} 
+              orders={orders} // Pass full orders list
+              finishedGoods={finishedGoods} // Pass finished goods list
               getOverallOrderStatus={getOverallOrderStatus}
               getStatusVariant={getStatusVariant}
               getStockAvailable={getStockAvailable}

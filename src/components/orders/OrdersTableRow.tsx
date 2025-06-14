@@ -1,36 +1,54 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText } from 'lucide-react';
-import OrderDetails from '@/components/OrderDetails';
+import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText, Info } from 'lucide-react';
+import OrderDetails from '@/components/OrderDetails'; // Keep for full order view
 import EditOrderDialog from './EditOrderDialog';
 import CreateInvoiceDialog from './CreateInvoiceDialog';
 import ViewInvoiceDialog from './ViewInvoiceDialog';
-import ProductDetailsPopover from '@/components/ui/ProductDetailsPopover';
+// ProductDetailsPopover is removed
+import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialog'; // For product code click
+import SuborderDetailsDialog from './SuborderDetailsDialog'; // New dialog for suborder
 import { useInvoices } from '@/hooks/useInvoices';
+import { FinishedGood } from '@/hooks/useFinishedGoods'; // Import type
+import { OrderItem as FullOrderItem } from '@/hooks/useOrders';
+import { Order as FullOrder } from '@/hooks/useOrders';
+import { OrderStatus } from '@/hooks/useOrders';
 
 interface OrdersTableRowProps {
-  item: {
-    id: string;
-    orderId: string;
+  item: { // This is a flattened order item
+    id: string; // suborder_item id
+    orderId: string; // parent order_number
     customer: string;
     productCode: string;
     category: string;
     subcategory: string;
     size: string;
     quantity: number;
-    status: string;
-    price: number;
-    totalOrderAmount: number;
+    status: string; // suborder status
+    price: number; // suborder total_price
+    totalOrderAmount: number; // parent order total_amount
     createdDate: string;
     updatedDate: string;
     expectedDelivery: string;
-    suborder_id: string;
+    suborder_id: string; // suborder specific identifier
+    // The original OrderItem fields are still needed for SuborderDetailsDialog
+    fulfilled_quantity: number; 
+    unit_price: number;
+    product_config_id: string;
+    product_config: {
+      id: string;
+      product_code: string;
+      category: string;
+      subcategory: string;
+      size_value: number;
+      weight_range: string | null;
+    };
   };
-  orders: any[];
+  orders: FullOrder[]; // Full orders list to find the parent order
+  finishedGoods: FinishedGood[]; // For product details on product code click
   getOverallOrderStatus: (orderId: string) => string;
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
   getStockAvailable: (productCode: string) => number;
@@ -38,17 +56,31 @@ interface OrdersTableRowProps {
   onFinishedGoodsUpdate?: () => void;
 }
 
-const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant, getStockAvailable, onOrderUpdate, onFinishedGoodsUpdate }: OrdersTableRowProps) => {
+const OrdersTableRow = ({ 
+  item, 
+  orders, 
+  finishedGoods,
+  getOverallOrderStatus, 
+  getStatusVariant, 
+  getStockAvailable, 
+  onOrderUpdate, 
+  onFinishedGoodsUpdate 
+}: OrdersTableRowProps) => {
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  const [isSuborderDetailsOpen, setIsSuborderDetailsOpen] = useState(false);
+  const [isViewProductOpen, setIsViewProductOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
+  
   const { getInvoiceByOrderId, refetch: refetchInvoices } = useInvoices();
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
 
-  // Find the correct order by order_number instead of id
-  const order = orders.find(o => o.order_number === item.orderId);
-  const existingInvoice = order ? getInvoiceByOrderId(order.id) : null;
+  // Find the correct parent order for dialogs
+  const parentOrder = orders.find(o => o.order_number === item.orderId);
+  const existingInvoice = parentOrder ? getInvoiceByOrderId(parentOrder.id) : null;
+  const selectedFinishedGood = finishedGoods.find(fg => fg.product_code === item.productCode);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -87,36 +119,77 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
     </Badge>
   );
 
-  const handleOrderUpdate = async () => {
-    await onOrderUpdate();
-    await refetchInvoices(); // Refresh invoices when order updates
+  const handleOrderUpdateAndCloseDialogs = async () => {
+    await onOrderUpdate(); // This should refetch orders and invoices
+    setIsOrderDetailsOpen(false);
+    setIsSuborderDetailsOpen(false);
+    setIsEditDialogOpen(false);
+    // No need to refetchInvoices separately if onOrderUpdate handles it
   };
 
   const handleInvoiceCreated = async () => {
     await onOrderUpdate();
-    await refetchInvoices();
+    // await refetchInvoices(); // Already handled by onOrderUpdate
     setIsCreateInvoiceDialogOpen(false);
   };
+
+  // Construct the OrderItem from the flattened `item`
+  const suborderItemForDialog: FullOrderItem = {
+    id: item.id,
+    suborder_id: item.suborder_id,
+    quantity: item.quantity,
+    fulfilled_quantity: item.fulfilled_quantity,
+    unit_price: item.unit_price,
+    total_price: item.price, // item.price is suborder total_price
+    status: item.status as OrderStatus,
+    product_config_id: item.product_config_id,
+    product_config: item.product_config,
+  };
+
 
   return (
     <>
       <TableRow className="h-10 hover:bg-gray-50">
-        <TableCell className="py-1 px-2 text-xs font-medium">{item.orderId}</TableCell>
+        <TableCell className="py-1 px-2 text-xs font-medium">
+          {parentOrder ? (
+            <Button 
+              variant="link" 
+              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800"
+              onClick={() => setIsOrderDetailsOpen(true)}
+            >
+              {item.orderId}
+            </Button>
+          ) : (
+            item.orderId
+          )}
+        </TableCell>
         <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium w-24">
-          <div 
-            className="truncate cursor-pointer" 
-            title={item.suborder_id}
-          >
-            {item.suborder_id}
-          </div>
+          {parentOrder ? (
+            <Button 
+              variant="link" 
+              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 truncate block w-full text-left"
+              onClick={() => setIsSuborderDetailsOpen(true)}
+              title={item.suborder_id}
+            >
+              {item.suborder_id}
+            </Button>
+          ) : (
+             <div className="truncate" title={item.suborder_id}>{item.suborder_id}</div>
+          )}
         </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
         <TableCell className="py-1 px-2 text-xs font-mono">
-          <ProductDetailsPopover productCode={item.productCode}>
-            <Button variant="ghost" className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+          {selectedFinishedGood ? (
+            <Button 
+              variant="link" 
+              className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800"
+              onClick={() => setIsViewProductOpen(true)}
+            >
               {item.productCode}
             </Button>
-          </ProductDetailsPopover>
+          ) : (
+            item.productCode
+          )}
         </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
         <TableCell className="py-1 px-2 text-xs">
@@ -135,35 +208,30 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         </TableCell>
         <TableCell className="py-1 px-2">
           <div className="flex gap-1">
-            {order && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-sm">Order Details</DialogTitle>
-                  </DialogHeader>
-                  <OrderDetails 
-                    order={order} 
-                    onOrderUpdate={handleOrderUpdate}
-                  />
-                </DialogContent>
-              </Dialog>
+            {/* Original Eye button remains for full order details as an alternative or remove if OrderID click is sufficient */}
+             {parentOrder && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-6 w-6 p-0"
+                onClick={() => setIsOrderDetailsOpen(true)} // Can also be triggered by Order ID click
+                title="View Full Order"
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
             )}
             <Button 
               variant="outline" 
               size="sm" 
               className="h-6 w-6 p-0"
               onClick={() => setIsEditDialogOpen(true)}
+              title="Edit Order Item"
             >
               <Edit className="h-3 w-3" />
             </Button>
             
             {/* Invoice Actions */}
-            {order && (
+            {parentOrder && (
               <>
                 {existingInvoice ? (
                   <Button 
@@ -192,20 +260,53 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
         </TableCell>
       </TableRow>
 
-      {order && (
+      {/* Dialogs */}
+      {parentOrder && (
+        <Dialog open={isOrderDetailsOpen} onOpenChange={setIsOrderDetailsOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Order Details: {parentOrder.order_number}</DialogTitle>
+            </DialogHeader>
+            <OrderDetails 
+              order={parentOrder} 
+              onOrderUpdate={handleOrderUpdateAndCloseDialogs} // Ensure dialog closes
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {parentOrder && (
+        <SuborderDetailsDialog
+          isOpen={isSuborderDetailsOpen}
+          onClose={() => setIsSuborderDetailsOpen(false)}
+          suborderItem={suborderItemForDialog}
+          parentOrder={parentOrder}
+          onSuborderUpdate={handleOrderUpdateAndCloseDialogs}
+        />
+      )}
+      
+      {selectedFinishedGood && (
+         <ViewFinishedGoodDialog
+            isOpen={isViewProductOpen}
+            onClose={() => setIsViewProductOpen(false)}
+            product={selectedFinishedGood} // Pass the full FinishedGood object
+          />
+      )}
+
+      {parentOrder && (
         <>
           <EditOrderDialog
             isOpen={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
-            order={order}
-            onOrderUpdate={handleOrderUpdate}
+            order={parentOrder} // EditOrderDialog might need to be adapted for single item editing or use SuborderDetailsDialog for edits too
+            onOrderUpdate={handleOrderUpdateAndCloseDialogs}
           />
           
           {!existingInvoice && (
             <CreateInvoiceDialog
               isOpen={isCreateInvoiceDialogOpen}
               onClose={() => setIsCreateInvoiceDialogOpen(false)}
-              order={order}
+              order={parentOrder}
               onInvoiceCreated={handleInvoiceCreated}
             />
           )}
@@ -215,7 +316,7 @@ const OrdersTableRow = ({ item, orders, getOverallOrderStatus, getStatusVariant,
               isOpen={isViewInvoiceDialogOpen}
               onClose={() => setIsViewInvoiceDialogOpen(false)}
               invoice={existingInvoice}
-              order={order}
+              order={parentOrder}
             />
           )}
         </>
