@@ -84,7 +84,14 @@ const PublicCatalogue = () => {
         .order('display_order', { ascending: true });
 
       if (itemsError) throw itemsError;
-      setCatalogueItems(itemsData || []);
+
+      // Filter out items where the linked product might be missing
+      const validItems = (itemsData || []).filter(item => {
+        const configs = item.product_configs;
+        return configs && typeof configs === 'object' && configs.product_code;
+      });
+
+      setCatalogueItems(validItems);
     } catch (error) {
       console.error('Error fetching catalogue:', error);
       toast({
