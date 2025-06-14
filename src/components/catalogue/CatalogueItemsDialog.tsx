@@ -29,6 +29,8 @@ const CatalogueItemsDialog = ({ catalogue, open, onOpenChange }: CatalogueItemsD
   const [customPrice, setCustomPrice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  console.log('CatalogueItemsDialog - catalogueItems:', catalogueItems);
+
   const availableProducts = productConfigs.filter(product => 
     product.is_active && 
     !catalogueItems.some(item => item.product_config_id === product.id) &&

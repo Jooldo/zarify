@@ -29,6 +29,19 @@ export interface CreateCatalogueItemData {
   is_featured?: boolean;
 }
 
+// Type for raw data from Supabase before filtering
+interface RawCatalogueItem {
+  id: string;
+  catalogue_id: string;
+  product_config_id: string;
+  display_order: number;
+  custom_price?: number;
+  custom_description?: string;
+  is_featured: boolean;
+  created_at: string;
+  product_configs: any; // Could be error object or valid data
+}
+
 export const useCatalogueItems = (catalogueId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -37,6 +50,8 @@ export const useCatalogueItems = (catalogueId?: string) => {
     queryKey: ['catalogue-items', catalogueId],
     queryFn: async () => {
       if (!catalogueId) return [];
+
+      console.log('Fetching catalogue items for:', catalogueId);
 
       const { data, error } = await supabase
         .from('catalogue_items')
@@ -54,33 +69,49 @@ export const useCatalogueItems = (catalogueId?: string) => {
         .eq('catalogue_id', catalogueId)
         .order('display_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching catalogue items:', error);
+        throw error;
+      }
+      
+      console.log('Raw data from Supabase:', data);
       
       // Filter out items where product_configs failed to load and properly type the result
-      return (data || [])
-        .filter((item): item is CatalogueItem => {
+      const validItems = (data || [])
+        .filter((item: RawCatalogueItem): item is CatalogueItem => {
           // Check if product_configs exists and is a valid object
           if (!item.product_configs || 
               item.product_configs === null || 
               item.product_configs === undefined) {
+            console.log('Item filtered out - no product_configs:', item.id);
             return false;
           }
           
           // Check if it's an error object
           if (typeof item.product_configs === 'object' && 'error' in item.product_configs) {
+            console.log('Item filtered out - error in product_configs:', item.id, item.product_configs);
             return false;
           }
           
           // Ensure it's a valid product_configs object with required properties
-          const configs = item.product_configs as any;
-          return typeof configs === 'object' && 
+          const configs = item.product_configs;
+          const isValid = typeof configs === 'object' && 
                  configs !== null &&
                  typeof configs.id === 'string' &&
                  typeof configs.product_code === 'string' &&
                  typeof configs.category === 'string' &&
                  typeof configs.subcategory === 'string' &&
                  typeof configs.size_value === 'number';
+          
+          if (!isValid) {
+            console.log('Item filtered out - invalid product_configs structure:', item.id, configs);
+          }
+          
+          return isValid;
         });
+
+      console.log('Filtered valid items:', validItems);
+      return validItems;
     },
     enabled: !!catalogueId,
   });
