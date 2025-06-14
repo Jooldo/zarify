@@ -275,7 +275,7 @@ const ManufacturingDashboard = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="queue" className="mt-0">
+        <TabsContent value="queue" className="mt-4">
           <ProductionQueueView />
         </TabsContent>
       </Tabs>

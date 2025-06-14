@@ -1,5 +1,5 @@
+
 import React, { useState, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Factory, Search } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
@@ -98,21 +98,6 @@ const ProductionQueueView = () => {
     setDetailsDialogOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Factory className="h-8 w-8 mx-auto mb-2 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading production queue...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const pendingOrders = filteredOrders.filter(order => order.status === 'pending');
-  const inProgressOrders = filteredOrders.filter(order => order.status === 'in_progress');
-  const completedOrders = filteredOrders.filter(order => order.status === 'completed');
-
   return (
     <div className="space-y-6">
       {/* Search and Filter Controls */}
@@ -131,11 +116,19 @@ const ProductionQueueView = () => {
         </div>
       </div>
 
-      {/* Production Flow View */}
-      <ProductionFlowView
-        manufacturingOrders={filteredOrders}
-        onViewDetails={handleViewDetails}
-      />
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 rounded-lg bg-muted/20">
+          <div className="text-center">
+            <Factory className="h-8 w-8 mx-auto mb-2 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Loading production queue...</p>
+          </div>
+        </div>
+      ) : (
+        <ProductionFlowView
+          manufacturingOrders={filteredOrders}
+          onViewDetails={handleViewDetails}
+        />
+      )}
 
       {/* Manufacturing Order Details Dialog */}
       <ManufacturingOrderDetailsDialog
