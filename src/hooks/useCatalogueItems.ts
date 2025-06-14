@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +55,21 @@ export const useCatalogueItems = (catalogueId?: string) => {
         .order('display_order', { ascending: true });
 
       if (error) throw error;
-      return data as CatalogueItem[];
+      
+      // Filter out items where product_configs failed to load and cast to proper type
+      return (data || [])
+        .filter(item => item.product_configs && typeof item.product_configs === 'object' && !('error' in item.product_configs))
+        .map(item => ({
+          ...item,
+          product_configs: item.product_configs as {
+            id: string;
+            product_code: string;
+            category: string;
+            subcategory: string;
+            size_value: number;
+            weight_range?: string;
+          }
+        })) as CatalogueItem[];
     },
     enabled: !!catalogueId,
   });
