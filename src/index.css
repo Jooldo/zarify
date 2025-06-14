@@ -78,6 +78,11 @@
 }
 
 @layer base {
+  html {
+    /* Set a smaller base font size to scale the entire UI down */
+    font-size: 14px;
+  }
+
   * {
     @apply border-border;
   }
