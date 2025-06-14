@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -144,7 +145,7 @@ const FinishedGoodsInventory = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-white p-6 rounded-lg">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
