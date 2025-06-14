@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -36,7 +37,8 @@ import {
   Boxes,
   BarChart3,
   ChevronDown,
-  Workflow
+  Workflow,
+  BookCopy // Added new icon
 } from "lucide-react";
 
 interface AppSidebarProps {
@@ -87,6 +89,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "Orders",
           icon: ShoppingCart,
           tab: "orders",
+          badge: null,
+        },
+        {
+          title: "Product Catalogues",
+          icon: BookCopy,
+          tab: "catalogue-management",
           badge: null,
         },
       ],
