@@ -14,7 +14,6 @@ import { Eye } from 'lucide-react';
 
 interface ManufacturingOrdersTableProps {
   orders: ManufacturingOrder[];
-  onViewDetails: (order: ManufacturingOrder) => void;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
   onViewOrder: (order: ManufacturingOrder) => void;
@@ -22,7 +21,6 @@ interface ManufacturingOrdersTableProps {
 
 const ManufacturingOrdersTable = ({ 
   orders, 
-  onViewDetails, 
   getPriorityColor, 
   getStatusColor, 
   onViewOrder 
