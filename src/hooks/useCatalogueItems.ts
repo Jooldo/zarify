@@ -11,7 +11,7 @@ export interface CatalogueItem {
   custom_description?: string;
   is_featured: boolean;
   created_at: string;
-  product_configs?: {
+  product_configs: {
     id: string;
     product_code: string;
     category: string;
@@ -68,7 +68,8 @@ export const useCatalogueItems = (catalogueId?: string) => {
             weight_range?: string;
           }
         } => {
-          return item.product_configs != null && 
+          return item.product_configs !== null && 
+                 item.product_configs !== undefined &&
                  typeof item.product_configs === 'object' && 
                  !('error' in item.product_configs) &&
                  'id' in item.product_configs;
