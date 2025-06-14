@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import TagAuditTrail from './inventory/TagAuditTrail';
 import FinishedGoodsFilter from './inventory/FinishedGoodsFilter';
 import SortDropdown from './ui/sort-dropdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import FinishedGoodsStatsHeader from './inventory/FinishedGoodsStatsHeader';
 
 const FinishedGoodsInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +26,18 @@ const FinishedGoodsInventory = () => {
   
   const { finishedGoods, loading, refetch } = useFinishedGoods();
   const queryClient = useQueryClient();
+
+  const inventoryStats = useMemo(() => {
+    if (!finishedGoods) {
+      return { total: 0, belowThreshold: 0, inManufacturing: 0, healthy: 0, totalStock: 0 };
+    }
+    const total = finishedGoods.length;
+    const belowThreshold = finishedGoods.filter(p => (p.current_stock || 0) < (p.threshold || 0)).length;
+    const inManufacturing = finishedGoods.reduce((sum, p) => sum + (p.in_manufacturing || 0), 0);
+    const healthy = total - belowThreshold;
+    const totalStock = finishedGoods.reduce((sum, p) => sum + (p.current_stock || 0), 0);
+    return { total, belowThreshold, inManufacturing, healthy, totalStock };
+  }, [finishedGoods]);
 
   const sortOptions = [
     { value: 'ordered_qty', label: 'Live Orders' },
@@ -152,6 +166,7 @@ const FinishedGoodsInventory = () => {
         </TabsList>
         
         <TabsContent value="inventory" className="space-y-4 mt-4">
+          <FinishedGoodsStatsHeader inventoryStats={inventoryStats} />
           <FinishedGoodsHeader
             onRefresh={handleRefresh}
             onTagOperationComplete={handleTagOperationComplete}

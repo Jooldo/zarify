@@ -1,212 +1,45 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, Calendar, Calculator, Play } from 'lucide-react';
-import { format } from 'date-fns';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import StartStepDialog from './StartStepDialog';
-import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { getPriorityColor, getStatusColor } from '@/utils/manufacturingColors';
+import { ManufacturingOrder } from '@/types/manufacturing';
 
 interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
   onViewDetails: (order: ManufacturingOrder) => void;
 }
 
-const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onViewDetails }: ManufacturingOrderCardProps) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
-
-  // Get the next step that should be started
-  const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
-    
-    if (currentOrderSteps.length === 0) {
-      // No steps exist, get the first manufacturing step
-      const firstStep = manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)[0];
-      
-      return firstStep;
-    }
-    
-    // Find the next pending step and get the corresponding manufacturing step
-    const nextPendingOrderStep = currentOrderSteps
-      .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
-    
-    if (nextPendingOrderStep) {
-      // Find the full manufacturing step object using the manufacturing_step_id
-      const fullManufacturingStep = manufacturingSteps.find(step => 
-        step.id === nextPendingOrderStep.manufacturing_step_id
-      );
-      
-      return fullManufacturingStep;
-    }
-    
-    return null;
-  };
-
-  const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when button is clicked
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    setDetailsDialogOpen(true);
-  };
-
-  const handleStartStep = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (nextStep && nextStep.id) {
-      // Ensure we have a clean step object with proper ID
-      const stepToPass = {
-        ...nextStep,
-        id: String(nextStep.id) // Ensure ID is always a string
-      };
-      
-      setSelectedStep(stepToPass);
-      setStartStepDialogOpen(true);
-    }
-  };
-
+const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({ order, onViewDetails }) => {
   return (
-    <>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">{order.product_name}</CardTitle>
-              <p className="text-sm text-gray-600 font-mono">{order.order_number}</p>
-              {order.product_type && (
-                <p className="text-xs text-gray-500">{order.product_type}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
-                {order.priority}
-              </Badge>
-              <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                {order.status.replace('_', ' ')}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Package2 className="h-4 w-4 text-gray-500" />
-              <span className="text-sm">Quantity: <span className="font-semibold">{order.quantity_required}</span></span>
-            </div>
-            
-            {order.due_date && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">Due: {format(new Date(order.due_date), 'MMM dd, yyyy')}</span>
-              </div>
-            )}
-            
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-sm">Created: {format(new Date(order.created_at), 'MMM dd, yyyy')}</span>
-            </div>
-          </div>
-
-          {/* Product Configuration Info */}
-          {order.product_configs && (
-            <div className="p-2 bg-blue-50 rounded border border-blue-200">
-              <div className="flex items-center gap-1 mb-1">
-                <Calculator className="h-3 w-3 text-blue-600" />
-                <span className="text-xs font-medium text-blue-700">Product Config</span>
-              </div>
-              <p className="text-xs text-blue-600 font-mono">{order.product_configs.product_code}</p>
-              <p className="text-xs text-blue-600">{order.product_configs.category} - {order.product_configs.subcategory}</p>
-            </div>
+    <Card
+      className="shadow-md hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.01] cursor-pointer"
+      onClick={() => onViewDetails(order)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-foreground">{order.product_name}</h2>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(order.priority)}`}>
+            {order.priority}
+          </span>
+        </div>
+        <div className="mb-2">
+          <p className="text-sm text-muted-foreground">Order Number: {order.order_number}</p>
+          <p className="text-sm text-muted-foreground">Quantity: {order.quantity_required}</p>
+          {order.due_date && (
+            <p className="text-sm text-muted-foreground">Due Date: {order.due_date}</p>
           )}
-
-          {/* Raw Material Requirements - Show first 3 only */}
-          {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Package2 className="h-3 w-3 text-gray-600" />
-                <span className="text-xs font-medium">Material Requirements</span>
-              </div>
-              <div className="border rounded overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs p-2">Material</TableHead>
-                      <TableHead className="text-xs p-2 text-center">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.product_configs.product_config_materials.slice(0, 2).map((material, index) => {
-                      const totalRequired = material.quantity_required * order.quantity_required;
-                      
-                      return (
-                        <TableRow key={material.id || index}>
-                          <TableCell className="text-xs p-2">
-                            {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
-                          </TableCell>
-                          <TableCell className="text-xs p-2 text-center font-medium">
-                            {totalRequired.toFixed(1)} {material.unit}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {order.product_configs.product_config_materials.length > 2 && (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-xs p-2 text-center text-gray-500">
-                          +{order.product_configs.product_config_materials.length - 2} more materials
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+            {order.status}
+          </span>
+          {order.special_instructions && (
+            <span className="text-xs text-muted-foreground" title={order.special_instructions}>
+              Has Instructions
+            </span>
           )}
-
-          {/* Single CTA Button */}
-          {nextStep && !hasStarted && (
-            <div className="pt-2 border-t">
-              <Button 
-                onClick={handleStartStep}
-                className="w-full text-sm bg-primary hover:bg-primary/90"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Start {nextStep.step_name}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <StartStepDialog
-        isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={order}
-        step={selectedStep}
-      />
-
-      <ManufacturingOrderDetailsDialog
-        order={order}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
-      />
-    </>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
