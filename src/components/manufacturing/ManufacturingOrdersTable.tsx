@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Table,
@@ -10,14 +11,22 @@ import {
 import { ManufacturingOrder } from '@/types/manufacturing';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
-import { getPriorityColor, getStatusColor } from '@/utils/manufacturingColors';
 
 interface ManufacturingOrdersTableProps {
   orders: ManufacturingOrder[];
   onViewDetails: (order: ManufacturingOrder) => void;
+  getPriorityColor: (priority: string) => string;
+  getStatusColor: (status: string) => string;
+  onViewOrder: (order: ManufacturingOrder) => void;
 }
 
-const ManufacturingOrdersTable = ({ orders, onViewDetails }: ManufacturingOrdersTableProps) => {
+const ManufacturingOrdersTable = ({ 
+  orders, 
+  onViewDetails, 
+  getPriorityColor, 
+  getStatusColor, 
+  onViewOrder 
+}: ManufacturingOrdersTableProps) => {
   return (
     <div className="border rounded-md">
       <Table>
@@ -48,7 +57,7 @@ const ManufacturingOrdersTable = ({ orders, onViewDetails }: ManufacturingOrders
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="sm" onClick={() => onViewDetails(order)}>
+                <Button variant="ghost" size="sm" onClick={() => onViewOrder(order)}>
                   <Eye className="h-4 w-4 mr-2" />
                   View
                 </Button>

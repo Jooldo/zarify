@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -14,6 +15,7 @@ interface ManufacturingOrderDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
+  onStatusUpdate: (orderId: string, status: 'pending' | 'in_progress' | 'completed') => void;
 }
 
 const ManufacturingOrderDetailsDialog = ({
@@ -22,6 +24,7 @@ const ManufacturingOrderDetailsDialog = ({
   onOpenChange,
   getPriorityColor,
   getStatusColor,
+  onStatusUpdate,
 }: ManufacturingOrderDetailsDialogProps) => {
   if (!order) {
     return null;

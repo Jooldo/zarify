@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Factory, Search } from 'lucide-react';
@@ -79,6 +80,11 @@ const ProductionQueueView = () => {
     setDetailsDialogOpen(true);
   };
 
+  const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
+    // This function can be implemented later if needed
+    console.log('Status update:', orderId, status);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Filter Controls */}
@@ -118,6 +124,7 @@ const ProductionQueueView = () => {
         onOpenChange={setDetailsDialogOpen}
         getPriorityColor={getPriorityColor}
         getStatusColor={getStatusColor}
+        onStatusUpdate={handleStatusUpdate}
       />
     </div>
   );

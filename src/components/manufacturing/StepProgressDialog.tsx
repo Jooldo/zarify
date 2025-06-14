@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -85,6 +86,10 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
     }
   };
 
+  const handleCheckboxChange = (checked: boolean | 'indeterminate') => {
+    setIsCompleted(checked === true);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -150,7 +155,7 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
               <Checkbox
                 id="isCompleted"
                 checked={isCompleted}
-                onCheckedChange={(checked) => setIsCompleted(checked || false)}
+                onCheckedChange={handleCheckboxChange}
               />
               <Label htmlFor="isCompleted" className="ml-2">
                 Completed

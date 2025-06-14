@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -25,8 +26,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({ step, order, onStepSt
   const [notes, setNotes] = useState('');
   const queryClient = useQueryClient();
 
-  const { mutate: startStep, isLoading: isStarting } = useMutation(
-    async () => {
+  const { mutate: startStep, isPending: isStarting } = useMutation({
+    mutationFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
         .update({ status: 'in_progress', notes: notes })
@@ -38,26 +39,24 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({ step, order, onStepSt
 
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
-        queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-        toast({
-          title: "Step Started",
-          description: "The manufacturing step has been marked as in progress.",
-        })
-        setOpen(false);
-        onStepStarted();
-      },
-      onError: (error: any) => {
-        toast({
-          variant: "destructive",
-          title: "Failed to Start Step",
-          description: error.message,
-        })
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      toast({
+        title: "Step Started",
+        description: "The manufacturing step has been marked as in progress.",
+      })
+      setOpen(false);
+      onStepStarted();
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to Start Step",
+        description: error.message,
+      })
+    },
+  });
 
   const handleStartStep = () => {
     startStep();
