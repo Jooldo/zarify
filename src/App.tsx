@@ -11,6 +11,7 @@ import { ErrorDialogProvider } from "@/components/ErrorDialogProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
+import PublicCatalogue from "./pages/PublicCatalogue";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
                   <Index />
                 </ProtectedRoute>
               } />
+              <Route path="/catalogue/:slug" element={<PublicCatalogue />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -9,6 +9,207 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      catalogue_categories: {
+        Row: {
+          catalogue_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+        }
+        Insert: {
+          catalogue_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          catalogue_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_categories_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogue_item_categories: {
+        Row: {
+          catalogue_category_id: string
+          catalogue_item_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          catalogue_category_id: string
+          catalogue_item_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          catalogue_category_id?: string
+          catalogue_item_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_item_categories_catalogue_category_id_fkey"
+            columns: ["catalogue_category_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalogue_item_categories_catalogue_item_id_fkey"
+            columns: ["catalogue_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogue_items: {
+        Row: {
+          catalogue_id: string
+          created_at: string
+          custom_description: string | null
+          custom_price: number | null
+          display_order: number
+          id: string
+          is_featured: boolean
+          product_config_id: string
+        }
+        Insert: {
+          catalogue_id: string
+          created_at?: string
+          custom_description?: string | null
+          custom_price?: number | null
+          display_order?: number
+          id?: string
+          is_featured?: boolean
+          product_config_id: string
+        }
+        Update: {
+          catalogue_id?: string
+          created_at?: string
+          custom_description?: string | null
+          custom_price?: number | null
+          display_order?: number
+          id?: string
+          is_featured?: boolean
+          product_config_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_items_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogue_orders: {
+        Row: {
+          catalogue_id: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          order_items: Json
+          processed_at: string | null
+          status: string
+          total_amount: number
+        }
+        Insert: {
+          catalogue_id: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          order_items: Json
+          processed_at?: string | null
+          status?: string
+          total_amount?: number
+        }
+        Update: {
+          catalogue_id?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          order_items?: Json
+          processed_at?: string | null
+          status?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_orders_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogues: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          merchant_id: string
+          name: string
+          public_url_slug: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          merchant_id: string
+          name: string
+          public_url_slug: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          merchant_id?: string
+          name?: string
+          public_url_slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -1352,6 +1553,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_catalogue_slug: {
+        Args: { catalogue_name: string; merchant_id_param: string }
+        Returns: string
+      }
       get_next_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string

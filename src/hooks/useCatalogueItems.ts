@@ -1,0 +1,153 @@
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { CatalogueItem } from './useCatalogues';
+
+export interface CreateCatalogueItemData {
+  catalogue_id: string;
+  product_config_id: string;
+  custom_price?: number;
+  custom_description?: string;
+  is_featured?: boolean;
+}
+
+export const useCatalogueItems = (catalogueId?: string) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: catalogueItems = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['catalogue-items', catalogueId],
+    queryFn: async () => {
+      if (!catalogueId) return [];
+
+      const { data, error } = await supabase
+        .from('catalogue_items')
+        .select(`
+          *,
+          product_configs (
+            id,
+            product_code,
+            category,
+            subcategory,
+            size_value,
+            weight_range
+          )
+        `)
+        .eq('catalogue_id', catalogueId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data as CatalogueItem[];
+    },
+    enabled: !!catalogueId,
+  });
+
+  const addItemMutation = useMutation({
+    mutationFn: async (itemData: CreateCatalogueItemData) => {
+      const { data, error } = await supabase
+        .from('catalogue_items')
+        .insert(itemData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalogue-items', catalogueId] });
+      toast({
+        title: 'Success',
+        description: 'Item added to catalogue',
+      });
+    },
+    onError: (error) => {
+      console.error('Error adding item to catalogue:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add item to catalogue',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase
+        .from('catalogue_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalogue-items', catalogueId] });
+      toast({
+        title: 'Success',
+        description: 'Item removed from catalogue',
+      });
+    },
+    onError: (error) => {
+      console.error('Error removing item from catalogue:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove item from catalogue',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<CatalogueItem> }) => {
+      const { data, error } = await supabase
+        .from('catalogue_items')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalogue-items', catalogueId] });
+      toast({
+        title: 'Success',
+        description: 'Item updated successfully',
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating catalogue item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update item',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const addItem = (itemData: CreateCatalogueItemData) => {
+    return addItemMutation.mutate(itemData);
+  };
+
+  const removeItem = (itemId: string) => {
+    return removeItemMutation.mutate(itemId);
+  };
+
+  const updateItem = (id: string, updates: Partial<CatalogueItem>) => {
+    return updateItemMutation.mutate({ id, updates });
+  };
+
+  return {
+    catalogueItems,
+    isLoading,
+    error,
+    addItem,
+    removeItem,
+    updateItem,
+    refetch,
+    isAdding: addItemMutation.isPending,
+    isRemoving: removeItemMutation.isPending,
+    isUpdating: updateItemMutation.isPending,
+  };
+};

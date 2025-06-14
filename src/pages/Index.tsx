@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -12,6 +11,7 @@ import FinishedGoodManagement from "@/components/FinishedGoodManagement";
 import ManufacturingSettings from "@/components/manufacturing/config/ManufacturingSettings";
 import MerchantConfigurations from "@/components/settings/MerchantConfigurations";
 import GeneralSettings from "@/components/settings/GeneralSettings";
+import CatalogueManagement from "@/components/catalogue/CatalogueManagement";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -49,6 +49,8 @@ const Index = () => {
         return "Workers";
       case "activity":
         return "Activity Logs";
+      case "catalogue-management":
+        return "Product Catalogues";
       case "merchant-configurations":
         return "Merchant Configurations";
       case "general-settings":
@@ -165,6 +167,10 @@ const Index = () => {
 
                   <TabsContent value="orders" className="space-y-6 mt-0">
                     <OrdersTab />
+                  </TabsContent>
+
+                  <TabsContent value="catalogue-management" className="space-y-6 mt-0">
+                    <CatalogueManagement />
                   </TabsContent>
 
                   <TabsContent value="activity" className="space-y-6 mt-0">
