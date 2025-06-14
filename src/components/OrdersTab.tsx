@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
@@ -8,7 +7,6 @@ import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
 
-// ... keep existing code (OrderFilters interface)
 interface OrderFilters {
   customer: string;
   orderStatus: string;
@@ -34,7 +32,6 @@ const OrdersTab = () => {
   const { customers } = useCustomerAutocomplete();
   const { refetch: refetchInvoices } = useInvoices();
   const [searchTerm, setSearchTerm] = useState('');
-  // ... keep existing code (filters state)
   const [filters, setFilters] = useState<OrderFilters>({
     customer: '',
     orderStatus: '',
@@ -54,7 +51,6 @@ const OrdersTab = () => {
   });
 
 
-  // ... keep existing code (orderStats, categories, subcategories, customerNames memos)
   const orderStats = useMemo(() => {
     const allOrderItems = orders.flatMap(order => order.order_items);
     return {
@@ -150,7 +146,7 @@ const OrdersTab = () => {
       return {
         // Spread all fields from suborder (FullOrderItem)
         ...suborder, 
-        // Override or add flattened fields
+        // Add flattened fields from parent order
         orderId: order.order_number,
         customer: order.customer.name,
         phone: order.customer.phone || '',
@@ -158,7 +154,10 @@ const OrdersTab = () => {
         updatedDate: order.updated_date,
         expectedDelivery: order.expected_delivery || '',
         totalOrderAmount: order.total_amount,
-        // productCode, category, subcategory are already in suborder.product_config
+        // Explicitly map product config fields to top-level for easier access
+        productCode: suborder.product_config.product_code,
+        category: suborder.product_config.category,
+        subcategory: suborder.product_config.subcategory,
         // size is constructed
         size: `${sizeValue}" / ${weightRange}`,
         // price is suborder.total_price
@@ -167,16 +166,15 @@ const OrdersTab = () => {
     })
   ), [orders]);
 
-  // ... keep existing code (filteredOrders logic)
   const filteredOrders = useMemo(() => flattenedOrders.filter(item => {
     // Text search filter
     if (searchTerm) {
       const searchMatch = item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.product_config.product_code.toLowerCase().includes(searchTerm.toLowerCase()) || // Access through product_config
-             item.product_config.category.toLowerCase().includes(searchTerm.toLowerCase()) || // Access through product_config
-             item.product_config.subcategory.toLowerCase().includes(searchTerm.toLowerCase()); // Access through product_config
+             item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) || // Use flattened item.productCode
+             item.category.toLowerCase().includes(searchTerm.toLowerCase()) || // Use flattened item.category
+             item.subcategory.toLowerCase().includes(searchTerm.toLowerCase()); // Use flattened item.subcategory
       if (!searchMatch) return false;
     }
 
@@ -184,8 +182,8 @@ const OrdersTab = () => {
     if (filters.customer && item.customer !== filters.customer) return false;
     if (filters.orderStatus && getOverallOrderStatus(item.orderId) !== filters.orderStatus) return false;
     if (filters.suborderStatus && item.status !== filters.suborderStatus) return false;
-    if (filters.category && item.product_config.category !== filters.category) return false; // Access through product_config
-    if (filters.subcategory && item.product_config.subcategory !== filters.subcategory) return false; // Access through product_config
+    if (filters.category && item.category !== filters.category) return false; // Use flattened item.category
+    if (filters.subcategory && item.subcategory !== filters.subcategory) return false; // Use flattened item.subcategory
 
     // Date range filter
     if (filters.dateRange) {
@@ -263,6 +261,7 @@ const OrdersTab = () => {
       }
     }
 
+
     // Quick filters
     if (filters.hasDeliveryDate && !item.expectedDelivery) return false;
     if (filters.overdueDelivery) {
@@ -274,11 +273,11 @@ const OrdersTab = () => {
       if (deliveryDate >= today) return false;
     }
     if (filters.lowStock) {
-      const stockAvailableVal = getStockAvailable(item.product_config.product_code); // Access through product_config
+      const stockAvailableVal = getStockAvailable(item.productCode); // Use flattened item.productCode
       if (stockAvailableVal >= item.quantity) return false;
     }
     if (filters.stockAvailable) {
-      const stockAvailableVal = getStockAvailable(item.product_config.product_code); // Access through product_config
+      const stockAvailableVal = getStockAvailable(item.productCode); // Use flattened item.productCode
       if (stockAvailableVal < item.quantity) return false;
     }
 
@@ -286,10 +285,6 @@ const OrdersTab = () => {
   }), [flattenedOrders, searchTerm, filters, getOverallOrderStatus, getStockAvailable, orders]);
 
 
-  // The main loading condition for the OrdersTab itself is handled here
-  // if (loading || fgLoading) { 
-  //   return <div className="flex items-center justify-center p-8">Loading orders and products...</div>;
-  // } 
   // The OrdersTable component will now handle its own skeleton based on the loading prop passed to it.
 
   return (
