@@ -10,6 +10,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -51,6 +54,8 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     "users": true,
     "settings": false,
   });
+
+  console.log("AppSidebar rendered with activeTab:", activeTab);
 
   const toggleSection = (sectionId: string) => {
     setOpenSections(prev => ({
@@ -178,29 +183,29 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   ];
 
   return (
-    <Sidebar className="border-r bg-sidebar text-sidebar-foreground">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 text-primary shadow-inner">
-            <Package className="h-5 w-5" />
+    <Sidebar className="border-r">
+      <SidebarHeader className="border-b p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Package className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-heading">Jewelry ERP</span>
+            <span className="text-sm font-semibold">Jewelry ERP</span>
             <span className="text-xs text-muted-foreground">Manufacturing</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="[&>div]:space-y-0.5"> {/* Reduced spacing between groups */}
+      <SidebarContent>
         {menuSections.map((section) => (
-          <SidebarGroup key={section.label} className="py-1 first:pt-0 last:pb-0"> {/* Reduced padding for groups */}
+          <SidebarGroup key={section.label}>
             {section.id ? (
               <Collapsible 
                 open={openSections[section.id]} 
                 onOpenChange={() => toggleSection(section.id!)}
               >
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-sidebar-accent rounded-md p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent rounded-md p-2">
                     <span>{section.label}</span>
                     {openSections[section.id] ? (
                       <ChevronDown className="h-3 w-3" />
@@ -217,12 +222,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                           <SidebarMenuButton 
                             onClick={() => onTabChange(item.tab)}
                             isActive={activeTab === item.tab}
-                            className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90"
+                            className="w-full"
                           >
-                            <item.icon className="h-4 w-4 text-primary/80" />
+                            <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
                             {item.badge && (
-                              <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground">
+                              <Badge variant="secondary" className="ml-auto">
                                 {item.badge}
                               </Badge>
                             )}
@@ -235,7 +240,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
               </Collapsible>
             ) : (
               <>
-                <SidebarGroupLabel className="p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70">{section.label}</SidebarGroupLabel>
+                <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {section.items.map((item) => (
@@ -243,12 +248,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                         <SidebarMenuButton 
                           onClick={() => onTabChange(item.tab)}
                           isActive={activeTab === item.tab}
-                          className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90"
+                          className="w-full"
                         >
-                          <item.icon className="h-4 w-4 text-primary/80" />
+                          <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                           {item.badge && (
-                             <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground">
+                            <Badge variant="secondary" className="ml-auto">
                               {item.badge}
                             </Badge>
                           )}
@@ -263,13 +268,13 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4 border-sidebar-border">
+      <SidebarFooter className="border-t p-4">
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
-          className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          className="w-full justify-start text-muted-foreground hover:text-foreground"
         >
-          <LogOut className="h-4 w-4 text-primary/80" />
+          <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </Button>
       </SidebarFooter>

@@ -3,8 +3,8 @@ import { useState, useMemo } from 'react';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Package, AlertTriangle, ArrowDown, CheckCircle } from 'lucide-react';
+import { Search } from 'lucide-react';
+import RawMaterialsHeader from './inventory/RawMaterialsHeader';
 import RawMaterialsTable from './inventory/RawMaterialsTable';
 import RawMaterialsFilter from './inventory/RawMaterialsFilter';
 import SortDropdown from './ui/sort-dropdown';
@@ -105,52 +105,10 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
   const supplierNames = [...new Set(suppliers.map(supplier => supplier.company_name))].filter(Boolean);
 
   return (
-    <div className="space-y-6">
-       <div>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-heading">Raw Material Inventory</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Track stock, manage suppliers, and create procurement requests.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Materials</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{materialStats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Stock</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{materialStats.critical}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <ArrowDown className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{materialStats.low}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Good Stock</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{materialStats.good}</div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-4">
+      <RawMaterialsHeader
+        materialStats={materialStats}
+      />
       
       <div className="flex items-start gap-3">
         <div className="relative flex-1 max-w-md">

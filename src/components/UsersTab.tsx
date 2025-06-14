@@ -33,12 +33,12 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
   };
 
   return (
-    <div className="bg-white">
+    <div className="min-h-screen bg-background">
       {/* Fixed Header Section */}
       <div className="bg-card border-b border-border">
         <div className="flex items-center justify-between py-6">
           <div>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-heading">
+            <h1 className="text-2xl font-semibold text-foreground">
               User Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -49,15 +49,15 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
-            <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-white">
+            <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Users className="h-4 w-4" />
               Customers
             </TabsTrigger>
-            <TabsTrigger value="suppliers" className="flex items-center gap-2 data-[state=active]:bg-white">
+            <TabsTrigger value="suppliers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Building className="h-4 w-4" />
               Suppliers
             </TabsTrigger>
-            <TabsTrigger value="workers" className="flex items-center gap-2 data-[state=active]:bg-white">
+            <TabsTrigger value="workers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Hammer className="h-4 w-4" />
               Workers
             </TabsTrigger>
@@ -66,8 +66,8 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
       </div>
 
       {/* Content Section */}
-      <div className="bg-white py-6">
-        <div>
+      <div className="bg-background py-6">
+        <div className="min-h-[700px]">
           <div className="space-y-6">
             {renderActiveContent()}
           </div>

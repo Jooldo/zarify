@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -145,7 +144,7 @@ const FinishedGoodsInventory = () => {
   }
 
   return (
-    <div className="space-y-4 bg-white p-6 rounded-lg">
+    <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
@@ -153,12 +152,6 @@ const FinishedGoodsInventory = () => {
         </TabsList>
         
         <TabsContent value="inventory" className="space-y-4 mt-4">
-           <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-heading">Finished Goods Inventory</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your final products, track stock levels, and handle inventory tagging.
-            </p>
-          </div>
           <FinishedGoodsHeader
             onRefresh={handleRefresh}
             onTagOperationComplete={handleTagOperationComplete}
