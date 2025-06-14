@@ -67,6 +67,22 @@ const CatalogueItemsDialog = ({ catalogue, open, onOpenChange }: CatalogueItemsD
     await updateItem(item.id, { is_featured: !item.is_featured });
   };
 
+  // Type guard function to check if product_configs is valid
+  const isValidProductConfig = (productConfigs: any): productConfigs is {
+    id: string;
+    product_code: string;
+    category: string;
+    subcategory: string;
+    size_value: number;
+    weight_range?: string;
+  } => {
+    return productConfigs && 
+           typeof productConfigs === 'object' && 
+           typeof productConfigs.product_code === 'string' &&
+           typeof productConfigs.category === 'string' &&
+           typeof productConfigs.subcategory === 'string';
+  };
+
   if (!catalogue) return null;
 
   return (
@@ -157,53 +173,68 @@ const CatalogueItemsDialog = ({ catalogue, open, onOpenChange }: CatalogueItemsD
               </div>
             ) : (
               <div className="space-y-3">
-                {catalogueItems.map((item) => (
-                  <Card key={item.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">
-                              {item.product_configs.product_code}
+                {catalogueItems.map((item) => {
+                  // Use type guard to ensure product_configs is valid
+                  if (!isValidProductConfig(item.product_configs)) {
+                    return (
+                      <Card key={item.id}>
+                        <CardContent className="p-4">
+                          <div className="text-red-500">
+                            Error: Product configuration data is invalid
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  return (
+                    <Card key={item.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium">
+                                {item.product_configs.product_code}
+                              </div>
+                              {item.is_featured && (
+                                <Badge variant="secondary">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Featured
+                                </Badge>
+                              )}
                             </div>
-                            {item.is_featured && (
-                              <Badge variant="secondary">
-                                <Star className="h-3 w-3 mr-1" />
-                                Featured
-                              </Badge>
+                            <div className="text-sm text-gray-600">
+                              {item.product_configs.category} • {item.product_configs.subcategory}
+                            </div>
+                            {item.custom_price && (
+                              <div className="text-sm font-medium text-green-600">
+                                Custom Price: ₹{item.custom_price}
+                              </div>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {item.product_configs.category} • {item.product_configs.subcategory}
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleFeatured(item)}
+                            >
+                              <Star className={`h-4 w-4 ${item.is_featured ? 'fill-current' : ''}`} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRemoveItem(item.id)}
+                              disabled={isRemoving}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          {item.custom_price && (
-                            <div className="text-sm font-medium text-green-600">
-                              Custom Price: ₹{item.custom_price}
-                            </div>
-                          )}
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleToggleFeatured(item)}
-                          >
-                            <Star className={`h-4 w-4 ${item.is_featured ? 'fill-current' : ''}`} />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRemoveItem(item.id)}
-                            disabled={isRemoving}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
