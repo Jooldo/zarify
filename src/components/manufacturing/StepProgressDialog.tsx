@@ -1,176 +1,184 @@
-
-import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { ManufacturingOrder } from '@/types/manufacturing';
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { User, Calendar, Package, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useWorkers } from '@/hooks/useWorkers';
 
 interface StepProgressDialogProps {
-  isOpen: boolean;
+  order: ManufacturingOrder | null;
+  orderSteps: ManufacturingOrderStep[];
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  step: any;
-  order: ManufacturingOrder;
-  onStepUpdated: () => void;
 }
 
 const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
-  isOpen,
-  onOpenChange,
-  step,
   order,
-  onStepUpdated,
+  orderSteps,
+  open,
+  onOpenChange
 }) => {
-  const [notes, setNotes] = useState(step?.notes || '');
-  const [isCompleted, setIsCompleted] = useState(step?.status === 'completed');
-  const [actualTime, setActualTime] = useState(step?.actual_time || 0);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
+  const { getStepValues } = useManufacturingStepValues();
+  const { workers } = useWorkers();
 
-  useEffect(() => {
-    if (step) {
-      setNotes(step.notes || '');
-      setIsCompleted(step.status === 'completed');
-      setActualTime(step.actual_time || 0);
-    }
-  }, [step]);
+  if (!order) return null;
 
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      const status = isCompleted ? 'completed' : 'in_progress';
-      const updates = {
-        notes: notes,
-        status: status,
-        actual_time: actualTime,
-      };
-
-      const { error } = await supabase
-        .from('manufacturing_order_steps')
-        .update(updates)
-        .eq('id', step.id);
-
-      if (error) {
-        console.error('Error updating step:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to update step. Please try again.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Success',
-          description: 'Step updated successfully.',
-        });
-        onStepUpdated();
-        onOpenChange(false);
-      }
-    } catch (error) {
-      console.error('Unexpected error updating step:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleCheckboxChange = (checked: boolean | 'indeterminate') => {
-    setIsCompleted(checked === true);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case 'in_progress': return <Clock className="h-4 w-4 text-blue-600" />;
+      default: return <Clock className="h-4 w-4 text-gray-400" />;
+    }
   };
+
+  // Sort steps by step order
+  const sortedSteps = [...orderSteps].sort((a, b) => 
+    (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0)
+  );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Step Progress</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <div>
+              <span className="text-xl font-semibold">Manufacturing Progress</span>
+              <p className="text-sm text-muted-foreground font-mono">{order.order_number} - {order.product_name}</p>
+            </div>
+            <Badge className="bg-blue-100 text-blue-800">
+              {sortedSteps.filter(s => s.status === 'completed').length} / {sortedSteps.length} Steps
+            </Badge>
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="stepName" className="text-right">
-              Step Name
-            </Label>
-            <Input
-              type="text"
-              id="stepName"
-              value={step?.step_name}
-              readOnly
-              className="col-span-3"
-            />
-          </div>
+        <div className="space-y-4">
+          {sortedSteps.map((step, index) => {
+            const stepValues = getStepValues(step.id);
+            const assignedWorker = step.workers?.name || 
+              (step.assigned_worker_id ? workers.find(w => w.id === step.assigned_worker_id)?.name : null);
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="estimatedTime" className="text-right">
-              Estimated Time
-            </Label>
-            <Input
-              type="text"
-              id="estimatedTime"
-              value={step?.estimated_time}
-              readOnly
-              className="col-span-3"
-            />
-          </div>
+            return (
+              <Card key={step.id} className="relative">
+                {/* Progress Line */}
+                {index < sortedSteps.length - 1 && (
+                  <div className="absolute left-6 top-16 w-px h-8 bg-gray-200 z-0" />
+                )}
+                
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-3">
+                      <div className="relative z-10 bg-white">
+                        {getStatusIcon(step.status)}
+                      </div>
+                      <span>{step.manufacturing_steps?.step_name || 'Unknown Step'}</span>
+                      <Badge variant="outline" className="text-xs">
+                        Step {step.manufacturing_steps?.step_order || index + 1}
+                      </Badge>
+                    </CardTitle>
+                    <Badge className={`${getStatusColor(step.status)}`}>
+                      {step.status.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                </CardHeader>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="actualTime" className="text-right">
-              Actual Time
-            </Label>
-            <Input
-              type="number"
-              id="actualTime"
-              value={actualTime}
-              onChange={(e) => setActualTime(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
+                <CardContent className="space-y-4">
+                  {/* Basic Step Info */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {assignedWorker && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Assigned Worker</span>
+                        </div>
+                        <span className="font-medium">{assignedWorker}</span>
+                      </div>
+                    )}
+                    
+                    {step.progress_percentage > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Progress</span>
+                        </div>
+                        <span className="font-medium">{step.progress_percentage}%</span>
+                      </div>
+                    )}
 
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="notes" className="text-right mt-2">
-              Notes
-            </Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
+                    {step.started_at && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Started</span>
+                        </div>
+                        <span className="font-medium">{format(new Date(step.started_at), 'MMM dd, HH:mm')}</span>
+                      </div>
+                    )}
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <div className="text-right"></div>
-            <div className="col-span-3 flex items-center">
-              <Checkbox
-                id="isCompleted"
-                checked={isCompleted}
-                onCheckedChange={handleCheckboxChange}
-              />
-              <Label htmlFor="isCompleted" className="ml-2">
-                Completed
-              </Label>
+                    {step.completed_at && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Completed</span>
+                        </div>
+                        <span className="font-medium">{format(new Date(step.completed_at), 'MMM dd, HH:mm')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step Field Values */}
+                  {stepValues.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="font-medium mb-2">Step Details</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {stepValues.map((value) => (
+                            <div key={value.id} className="space-y-1">
+                              <span className="text-sm text-muted-foreground capitalize">
+                                {value.field_id.replace('_', ' ')}:
+                              </span>
+                              <div className="font-medium text-sm">{value.field_value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Notes */}
+                  {step.notes && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="font-medium mb-2">Notes</h4>
+                        <p className="text-sm text-muted-foreground">{step.notes}</p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {sortedSteps.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No manufacturing steps have been started yet.
             </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="button" className="ml-2" onClick={handleSaveChanges} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
