@@ -119,6 +119,20 @@ export type Database = {
             referencedRelation: "catalogues"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_catalogue_items_catalogue"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_catalogue_items_product_config"
+            columns: ["product_config_id"]
+            isOneToOne: false
+            referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       catalogue_orders: {
