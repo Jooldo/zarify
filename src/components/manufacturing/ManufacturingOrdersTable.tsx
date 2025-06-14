@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,9 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Import useFinishedGoods and FinishedGood
-import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialog'; // Import ViewFinishedGoodDialog
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
+import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface ManufacturingOrdersTableProps {
   orders: ManufacturingOrder[];
@@ -20,7 +19,7 @@ interface ManufacturingOrdersTableProps {
 const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, onViewOrder }: ManufacturingOrdersTableProps) => {
   const [isViewProductOpen, setIsViewProductOpen] = useState(false);
   const [selectedProductForView, setSelectedProductForView] = useState<FinishedGood | null>(null);
-  const { finishedGoods, loading: fgLoading, error: fgError } = useFinishedGoods(); // Fetch finished goods
+  const { finishedGoods, loading: fgLoading, error: fgError } = useFinishedGoods();
   const { toast } = useToast();
 
   const handleProductCodeClick = (productCode: string | undefined) => {
@@ -43,37 +42,34 @@ const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, on
       setIsViewProductOpen(true);
     } else {
       toast({ title: "Not Found", description: `Details for product code ${productCode} not found.`, variant: "default" });
-      // console.warn(`Finished good with code ${productCode} not found.`);
     }
   };
 
   return (
     <>
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-hidden"> {/* Added overflow-hidden for rounded corners with bg */}
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-primary/5 dark:bg-primary/10"> {/* Themed table header */}
             <TableRow>
-              <TableHead>Order Number</TableHead>
-              {/* <TableHead>Product Name</TableHead> Removed */}
-              <TableHead>Product Code</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Order Number</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Product Code</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Quantity</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Priority</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Status</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Due Date</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Created</TableHead>
+              <TableHead className="text-primary dark:text-primary-foreground/80">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.map((order) => (
-              <TableRow key={order.id} className="hover:bg-muted/50">
+              <TableRow key={order.id} className="hover:bg-muted/50 dark:hover:bg-muted/20">
                 <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
-                {/* <TableCell className="font-medium">{order.product_name}</TableCell> Removed */}
                 <TableCell className="font-mono text-sm">
                   {order.product_configs?.product_code ? (
                     <Button
                       variant="link"
-                      className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800"
+                      className="h-auto p-0 text-xs font-mono text-primary hover:text-primary/80" // Themed link
                       onClick={() => handleProductCodeClick(order.product_configs?.product_code)}
                     >
                       {order.product_configs.product_code}
@@ -122,4 +118,3 @@ const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, on
 };
 
 export default ManufacturingOrdersTable;
-
