@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -72,13 +71,15 @@ export const useCatalogueItems = (catalogueId?: string) => {
             return false;
           }
           
-          // Check if it has the required properties
-          return typeof item.product_configs === 'object' && 
-                 'id' in item.product_configs &&
-                 'product_code' in item.product_configs &&
-                 'category' in item.product_configs &&
-                 'subcategory' in item.product_configs &&
-                 'size_value' in item.product_configs;
+          // Ensure it's a valid product_configs object with required properties
+          const configs = item.product_configs as any;
+          return typeof configs === 'object' && 
+                 configs !== null &&
+                 typeof configs.id === 'string' &&
+                 typeof configs.product_code === 'string' &&
+                 typeof configs.category === 'string' &&
+                 typeof configs.subcategory === 'string' &&
+                 typeof configs.size_value === 'number';
         });
     },
     enabled: !!catalogueId,

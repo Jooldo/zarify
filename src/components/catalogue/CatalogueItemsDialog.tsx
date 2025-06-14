@@ -162,7 +162,7 @@ const CatalogueItemsDialog = ({ catalogue, open, onOpenChange }: CatalogueItemsD
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <div className="font-medium">
-                              {item.product_configs?.product_code}
+                              {item.product_configs.product_code}
                             </div>
                             {item.is_featured && (
                               <Badge variant="secondary">
@@ -172,7 +172,7 @@ const CatalogueItemsDialog = ({ catalogue, open, onOpenChange }: CatalogueItemsD
                             )}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {item.product_configs?.category} • {item.product_configs?.subcategory}
+                            {item.product_configs.category} • {item.product_configs.subcategory}
                           </div>
                           {item.custom_price && (
                             <div className="text-sm font-medium text-green-600">
