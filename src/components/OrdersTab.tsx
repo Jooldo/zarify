@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
@@ -285,9 +286,11 @@ const OrdersTab = () => {
   }), [flattenedOrders, searchTerm, filters, getOverallOrderStatus, getStockAvailable, orders]);
 
 
-  if (loading || fgLoading) {
-    return <div className="flex items-center justify-center p-8">Loading orders and products...</div>;
-  }
+  // The main loading condition for the OrdersTab itself is handled here
+  // if (loading || fgLoading) { 
+  //   return <div className="flex items-center justify-center p-8">Loading orders and products...</div>;
+  // } 
+  // The OrdersTable component will now handle its own skeleton based on the loading prop passed to it.
 
   return (
     <div className="space-y-4">
@@ -307,6 +310,7 @@ const OrdersTab = () => {
         filteredOrders={filteredOrders}
         orders={orders} // Pass the original orders structure
         finishedGoods={finishedGoods} // Pass finished goods data
+        loading={loading || fgLoading} // Pass the combined loading state
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}

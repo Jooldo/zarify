@@ -3,11 +3,13 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import OrdersTableRow from './OrdersTableRow';
 import { Order } from '@/hooks/useOrders';
 import { FinishedGood } from '@/hooks/useFinishedGoods'; // Import type
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton'; // Import TableSkeleton
 
 interface OrdersTableProps {
   filteredOrders: any[]; // These are flattened order items
   orders: Order[]; // Original orders structure
   finishedGoods: FinishedGood[]; // Pass finished goods data
+  loading: boolean; // Add loading prop
   getOverallOrderStatus: (orderId: string) => string;
   getStatusVariant: (status: string) => "secondary" | "default" | "outline";
   getStockAvailable: (productCode: string) => number;
@@ -19,6 +21,7 @@ const OrdersTable = ({
   filteredOrders, 
   orders,
   finishedGoods,
+  loading, // Destructure loading prop
   getOverallOrderStatus, 
   getStatusVariant, 
   getStockAvailable, 
@@ -30,10 +33,10 @@ const OrdersTable = ({
     return (
       <TableSkeleton 
         rows={10} 
-        columns={8}
+        columns={10} // Updated to 10 columns to match headers
         columnWidths={[
-          'w-20', 'w-24', 'w-32', 'w-12', 'w-20', 
-          'w-16', 'w-24', 'w-20'
+          'w-20', 'w-24', 'w-32', 'w-24', 'w-12', 
+          'w-16', 'w-24', 'w-24', 'w-20', 'w-20' // Added widths for new columns
         ]}
       />
     );
