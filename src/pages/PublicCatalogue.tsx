@@ -57,6 +57,13 @@ const PublicCatalogue = () => {
         .single();
 
       if (catalogueError) throw catalogueError;
+
+      // If no catalogue found, set to null and exit early
+      if (!catalogueData) {
+        setCatalogue(null);
+        return;
+      }
+      
       setCatalogue(catalogueData);
 
       // Fetch catalogue items
