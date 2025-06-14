@@ -52,7 +52,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
   const [loadingOrders, setLoadingOrders] = useState(false);
   
   const { manualTagOut } = useInventoryTags();
-  const { finishedGoods } = useFinishedGoods(); // This provides product_configs list effectively
+  const { finishedGoods } = useFinishedGoods(); 
   const { customers } = useCustomerAutocomplete();
   const { toast } = useToast();
 
@@ -133,7 +133,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
     }
   }, [productId, allCustomerOrders]);
   
-  const selectedProductConfig = finishedGoods.find(fg => fg.product_config_id === productId)?.product_configs;
+  const selectedProductConfigData = finishedGoods.find(fg => fg.product_config_id === productId)?.product_config;
 
   const handleManualTagOut = async () => {
     if (!productId || !quantityToTagOut || !customerId || !selectedOrderId || !selectedOrderItemId) {
@@ -175,7 +175,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
     setLoading(true);
     try {
       await manualTagOut(
-        item.product_config_id, // Ensure manualTagOut uses product_config_id if needed, or map from form's productId
+        productId, // This should be product_config_id, ensure manualTagOut uses this. The `productId` state variable IS product_config_id
         qty,
         customerId,
         selectedOrderId,
@@ -184,13 +184,11 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
         grossWeight ? parseFloat(grossWeight) : undefined
       );
       
-      // Reset some fields, keep selections for potential more tag outs on same order/item
       setNetWeight('');
       setGrossWeight('');
       setQuantityToTagOut('');
       
-      if (customerId) await fetchCustomerOrders(customerId); // Refresh order data
-      // Filtered orders will auto-update via useEffect
+      if (customerId) await fetchCustomerOrders(customerId); 
       
       if (onOperationComplete) onOperationComplete();
     } catch (error) {
@@ -212,7 +210,6 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
             value={productId} 
             onValueChange={(value) => {
                 setProductId(value);
-                // Customer selection remains, orders will be filtered by new product
                 setFilteredOrders([]);
                 setSelectedOrderId('');
                 setSelectedOrderItemId('');
@@ -222,17 +219,17 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
             <SelectValue placeholder="Select product..." />
           </SelectTrigger>
           <SelectContent>
-            {finishedGoods.map((fg) => ( // Assuming finishedGoods has product_config_id and product_configs.product_code
+            {finishedGoods.map((fg) => ( 
               <SelectItem key={fg.product_config_id} value={fg.product_config_id}>
-                {fg.product_configs.product_code} - {fg.product_configs.subcategory} ({fg.product_configs.size_value}")
+                {fg.product_config.product_code} - {fg.product_config.subcategory} ({fg.product_config.size_value}")
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      {selectedProductConfig && (
+      {selectedProductConfigData && (
          <div className="p-2 border border-blue-200 bg-blue-50 rounded text-xs text-blue-700">
-            Selected Product: <strong>{selectedProductConfig.product_code}</strong>
+            Selected Product: <strong>{selectedProductConfigData.product_code}</strong>
         </div>
       )}
 
@@ -306,7 +303,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
 
       {customerId && productId && (
         <div className="space-y-1">
-          <Label htmlFor="order" className="text-xs">Order (for {selectedProductConfig?.product_code || 'selected product'})</Label>
+          <Label htmlFor="order" className="text-xs">Order (for {selectedProductConfigData?.product_code || 'selected product'})</Label>
           <Select 
             value={selectedOrderId} 
             onValueChange={(value) => {
@@ -334,7 +331,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
 
       {selectedOrder && productId && (
         <div className="space-y-1">
-          <Label htmlFor="suborder" className="text-xs">Sub-order (Item: {selectedProductConfig?.product_code || 'selected product'})</Label>
+          <Label htmlFor="suborder" className="text-xs">Sub-order (Item: {selectedProductConfigData?.product_code || 'selected product'})</Label>
           <Select 
             value={selectedOrderItemId} 
             onValueChange={setSelectedOrderItemId} 
