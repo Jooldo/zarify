@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,21 +10,26 @@ import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { type OrderStatus } from '@/hooks/useOrders'; // For OrderItem status typing
+
+interface OrderItem {
+  id: string;
+  suborder_id: string;
+  quantity: number;
+  fulfilled_quantity: number; // Added
+  status: OrderStatus; // Added
+  product_config_id: string;
+  product_configs: { // Corrected: product_config, not product_configs
+    product_code: string;
+  };
+}
 
 interface Order {
   id: string;
   order_number: string;
-  status: string;
+  status: string; 
   total_amount: number;
-  order_items: {
-    id: string;
-    suborder_id: string;
-    quantity: number;
-    product_config_id: string;
-    product_configs: {
-      product_code: string;
-    };
-  }[];
+  order_items: OrderItem[]; // Use updated OrderItem type
 }
 
 interface ManualTagOutFormProps {
@@ -36,7 +40,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
   const [productId, setProductId] = useState('');
   const [netWeight, setNetWeight] = useState('');
   const [grossWeight, setGrossWeight] = useState('');
-  const [quantity, setQuantity] = useState('');
+  const [quantityToTagOut, setQuantityToTagOut] = useState(''); // Renamed for clarity
   const [customerId, setCustomerId] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -63,18 +67,27 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
             id,
             suborder_id,
             quantity,
+            fulfilled_quantity, 
+            status,             
             product_config_id,
-            product_configs (
+            product_config:product_configs ( 
               product_code
             )
           )
         `)
         .eq('customer_id', customerId)
-        .in('status', ['Created', 'In Progress'])
+        .in('status', ['Created', 'In Progress', 'Partially Fulfilled']) // Also allow partially fulfilled orders
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+       const mappedData = data?.map(order => ({
+        ...order,
+        order_items: order.order_items.map((item: any) => ({
+          ...item,
+          product_configs: item.product_config 
+        }))
+      })) || [];
+      setOrders(mappedData);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -90,28 +103,57 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
   useEffect(() => {
     if (customerId) {
       fetchCustomerOrders(customerId);
-      setSelectedOrderId('');
-      setSelectedOrderItemId('');
+      setSelectedOrderId(''); // Reset order when customer changes
+      setSelectedOrderItemId(''); // Reset item when customer changes
     } else {
       setOrders([]);
     }
   }, [customerId]);
+  
+  const selectedOrder = orders.find(order => order.id === selectedOrderId);
+  const selectedOrderItem = selectedOrder?.order_items.find(item => item.id === selectedOrderItemId);
 
   const handleManualTagOut = async () => {
-    if (!productId || !quantity || !customerId || !selectedOrderId || !selectedOrderItemId) {
+    if (!productId || !quantityToTagOut || !customerId || !selectedOrderId || !selectedOrderItemId) {
       toast({
         title: 'Error',
-        description: 'All fields are required for manual tag out',
+        description: 'All fields except weights are required for manual tag out',
         variant: 'destructive',
       });
       return;
     }
 
+    const qty = parseInt(quantityToTagOut);
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: 'Error', description: 'Quantity must be a positive number.', variant: 'destructive' });
+      return;
+    }
+    
+    if (selectedOrderItem) {
+      if (selectedOrderItem.status === 'Delivered' || selectedOrderItem.fulfilled_quantity >= selectedOrderItem.quantity) {
+        toast({ title: 'Info', description: 'This order item is already fully fulfilled/delivered.', variant: 'default' });
+        return;
+      }
+      const remainingToFulfill = selectedOrderItem.quantity - selectedOrderItem.fulfilled_quantity;
+      if (qty > remainingToFulfill) {
+        toast({
+          title: 'Error',
+          description: `Quantity to tag out (${qty}) exceeds remaining needed (${remainingToFulfill}) for this item.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+        toast({ title: 'Error', description: 'Selected order item not found.', variant: 'destructive' });
+        return;
+    }
+
+
     setLoading(true);
     try {
       await manualTagOut(
         productId,
-        parseInt(quantity),
+        qty,
         customerId,
         selectedOrderId,
         selectedOrderItemId,
@@ -119,25 +161,24 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
         grossWeight ? parseFloat(grossWeight) : undefined
       );
       
-      // Reset form
       setProductId('');
       setNetWeight('');
       setGrossWeight('');
-      setQuantity('');
-      setCustomerId('');
-      setSelectedOrderId('');
-      setSelectedOrderItemId('');
-      setOrders([]);
+      setQuantityToTagOut('');
+      // Keep customer, order, item selected for potentially more tag outs
+      // or reset based on preference. For now, only clearing input fields.
+      // Re-fetch orders to update displayed fulfilled quantity:
+      if (customerId) fetchCustomerOrders(customerId);
       
       if (onOperationComplete) onOperationComplete();
     } catch (error) {
+      // Error toast handled by useInventoryTags
       console.error('Error processing manual tag out:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedOrder = orders.find(order => order.id === selectedOrderId);
 
   return (
     <div className="space-y-3">
@@ -186,20 +227,25 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="quantity" className="text-xs">Quantity</Label>
+        <Label htmlFor="quantityToTagOut" className="text-xs">Quantity to Tag Out *</Label>
         <Input
-          id="quantity"
+          id="quantityToTagOut"
           type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          value={quantityToTagOut}
+          onChange={(e) => setQuantityToTagOut(e.target.value)}
           placeholder="Enter quantity..."
           className="h-8"
+          min="1"
         />
       </div>
 
       <div className="space-y-1">
         <Label htmlFor="customer" className="text-xs">Customer Name</Label>
-        <Select value={customerId} onValueChange={setCustomerId}>
+        <Select value={customerId} onValueChange={(value) => {
+          setCustomerId(value);
+          setSelectedOrderId(''); 
+          setSelectedOrderItemId(''); 
+        }}>
           <SelectTrigger className="h-8">
             <SelectValue placeholder="Select customer..." />
           </SelectTrigger>
@@ -213,16 +259,20 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
         </Select>
       </div>
 
+
       {customerId && (
         <div className="space-y-1">
           <Label htmlFor="order" className="text-xs">Order</Label>
           <Select 
             value={selectedOrderId} 
-            onValueChange={setSelectedOrderId}
-            disabled={loadingOrders}
+            onValueChange={(value) => {
+              setSelectedOrderId(value);
+              setSelectedOrderItemId(''); 
+            }}
+            disabled={loadingOrders || orders.length === 0}
           >
             <SelectTrigger className="h-8">
-              <SelectValue placeholder={loadingOrders ? "Loading orders..." : "Select order..."} />
+              <SelectValue placeholder={loadingOrders ? "Loading orders..." : (orders.length === 0 ? "No active orders" : "Select order...")} />
             </SelectTrigger>
             <SelectContent>
               {orders.map((order) => (
@@ -241,18 +291,26 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
       {selectedOrder && (
         <div className="space-y-1">
           <Label htmlFor="suborder" className="text-xs">Sub-order</Label>
-          <Select value={selectedOrderItemId} onValueChange={setSelectedOrderItemId}>
+          <Select value={selectedOrderItemId} onValueChange={setSelectedOrderItemId} disabled={selectedOrder.order_items.length === 0}>
             <SelectTrigger className="h-8">
-              <SelectValue placeholder="Select sub-order..." />
+              <SelectValue placeholder={selectedOrder.order_items.length === 0 ? "No items in order" : "Select sub-order..."} />
             </SelectTrigger>
             <SelectContent>
               {selectedOrder.order_items.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">{item.suborder_id}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.product_configs.product_code} (Qty: {item.quantity})
-                    </span>
+                 <SelectItem key={item.id} value={item.id} disabled={item.status === 'Delivered' || item.fulfilled_quantity >= item.quantity}>
+                  <div className="flex flex-col text-xs">
+                    <div className="flex items-center gap-2">
+                      <span>{item.suborder_id}</span>
+                      <span className="text-muted-foreground">
+                        {item.product_configs.product_code}
+                      </span>
+                      <Badge variant={item.status === 'Delivered' ? "default" : "secondary"} className="text-xs px-1 h-4">
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Ordered: {item.quantity}, Fulfilled: {item.fulfilled_quantity}
+                    </div>
                   </div>
                 </SelectItem>
               ))}
@@ -261,9 +319,29 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
         </div>
       )}
 
+      {selectedOrderItem && (
+        <div className="text-xs text-blue-600 p-2 border border-blue-200 bg-blue-50 rounded mt-2">
+            Selected: {selectedOrderItem.suborder_id} ({selectedOrderItem.product_configs.product_code})
+            <br />
+            Status: {selectedOrderItem.status}, Fulfilled: {selectedOrderItem.fulfilled_quantity} / {selectedOrderItem.quantity}
+             {(selectedOrderItem.status === 'Delivered' || selectedOrderItem.fulfilled_quantity >= selectedOrderItem.quantity) && 
+              <p className="text-green-600 font-medium">This item is fully fulfilled.</p>
+            }
+        </div>
+      )}
+
       <Button 
         onClick={handleManualTagOut} 
-        disabled={loading || !productId || !quantity || !customerId || !selectedOrderId || !selectedOrderItemId}
+        disabled={
+            loading || 
+            !productId || 
+            !quantityToTagOut || 
+            !customerId || 
+            !selectedOrderId || 
+            !selectedOrderItemId || 
+            (selectedOrderItem?.status === 'Delivered') ||
+            (selectedOrderItem && selectedOrderItem.fulfilled_quantity >= selectedOrderItem.quantity)
+        }
         className="w-full h-8 text-xs"
       >
         {loading ? 'Processing...' : (
@@ -276,7 +354,8 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
 
       <div className="text-xs text-muted-foreground space-y-1">
         <p>• Directly remove stock from inventory without scanning tags</p>
-        <p>• Associate with specific customer orders for tracking</p>
+        <p>• Associate with specific customer orders for tracking fulfillment</p>
+        <p>• Items marked 'Delivered' or fully fulfilled cannot be selected.</p>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { type OrderStatus } from '@/hooks/useOrders'; // Import OrderStatus type
 
 export interface InventoryTag {
   id: string;
@@ -288,12 +288,57 @@ export const useInventoryTags = () => {
 
       if (auditError) throw auditError;
 
+      // NEW: Update order item fulfilled quantity and status
+      if (orderItemId) {
+        const { data: orderItem, error: orderItemError } = await supabase
+          .from('order_items')
+          .select('id, quantity, fulfilled_quantity, status')
+          .eq('id', orderItemId)
+          .single();
+
+        if (orderItemError) throw new Error(`Error fetching order item: ${orderItemError.message}`);
+        if (!orderItem) throw new Error('Order item not found.');
+
+        if ((orderItem.fulfilled_quantity + quantity) > orderItem.quantity) {
+          throw new Error('Tagging out this quantity would exceed the ordered amount for this item.');
+        }
+
+        const newFulfilledQuantity = orderItem.fulfilled_quantity + quantity;
+        let newOrderItemStatus: OrderStatus = orderItem.status as OrderStatus;
+
+        if (newFulfilledQuantity >= orderItem.quantity) {
+          newOrderItemStatus = 'Delivered';
+        } else if (newFulfilledQuantity > 0) {
+          newOrderItemStatus = 'Partially Fulfilled';
+        }
+        // If newFulfilledQuantity is 0, status doesn't change by tag-out logic (as quantity is > 0)
+        // or remains as is if it was e.g. 'Created' and fulfillment is still 0.
+
+        const dbStatus = newOrderItemStatus === 'Progress' ? 'In Progress' : newOrderItemStatus;
+
+        const { error: updateError } = await supabase
+          .from('order_items')
+          .update({
+            fulfilled_quantity: newFulfilledQuantity,
+            status: dbStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderItemId);
+
+        if (updateError) throw new Error(`Error updating order item: ${updateError.message}`);
+        
+        toast({
+          title: 'Order Item Updated',
+          description: `Order item ${orderItem.id.substring(0,6)} marked as ${newOrderItemStatus}, fulfilled ${newFulfilledQuantity}/${orderItem.quantity}.`,
+        });
+      }
+
       toast({
         title: 'Success',
-        description: `Manual Tag Out: -${quantity} units of ${product.product_configs.product_code}`,
+        description: `Manual Tag Out: -${quantity} units of ${product.product_configs.product_code}. Order item updated.`,
       });
 
-      await fetchTags();
+      await fetchTags(); // Refetch tags, order refetch will be handled by caller via onOperationComplete
       return { product, newStock };
     } catch (error) {
       console.error('Error processing manual tag out:', error);
@@ -398,12 +443,60 @@ export const useInventoryTags = () => {
 
       if (auditError) throw auditError;
 
+      // NEW: Update order item fulfilled quantity and status if 'Tag Out' and orderItemId is provided
+      if (operationType === 'Tag Out' && orderItemId) {
+        const { data: orderItem, error: orderItemError } = await supabase
+          .from('order_items')
+          .select('id, quantity, fulfilled_quantity, status')
+          .eq('id', orderItemId)
+          .single();
+
+        if (orderItemError) throw new Error(`Error fetching order item: ${orderItemError.message}`);
+        if (!orderItem) throw new Error('Order item not found.');
+        
+        const tagQuantity = tag.quantity; // Quantity from the tag
+
+        if ((orderItem.fulfilled_quantity + tagQuantity) > orderItem.quantity) {
+          // This case needs careful consideration: Tag has more items than needed.
+          // For now, we'll throw an error. A more advanced system might partially use the tag
+          // or allow splitting, but that's beyond current scope.
+          throw new Error('Tag quantity exceeds remaining needed for this order item. Operation aborted.');
+        }
+
+        const newFulfilledQuantity = orderItem.fulfilled_quantity + tagQuantity;
+        let newOrderItemStatus: OrderStatus = orderItem.status as OrderStatus;
+
+        if (newFulfilledQuantity >= orderItem.quantity) {
+          newOrderItemStatus = 'Delivered';
+        } else if (newFulfilledQuantity > 0) {
+          newOrderItemStatus = 'Partially Fulfilled';
+        }
+
+        const dbStatus = newOrderItemStatus === 'Progress' ? 'In Progress' : newOrderItemStatus;
+
+        const { error: updateError } = await supabase
+          .from('order_items')
+          .update({
+            fulfilled_quantity: newFulfilledQuantity,
+            status: dbStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderItemId);
+
+        if (updateError) throw new Error(`Error updating order item: ${updateError.message}`);
+
+        toast({
+          title: 'Order Item Updated',
+          description: `Order item ${orderItem.id.substring(0,6)} marked as ${newOrderItemStatus}, fulfilled ${newFulfilledQuantity}/${orderItem.quantity}.`,
+        });
+      }
+
       toast({
         title: 'Success',
-        description: `${operationType}: ${operationType === 'Tag In' ? '+' : '-'}${quantity} units of ${tag.finished_goods.product_code}`,
+        description: `${operationType}: ${operationType === 'Tag In' ? '+' : '-'}${tag.quantity} units of ${tag.finished_goods.product_code}. ${operationType === 'Tag Out' && orderItemId ? "Order item updated." : ""}`,
       });
 
-      await fetchTags();
+      await fetchTags(); // Refetch tags, order refetch will be handled by caller
       return { tag, newStock };
     } catch (error) {
       console.error('Error processing tag operation:', error);
