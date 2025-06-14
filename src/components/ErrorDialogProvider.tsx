@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ErrorDialog } from '@/components/ui/error-dialog';
 import { useErrorDialog } from '@/hooks/use-error-dialog';
 import { ErrorDetails, ErrorAction } from '@/types/error';

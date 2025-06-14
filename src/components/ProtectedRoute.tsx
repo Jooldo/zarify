@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+
+import React, { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthPage from './AuthPage';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';

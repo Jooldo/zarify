@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
