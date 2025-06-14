@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Added Card components
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,12 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useOrders, Order, OrderItem, OrderStatus } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
-// Separator might not be needed if using Card structure effectively
-// import { Separator } from '@/components/ui/separator';
 
 interface SuborderDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  suborderItem: OrderItem; // The specific suborder item
-  parentOrder: Order; // The parent order for context like customer name
+  suborderItem: OrderItem; 
+  parentOrder: Order; 
   onSuborderUpdate: () => void;
 }
 
@@ -73,35 +71,35 @@ const SuborderDetailsDialog = ({
   const fulfillmentPercentage = suborderItem.quantity > 0 ? (fulfilledQuantity / suborderItem.quantity) * 100 : 0;
 
   const InfoRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
-    <div className="flex justify-between items-center text-xs py-1">
-      <Label className="text-gray-500">{label}:</Label>
-      <div className="font-medium text-right">{value}</div>
+    <div className="flex justify-between items-center text-xs py-0.5"> {/* Reduced py */}
+      <Label className="text-gray-500 text-xs">{label}:</Label> {/* Ensured text-xs */}
+      <div className="font-medium text-right text-xs">{value}</div> {/* Ensured text-xs */}
     </div>
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0"> {/* Adjusted padding for Card */}
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle className="text-base">Suborder: {suborderItem.suborder_id}</DialogTitle>
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogHeader className="p-3 border-b"> {/* Reduced p-4 to p-3 */}
+          <DialogTitle className="text-sm">Suborder: {suborderItem.suborder_id}</DialogTitle> {/* text-base to text-sm */}
         </DialogHeader>
         
-        <div className="max-h-[70vh] overflow-y-auto p-4 space-y-3"> {/* Scrollable content area */}
+        <div className="max-h-[70vh] overflow-y-auto p-3 space-y-2"> {/* Reduced p-4 to p-3, space-y-3 to space-y-2 */}
           <Card>
-            <CardHeader className="pb-2 pt-3">
+            <CardHeader className="pb-1 pt-2"> {/* Reduced padding */}
               <h4 className="font-semibold text-xs text-gray-600">ORDER INFORMATION</h4>
             </CardHeader>
-            <CardContent className="space-y-0.5 pb-3">
+            <CardContent className="space-y-0.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
               <InfoRow label="Order ID" value={parentOrder.order_number} />
               <InfoRow label="Customer" value={parentOrder.customer.name} />
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2 pt-3">
+            <CardHeader className="pb-1 pt-2"> {/* Reduced padding */}
               <h4 className="font-semibold text-xs text-gray-600">PRODUCT INFORMATION</h4>
             </CardHeader>
-            <CardContent className="space-y-0.5 pb-3">
+            <CardContent className="space-y-0.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
               <InfoRow label="Product Code" value={suborderItem.product_config.product_code} />
               <InfoRow label="Category" value={suborderItem.product_config.category} />
               <InfoRow label="Subcategory" value={suborderItem.product_config.subcategory} />
@@ -113,13 +111,13 @@ const SuborderDetailsDialog = ({
           </Card>
 
           <Card>
-            <CardHeader className="pb-2 pt-3">
+            <CardHeader className="pb-1 pt-2"> {/* Reduced padding */}
               <h4 className="font-semibold text-xs text-gray-600">QUANTITY & FULFILLMENT</h4>
             </CardHeader>
-            <CardContent className="space-y-1 pb-3">
+            <CardContent className="space-y-1 pb-2"> {/* Reduced pb-3 to pb-2 */}
               <InfoRow label="Total Quantity" value={suborderItem.quantity} />
-              <div className="flex justify-between items-center text-xs py-1">
-                <Label htmlFor="fulfilledQuantity" className="text-gray-500">Fulfilled Quantity:</Label>
+              <div className="flex justify-between items-center text-xs py-0.5"> {/* Reduced py */}
+                <Label htmlFor="fulfilledQuantity" className="text-gray-500 text-xs">Fulfilled Quantity:</Label> {/* Ensured text-xs */}
                 <Input 
                   id="fulfilledQuantity" 
                   type="number" 
@@ -127,7 +125,7 @@ const SuborderDetailsDialog = ({
                   onChange={handleFulfilledQuantityChange} 
                   max={suborderItem.quantity}
                   min={0}
-                  className="h-7 w-20 text-xs p-1" /* Compact input */
+                  className="h-7 w-20 text-xs p-1"
                 />
               </div>
               <Progress value={fulfillmentPercentage} className="mt-1 h-1.5" />
@@ -138,30 +136,30 @@ const SuborderDetailsDialog = ({
           </Card>
           
           <Card>
-            <CardHeader className="pb-2 pt-3">
+            <CardHeader className="pb-1 pt-2"> {/* Reduced padding */}
               <h4 className="font-semibold text-xs text-gray-600">PRICING</h4>
             </CardHeader>
-            <CardContent className="space-y-0.5 pb-3">
+            <CardContent className="space-y-0.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
               <InfoRow label="Unit Price" value={`₹${suborderItem.unit_price.toLocaleString('en-IN')}`} />
               <InfoRow label="Total Price" value={`₹${suborderItem.total_price.toLocaleString('en-IN')}`} />
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2 pt-3">
+            <CardHeader className="pb-1 pt-2"> {/* Reduced padding */}
               <h4 className="font-semibold text-xs text-gray-600">STATUS MANAGEMENT</h4>
             </CardHeader>
-            <CardContent className="space-y-1.5 pb-3">
-              <div className="flex justify-between items-center text-xs py-1">
-                <Label className="text-gray-500">Current Status:</Label>
+            <CardContent className="space-y-1.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
+              <div className="flex justify-between items-center text-xs py-0.5"> {/* Reduced py */}
+                <Label className="text-gray-500 text-xs">Current Status:</Label> {/* Ensured text-xs */}
                 <Badge variant={currentStatus === "Delivered" || currentStatus === "Ready" ? "outline" : "default"} className="text-xs">
                   {currentStatus}
                 </Badge>
               </div>
-              <div className="flex justify-between items-center text-xs py-1">
-                <Label htmlFor="status" className="text-gray-500">Update Status:</Label>
+              <div className="flex justify-between items-center text-xs py-0.5"> {/* Reduced py */}
+                <Label htmlFor="status" className="text-gray-500 text-xs">Update Status:</Label> {/* Ensured text-xs */}
                 <Select value={currentStatus} onValueChange={(value) => handleStatusChange(value as OrderStatus)}>
-                  <SelectTrigger className="h-7 w-40 text-xs"> {/* Compact select */}
+                  <SelectTrigger className="h-7 w-40 text-xs">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -175,7 +173,7 @@ const SuborderDetailsDialog = ({
           </Card>
         </div>
         
-        <DialogFooter className="p-4 border-t">
+        <DialogFooter className="p-3 border-t"> {/* Reduced p-4 to p-3 */}
           <DialogClose asChild>
             <Button type="button" variant="outline" size="sm">Cancel</Button>
           </DialogClose>
@@ -187,3 +185,4 @@ const SuborderDetailsDialog = ({
 };
 
 export default SuborderDetailsDialog;
+
