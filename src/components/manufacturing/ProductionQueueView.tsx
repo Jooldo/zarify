@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -116,30 +115,6 @@ const ProductionQueueView = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Factory className="h-6 w-6" />
-            Production Queue
-          </h2>
-          <p className="text-muted-foreground">
-            Manage and track manufacturing orders through production stages
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant="outline">
-            {pendingOrders.length} Pending
-          </Badge>
-          <Badge variant="outline">
-            {inProgressOrders.length} In Progress
-          </Badge>
-          <Badge variant="outline">
-            {completedOrders.length} Completed
-          </Badge>
-        </div>
-      </div>
-
       {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-2 flex-1">

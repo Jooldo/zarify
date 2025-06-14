@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText, Info } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import OrderDetails from '@/components/OrderDetails'; // Keep for full order view
 import EditOrderDialog from './EditOrderDialog';
 import CreateInvoiceDialog from './CreateInvoiceDialog';
@@ -76,6 +77,7 @@ const OrdersTableRow = ({
   const { getInvoiceByOrderId, refetch: refetchInvoices } = useInvoices();
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockLow = stockAvailable < item.quantity;
+  const fulfillmentPercentage = item.quantity > 0 ? (item.fulfilled_quantity / item.quantity) * 100 : 0;
 
   // Find the correct parent order for dialogs
   const parentOrder = orders.find(o => o.order_number === item.orderId);
@@ -192,6 +194,15 @@ const OrdersTableRow = ({
           )}
         </TableCell>
         <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
+        <TableCell className="py-1 px-2 text-xs">
+          <div className="flex items-center gap-2">
+            <Progress value={fulfillmentPercentage} className="h-1.5 w-16" />
+            <span className="text-muted-foreground text-[11px]">{fulfillmentPercentage.toFixed(0)}%</span>
+          </div>
+        </TableCell>
+        <TableCell className="py-1 px-2 text-xs">
+          {item.createdDate ? new Date(item.createdDate).toLocaleDateString('en-IN') : '-'}
+        </TableCell>
         <TableCell className="py-1 px-2 text-xs">
           <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>
             {stockAvailable}

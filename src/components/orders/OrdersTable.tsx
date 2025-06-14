@@ -33,10 +33,11 @@ const OrdersTable = ({
     return (
       <TableSkeleton 
         rows={10} 
-        columns={10} // Updated to 10 columns to match headers
+        columns={12} // Updated to 12 columns
         columnWidths={[
           'w-20', 'w-24', 'w-32', 'w-24', 'w-12', 
-          'w-16', 'w-24', 'w-24', 'w-20', 'w-20' // Added widths for new columns
+          'w-32', 'w-24', // widths for new columns
+          'w-16', 'w-24', 'w-24', 'w-20', 'w-20'
         ]}
       />
     );
@@ -52,6 +53,8 @@ const OrdersTable = ({
             <TableHead className="py-1 px-2 text-xs">Customer</TableHead>
             <TableHead className="py-1 px-2 text-xs">Product Code</TableHead>
             <TableHead className="py-1 px-2 text-xs">Qty</TableHead>
+            <TableHead className="py-1 px-2 text-xs w-32">Fulfillment</TableHead>
+            <TableHead className="py-1 px-2 text-xs">Created</TableHead>
             <TableHead className="py-1 px-2 text-xs">Stock</TableHead>
             <TableHead className="py-1 px-2 text-xs">Item Status</TableHead>
             <TableHead className="py-1 px-2 text-xs">Order Status</TableHead>
