@@ -133,7 +133,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
     }
   }, [productId, allCustomerOrders]);
   
-  const selectedProductConfigData = finishedGoods.find(fg => fg.product_config_id === productId)?.product_config;
+  const selectedProductConfigData = finishedGoods.find(fg => fg.product_config_id === productId);
 
   const handleManualTagOut = async () => {
     if (!productId || !quantityToTagOut || !customerId || !selectedOrderId || !selectedOrderItemId) {
@@ -221,7 +221,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
           <SelectContent>
             {finishedGoods.map((fg) => ( 
               <SelectItem key={fg.product_config_id} value={fg.product_config_id}>
-                {fg.product_config.product_code} - {fg.product_config.subcategory} ({fg.product_config.size_value}")
+                {fg.product_code} - {fg.product_config.subcategory} ({fg.product_config.size_value}")
               </SelectItem>
             ))}
           </SelectContent>
