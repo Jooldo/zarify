@@ -56,12 +56,10 @@ export const useCatalogueItems = (catalogueId?: string) => {
 
       if (error) throw error;
       
-      // Filter out items where product_configs failed to load and cast to proper type
+      // Filter out items where product_configs failed to load and properly type the result
       return (data || [])
-        .filter(item => item.product_configs && typeof item.product_configs === 'object' && !('error' in item.product_configs))
-        .map(item => ({
-          ...item,
-          product_configs: item.product_configs as {
+        .filter((item): item is typeof item & { 
+          product_configs: {
             id: string;
             product_code: string;
             category: string;
@@ -69,7 +67,12 @@ export const useCatalogueItems = (catalogueId?: string) => {
             size_value: number;
             weight_range?: string;
           }
-        })) as CatalogueItem[];
+        } => {
+          return item.product_configs != null && 
+                 typeof item.product_configs === 'object' && 
+                 !('error' in item.product_configs) &&
+                 'id' in item.product_configs;
+        }) as CatalogueItem[];
     },
     enabled: !!catalogueId,
   });
