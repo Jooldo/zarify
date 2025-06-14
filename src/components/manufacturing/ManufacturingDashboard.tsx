@@ -1,20 +1,27 @@
-
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
-import { Plus, Package2 } from 'lucide-react';
-import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { Input } from "@/components/ui/input";
+import { Plus, Package2, Clock, CheckCircle, Workflow, Search } from 'lucide-react';
+import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
 import ManufacturingOrdersTable from './ManufacturingOrdersTable';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionQueueView from './ProductionQueueView';
+import ManufacturingOrdersFilter from './ManufacturingOrdersFilter';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
-import { ManufacturingOrder, ManufacturingFilters } from '@/types/manufacturing';
-import { getPriorityColor, getStatusColor } from '@/utils/manufacturingColors';
-import ManufacturingDashboardHeader from './ManufacturingDashboardHeader';
-import ManufacturingStatsCards from './ManufacturingStatsCards';
-import ManufacturingToolbar from './ManufacturingToolbar';
+
+interface ManufacturingFilters {
+  status: string;
+  priority: string;
+  productName: string;
+  dueDateFrom: Date | null;
+  dueDateTo: Date | null;
+  createdDateRange: string;
+  hasSpecialInstructions: boolean;
+  overdueOrders: boolean;
+}
 
 const ManufacturingDashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -127,6 +134,25 @@ const ManufacturingDashboard = () => {
   const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress').length;
   const completedOrders = manufacturingOrders.filter(order => order.status === 'completed').length;
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const handleViewOrder = (order: ManufacturingOrder) => {
     setSelectedOrder(order);
     setShowDetailsDialog(true);
@@ -138,15 +164,76 @@ const ManufacturingDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <ManufacturingDashboardHeader onShowCreateDialog={() => setShowCreateDialog(true)} />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Manufacturing Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage production orders and track manufacturing progress
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Create Manufacturing Order
+        </Button>
+      </div>
 
-      <ManufacturingStatsCards
-        totalOrders={totalOrders}
-        pendingOrders={pendingOrders}
-        inProgressOrders={inProgressOrders}
-        completedOrders={completedOrders}
-      />
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-blue-50 border-blue-200 border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-blue-800">Total Orders</CardTitle>
+            <div className="p-1.5 bg-blue-200 rounded-full">
+              <Package2 className="h-4 w-4 text-blue-700" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold text-blue-900">{totalOrders}</div>
+            <p className="text-xs text-blue-700 mt-0.5">All manufacturing orders</p>
+          </CardContent>
+        </Card>
 
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-gray-50 border-gray-200 border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-gray-800">Pending</CardTitle>
+            <div className="p-1.5 bg-gray-200 rounded-full">
+              <Clock className="h-4 w-4 text-gray-700" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold text-gray-900">{pendingOrders}</div>
+            <p className="text-xs text-gray-700 mt-0.5">Awaiting production</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-orange-50 border-orange-200 border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-orange-800">In Progress</CardTitle>
+            <div className="p-1.5 bg-orange-200 rounded-full">
+              <Workflow className="h-4 w-4 text-orange-700" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold text-orange-900">{inProgressOrders}</div>
+            <p className="text-xs text-orange-700 mt-0.5">Currently being manufactured</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-green-50 border-green-200 border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-green-800">Completed</CardTitle>
+            <div className="p-1.5 bg-green-200 rounded-full">
+              <CheckCircle className="h-4 w-4 text-green-700" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold text-green-900">{completedOrders}</div>
+            <p className="text-xs text-green-700 mt-0.5">Finished production</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="orders">Manufacturing Orders</TabsTrigger>
@@ -154,11 +241,21 @@ const ManufacturingDashboard = () => {
         </TabsList>
         
         <TabsContent value="orders" className="space-y-4">
-          <ManufacturingToolbar
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            onFiltersChange={setFilters}
-          />
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-2 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search manufacturing orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-8"
+                />
+              </div>
+              <ManufacturingOrdersFilter onFiltersChange={setFilters} />
+            </div>
+          </div>
 
           {filteredOrders.length === 0 ? (
             <Card>
