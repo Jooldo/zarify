@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,9 +10,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  // SidebarMenuSub, // Not used
-  // SidebarMenuSubButton, // Not used
-  // SidebarMenuSubItem, // Not used
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -55,8 +51,6 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     "users": true,
     "settings": false,
   });
-
-  // console.log("AppSidebar rendered with activeTab:", activeTab); // Keep console logs if helpful for user
 
   const toggleSection = (sectionId: string) => {
     setOpenSections(prev => ({
@@ -185,14 +179,14 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
 
   return (
     <Sidebar className="border-r bg-sidebar text-sidebar-foreground">
-      <SidebarHeader className="border-b border-sidebar-border p-4 bg-sidebar text-sidebar-primary"> {/* Updated: bg-sidebar, text-sidebar-primary, border-sidebar-border */}
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary"> {/* Updated: bg-primary/10, text-primary */}
-            <Package className="h-4 w-4" />
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 text-primary shadow-inner">
+            <Package className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-primary">Jewelry ERP</span> {/* Ensured text color consistency */}
-            <span className="text-xs text-sidebar-primary/80">Manufacturing</span> {/* Updated: text-sidebar-primary/80 */}
+            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-heading">Jewelry ERP</span>
+            <span className="text-xs text-muted-foreground">Manufacturing</span>
           </div>
         </div>
       </SidebarHeader>
@@ -206,7 +200,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                 onOpenChange={() => toggleSection(section.id!)}
               >
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-sidebar-accent rounded-md p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground"> {/* Updated: hover:bg-sidebar-accent */}
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-sidebar-accent rounded-md p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground">
                     <span>{section.label}</span>
                     {openSections[section.id] ? (
                       <ChevronDown className="h-3 w-3" />
@@ -223,12 +217,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                           <SidebarMenuButton 
                             onClick={() => onTabChange(item.tab)}
                             isActive={activeTab === item.tab}
-                            className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90" // Updated: hover:bg-sidebar-accent
+                            className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90"
                           >
-                            <item.icon className="h-4 w-4" />
+                            <item.icon className="h-4 w-4 text-primary/80" />
                             <span>{item.title}</span>
                             {item.badge && (
-                              <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground"> {/* Adjusted badge for light sidebar */}
+                              <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground">
                                 {item.badge}
                               </Badge>
                             )}
@@ -249,12 +243,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                         <SidebarMenuButton 
                           onClick={() => onTabChange(item.tab)}
                           isActive={activeTab === item.tab}
-                          className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90" // Updated: hover:bg-sidebar-accent
+                          className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent data-[active=true]:hover:opacity-90"
                         >
-                          <item.icon className="h-4 w-4" />
+                          <item.icon className="h-4 w-4 text-primary/80" />
                           <span>{item.title}</span>
                           {item.badge && (
-                             <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground"> {/* Adjusted badge for light sidebar */}
+                             <Badge variant="secondary" className="ml-auto bg-primary/20 text-primary-foreground">
                               {item.badge}
                             </Badge>
                           )}
@@ -273,9 +267,9 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
-          className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent" // Updated: hover:bg-sidebar-accent
+          className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
         >
-          <LogOut className="h-4 w-4 mr-2" />
+          <LogOut className="h-4 w-4 text-primary/80" />
           Sign Out
         </Button>
       </SidebarFooter>
