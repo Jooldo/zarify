@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,66 +5,73 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCheck, Truck } from 'lucide-react';
+import { CheckCheck, Truck, PieChart } from 'lucide-react'; // Added PieChart for partial
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useQueryClient } from '@tanstack/react-query';
+import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders'; // Import OrderStatus and OrderItem type
+import { Progress } from "@/components/ui/progress"; // For visual progress
 
 interface OrderDetailsProps {
-  order: any;
+  order: any; // Consider using the stronger Order type from useOrders
   onOrderUpdate: () => void;
 }
-
-type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
 
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { toast } = useToast();
   const { logActivity } = useActivityLog();
   const queryClient = useQueryClient();
 
-  const updateOrderItemStatus = async (itemId: string, newStatus: OrderStatus) => {
+  // Using updateOrderItemDetails from useOrders (implicitly, as it's not directly imported here but assumed to be part of onOrderUpdate flow or similar)
+  // The direct supabase call pattern here will be updated.
+  const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
-      console.log('Updating order item status:', { itemId, newStatus });
+      console.log('Updating order item status:', { itemId: item.id, newStatus });
       
-      // Find the order item to get details for logging
-      const orderItem = order.order_items.find(item => item.id === itemId);
-      console.log('Order item before update:', orderItem);
+      let fulfilledQuantityUpdate = item.fulfilled_quantity;
+      if (newStatus === 'Delivered') {
+        fulfilledQuantityUpdate = item.quantity;
+      } else if (newStatus === 'Created') {
+        fulfilledQuantityUpdate = 0;
+      }
+      // For 'Progress', 'Ready', 'Partially Fulfilled', fulfilled_quantity is managed by other processes (e.g. tag-out)
+      // or preserved if manually set.
+
+      const updatePayload: { status: OrderStatus; fulfilled_quantity: number } = {
+        status: newStatus,
+        fulfilled_quantity: fulfilledQuantityUpdate,
+      };
       
-      // Convert Progress to "In Progress" for database storage
+      // This part needs to call the hook's update function if we refactor fully.
+      // For now, keeping direct Supabase update as per original structure, but using refined payload.
       const dbStatus = newStatus === 'Progress' ? 'In Progress' : newStatus;
-      
       const { error } = await supabase
         .from('order_items')
         .update({ 
           status: dbStatus,
+          fulfilled_quantity: fulfilledQuantityUpdate,
           updated_at: new Date().toISOString()
         })
-        .eq('id', itemId);
+        .eq('id', item.id);
 
       if (error) throw error;
 
       console.log('Order item status updated successfully');
 
-      if (orderItem) {
-        await logActivity(
-          'updated',
-          'order',
-          order.order_number,
-          `changed status of suborder ${orderItem.suborder_id} from "${orderItem.status}" to "${newStatus}"`
-        );
-      }
-
+      await logActivity(
+        'updated',
+        'order',
+        order.order_number,
+        `changed status of suborder ${item.suborder_id} from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`
+      );
+      
       toast({
         title: 'Success',
         description: 'Order item status updated successfully',
       });
 
-      // Always refresh orders data and invalidate related queries
-      console.log('Refreshing orders data...');
       await onOrderUpdate();
-      
-      // Invalidate queries to trigger refetch of finished goods and raw materials
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
       
@@ -121,21 +127,19 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-1.5">
-            {order.order_items.map((item: any) => {
-              // Display size exactly as entered in product config without any conversion
+            {order.order_items.map((item: OrderItemType) => {
               const sizeValue = item.product_config.size_value || 'N/A';
               const weightRange = item.product_config.weight_range || 'N/A';
               const sizeWeight = `${sizeValue}" / ${weightRange}`;
+              const fulfillmentProgress = item.quantity > 0 ? (item.fulfilled_quantity / item.quantity) * 100 : 0;
               
               return (
                 <div key={item.id} className="p-2 border border-gray-200 rounded bg-gray-50 space-y-1">
-                  {/* Header row with suborder ID and status */}
                   <div className="flex justify-between items-center">
                     <div className="text-xs font-medium text-blue-600">{item.suborder_id}</div>
                     <Badge variant="secondary" className="text-xs h-4 px-1">{item.status}</Badge>
                   </div>
                   
-                  {/* Product details in compact rows */}
                   <div className="space-y-0.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Product Code:</span>
@@ -157,6 +161,13 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                       <span className="text-gray-500">Quantity:</span>
                       <span className="font-medium">{item.quantity}</span>
                     </div>
+                     <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Fulfilled:</span>
+                      <span className="font-medium">{item.fulfilled_quantity} / {item.quantity}</span>
+                    </div>
+                    {item.quantity > 0 && (item.fulfilled_quantity > 0 || item.status === 'Partially Fulfilled' || item.status === 'Delivered') && (
+                       <Progress value={fulfillmentProgress} className="h-1.5 w-full mt-0.5" />
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-500">Unit Price:</span>
                       <span>₹{item.unit_price.toLocaleString()}</span>
@@ -167,15 +178,18 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                     </div>
                   </div>
                   
-                  {/* Status update selector */}
                   <div className="pt-1 border-t border-gray-300">
-                    <Select onValueChange={(value) => updateOrderItemStatus(item.id, value as OrderStatus)}>
+                    <Select 
+                      value={item.status}
+                      onValueChange={(value) => handleItemStatusUpdate(item, value as OrderStatus)}
+                    >
                       <SelectTrigger className="w-full h-6 text-xs">
                         <SelectValue placeholder={`Update status (${item.status})`} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Created">Created</SelectItem>
                         <SelectItem value="Progress">Progress</SelectItem>
+                        <SelectItem value="Partially Fulfilled">Partially Fulfilled</SelectItem>
                         <SelectItem value="Ready">Ready</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>
                       </SelectContent>

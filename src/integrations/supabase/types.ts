@@ -692,6 +692,7 @@ export type Database = {
       order_items: {
         Row: {
           created_at: string | null
+          fulfilled_quantity: number
           id: string
           merchant_id: string
           order_id: string
@@ -705,6 +706,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          fulfilled_quantity?: number
           id?: string
           merchant_id: string
           order_id: string
@@ -718,6 +720,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          fulfilled_quantity?: number
           id?: string
           merchant_id?: string
           order_id?: string
@@ -1384,7 +1387,12 @@ export type Database = {
       }
     }
     Enums: {
-      order_status: "Created" | "In Progress" | "Ready" | "Delivered"
+      order_status:
+        | "Created"
+        | "In Progress"
+        | "Ready"
+        | "Delivered"
+        | "Partially Fulfilled"
       procurement_status: "None" | "Pending" | "Approved" | "Received"
       user_role: "admin" | "worker"
       worker_status: "Active" | "On Leave"
@@ -1503,7 +1511,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      order_status: ["Created", "In Progress", "Ready", "Delivered"],
+      order_status: [
+        "Created",
+        "In Progress",
+        "Ready",
+        "Delivered",
+        "Partially Fulfilled",
+      ],
       procurement_status: ["None", "Pending", "Approved", "Received"],
       user_role: ["admin", "worker"],
       worker_status: ["Active", "On Leave"],

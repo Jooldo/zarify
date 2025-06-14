@@ -1,16 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered' | 'Partially Fulfilled';
+
 export interface OrderItem {
   id: string;
   suborder_id: string;
   quantity: number;
+  fulfilled_quantity: number; // Added field
   unit_price: number;
   total_price: number;
-  status: 'Created' | 'Progress' | 'Ready' | 'Delivered';
+  status: OrderStatus; // Updated type
   product_config_id: string;
   product_config: {
     id: string;
@@ -29,7 +31,7 @@ export interface Order {
   created_date: string;
   updated_date: string;
   expected_delivery?: string;
-  status: 'Created' | 'Progress' | 'Ready' | 'Delivered';
+  status: OrderStatus; // Updated type
   customer_id: string;
   customer: {
     id: string;
@@ -39,12 +41,10 @@ export interface Order {
   order_items: OrderItem[];
 }
 
-type OrderStatus = 'Created' | 'Progress' | 'Ready' | 'Delivered';
-
 // Helper function to normalize status from database
 const normalizeStatus = (status: string): OrderStatus => {
-  // Convert "In Progress" from database to "Progress" for frontend
   if (status === 'In Progress') return 'Progress';
+  // Ensure 'Partially Fulfilled' and other statuses are correctly typed
   return status as OrderStatus;
 };
 
@@ -70,13 +70,13 @@ export const useOrders = () => {
 
       if (error) throw error;
       
-      // Normalize the data to match our types
       const normalizedData = data?.map(order => ({
         ...order,
         status: normalizeStatus(order.status),
         order_items: order.order_items.map(item => ({
           ...item,
-          status: normalizeStatus(item.status)
+          status: normalizeStatus(item.status),
+          fulfilled_quantity: item.fulfilled_quantity || 0, // Ensure default if null from DB
         }))
       })) || [];
       
@@ -95,7 +95,6 @@ export const useOrders = () => {
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
-      // Convert Progress to "In Progress" for database storage
       const dbStatus = status === 'Progress' ? 'In Progress' : status;
       
       const { error } = await supabase
@@ -114,7 +113,6 @@ export const useOrders = () => {
         description: 'Order status updated successfully',
       });
 
-      // Auto refresh related data
       await fetchOrders();
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
@@ -129,40 +127,43 @@ export const useOrders = () => {
     }
   };
 
-  const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
+  // Renamed from updateOrderItemStatus to updateOrderItemDetails for clarity
+  const updateOrderItemDetails = async (itemId: string, updates: { status?: OrderStatus; fulfilled_quantity?: number }) => {
     try {
-      // Convert Progress to "In Progress" for database storage
-      const dbStatus = status === 'Progress' ? 'In Progress' : status;
+      const payload: any = { updated_at: new Date().toISOString() };
+      if (updates.status) {
+        payload.status = updates.status === 'Progress' ? 'In Progress' : updates.status;
+      }
+      if (updates.fulfilled_quantity !== undefined) {
+        payload.fulfilled_quantity = updates.fulfilled_quantity;
+      }
       
       const { error } = await supabase
         .from('order_items')
-        .update({ 
-          status: dbStatus, 
-          updated_at: new Date().toISOString() 
-        })
+        .update(payload)
         .eq('id', itemId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Order item status updated successfully',
+        description: 'Order item details updated successfully',
       });
 
-      // Auto refresh related data
       await fetchOrders();
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
     } catch (error) {
-      console.error('Error updating order item status:', error);
+      console.error('Error updating order item details:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update order item status',
+        description: 'Failed to update order item details',
         variant: 'destructive',
       });
       throw error;
     }
   };
+
 
   useEffect(() => {
     fetchOrders();
@@ -173,6 +174,6 @@ export const useOrders = () => {
     loading, 
     refetch: fetchOrders, 
     updateOrderStatus, 
-    updateOrderItemStatus 
+    updateOrderItemDetails // Changed export name
   };
 };
