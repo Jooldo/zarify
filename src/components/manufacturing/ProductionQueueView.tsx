@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Factory, Search } from 'lucide-react';
@@ -7,6 +6,7 @@ import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionQueueFilter from './ProductionQueueFilter';
+import { getPriorityColor, getStatusColor } from '@/utils/manufacturingColors';
 
 interface ProductionQueueFilters {
   status: string;
@@ -73,25 +73,6 @@ const ProductionQueueView = () => {
       return true;
     });
   }, [manufacturingOrders, orderSteps, searchTerm, filters]);
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const handleViewDetails = (order: any) => {
     setSelectedOrder(order);
