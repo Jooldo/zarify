@@ -25,9 +25,12 @@ export interface FinishedGood {
 export const useFinishedGoods = () => {
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null); // Added error state
   const { toast } = useToast();
 
   const fetchFinishedGoods = async () => {
+    setLoading(true);
+    setError(null); // Clear previous errors
     try {
       console.log('Fetching finished goods data...');
       
@@ -37,6 +40,7 @@ export const useFinishedGoods = () => {
 
       if (merchantError) {
         console.error('Error getting merchant ID:', merchantError);
+        setError(merchantError); // Set error state
         throw merchantError;
       }
 
@@ -55,6 +59,7 @@ export const useFinishedGoods = () => {
 
       if (finishedGoodsError) {
         console.error('Error fetching finished goods:', finishedGoodsError);
+        setError(finishedGoodsError); // Set error state
         throw finishedGoodsError;
       }
 
@@ -73,8 +78,10 @@ export const useFinishedGoods = () => {
       console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
 
       setFinishedGoods(finishedGoodsWithRequiredQty);
-    } catch (error) {
-      console.error('Error fetching finished goods:', error);
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error fetching finished goods:', typedError);
+      setError(typedError); // Ensure error state is set with the caught error
       toast({
         title: 'Error',
         description: 'Failed to fetch finished goods',
@@ -89,5 +96,6 @@ export const useFinishedGoods = () => {
     fetchFinishedGoods();
   }, []);
 
-  return { finishedGoods, loading, refetch: fetchFinishedGoods };
+  return { finishedGoods, loading, error, refetch: fetchFinishedGoods }; // Return error state
 };
+
