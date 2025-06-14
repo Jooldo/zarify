@@ -1,10 +1,11 @@
 
 import { Button } from '@/components/ui/button';
-import { Package, Printer, Scan } from 'lucide-react';
+import { Package, Printer, Scan, QrCode } from 'lucide-react'; // Added QrCode for consistency with TagPrintForm
 import { useState } from 'react';
-import TagPrintDialog from './TagPrintDialog';
+// Removed TagPrintDialog import
 import TagScanInterface from './TagScanInterface';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import TagPrintForm from './TagPrintForm'; // Added import for TagPrintForm
 
 interface FinishedGoodsHeaderProps {
   onRefresh: () => void;
@@ -19,6 +20,7 @@ const FinishedGoodsHeader = ({
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
 
   const handleTagGenerated = () => {
+    setIsPrintDialogOpen(false); // Close dialog on successful generation
     if (onTagOperationComplete) onTagOperationComplete();
   };
 
@@ -35,15 +37,27 @@ const FinishedGoodsHeader = ({
       </h3>
       
       <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setIsPrintDialogOpen(true)}
-          className="h-8"
-        >
-          <Printer className="h-4 w-4 mr-1" />
-          Print Tag
-        </Button>
+        <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8"
+            >
+              <Printer className="h-4 w-4 mr-1" />
+              Print Tag
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" /> {/* Using QrCode icon like in TagPrintForm */}
+                Generate & Print Tag
+              </DialogTitle>
+            </DialogHeader>
+            <TagPrintForm onTagGenerated={handleTagGenerated} />
+          </DialogContent>
+        </Dialog>
         
         <Dialog open={isScanDialogOpen} onOpenChange={setIsScanDialogOpen}>
           <DialogTrigger asChild>
@@ -56,7 +70,7 @@ const FinishedGoodsHeader = ({
               Scan Tag
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px]"> {/* Ensure consistent styling */}
             <DialogHeader>
               <DialogTitle>Tag Scanner</DialogTitle>
             </DialogHeader>
@@ -65,13 +79,10 @@ const FinishedGoodsHeader = ({
         </Dialog>
       </div>
 
-      <TagPrintDialog
-        isOpen={isPrintDialogOpen}
-        onOpenChange={setIsPrintDialogOpen}
-        onTagGenerated={handleTagGenerated}
-      />
+      {/* TagPrintDialog component is no longer used here */}
     </div>
   );
 };
 
 export default FinishedGoodsHeader;
+

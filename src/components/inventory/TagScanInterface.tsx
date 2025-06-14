@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Scan, Printer, ArrowDown, ArrowUp, Plus, Minus } from 'lucide-react';
-import TagPrintForm from './TagPrintForm';
+import { Scan, ArrowDown, ArrowUp, Plus, Minus } from 'lucide-react';
+// TagPrintForm is no longer used here
 import TagOutForm from './TagOutForm';
 import ManualTagInForm from './ManualTagInForm';
 import ManualTagOutForm from './ManualTagOutForm';
@@ -22,12 +22,9 @@ const TagScanInterface = ({ onOperationComplete }: TagScanInterfaceProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <Tabs defaultValue="print" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 gap-1 h-auto p-1">
-            <TabsTrigger value="print" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
-              <Printer className="h-3 w-3" />
-              <span>Print Tag</span>
-            </TabsTrigger>
+        <Tabs defaultValue="tag-operations" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 gap-1 h-auto p-1"> {/* Changed grid-cols-3 to grid-cols-2 */}
+            {/* Removed Print Tag TabTrigger */}
             <TabsTrigger value="tag-operations" className="flex flex-col items-center gap-1 text-xs h-12 px-2">
               <div className="flex gap-1">
                 <ArrowUp className="h-2.5 w-2.5" />
@@ -44,9 +41,7 @@ const TagScanInterface = ({ onOperationComplete }: TagScanInterfaceProps) => {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="print" className="mt-3">
-            <TagPrintForm onTagGenerated={onOperationComplete} />
-          </TabsContent>
+          {/* Removed Print Tag TabsContent */}
           
           <TabsContent value="tag-operations" className="mt-3">
             <Tabs defaultValue="tag-out" className="w-full">
@@ -102,3 +97,4 @@ const TagScanInterface = ({ onOperationComplete }: TagScanInterfaceProps) => {
 };
 
 export default TagScanInterface;
+
