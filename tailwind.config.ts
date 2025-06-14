@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -121,11 +120,13 @@ export default {
         'gradient-emerald-blue': 'linear-gradient(to right, theme(colors.lp-emerald.500), theme(colors.lp-blue.500))',
         'gradient-purple-pink': 'linear-gradient(to right, theme(colors.lp-purple.500), theme(colors.lp-pink.500))',
         'gradient-primary': 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))', // Example for buttons
+        'gradient-heading': 'linear-gradient(to right, theme(colors.lp-emerald.600), theme(colors.lp-blue.600), theme(colors.lp-purple.600))',
       },
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				sm: 'calc(var(--radius) - 4px)',
+        xl: 'calc(var(--radius) + 4px)', // Added for buttons
 			},
 			keyframes: {
 				'accordion-down': {

@@ -7,7 +7,7 @@ import ConversationalQueryWidget from './ConversationalQueryWidget';
 import DailyInsights from './DailyInsights';
 import MerchantProfile from '../MerchantProfile';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { Separator } from '@/components/ui/separator'; // Import Separator
+import { Separator } from '@/components/ui/separator'; 
 
 interface VisualDashboardProps {
   onNavigateToTab?: (tab: string) => void;
@@ -32,7 +32,7 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
     <div className="space-y-6 p-1"> {/* Adjusted padding and spacing */}
       {/* Header */}
       <div className="pb-4">
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-primary mb-1">
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-heading mb-1"> {/* Updated gradient */}
           {getDashboardTitle()}
         </h1>
         <div className="flex flex-col gap-1">
@@ -97,4 +97,3 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
 };
 
 export default VisualDashboard;
-

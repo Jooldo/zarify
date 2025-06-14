@@ -37,7 +37,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-xl font-semibold leading-none tracking-tight text-primary", // Changed size to xl and color to primary
+      "text-xl font-semibold leading-none tracking-tight bg-clip-text text-transparent bg-gradient-heading", // Changed to gradient
       className
     )}
     {...props}
@@ -78,4 +78,3 @@ const CardFooter = React.forwardRef<
 CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
-

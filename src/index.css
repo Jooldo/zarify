@@ -36,15 +36,15 @@
     --ring: 221 83% 53%; /* lp-blue-600 for focus rings */
     --radius: 0.5rem;
 
-    /* Sidebar specific variables - will be updated from Tailwind config now */
-    --sidebar-background: 224 71% 4%; /* Dark blue-gray for contrast */
-    --sidebar-foreground:  0 0% 90%; /* Light gray for text */
-    --sidebar-primary: 221 83% 60%; /* Brighter blue for active items */
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 221 83% 50%; /* Slightly muted blue for hover */
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 224 71% 10%;
-    --sidebar-ring: 221 83% 53%;
+    /* Sidebar specific variables - Light Theme */
+    --sidebar-background: 0 0% 96%; /* Very light gray (e.g., bg-gray-100) */
+    --sidebar-foreground: 224 71% 4%; /* Dark blue-gray text */
+    --sidebar-primary: 221 83% 53%; /* Main primary color for highlights/text */
+    --sidebar-primary-foreground: 0 0% 98%; /* White text on primary bg */
+    --sidebar-accent: 220 13% 90%; /* Slightly darker gray for hover (e.g., bg-gray-200) */
+    --sidebar-accent-foreground: 224 71% 4%; /* Dark text on hover accent */
+    --sidebar-border: 220 13% 85%; /* Standard border color */
+    --sidebar-ring: 221 83% 53%; /* Main ring color */
   }
 
   .dark {
@@ -78,13 +78,13 @@
     --ring: 221 83% 65%;
     
     /* Sidebar specific variables for dark mode */
-    --sidebar-background: 224 71% 2%; /* Even darker */
-    --sidebar-foreground:  0 0% 80%;
-    --sidebar-primary: 221 83% 70%;
+    --sidebar-background: 224 71% 10%; /* Dark gray, distinct from main bg */
+    --sidebar-foreground:  0 0% 85%; /* Light gray text */
+    --sidebar-primary: 221 83% 70%; /* Lighter blue for active items */
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 221 83% 60%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 224 71% 8%;
+    --sidebar-accent: 224 71% 15%; /* Slightly lighter dark gray for hover */
+    --sidebar-accent-foreground: 0 0% 90%; /* Lighter text on hover accent */
+    --sidebar-border: 224 71% 12%; /* Darker border */
     --sidebar-ring: 221 83% 65%;
   }
 }
@@ -157,4 +157,3 @@
     transform: translateX(100%);
   }
 }
-
