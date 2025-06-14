@@ -10,9 +10,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
+  // SidebarMenuSub, // Not used
+  // SidebarMenuSubButton, // Not used
+  // SidebarMenuSubItem, // Not used
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -55,7 +55,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     "settings": false,
   });
 
-  console.log("AppSidebar rendered with activeTab:", activeTab);
+  // console.log("AppSidebar rendered with activeTab:", activeTab); // Keep console logs if helpful for user
 
   const toggleSection = (sectionId: string) => {
     setOpenSections(prev => ({
@@ -183,29 +183,29 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   ];
 
   return (
-    <Sidebar className="border-r">
-      <SidebarHeader className="border-b p-4">
+    <Sidebar className="border-r bg-sidebar text-sidebar-foreground">
+      <SidebarHeader className="border-b p-4 bg-gradient-to-r from-lp-emerald-600 via-lp-blue-600 to-lp-purple-600 text-white">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white/20 text-primary-foreground">
             <Package className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold">Jewelry ERP</span>
-            <span className="text-xs text-muted-foreground">Manufacturing</span>
+            <span className="text-xs text-white/80">Manufacturing</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="[&>div]:space-y-0.5"> {/* Reduced spacing between groups */}
         {menuSections.map((section) => (
-          <SidebarGroup key={section.label}>
+          <SidebarGroup key={section.label} className="py-1 first:pt-0 last:pb-0"> {/* Reduced padding for groups */}
             {section.id ? (
               <Collapsible 
                 open={openSections[section.id]} 
                 onOpenChange={() => toggleSection(section.id!)}
               >
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-accent rounded-md p-2">
+                  <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-sidebar-accent/50 rounded-md p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground">
                     <span>{section.label}</span>
                     {openSections[section.id] ? (
                       <ChevronDown className="h-3 w-3" />
@@ -222,12 +222,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                           <SidebarMenuButton 
                             onClick={() => onTabChange(item.tab)}
                             isActive={activeTab === item.tab}
-                            className="w-full"
+                            className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent/50 data-[active=true]:hover:opacity-90"
                           >
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
                             {item.badge && (
-                              <Badge variant="secondary" className="ml-auto">
+                              <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
                                 {item.badge}
                               </Badge>
                             )}
@@ -240,7 +240,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
               </Collapsible>
             ) : (
               <>
-                <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+                <SidebarGroupLabel className="p-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70">{section.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {section.items.map((item) => (
@@ -248,12 +248,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                         <SidebarMenuButton 
                           onClick={() => onTabChange(item.tab)}
                           isActive={activeTab === item.tab}
-                          className="w-full"
+                          className="w-full text-sm h-9 data-[active=true]:bg-gradient-to-r data-[active=true]:from-lp-blue-500 data-[active=true]:to-lp-emerald-500 data-[active=true]:text-white hover:bg-sidebar-accent/50 data-[active=true]:hover:opacity-90"
                         >
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                           {item.badge && (
-                            <Badge variant="secondary" className="ml-auto">
+                            <Badge variant="secondary" className="ml-auto bg-white/20 text-white">
                               {item.badge}
                             </Badge>
                           )}
@@ -268,11 +268,11 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t p-4 border-sidebar-border">
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
         >
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
