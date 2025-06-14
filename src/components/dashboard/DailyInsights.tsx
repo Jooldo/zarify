@@ -55,7 +55,7 @@ const DailyInsights = () => {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Daily Insights</CardTitle>
@@ -81,7 +81,7 @@ const DailyInsights = () => {
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm hover:shadow-lg transition-shadow duration-300">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Today's Insights</CardTitle>
@@ -104,7 +104,7 @@ const DailyInsights = () => {
             return (
               <div 
                 key={insight.id} 
-                className={`p-3 rounded-lg border ${getTypeColor(insight.type)} transition-colors`}
+                className={`p-3 rounded-lg border ${getTypeColor(insight.type)} transition-transform hover:scale-[1.02] duration-300 ease-in-out`}
               >
                 <div className="flex items-start gap-3">
                   <IconComponent className="h-5 w-5 mt-0.5 flex-shrink-0" />

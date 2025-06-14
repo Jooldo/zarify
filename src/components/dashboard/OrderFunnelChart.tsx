@@ -8,7 +8,7 @@ const OrderFunnelChart = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="shadow-sm hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
           <CardTitle className="text-sm">Order Status Distribution</CardTitle>
         </CardHeader>
@@ -31,7 +31,7 @@ const OrderFunnelChart = () => {
   ];
 
   return (
-    <Card>
+    <Card className="shadow-sm hover:shadow-lg transition-shadow duration-300">
       <CardHeader>
         <CardTitle className="text-sm">Order Status Distribution</CardTitle>
       </CardHeader>

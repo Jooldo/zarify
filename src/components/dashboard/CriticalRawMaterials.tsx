@@ -31,7 +31,7 @@ const CriticalRawMaterials = ({ onNavigateToProcurement }: CriticalRawMaterialsP
     .slice(0, 3);
 
   return (
-    <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
+    <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.01]">
       <CardHeader className="pb-3 pt-3 px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-gray-900">Critical Raw Materials</CardTitle>
@@ -54,7 +54,7 @@ const CriticalRawMaterials = ({ onNavigateToProcurement }: CriticalRawMaterialsP
         ) : (
           <div className="space-y-2">
             {criticalMaterials.map((material) => (
-              <div key={material.id} className="border-l-4 border-l-orange-400 bg-orange-50 rounded-lg p-2 hover:shadow-sm transition-shadow">
+              <div key={material.id} className="border-l-4 border-l-orange-400 bg-orange-50 rounded-r-lg p-2 hover:bg-orange-100 transition-colors">
                 <div className="flex justify-between items-start mb-1">
                   <div className="font-medium text-gray-900 text-xs">{material.name}</div>
                   <div className="text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded text-[10px]">{material.type}</div>

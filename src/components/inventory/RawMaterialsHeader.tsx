@@ -20,56 +20,56 @@ const RawMaterialsHeader = ({ materialStats }: RawMaterialsHeaderProps) => {
         <h2 className="text-xl font-semibold">Raw Material Inventory</h2>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-blue-50 to-white">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-blue-50 border-blue-200 border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-gray-700">Total Materials</CardTitle>
-            <div className="p-1.5 bg-blue-100 rounded-full">
-              <Package className="h-3.5 w-3.5 text-blue-600" />
+            <CardTitle className="text-xs font-medium text-blue-800">Total Materials</CardTitle>
+            <div className="p-1.5 bg-blue-200 rounded-full">
+              <Package className="h-4 w-4 text-blue-700" />
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold text-blue-700">{materialStats.total}</div>
-            <p className="text-xs text-gray-500 mt-0.5">Material types</p>
+            <div className="text-2xl font-bold text-blue-900">{materialStats.total}</div>
+            <p className="text-xs text-blue-700 mt-0.5">Material types</p>
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-red-50 to-white">
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-red-50 border-red-200 border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-gray-700">Critical Stock</CardTitle>
-            <div className="p-1.5 bg-red-100 rounded-full">
-              <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+            <CardTitle className="text-xs font-medium text-red-800">Critical Stock</CardTitle>
+            <div className="p-1.5 bg-red-200 rounded-full">
+              <AlertTriangle className="h-4 w-4 text-red-700" />
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold text-red-700">{materialStats.critical}</div>
-            <p className="text-xs text-gray-500 mt-0.5">Urgent attention</p>
+            <div className="text-2xl font-bold text-red-900">{materialStats.critical}</div>
+            <p className="text-xs text-red-700 mt-0.5">Urgent attention</p>
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-l-yellow-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-yellow-50 to-white">
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-yellow-50 border-yellow-200 border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-gray-700">Low Stock</CardTitle>
-            <div className="p-1.5 bg-yellow-100 rounded-full">
-              <Target className="h-3.5 w-3.5 text-yellow-600" />
+            <CardTitle className="text-xs font-medium text-yellow-800">Low Stock</CardTitle>
+            <div className="p-1.5 bg-yellow-200 rounded-full">
+              <Target className="h-4 w-4 text-yellow-700" />
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold text-yellow-700">{materialStats.low}</div>
-            <p className="text-xs text-gray-500 mt-0.5">Need restocking</p>
+            <div className="text-2xl font-bold text-yellow-900">{materialStats.low}</div>
+            <p className="text-xs text-yellow-700 mt-0.5">Need restocking</p>
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-r from-green-50 to-white">
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-green-50 border-green-200 border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-gray-700">Good Stock</CardTitle>
-            <div className="p-1.5 bg-green-100 rounded-full">
-              <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+            <CardTitle className="text-xs font-medium text-green-800">Good Stock</CardTitle>
+            <div className="p-1.5 bg-green-200 rounded-full">
+              <CheckCircle className="h-4 w-4 text-green-700" />
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold text-green-700">{materialStats.good}</div>
-            <p className="text-xs text-gray-500 mt-0.5">Healthy levels</p>
+            <div className="text-2xl font-bold text-green-900">{materialStats.good}</div>
+            <p className="text-xs text-green-700 mt-0.5">Healthy levels</p>
           </CardContent>
         </Card>
       </div>
