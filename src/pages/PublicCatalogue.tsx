@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ShoppingCart, Plus, Minus, Phone, Mail, ArrowLeft } from 'lucide-react';
@@ -19,6 +18,7 @@ interface CartItem {
   size_value: number;
   price?: number;
   quantity: number;
+  [key: string]: any; // Index signature for JSON compatibility
 }
 
 const PublicCatalogue = () => {
@@ -155,7 +155,7 @@ const PublicCatalogue = () => {
           customer_phone: customerInfo.phone || null,
           customer_email: customerInfo.email || null,
           notes: customerInfo.notes || null,
-          order_items: cart,
+          order_items: cart as any, // Cast to any for JSON compatibility
           total_amount: getTotalAmount(),
         });
 

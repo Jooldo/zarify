@@ -2,7 +2,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CatalogueItem } from './useCatalogues';
+
+export interface CatalogueItem {
+  id: string;
+  catalogue_id: string;
+  product_config_id: string;
+  display_order: number;
+  custom_price?: number;
+  custom_description?: string;
+  is_featured: boolean;
+  created_at: string;
+  product_configs?: {
+    id: string;
+    product_code: string;
+    category: string;
+    subcategory: string;
+    size_value: number;
+    weight_range?: string;
+  };
+}
 
 export interface CreateCatalogueItemData {
   catalogue_id: string;
