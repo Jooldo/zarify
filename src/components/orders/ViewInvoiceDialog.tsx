@@ -142,8 +142,8 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
           
           <div class="customer-details">
             <h3>Bill To:</h3>
-            <p><strong>${order.customer.name}</strong></p>
-            ${order.customer.phone ? `<p>Phone: ${order.customer.phone}</p>` : ''}
+            <p><strong>${order.customers?.name}</strong></p>
+            ${order.customers?.phone ? `<p>Phone: ${order.customers.phone}</p>` : ''}
           </div>
           
           <table class="items-table">
@@ -160,9 +160,9 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
             <tbody>
               ${order.order_items.map(item => `
                 <tr>
-                  <td>${item.product_config.product_code}</td>
-                  <td>${item.product_config.category}</td>
-                  <td>${item.product_config.subcategory}</td>
+                  <td>${item.product_configs?.product_code}</td>
+                  <td>${item.product_configs?.category}</td>
+                  <td>${item.product_configs?.subcategory}</td>
                   <td>${item.quantity}</td>
                   <td>${item.unit_price.toFixed(2)}</td>
                   <td>${item.total_price.toFixed(2)}</td>
@@ -236,8 +236,8 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
             <div>
               <h3 className="font-semibold mb-2">Bill To:</h3>
               <div className="bg-gray-50 p-3 rounded">
-                <p className="font-medium">{order.customer.name}</p>
-                {order.customer.phone && <p className="text-sm text-gray-600">Phone: {order.customer.phone}</p>}
+                <p className="font-medium">{order.customers?.name}</p>
+                {order.customers?.phone && <p className="text-sm text-gray-600">Phone: {order.customers.phone}</p>}
               </div>
             </div>
           </div>
@@ -260,9 +260,9 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
                 <tbody>
                   {order.order_items.map((item) => (
                     <tr key={item.id} className="border-t">
-                      <td className="px-4 py-2">{item.product_config.product_code}</td>
-                      <td className="px-4 py-2">{item.product_config.category}</td>
-                      <td className="px-4 py-2">{item.product_config.subcategory}</td>
+                      <td className="px-4 py-2">{item.product_configs?.product_code}</td>
+                      <td className="px-4 py-2">{item.product_configs?.category}</td>
+                      <td className="px-4 py-2">{item.product_configs?.subcategory}</td>
                       <td className="px-4 py-2 text-center">{item.quantity}</td>
                       <td className="px-4 py-2 text-right">₹{item.unit_price.toFixed(2)}</td>
                       <td className="px-4 py-2 text-right">₹{item.total_price.toFixed(2)}</td>

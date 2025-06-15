@@ -24,7 +24,7 @@ const LiveOrderFunnel = () => {
   const allOrderItems = orders.flatMap(order => order.order_items);
   const statusCounts = {
     Created: allOrderItems.filter(item => item.status === 'Created').length,
-    Progress: allOrderItems.filter(item => item.status === 'Progress').length,
+    'In Progress': allOrderItems.filter(item => item.status === 'In Progress').length,
     Ready: allOrderItems.filter(item => item.status === 'Ready').length,
     Delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
   };
@@ -32,7 +32,7 @@ const LiveOrderFunnel = () => {
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'Created': return { color: 'bg-gray-100 text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-l-gray-400' };
-      case 'Progress': return { color: 'bg-orange-100 text-orange-800', bgColor: 'bg-orange-50', borderColor: 'border-l-orange-400' };
+      case 'In Progress': return { color: 'bg-orange-100 text-orange-800', bgColor: 'bg-orange-50', borderColor: 'border-l-orange-400' };
       case 'Ready': return { color: 'bg-yellow-100 text-yellow-800', bgColor: 'bg-yellow-50', borderColor: 'border-l-yellow-400' };
       case 'Delivered': return { color: 'bg-green-100 text-green-800', bgColor: 'bg-green-50', borderColor: 'border-l-green-400' };
       default: return { color: 'bg-gray-100 text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-l-gray-400' };

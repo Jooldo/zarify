@@ -11,7 +11,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useInvoices } from '@/hooks/useInvoices';
-import type { Order } from '@/hooks/useOrders';
+import type { Order, OrderItem } from '@/hooks/useOrders';
 
 interface CreateInvoiceDialogProps {
   isOpen: boolean;
@@ -53,11 +53,11 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
     setIsSubmitting(true);
     try {
       console.log('Order object:', order);
-      console.log('Customer object:', order.customer);
+      console.log('Customer object:', order.customers);
 
       const invoiceData = {
         order_id: order.id,
-        customer_id: order.customer_id || order.customer?.id,
+        customer_id: order.customer_id || order.customers?.id,
         invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         subtotal,
@@ -72,7 +72,7 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
 
       const invoiceItems = editableItems.map(item => ({
         order_item_id: item.id,
-        product_config_id: item.product_config_id || item.product_config?.id,
+        product_config_id: item.product_config_id || item.product_configs?.id,
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,
@@ -102,8 +102,8 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
           <div className="space-y-2">
             <h3 className="font-medium">Customer Information</h3>
             <div className="bg-gray-50 p-3 rounded-md">
-              <p><strong>Name:</strong> {order.customer?.name || 'N/A'}</p>
-              {order.customer?.phone && <p><strong>Phone:</strong> {order.customer.phone}</p>}
+              <p><strong>Name:</strong> {order.customers?.name || 'N/A'}</p>
+              {order.customers?.phone && <p><strong>Phone:</strong> {order.customers.phone}</p>}
             </div>
           </div>
 
@@ -114,9 +114,9 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
               {editableItems.map((item) => (
                 <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded border">
                   <div className="flex-1">
-                    <p className="font-medium">{item.product_config?.product_code || 'N/A'}</p>
+                    <p className="font-medium">{item.product_configs?.product_code || 'N/A'}</p>
                     <p className="text-sm text-gray-600">
-                      {item.product_config?.category || 'N/A'} - {item.product_config?.subcategory || 'N/A'}
+                      {item.product_configs?.category || 'N/A'} - {item.product_configs?.subcategory || 'N/A'}
                     </p>
                     <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                   </div>

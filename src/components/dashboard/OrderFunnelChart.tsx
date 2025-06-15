@@ -25,7 +25,7 @@ const OrderFunnelChart = () => {
   
   const data = [
     { status: 'Created', count: allOrderItems.filter(item => item.status === 'Created').length },
-    { status: 'Progress', count: allOrderItems.filter(item => item.status === 'Progress').length },
+    { status: 'In Progress', count: allOrderItems.filter(item => item.status === 'In Progress').length },
     { status: 'Ready', count: allOrderItems.filter(item => item.status === 'Ready').length },
     { status: 'Delivered', count: allOrderItems.filter(item => item.status === 'Delivered').length },
   ];

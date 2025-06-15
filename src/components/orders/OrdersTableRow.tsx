@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialo
 import SuborderDetailsDialog from './SuborderDetailsDialog'; // New dialog for suborder
 import { useInvoices } from '@/hooks/useInvoices';
 import { FinishedGood } from '@/hooks/useFinishedGoods'; // Import type
-import { OrderItem as FullOrderItem } from '@/hooks/useOrders';
+import { OrderItem as FullOrderItem, ProductConfig } from '@/hooks/useOrders';
 import { Order as FullOrder } from '@/hooks/useOrders';
 import { OrderStatus } from '@/hooks/useOrders';
 
@@ -40,14 +39,7 @@ interface OrdersTableRowProps {
     fulfilled_quantity: number; 
     unit_price: number;
     product_config_id: string;
-    product_configs: {
-      id: string;
-      product_code: string;
-      category: string;
-      subcategory: string;
-      size_value: number;
-      weight_range: string | null;
-    };
+    product_configs: ProductConfig;
   };
   orders: FullOrder[]; // Full orders list to find the parent order
   finishedGoods: FinishedGood[]; // For product details on product code click
@@ -147,6 +139,15 @@ const OrdersTableRow = ({
     status: item.status as OrderStatus,
     product_config_id: item.product_config_id,
     product_configs: item.product_configs,
+    updated_at: item.updatedDate,
+    // The following are part of the OrderItem type but might not be directly on `item` if it's a simplified object.
+    // Assuming they exist on `item` because it's spread from the original suborder.
+    // @ts-ignore
+    created_at: item.createdDate,
+    // @ts-ignore
+    order_id: item.order_id,
+    // @ts-ignore
+    merchant_id: item.merchant_id,
   };
 
 
