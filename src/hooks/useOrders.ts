@@ -30,6 +30,7 @@ export interface Order {
   total_amount: number;
   created_date: string;
   updated_date: string;
+  updated_at: string;
   expected_delivery?: string;
   status: OrderStatus; // Updated type
   customer_id: string;

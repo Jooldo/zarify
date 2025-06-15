@@ -1,5 +1,6 @@
 
 import { useUserProfile } from '@/hooks/useUserProfile';
+import DashboardCharts from './DashboardCharts';
 
 interface VisualDashboardProps {
   onNavigateToTab?: (tab: string) => void;
@@ -34,9 +35,7 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
       </div>
 
       {/* Main Content Area */}
-      <div className="min-h-[400px] bg-gray-100 border-2 border-dashed rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Your new dashboard starts here.</p>
-      </div>
+      <DashboardCharts />
     </div>
   );
 };
