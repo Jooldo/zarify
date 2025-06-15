@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const chartConfig = {
   readyOrders: {
     label: 'Ready Orders',
-    color: '#10b981', // emerald-500
+    color: 'hsl(var(--primary))',
   },
 };
 
@@ -89,7 +89,7 @@ const ReadyOrdersTrendChart = () => {
   return (
     <Card className="h-full">
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
                 <CardTitle>Ready Orders Trend</CardTitle>
                 <CardDescription>Orders moved to 'Ready' over time</CardDescription>

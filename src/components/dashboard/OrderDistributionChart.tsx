@@ -9,11 +9,11 @@ import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 const chartConfig = {
   created: {
     label: 'Created',
-    color: '#3b82f6', // blue-500
+    color: 'hsl(var(--primary))',
   },
   inProgress: {
     label: 'In Progress',
-    color: '#f97316', // orange-500
+    color: 'hsl(var(--muted-foreground))',
   },
 };
 
@@ -42,7 +42,7 @@ const OrderDistributionChart = () => {
 
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="pb-0">
         <CardTitle>Order Distribution</CardTitle>
         <CardDescription>Created vs. In Progress</CardDescription>
       </CardHeader>
