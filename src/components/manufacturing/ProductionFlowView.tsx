@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -169,7 +168,6 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     onNextStepClick: (orderStep: any) => void;
     stepValues: any[];
     stepFields: any[];
-    timestamp: number; // Force re-render when this changes
   };
   
   console.log('StepProgressNodeComponent - stepData:', stepData);
@@ -210,18 +208,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
-  const handleViewDetails = (order: ManufacturingOrder) => {
+  const handleViewDetails = useCallback((order: ManufacturingOrder) => {
     setSelectedOrder(order);
     setDetailsDialogOpen(true);
-  };
+  }, []);
 
-  const handleStepClick = (orderStep: any) => {
+  const handleStepClick = useCallback((orderStep: any) => {
     console.log('Step clicked:', orderStep);
     setSelectedOrderStep(orderStep);
     setUpdateStepDialogOpen(true);
-  };
+  }, []);
 
-  const handleNextStepClick = (orderStep: any) => {
+  const handleNextStepClick = useCallback((orderStep: any) => {
     // Find the next step after this completed step
     const currentOrder = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
     if (!currentOrder) return;
@@ -236,7 +234,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       setSelectedStepForStart(nextStep);
       setStartStepDialogOpen(true);
     }
-  };
+  }, [manufacturingOrders, manufacturingSteps]);
 
   // Handle node drag to save positions
   const onNodeDragStop: OnNodeDrag = useCallback((event, node) => {
@@ -244,10 +242,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   }, [updateNodePosition]);
 
   // Convert manufacturing orders and their steps to React Flow nodes
-  // Use timestamp to force re-render when data changes
   const initialNodes: Node[] = useMemo(() => {
-    const timestamp = Date.now();
-    console.log('Creating nodes with stepValues:', stepValues.length, 'stepFields:', stepFields.length, 'at timestamp:', timestamp);
+    console.log('Recalculating nodes...');
     const nodes: Node[] = [];
     
     manufacturingOrders.forEach((order, orderIndex) => {
@@ -267,7 +263,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         data: { 
           ...order, 
           onViewDetails: handleViewDetails,
-          timestamp
         } as unknown as Record<string, unknown>,
       });
 
@@ -305,14 +300,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             onNextStepClick: handleNextStepClick,
             stepValues: stepStepValues,
             stepFields: stepStepFields, // Pass step fields to the node
-            timestamp // Force re-render when this changes
           } as unknown as Record<string, unknown>,
         });
       });
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition]); // Include stepFields in dependencies
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick]);
 
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
@@ -359,19 +353,19 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return edges;
   }, [manufacturingOrders, orderSteps]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Update nodes when initialNodes change (this ensures real-time updates)
   React.useEffect(() => {
     console.log('Updating React Flow nodes due to data changes');
     setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+  }, [initialNodes]);
 
   // Update edges when initialEdges change
   React.useEffect(() => {
     setEdges(initialEdges);
-  }, [initialEdges, setEdges]);
+  }, [initialEdges]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),
