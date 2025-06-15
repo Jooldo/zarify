@@ -13,6 +13,7 @@ export interface OrderItem {
   unit_price: number;
   total_price: number;
   status: OrderStatus; // Updated type
+  updated_at: string;
   product_config_id: string;
   product_config: {
     id: string;

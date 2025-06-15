@@ -24,7 +24,7 @@ const ReadyOrdersTrendChart = () => {
   const chartData = useMemo(() => {
     if (!orders) return [];
 
-    const readyOrders = orders.filter(o => o.status === 'Ready' && o.updated_at);
+    const readyOrderItems = orders.flatMap(o => o.order_items).filter(item => item.status === 'Ready' && item.updated_at);
 
     const now = new Date();
     let interval;
@@ -34,8 +34,8 @@ const ReadyOrdersTrendChart = () => {
       case 'weekly':
         interval = { start: subDays(now, 83), end: now };
         const weekKeyFormat = 'yyyy-MM-dd';
-        readyOrders.forEach(o => {
-            const key = format(startOfWeek(new Date(o.updated_at), { weekStartsOn: 1 }), weekKeyFormat);
+        readyOrderItems.forEach(item => {
+            const key = format(startOfWeek(new Date(item.updated_at), { weekStartsOn: 1 }), weekKeyFormat);
             dataMap.set(key, (dataMap.get(key) || 0) + 1);
         });
         const weeks = eachWeekOfInterval(interval, { weekStartsOn: 1 });
@@ -50,8 +50,8 @@ const ReadyOrdersTrendChart = () => {
       case 'monthly':
         interval = { start: subDays(now, 364), end: now };
         const monthKeyFormat = 'yyyy-MM';
-        readyOrders.forEach(o => {
-            const key = format(new Date(o.updated_at), monthKeyFormat);
+        readyOrderItems.forEach(item => {
+            const key = format(new Date(item.updated_at), monthKeyFormat);
             dataMap.set(key, (dataMap.get(key) || 0) + 1);
         });
         const months = eachMonthOfInterval(interval);
@@ -67,8 +67,8 @@ const ReadyOrdersTrendChart = () => {
       default:
         interval = { start: subDays(now, 29), end: now };
         const dayKeyFormat = 'yyyy-MM-dd';
-        readyOrders.forEach(o => {
-            const key = format(new Date(o.updated_at), dayKeyFormat);
+        readyOrderItems.forEach(item => {
+            const key = format(new Date(item.updated_at), dayKeyFormat);
             dataMap.set(key, (dataMap.get(key) || 0) + 1);
         });
         const days = eachDayOfInterval(interval);

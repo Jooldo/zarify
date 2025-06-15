@@ -23,8 +23,10 @@ const OrderDistributionChart = () => {
   const chartData = useMemo(() => {
     if (!orders) return [];
     
-    const createdCount = orders.filter(o => o.status === 'Created').length;
-    const inProgressCount = orders.filter(o => o.status === 'Progress' || o.status === 'Partially Fulfilled').length;
+    const allOrderItems = orders.flatMap(o => o.order_items);
+    
+    const createdCount = allOrderItems.filter(item => item.status === 'Created').length;
+    const inProgressCount = allOrderItems.filter(item => item.status === 'Progress' || item.status === 'Partially Fulfilled').length;
     
     return [
       { name: 'created', value: createdCount, fill: 'var(--color-created)' },
