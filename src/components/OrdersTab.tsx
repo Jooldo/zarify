@@ -1,14 +1,15 @@
-
 import { useState, useMemo } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { useInvoices } from '@/hooks/useInvoices';
+import { startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
+import DeliveryTimeline from './orders/DeliveryTimeline';
 
-interface OrderFilters {
+export interface OrderFilters {
   customer: string;
   orderStatus: string;
   suborderStatus: string;
@@ -238,6 +239,18 @@ const OrdersTab = () => {
         case 'Past due':
           if (daysDiff >= 0) return false;
           break;
+        case 'This Week': {
+            const startOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+            const endOfThisWeek = endOfWeek(today, { weekStartsOn: 1 });
+            if (!isWithinInterval(deliveryDateNormalized, { start: startOfThisWeek, end: endOfThisWeek })) return false;
+            break;
+        }
+        case 'Next Week': {
+            const startOfNextWeek = startOfWeek(addWeeks(today, 1), { weekStartsOn: 1 });
+            const endOfNextWeek = endOfWeek(addWeeks(today, 1), { weekStartsOn: 1 });
+            if (!isWithinInterval(deliveryDateNormalized, { start: startOfNextWeek, end: endOfNextWeek })) return false;
+            break;
+        }
       }
     }
 
@@ -291,6 +304,12 @@ const OrdersTab = () => {
   return (
     <div className="space-y-4">
       <OrdersStatsHeader orderStats={orderStats} />
+      
+      <DeliveryTimeline
+        orders={orders}
+        getOverallOrderStatus={getOverallOrderStatus}
+        onFilterChange={setFilters}
+      />
       
       <OrdersHeader 
         searchTerm={searchTerm} 
