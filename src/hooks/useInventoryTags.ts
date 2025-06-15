@@ -379,7 +379,7 @@ export const useInventoryTags = () => {
         // If newFulfilledQuantity is 0, status doesn't change by tag-out logic (as quantity is > 0)
         // or remains as is if it was e.g. 'Created' and fulfillment is still 0.
 
-        const dbStatus = newOrderItemStatus === 'Progress' ? 'In Progress' : newOrderItemStatus;
+        const dbStatus = newOrderItemStatus === 'In Progress' ? 'In Progress' : newOrderItemStatus;
 
         const { error: updateError } = await supabase
           .from('order_items')
@@ -537,7 +537,7 @@ export const useInventoryTags = () => {
           newOrderItemStatus = 'Partially Fulfilled';
         }
 
-        const dbStatus = newOrderItemStatus === 'Progress' ? 'In Progress' : newOrderItemStatus;
+        const dbStatus = newOrderItemStatus === 'In Progress' ? 'In Progress' : newOrderItemStatus;
 
         const { error: updateError } = await supabase
           .from('order_items')
