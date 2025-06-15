@@ -50,47 +50,80 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     }
   }, [order, orderSteps, manufacturingSteps]);
 
+  // NEW: Utility for better log details
+  function logStepDebug(orderSteps, manufacturingSteps, forOrderId) {
+    console.log("[STEP DETAILS DEBUG]:");
+    console.log("Order ID:", forOrderId);
+    console.log("orderSteps", orderSteps);
+    console.log("manufacturingSteps", manufacturingSteps);
+    if (orderSteps.length && manufacturingSteps.length && forOrderId) {
+      const stepsForOrder = orderSteps.filter(s => s.manufacturing_order_id === forOrderId);
+      console.log("Steps for this order:", stepsForOrder);
+      const stepOrders = stepsForOrder.map(s => s.manufacturing_steps?.step_order);
+      const uniqueStepOrders = [...new Set(stepOrders)];
+      console.log("Step orders present:", uniqueStepOrders);
+    }
+  }
+
+  React.useEffect(() => {
+    if (order && step) {
+      logStepDebug(orderSteps, manufacturingSteps, order.id);
+    }
+  }, [order, orderSteps, manufacturingSteps, step]);
+
   const previousStepsData = useMemo(() => {
     if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {
       return [];
     }
 
     const currentStepDefinition = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
-    if (!currentStepDefinition) return [];
+    if (!currentStepDefinition) {
+      console.log("[DEBUG] No currentStepDefinition for step:", step);
+      return [];
+    }
 
-    // Find all previous steps with lower step_order for current merchant/order
+    // Defensive, parse to numbers to avoid string/number confusion
+    const currentStepOrder = typeof currentStepDefinition.step_order === "number"
+      ? currentStepDefinition.step_order
+      : Number(currentStepDefinition.step_order);
+
+    // Get all previous step definitions based on order (fix parsing!)
     const previousStepDefinitions = manufacturingSteps
-      .filter(s => s.step_order < currentStepDefinition.step_order)
-      .sort((a, b) => a.step_order - b.step_order);
+      .filter(s => {
+        const so = typeof s.step_order === "number" ? s.step_order : Number(s.step_order);
+        return so < currentStepOrder;
+      })
+      .sort((a, b) => (Number(a.step_order) - Number(b.step_order)));
 
-    // Debug: Log the previous step definitions
-    console.log('[DEBUG] Previous step definitions:', previousStepDefinitions);
+    // Extra debug
+    console.log('[DEBUG] previousStepDefinitions:', previousStepDefinitions);
 
     return previousStepDefinitions.map(prevStepDef => {
+      // Be robust if order_step linkage is missing (check both id and type)
       const prevOrderStep = orderSteps.find(os =>
-        os.manufacturing_order_id === order.id && os.manufacturing_step_id === prevStepDef.id
+        String(os.manufacturing_order_id) === String(order.id) &&
+        String(os.manufacturing_step_id) === String(prevStepDef.id)
       );
 
       if (!prevOrderStep) {
-        // Debug: No prevOrderStep found
         console.log(`[DEBUG] No prevOrderStep found for step_id=${prevStepDef.id} in order_id=${order.id}`);
         return null;
       }
 
       const fields = getStepFields(prevStepDef.id);
 
-      // Debug: Log which fields are found
-      console.log(`[DEBUG] Fields for prev step ${prevStepDef.step_name}:`, fields);
+      // More debug
+      console.log(`[DEBUG] Fields for prev step ${prevStepDef.step_name} (${prevStepDef.id}) in order ${order.id}:`, fields);
 
       const values = fields.map(field => {
         const value = getStepValue(prevOrderStep.id, field.field_id);
         return {
           label: field.field_label,
           value: value || '-',
+          unit: field.field_options?.unit,
         };
       });
 
-      // Debug: Log the values for these fields in this previous order step
       console.log(`[DEBUG] Prev step ${prevStepDef.step_name} values:`, values);
 
       return {
