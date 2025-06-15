@@ -45,11 +45,10 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       
       // This part needs to call the hook's update function if we refactor fully.
       // For now, keeping direct Supabase update as per original structure, but using refined payload.
-      const dbStatus = newStatus === 'Progress' ? 'In Progress' : newStatus;
       const { error } = await supabase
         .from('order_items')
         .update({ 
-          status: dbStatus,
+          status: newStatus,
           fulfilled_quantity: fulfilledQuantityUpdate,
           updated_at: new Date().toISOString()
         })
@@ -100,7 +99,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Customer:</Label>
-              <div className="font-semibold">{order.customer.name}</div>
+              <div className="font-semibold">{order.customers.name}</div>
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Total Amount:</Label>
@@ -128,8 +127,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         <CardContent className="pt-0">
           <div className="space-y-1.5">
             {order.order_items.map((item: OrderItemType) => {
-              const sizeValue = item.product_config.size_value || 'N/A';
-              const weightRange = item.product_config.weight_range || 'N/A';
+              const sizeValue = item.product_configs.size_value || 'N/A';
+              const weightRange = item.product_configs.weight_range || 'N/A';
               const sizeWeight = `${sizeValue}" / ${weightRange}`;
               const fulfillmentProgress = item.quantity > 0 ? (item.fulfilled_quantity / item.quantity) * 100 : 0;
               
@@ -143,15 +142,15 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                   <div className="space-y-0.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Product Code:</span>
-                      <span className="font-medium">{item.product_config.product_code}</span>
+                      <span className="font-medium">{item.product_configs.product_code}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Category:</span>
-                      <span>{item.product_config.category}</span>
+                      <span>{item.product_configs.category}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Type:</span>
-                      <span>{item.product_config.subcategory}</span>
+                      <span>{item.product_configs.subcategory}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Size & Weight:</span>
@@ -188,7 +187,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Created">Created</SelectItem>
-                        <SelectItem value="Progress">Progress</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
                         <SelectItem value="Partially Fulfilled">Partially Fulfilled</SelectItem>
                         <SelectItem value="Ready">Ready</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>

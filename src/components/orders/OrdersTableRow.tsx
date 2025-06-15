@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ interface OrdersTableRowProps {
     fulfilled_quantity: number; 
     unit_price: number;
     product_config_id: string;
-    product_config: {
+    product_configs: {
       id: string;
       product_code: string;
       category: string;
@@ -88,7 +89,7 @@ const OrdersTableRow = ({
     switch (status) {
       case 'Created':
         return <Clock className="h-3 w-3" />;
-      case 'Progress':
+      case 'In Progress':
         return <Package className="h-3 w-3" />;
       case 'Ready':
         return <CheckCircle className="h-3 w-3" />;
@@ -103,7 +104,7 @@ const OrdersTableRow = ({
     switch (status) {
       case 'Created':
         return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
-      case 'Progress':
+      case 'In Progress':
         return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       case 'Ready':
         return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
@@ -145,7 +146,7 @@ const OrdersTableRow = ({
     total_price: item.price, // item.price is suborder total_price
     status: item.status as OrderStatus,
     product_config_id: item.product_config_id,
-    product_config: item.product_config,
+    product_configs: item.product_configs,
   };
 
 

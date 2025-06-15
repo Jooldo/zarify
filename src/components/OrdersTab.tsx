@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
@@ -56,7 +57,7 @@ const OrdersTab = () => {
     return {
       total: allOrderItems.length,
       created: allOrderItems.filter(item => item.status === 'Created').length,
-      inProgress: allOrderItems.filter(item => item.status === 'Progress').length,
+      inProgress: allOrderItems.filter(item => item.status === 'In Progress').length,
       ready: allOrderItems.filter(item => item.status === 'Ready').length,
       delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
     };
@@ -68,8 +69,8 @@ const OrdersTab = () => {
     
     orders.forEach(order => {
       order.order_items.forEach(item => {
-        if (item.product_config.category) categoriesSet.add(item.product_config.category);
-        if (item.product_config.subcategory) subcategoriesSet.add(item.product_config.subcategory);
+        if (item.product_configs.category) categoriesSet.add(item.product_configs.category);
+        if (item.product_configs.subcategory) subcategoriesSet.add(item.product_configs.subcategory);
       });
     });
     
@@ -82,7 +83,7 @@ const OrdersTab = () => {
   const customerNames = useMemo(() => {
     const customersSet = new Set<string>();
     orders.forEach(order => {
-      if (order.customer.name) customersSet.add(order.customer.name);
+      if (order.customers.name) customersSet.add(order.customers.name);
     });
     return Array.from(customersSet).sort();
   }, [orders]);
@@ -96,7 +97,7 @@ const OrdersTab = () => {
     if (statuses.every(s => s === "Delivered")) return "Delivered";
     if (statuses.every(s => s === "Ready")) return "Ready";
     // if (statuses.some(s => s === "Progress" || s === "Partially Fulfilled")) return "Progress"; // Adjusted for Partially Fulfilled
-    if (statuses.some(s => s === "Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "Progress";
+    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "In Progress";
 
 
     if (statuses.every(s => s === "Created")) return "Created"; // All items are 'Created'
@@ -104,7 +105,7 @@ const OrdersTab = () => {
     // Handle cases where some are Created and others are not (e.g. partially started)
     // This logic might need refinement based on desired "overall" status behavior
     if (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created")) {
-        return "Progress"; // Or a custom status like "Partially Started"
+        return "In Progress"; // Or a custom status like "Partially Started"
     }
     
     return "Created"; // Default fallback
@@ -114,7 +115,7 @@ const OrdersTab = () => {
     switch (status) {
       case "Created":
         return "secondary" as const;
-      case "Progress": // Includes "In Progress" and "Partially Fulfilled"
+      case "In Progress": // Includes "In Progress" and "Partially Fulfilled"
       case "Partially Fulfilled":
         return "default" as const;
       case "Ready":
@@ -140,24 +141,24 @@ const OrdersTab = () => {
 
   const flattenedOrders = useMemo(() => orders.flatMap(order => 
     order.order_items.map(suborder => {
-      const sizeValue = suborder.product_config.size_value || 'N/A';
-      const weightRange = suborder.product_config.weight_range || 'N/A';
+      const sizeValue = suborder.product_configs.size_value || 'N/A';
+      const weightRange = suborder.product_configs.weight_range || 'N/A';
       
       return {
         // Spread all fields from suborder (FullOrderItem)
         ...suborder, 
         // Add flattened fields from parent order
         orderId: order.order_number,
-        customer: order.customer.name,
-        phone: order.customer.phone || '',
+        customer: order.customers.name,
+        phone: order.customers.phone || '',
         createdDate: order.created_date,
         updatedDate: order.updated_date,
         expectedDelivery: order.expected_delivery || '',
         totalOrderAmount: order.total_amount,
         // Explicitly map product config fields to top-level for easier access
-        productCode: suborder.product_config.product_code,
-        category: suborder.product_config.category,
-        subcategory: suborder.product_config.subcategory,
+        productCode: suborder.product_configs.product_code,
+        category: suborder.product_configs.category,
+        subcategory: suborder.product_configs.subcategory,
         // size is constructed
         size: `${sizeValue}" / ${weightRange}`,
         // price is suborder.total_price

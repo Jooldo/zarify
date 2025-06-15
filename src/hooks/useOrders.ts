@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
 
+export type OrderStatus = Database['public']['Enums']['order_status'];
+
 export type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: OrderItem[];
   customers: Customer | null;
@@ -61,6 +63,7 @@ export const useOrders = () => {
     data: orders = [],
     isLoading: loading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ['orders', user?.id],
     queryFn: fetchOrders,
@@ -70,6 +73,25 @@ export const useOrders = () => {
   const invalidateOrders = () => {
     queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
   };
+  
+  const updateOrderItemDetails = async (
+    itemId: string,
+    updates: { status?: OrderStatus; fulfilled_quantity?: number }
+  ) => {
+    const { error } = await supabase
+      .from('order_items')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', itemId);
 
-  return { orders, loading, error, invalidateOrders };
+    if (error) {
+      console.error('Error updating order item details:', error);
+      throw new Error('Could not update order item details');
+    }
+    
+    invalidateOrders();
+    queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
+    queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+  };
+
+  return { orders, loading, error, invalidateOrders, refetch, updateOrderItemDetails };
 };

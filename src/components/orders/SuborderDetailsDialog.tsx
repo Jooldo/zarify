@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -91,7 +90,7 @@ const SuborderDetailsDialog = ({
             </CardHeader>
             <CardContent className="space-y-0.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
               <InfoRow label="Order ID" value={parentOrder.order_number} />
-              <InfoRow label="Customer" value={parentOrder.customer.name} />
+              <InfoRow label="Customer" value={parentOrder.customers.name} />
             </CardContent>
           </Card>
 
@@ -100,12 +99,12 @@ const SuborderDetailsDialog = ({
               <h4 className="font-semibold text-xs text-gray-600">PRODUCT INFORMATION</h4>
             </CardHeader>
             <CardContent className="space-y-0.5 pb-2"> {/* Reduced pb-3 to pb-2 */}
-              <InfoRow label="Product Code" value={suborderItem.product_config.product_code} />
-              <InfoRow label="Category" value={suborderItem.product_config.category} />
-              <InfoRow label="Subcategory" value={suborderItem.product_config.subcategory} />
+              <InfoRow label="Product Code" value={suborderItem.product_configs.product_code} />
+              <InfoRow label="Category" value={suborderItem.product_configs.category} />
+              <InfoRow label="Subcategory" value={suborderItem.product_configs.subcategory} />
               <InfoRow 
                 label="Size/Weight" 
-                value={`${suborderItem.product_config.size_value}" / ${suborderItem.product_config.weight_range || 'N/A'}`} 
+                value={`${suborderItem.product_configs.size_value}" / ${suborderItem.product_configs.weight_range || 'N/A'}`} 
               />
             </CardContent>
           </Card>
@@ -163,7 +162,7 @@ const SuborderDetailsDialog = ({
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(['Created', 'Progress', 'Partially Fulfilled', 'Ready', 'Delivered'] as OrderStatus[]).map(status => (
+                    {(['Created', 'In Progress', 'Partially Fulfilled', 'Ready', 'Delivered'] as OrderStatus[]).map(status => (
                       <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>
                     ))}
                   </SelectContent>
@@ -185,4 +184,3 @@ const SuborderDetailsDialog = ({
 };
 
 export default SuborderDetailsDialog;
-
