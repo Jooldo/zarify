@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -118,13 +117,14 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       console.log('All Order Steps from hook:', allOrderSteps);
       console.log('All Step Fields from hook:', allStepFields);
 
-      const currentOrderSteps = allOrderSteps.filter(
-        (os) => String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id)
-      );
-      console.log(`Found ${currentOrderSteps.length} steps for order ID ${orderStep.manufacturing_order_id}`);
-
-      const previousOrderSteps = currentOrderSteps
-        .filter(os => os.manufacturing_steps && os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order)
+      // 1. Get previous order steps, sorted by their order
+      const previousOrderSteps = allOrderSteps
+        .filter(
+          (os) =>
+            String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
+            os.manufacturing_steps &&
+            os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order
+        )
         .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
       
       console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
@@ -132,12 +132,26 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       if (previousOrderSteps.length === 0) {
         return { headers: [], rows: [] };
       }
+
+      // 2. Group by unique manufacturing step to create table headers
+      const uniqueSteps = new Map<string, { name: string; order: number }>();
+      previousOrderSteps.forEach(pos => {
+        if (pos.manufacturing_steps && !uniqueSteps.has(pos.manufacturing_steps.id)) {
+          uniqueSteps.set(pos.manufacturing_steps.id, {
+            name: pos.manufacturing_steps.step_name || 'Unknown Step',
+            order: pos.manufacturing_steps.step_order,
+          });
+        }
+      });
+      const sortedUniqueSteps = Array.from(uniqueSteps.entries())
+        .sort(([, a], [, b]) => a.order - b.order);
       
-      const headers = previousOrderSteps.map(pos => pos.manufacturing_steps.step_name || 'Unknown Step');
+      const headers = sortedUniqueSteps.map(([, stepInfo]) => stepInfo.name);
+      const sortedUniqueStepIds = sortedUniqueSteps.map(([id]) => id);
       console.log('Table headers:', headers);
 
-      const distinctFieldLabels = new Map<string, { id: string, name: string, label: string, options: any }>();
-
+      // 3. Collect all unique fields from these steps to create table rows
+      const distinctFieldLabels = new Map<string, { id: string; name: string; label: string; options: any }>();
       previousOrderSteps.forEach(pos => {
         const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
         fieldsForThisStep.forEach(field => {
@@ -146,33 +160,43 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
               id: field.field_id,
               name: field.field_name,
               label: field.field_label,
-              options: field.field_options
+              options: field.field_options,
             });
           }
         });
       });
       console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
 
+      // 4. Build the table rows with aggregated values
       const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
         const rowData = {
           label: fieldInfo.label,
-          values: [] as string[]
+          values: [] as string[],
         };
 
-        previousOrderSteps.forEach(pos => {
-          const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
-          
-          let value = '-';
-          if (fieldForThisStep) {
-            const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
-            if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-              value = savedValue;
-              if (fieldForThisStep.field_options?.unit) {
-                value = `${value} ${fieldForThisStep.field_options.unit}`;
+        // For each unique step (column)
+        sortedUniqueStepIds.forEach(stepId => {
+          // Find all instances of this manufacturing step
+          const orderStepsForThisStep = previousOrderSteps.filter(pos => String(pos.manufacturing_step_id) === String(stepId));
+          const valuesForThisCell: string[] = [];
+
+          // For each instance, get the value
+          orderStepsForThisStep.forEach(pos => {
+            const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
+            if (fieldForThisStep) {
+              const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
+              if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+                let value = savedValue;
+                if (fieldForThisStep.field_options?.unit) {
+                  value = `${value} ${fieldForThisStep.field_options.unit}`;
+                }
+                valuesForThisCell.push(value);
               }
             }
-          }
-          rowData.values.push(value);
+          });
+
+          // Join multiple values or show a placeholder
+          rowData.values.push(valuesForThisCell.length > 0 ? valuesForThisCell.join(', ') : '-');
         });
 
         return rowData;
