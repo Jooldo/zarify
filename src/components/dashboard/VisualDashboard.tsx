@@ -1,11 +1,8 @@
-
 import { useUserProfile } from '@/hooks/useUserProfile';
 import DashboardCharts from './DashboardCharts';
 import DeliveryTimeline from '../orders/DeliveryTimeline';
-import { useOrders } from '@/hooks/useOrders';
+import { useOrders, Order as FullOrder } from '@/hooks/useOrders';
 import { OrderFilters } from '@/components/OrdersTab';
-import StockStatusChart from './StockStatusChart';
-import ManufacturingOverviewChart from './ManufacturingOverviewChart';
 
 interface VisualDashboardProps {
   onNavigateToTab?: (tab: string, filters?: Partial<OrderFilters>) => void;
@@ -71,11 +68,6 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
       )}
 
       {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <StockStatusChart />
-        <ManufacturingOverviewChart />
-      </div>
-
       <DashboardCharts />
     </div>
   );
