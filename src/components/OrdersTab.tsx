@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
@@ -7,7 +7,7 @@ import { startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
-import DeliveryTimeline from './orders/DeliveryTimeline';
+// import DeliveryTimeline from './orders/DeliveryTimeline'; // Removed
 
 export interface OrderFilters {
   customer: string;
@@ -27,8 +27,12 @@ export interface OrderFilters {
   expectedDeliveryRange: string;
 }
 
+interface OrdersTabProps {
+  initialFilters?: OrderFilters | null;
+  onFiltersConsumed?: () => void;
+}
 
-const OrdersTab = () => {
+const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
   const { orders, loading, refetch } = useOrders();
   const { finishedGoods, loading: fgLoading, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { customers } = useCustomerAutocomplete();
@@ -51,6 +55,15 @@ const OrdersTab = () => {
     expectedDeliveryTo: null,
     expectedDeliveryRange: ''
   });
+
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(initialFilters);
+      if (onFiltersConsumed) {
+        onFiltersConsumed();
+      }
+    }
+  }, [initialFilters, onFiltersConsumed]);
 
 
   const orderStats = useMemo(() => {
@@ -305,11 +318,7 @@ const OrdersTab = () => {
     <div className="space-y-4">
       <OrdersStatsHeader orderStats={orderStats} />
       
-      <DeliveryTimeline
-        orders={orders}
-        getOverallOrderStatus={getOverallOrderStatus}
-        onFilterChange={setFilters}
-      />
+      {/* <DeliveryTimeline ... /> Removed */}
       
       <OrdersHeader 
         searchTerm={searchTerm} 

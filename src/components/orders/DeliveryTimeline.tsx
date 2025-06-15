@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Order as FullOrder } from '@/hooks/useOrders';
@@ -9,10 +8,10 @@ import { OrderFilters } from '@/components/OrdersTab';
 interface DeliveryTimelineProps {
   orders: FullOrder[];
   getOverallOrderStatus: (orderId: string) => string;
-  onFilterChange: React.Dispatch<React.SetStateAction<OrderFilters>>;
+  onMetricClick: (filter: Partial<OrderFilters>) => void;
 }
 
-const DeliveryTimeline = ({ orders, getOverallOrderStatus, onFilterChange }: DeliveryTimelineProps) => {
+const DeliveryTimeline = ({ orders, getOverallOrderStatus, onMetricClick }: DeliveryTimelineProps) => {
   const timelineMetrics = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -91,15 +90,7 @@ const DeliveryTimeline = ({ orders, getOverallOrderStatus, onFilterChange }: Del
         <Card
           key={metric.title}
           className="hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => onFilterChange(prev => ({
-              ...prev,
-              overdueDelivery: false,
-              expectedDeliveryRange: '',
-              hasDeliveryDate: false,
-              expectedDeliveryFrom: null,
-              expectedDeliveryTo: null,
-              ...metric.filter
-          }))}
+          onClick={() => onMetricClick(metric.filter)}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>

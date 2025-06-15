@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
-import OrdersTab from "@/components/OrdersTab";
+import OrdersTab, { OrderFilters } from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
@@ -15,12 +15,29 @@ import CatalogueManagement from "@/components/catalogue/CatalogueManagement";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [initialOrderFilters, setInitialOrderFilters] = useState<OrderFilters | null>(null);
 
   console.log('Index component rendered with activeTab:', activeTab);
 
-  const handleNavigateToTab = (tab: string) => {
+  const handleNavigateToTab = (tab: string, filters?: Partial<OrderFilters>) => {
     console.log('Navigating to tab:', tab);
+    if (tab === 'orders' && filters) {
+      const newFilters: OrderFilters = {
+        customer: '', orderStatus: '', suborderStatus: '', category: '', subcategory: '',
+        dateRange: '', minAmount: '', maxAmount: '', hasDeliveryDate: false,
+        overdueDelivery: false, lowStock: false, stockAvailable: false,
+        expectedDeliveryFrom: null, expectedDeliveryTo: null, expectedDeliveryRange: '',
+        ...filters
+      };
+      setInitialOrderFilters(newFilters);
+    } else {
+      setInitialOrderFilters(null);
+    }
     setActiveTab(tab);
+  };
+
+  const handleFiltersConsumed = () => {
+    setInitialOrderFilters(null);
   };
 
   const getPageTitle = () => {
@@ -166,7 +183,10 @@ const Index = () => {
                   </TabsContent>
 
                   <TabsContent value="orders" className="space-y-6 mt-0">
-                    <OrdersTab />
+                    <OrdersTab
+                      initialFilters={initialOrderFilters}
+                      onFiltersConsumed={handleFiltersConsumed}
+                    />
                   </TabsContent>
 
                   <TabsContent value="catalogue-management" className="space-y-6 mt-0">

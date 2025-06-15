@@ -1,23 +1,48 @@
-
 import { useUserProfile } from '@/hooks/useUserProfile';
 import DashboardCharts from './DashboardCharts';
+import DeliveryTimeline from '../orders/DeliveryTimeline';
+import { useOrders, Order as FullOrder } from '@/hooks/useOrders';
+import { OrderFilters } from '@/components/OrdersTab';
 
 interface VisualDashboardProps {
-  onNavigateToTab?: (tab: string) => void;
+  onNavigateToTab?: (tab: string, filters?: Partial<OrderFilters>) => void;
 }
 
 const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
-  const { profile, loading } = useUserProfile();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const { orders, loading: ordersLoading } = useOrders();
+
+  const getOverallOrderStatus = (orderId: string) => {
+    const order = orders.find(o => o.order_number === orderId);
+    if (!order) return "Created";
+    
+    const statuses = order.order_items.map(sub => sub.status);
+    
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "In Progress";
+    if (statuses.every(s => s === "Created")) return "Created";
+    if (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created")) {
+        return "In Progress";
+    }
+    return "Created";
+  };
+
+  const handleMetricClick = (filter: Partial<OrderFilters>) => {
+    if (onNavigateToTab) {
+      onNavigateToTab('orders', filter);
+    }
+  };
 
   const getGreeting = () => {
-    if (loading || !profile) return 'Namaskar';
+    if (profileLoading || !profile) return 'Namaskar';
     
     const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
     return fullName ? `Namaskar ${fullName} ji` : 'Namaskar ji';
   };
 
   const getDashboardTitle = () => {
-    if (loading || !profile?.merchantName) return 'Dashboard';
+    if (profileLoading || !profile?.merchantName) return 'Dashboard';
     return `${profile.merchantName} Dashboard`;
   };
 
@@ -33,6 +58,14 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
           <p className="text-gray-600 text-sm">Welcome to your dashboard. Let's get started!</p>
         </div>
       </div>
+
+      {!ordersLoading && (
+        <DeliveryTimeline
+          orders={orders}
+          getOverallOrderStatus={getOverallOrderStatus}
+          onMetricClick={handleMetricClick}
+        />
+      )}
 
       {/* Main Content Area */}
       <DashboardCharts />
