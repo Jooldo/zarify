@@ -1,12 +1,12 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Package, Settings, Weight, Hash, Type } from 'lucide-react';
+import { Calendar, User, Package, Settings, Weight, Hash, Type, History } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 interface StepDetailsDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   stepFields = []
 }) => {
   const { getStepValue } = useManufacturingStepValues();
+  const { orderSteps: allOrderSteps, stepFields: allStepFields } = useManufacturingSteps();
 
   if (!stepData) return null;
 
@@ -93,9 +94,74 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   const fieldValues = getFieldValues();
 
+  const getPreviousStepsData = () => {
+    if (!orderStep?.manufacturing_order_id || !orderStep?.manufacturing_steps?.step_order) {
+      return { headers: [], rows: [] };
+    }
+
+    const currentOrderSteps = allOrderSteps.filter(
+      (os) => os.manufacturing_order_id === orderStep.manufacturing_order_id
+    );
+
+    const previousOrderSteps = currentOrderSteps
+      .filter(os => os.manufacturing_steps && os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order)
+      .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
+
+    if (previousOrderSteps.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    const headers = previousOrderSteps.map(pos => pos.manufacturing_steps?.step_name || 'Unknown Step');
+
+    const distinctFieldLabels = new Map<string, { id: string, name: string, label: string, options: any }>();
+
+    previousOrderSteps.forEach(pos => {
+      const fieldsForThisStep = allStepFields.filter(sf => sf.manufacturing_step_id === pos.manufacturing_step_id);
+      fieldsForThisStep.forEach(field => {
+        if (!distinctFieldLabels.has(field.field_label)) {
+          distinctFieldLabels.set(field.field_label, {
+            id: field.field_id,
+            name: field.field_name,
+            label: field.field_label,
+            options: field.field_options
+          });
+        }
+      });
+    });
+
+    const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
+      const rowData = {
+        label: fieldInfo.label,
+        values: [] as string[]
+      };
+
+      previousOrderSteps.forEach(pos => {
+        const fieldForThisStep = allStepFields.find(sf => sf.manufacturing_step_id === pos.manufacturing_step_id && sf.field_label === fieldInfo.label);
+        
+        let value = '-';
+        if (fieldForThisStep) {
+          const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
+          if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+            value = savedValue;
+            if (fieldForThisStep.field_options?.unit) {
+              value = `${value} ${fieldForThisStep.field_options.unit}`;
+            }
+          }
+        }
+        rowData.values.push(value);
+      });
+
+      return rowData;
+    });
+
+    return { headers, rows };
+  };
+
+  const { headers: prevStepsHeaders, rows: prevStepsRows } = getPreviousStepsData();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[70vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -196,6 +262,38 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           )}
 
+          {/* Previous Steps Data */}
+          {prevStepsHeaders.length > 0 && (
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
+                <History className="h-3 w-3" />
+                Previous Steps Data
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="p-2 text-left font-semibold border border-gray-300">Metric</th>
+                      {prevStepsHeaders.map((header, index) => (
+                        <th key={index} className="p-2 text-left font-semibold border border-gray-300">{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prevStepsRows.map((row, rowIndex) => (
+                      <tr key={rowIndex} className="border-b border-gray-300">
+                        <td className="p-2 font-medium border border-gray-300">{row.label}</td>
+                        {row.values.map((value, valueIndex) => (
+                          <td key={valueIndex} className="p-2 border border-gray-300">{value}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
           {/* Step Field Values - Show actual values from database */}
           {fieldValues.length > 0 && (
             <div className="bg-purple-50 p-3 rounded-lg">
