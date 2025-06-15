@@ -42,7 +42,7 @@ export interface ManufacturingOrderStep {
   merchant_id: string;
   created_at: string;
   updated_at: string;
-  manufacturing_steps?: ManufacturingStep;
+  manufacturing_steps: ManufacturingStep; // This is no longer optional
   workers?: {
     id: string;
     name: string;
@@ -135,24 +135,35 @@ export const useManufacturingSteps = () => {
         throw error;
       }
       
-      // Ensure proper ID casting for nested data
-      const processedData = data.map(orderStep => {
-        const processed = {
-          ...orderStep,
-          id: String(orderStep.id),
-          manufacturing_order_id: String(orderStep.manufacturing_order_id),
-          manufacturing_step_id: String(orderStep.manufacturing_step_id),
-        };
-        
-        if (processed.manufacturing_steps) {
-          processed.manufacturing_steps = {
-            ...processed.manufacturing_steps,
-            id: String(processed.manufacturing_steps.id),
+      // Ensure proper ID casting for nested data and filter out inconsistent data
+      const processedData = data
+        .filter(orderStep => {
+          if (!orderStep.manufacturing_steps) {
+            console.warn(
+              'Order step is missing linked manufacturing_steps data, filtering out. Order step ID:',
+              orderStep.id
+            );
+            return false;
+          }
+          return true;
+        })
+        .map(orderStep => {
+          const processed = {
+            ...orderStep,
+            id: String(orderStep.id),
+            manufacturing_order_id: String(orderStep.manufacturing_order_id),
+            manufacturing_step_id: String(orderStep.manufacturing_step_id),
           };
-        }
         
-        return processed;
-      }) as ManufacturingOrderStep[];
+          if (processed.manufacturing_steps) {
+            processed.manufacturing_steps = {
+              ...processed.manufacturing_steps,
+              id: String(processed.manufacturing_steps.id),
+            };
+          }
+        
+          return processed;
+        }) as ManufacturingOrderStep[];
       
       console.log('Processed order steps with complete data:', processedData);
       console.log('Sample order step with manufacturing_steps:', processedData[0]?.manufacturing_steps);

@@ -25,7 +25,18 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   stepFields = []
 }) => {
   const { getStepValue } = useManufacturingStepValues();
-  const { orderSteps: allOrderSteps, stepFields: allStepFields } = useManufacturingSteps();
+  const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading } = useManufacturingSteps();
+
+  React.useEffect(() => {
+    if (open) {
+      console.log('--- StepDetailsDialog DATA ---');
+      console.log('isLoading:', isLoading);
+      console.log('stepData:', JSON.stringify(stepData, null, 2));
+      console.log('orderStep:', JSON.stringify(orderStep, null, 2));
+      console.log('allOrderSteps count:', allOrderSteps.length);
+      console.log('allStepFields count:', allStepFields.length);
+    }
+  }, [open, isLoading, stepData, orderStep, allOrderSteps, allStepFields]);
 
   if (!stepData) return null;
 
@@ -95,82 +106,85 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   const fieldValues = getFieldValues();
 
-  const getPreviousStepsData = () => {
-    console.log('getPreviousStepsData called with orderStep:', orderStep);
+  const { headers: prevStepsHeaders, rows: prevStepsRows } = React.useMemo(() => {
+    const getPreviousStepsData = () => {
+      console.log('getPreviousStepsData called with orderStep:', orderStep);
 
-    if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order === 'undefined') {
-      console.log('Bailing out of getPreviousStepsData: orderStep is missing required properties.', { orderStep });
-      return { headers: [], rows: [] };
-    }
-    
-    console.log('All Order Steps from hook:', allOrderSteps);
-    console.log('All Step Fields from hook:', allStepFields);
+      if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order === 'undefined') {
+        console.log('Bailing out of getPreviousStepsData: orderStep is missing required properties.', { orderStep });
+        return { headers: [], rows: [] };
+      }
+      
+      console.log('All Order Steps from hook:', allOrderSteps);
+      console.log('All Step Fields from hook:', allStepFields);
 
-    const currentOrderSteps = allOrderSteps.filter(
-      (os) => String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id)
-    );
-    console.log(`Found ${currentOrderSteps.length} steps for order ID ${orderStep.manufacturing_order_id}`);
+      const currentOrderSteps = allOrderSteps.filter(
+        (os) => String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id)
+      );
+      console.log(`Found ${currentOrderSteps.length} steps for order ID ${orderStep.manufacturing_order_id}`);
 
-    const previousOrderSteps = currentOrderSteps
-      .filter(os => os.manufacturing_steps && os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order)
-      .sort((a, b) => a.manufacturing_steps!.step_order - b.manufacturing_steps!.step_order);
-    
-    console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
+      const previousOrderSteps = currentOrderSteps
+        .filter(os => os.manufacturing_steps && os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order)
+        .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
+      
+      console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
 
-    if (previousOrderSteps.length === 0) {
-      return { headers: [], rows: [] };
-    }
-    
-    const headers = previousOrderSteps.map(pos => pos.manufacturing_steps?.step_name || 'Unknown Step');
-    console.log('Table headers:', headers);
+      if (previousOrderSteps.length === 0) {
+        return { headers: [], rows: [] };
+      }
+      
+      const headers = previousOrderSteps.map(pos => pos.manufacturing_steps.step_name || 'Unknown Step');
+      console.log('Table headers:', headers);
 
-    const distinctFieldLabels = new Map<string, { id: string, name: string, label: string, options: any }>();
-
-    previousOrderSteps.forEach(pos => {
-      const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
-      fieldsForThisStep.forEach(field => {
-        if (!distinctFieldLabels.has(field.field_label)) {
-          distinctFieldLabels.set(field.field_label, {
-            id: field.field_id,
-            name: field.field_name,
-            label: field.field_label,
-            options: field.field_options
-          });
-        }
-      });
-    });
-    console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
-
-    const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
-      const rowData = {
-        label: fieldInfo.label,
-        values: [] as string[]
-      };
+      const distinctFieldLabels = new Map<string, { id: string, name: string, label: string, options: any }>();
 
       previousOrderSteps.forEach(pos => {
-        const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
-        
-        let value = '-';
-        if (fieldForThisStep) {
-          const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
-          if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-            value = savedValue;
-            if (fieldForThisStep.field_options?.unit) {
-              value = `${value} ${fieldForThisStep.field_options.unit}`;
+        const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
+        fieldsForThisStep.forEach(field => {
+          if (!distinctFieldLabels.has(field.field_label)) {
+            distinctFieldLabels.set(field.field_label, {
+              id: field.field_id,
+              name: field.field_name,
+              label: field.field_label,
+              options: field.field_options
+            });
+          }
+        });
+      });
+      console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
+
+      const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
+        const rowData = {
+          label: fieldInfo.label,
+          values: [] as string[]
+        };
+
+        previousOrderSteps.forEach(pos => {
+          const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
+          
+          let value = '-';
+          if (fieldForThisStep) {
+            const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
+            if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+              value = savedValue;
+              if (fieldForThisStep.field_options?.unit) {
+                value = `${value} ${fieldForThisStep.field_options.unit}`;
+              }
             }
           }
-        }
-        rowData.values.push(value);
+          rowData.values.push(value);
+        });
+
+        return rowData;
       });
+      console.log('Table rows:', rows);
 
-      return rowData;
-    });
-    console.log('Table rows:', rows);
-
-    return { headers, rows };
-  };
-
-  const { headers: prevStepsHeaders, rows: prevStepsRows } = getPreviousStepsData();
+      return { headers, rows };
+    };
+    
+    if (isLoading) return { headers: [], rows: [] };
+    return getPreviousStepsData();
+  }, [orderStep, allOrderSteps, allStepFields, getStepValue, isLoading]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
