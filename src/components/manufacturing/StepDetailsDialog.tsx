@@ -138,6 +138,66 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     getStepValue,
   ]);
 
+  // NEW: Add debug logging for MO000005
+  React.useEffect(() => {
+    if (open && order && order.order_number === "MO000005") {
+      console.log("[DEBUG/MO000005] === MANUFACTURING DATA FOR MO000005 ===");
+      console.log("[DEBUG/MO000005] Order details:", order);
+      console.log("[DEBUG/MO000005] All manufacturing steps for merchant:", manufacturingSteps);
+      
+      // Fetch all order steps for MO000005
+      const relevantOrderSteps = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
+      console.log("[DEBUG/MO000005] All order steps for this order:", relevantOrderSteps);
+
+      if (relevantOrderSteps.length === 0) {
+        console.warn("[DEBUG/MO000005] No order steps found for MO000005");
+        return;
+      }
+
+      // Log each manufacturing step and its data
+      relevantOrderSteps.forEach(os => {
+        const stepDefinition = manufacturingSteps.find(d => String(d.id) === String(os.manufacturing_step_id));
+        console.log(`[DEBUG/MO000005] === STEP: ${stepDefinition?.step_name || 'Unknown'} ===`);
+        console.log(`[DEBUG/MO000005] Order Step ID: ${os.id}`);
+        console.log(`[DEBUG/MO000005] Manufacturing Step ID: ${os.manufacturing_step_id}`);
+        console.log(`[DEBUG/MO000005] Status: ${os.status}`);
+        console.log(`[DEBUG/MO000005] Progress: ${os.progress_percentage}%`);
+        console.log(`[DEBUG/MO000005] Started At: ${os.started_at || 'Not started'}`);
+        console.log(`[DEBUG/MO000005] Completed At: ${os.completed_at || 'Not completed'}`);
+        console.log(`[DEBUG/MO000005] Notes: ${os.notes || 'No notes'}`);
+        console.log(`[DEBUG/MO000005] Assigned Worker: ${os.assigned_worker_id || 'Not assigned'}`);
+
+        // Get and log all field values for this step
+        if (stepDefinition) {
+          const stepFields = getStepFields(stepDefinition.id);
+          console.log(`[DEBUG/MO000005] Fields configured for ${stepDefinition.step_name}:`, stepFields.length);
+          
+          if (stepFields.length > 0) {
+            stepFields.forEach(field => {
+              const value = getStepValue(os.id, field.field_id);
+              console.log(`[DEBUG/MO000005]   "${field.field_label}" (${field.field_type}): ${value ?? "(empty/null)"}`);
+              if (field.field_options) {
+                console.log(`[DEBUG/MO000005]     Options:`, field.field_options);
+              }
+            });
+          } else {
+            console.log(`[DEBUG/MO000005] No fields configured for step: ${stepDefinition.step_name}`);
+          }
+        }
+        console.log(`[DEBUG/MO000005] === END STEP ===`);
+      });
+
+      console.log("[DEBUG/MO000005] === END MANUFACTURING DATA ===");
+    }
+  }, [
+    open,
+    order,
+    orderSteps,
+    manufacturingSteps,
+    getStepFields,
+    getStepValue,
+  ]);
+
   const previousStepsData = useMemo(() => {
     if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {
       return [];
