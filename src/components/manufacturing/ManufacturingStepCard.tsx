@@ -119,7 +119,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return step.status === 'in_progress' || step.status === 'completed';
   });
 
-  // Get assigned worker name from step values or order step
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
     
@@ -221,8 +220,24 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps started
   const shouldShowCTA = (data.stepName === 'Manufacturing Order' && 
     data.status === 'pending' && 
-    !orderSteps.some(step => step.manufacturing_order_id === data.orderId)) ||
+    !orderSteps.some(step => String(step.manufacturing_order_id) === String(data.orderId))) ||
     (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentSteps);
+
+  if (data.orderNumber === 'MO000005' && data.stepOrder > 0 && data.status === 'completed') {
+    console.log(
+      `[DEBUG] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentSteps} | Should Show CTA: ${shouldShowCTA}`
+    );
+    if (!hasSubsequentSteps) {
+      console.log(`[DEBUG] CTA button is visible on "${data.stepName}" because 'hasSubsequentSteps' is false. Inspecting 'orderSteps' for this order:`, 
+        orderSteps.filter(s => String(s.manufacturing_order_id) === String(data.orderId))
+          .map(s => ({ 
+            step: s.manufacturing_steps?.step_name, 
+            order: s.manufacturing_steps?.step_order, 
+            status: s.status 
+          }))
+      );
+    }
+  }
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
