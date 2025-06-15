@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import {
   Dialog,
@@ -10,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { Tables } from '@/integrations/supabase/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -27,12 +27,17 @@ interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   step: Tables<'manufacturing_order_steps'> | null;
-  order: Tables<'manufacturing_orders'> | null;
 }
 
-const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChange, step, order }) => {
+const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChange, step }) => {
   const { manufacturingSteps, orderSteps, getStepFields, isLoading: isLoadingStepsData } = useManufacturingSteps();
   const { getStepValue, isLoading: isLoadingValues } = useManufacturingStepValues();
+  const { manufacturingOrders } = useManufacturingOrders();
+
+  const order = useMemo(() => {
+    if (!step) return null;
+    return manufacturingOrders.find(o => o.id === step.manufacturing_order_id) || null;
+  }, [step, manufacturingOrders]);
 
   const previousStepsData = useMemo(() => {
     if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {

@@ -1,7 +1,13 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+
+export type ManufacturingStep = Tables<'manufacturing_steps'>;
+export type ManufacturingStepField = Tables<'manufacturing_step_fields'>;
+export type ManufacturingOrderStep = Tables<'manufacturing_order_steps'> & {
+  manufacturing_steps: ManufacturingStep | null;
+  workers?: { name: string | null } | null;
+};
 
 export const useManufacturingSteps = () => {
   const { data: manufacturingSteps = [], isLoading: isLoadingSteps } = useQuery<Tables<'manufacturing_steps'>[]>({
@@ -21,7 +27,7 @@ export const useManufacturingSteps = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
-        .select('*, manufacturing_steps(*)');
+        .select('*, manufacturing_steps(*), workers(name)');
       if (error) {
         console.error("Error fetching order steps with manufacturing steps", error);
         throw error;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } fro
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsDialog from './StepDetailsDialog';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface RawMaterial {
   name: string;
@@ -367,9 +367,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <StepDetailsDialog
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
-        stepData={data}
-        orderStep={currentOrderStep}
-        stepFields={getStepFields()}
+        step={currentOrderStep || null}
       />
     </>
   );
