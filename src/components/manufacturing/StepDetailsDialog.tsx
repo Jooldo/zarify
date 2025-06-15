@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, User, Package, Settings, Weight, Hash, Type, History } from 'lucide-react';
+import { format } from 'date-fns';
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingSteps, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -106,132 +106,23 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   const fieldValues = getFieldValues();
 
-  const { headers: prevStepsHeaders, rows: prevStepsRows } = React.useMemo(() => {
-    const getPreviousStepsData = () => {
-      console.log('--- Recalculating Previous Steps Data ---');
-      console.log('Current orderStep:', JSON.stringify(orderStep, null, 2));
+  const previousOrderSteps = React.useMemo(() => {
+    if (isLoading || !orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order !== 'number') {
+      return [];
+    }
 
-      if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order !== 'number') {
-          console.warn('Bailing out: Incomplete current step data.', { 
-              hasOrderStep: !!orderStep, 
-              hasOrderId: !!orderStep?.manufacturing_order_id, 
-              hasMfgSteps: !!orderStep?.manufacturing_steps,
-              hasStepOrder: typeof orderStep?.manufacturing_steps?.step_order
-          });
-          return { headers: [], rows: [] };
-      }
+    const currentStepOrder = orderStep.manufacturing_steps.step_order;
 
-      const currentStepOrder = orderStep.manufacturing_steps.step_order;
-      console.log(`Current step order is: ${currentStepOrder}`);
+    const filteredSteps = allOrderSteps
+      .filter(os =>
+          String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
+          os.manufacturing_steps && typeof os.manufacturing_steps.step_order === 'number' &&
+          os.manufacturing_steps.step_order < currentStepOrder
+      );
 
-      // 1. Filter to get all steps for the current order that occurred *before* the current step.
-      const previousOrderSteps = allOrderSteps
-          .filter(os =>
-              String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
-              os.manufacturing_steps && typeof os.manufacturing_steps.step_order === 'number' &&
-              os.manufacturing_steps.step_order < currentStepOrder
-          )
-          .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
+    return filteredSteps.sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+  }, [orderStep, allOrderSteps, isLoading]);
 
-      console.log(`Found ${previousOrderSteps.length} previous order steps:`, JSON.stringify(previousOrderSteps.map(p => ({id: p.id, name: p.manufacturing_steps.step_name, order: p.manufacturing_steps.step_order})), null, 2));
-
-      if (previousOrderSteps.length === 0) {
-          console.log('No previous steps found.');
-          return { headers: [], rows: [] };
-      }
-
-      // 2. Create headers from unique previous steps.
-      const uniqueSteps = new Map<string, { name: string; order: number }>();
-      previousOrderSteps.forEach(pos => {
-          if (pos.manufacturing_steps && !uniqueSteps.has(pos.manufacturing_steps.id)) {
-              uniqueSteps.set(pos.manufacturing_steps.id, {
-                  name: pos.manufacturing_steps.step_name || 'Unknown Step',
-                  order: pos.manufacturing_steps.step_order,
-              });
-          }
-      });
-
-      const sortedUniqueSteps = Array.from(uniqueSteps.entries()).sort(([, a], [, b]) => a.order - b.order);
-      const headers = sortedUniqueSteps.map(([, stepInfo]) => stepInfo.name);
-      const uniqueStepIds = sortedUniqueSteps.map(([id]) => id);
-
-      console.log('Table Headers:', headers);
-      if (headers.length === 0) {
-          console.warn('Generated 0 headers.');
-          return { headers: [], rows: [] };
-      }
-
-      // 3. Find all distinct fields across all previous steps.
-      const distinctFields = new Map<string, { fieldId: string; label: string; name: string; options: any; type: string }>();
-      previousOrderSteps.forEach(pos => {
-          const fieldsForStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
-          fieldsForStep.forEach(field => {
-              if (!distinctFields.has(field.field_label)) { // Using label to group rows
-                  distinctFields.set(field.field_label, {
-                      fieldId: field.field_id,
-                      label: field.field_label,
-                      name: field.field_name,
-                      options: field.field_options,
-                      type: field.field_type
-                  });
-              }
-          });
-      });
-      
-      const rowLabels = Array.from(distinctFields.values());
-      console.log('Distinct Row Labels (Metrics):', JSON.stringify(rowLabels, null, 2));
-
-      if (rowLabels.length === 0) {
-          console.warn('Found 0 distinct fields in previous steps.');
-          return { headers: [], rows: [] };
-      }
-
-      // 4. Populate rows with values.
-      const rows = rowLabels.map(fieldInfo => {
-          const rowData = {
-              label: fieldInfo.label,
-              values: [] as string[]
-          };
-
-          // For each header (column)
-          uniqueStepIds.forEach(stepId => {
-              // Find all order steps that match this column's step definition
-              const relevantOrderSteps = previousOrderSteps.filter(pos => String(pos.manufacturing_step_id) === String(stepId));
-              
-              const cellValues: string[] = [];
-              relevantOrderSteps.forEach(ros => {
-                  // Find the specific field definition for this step that matches our row's label
-                  const fieldDef = allStepFields.find(sf => 
-                      String(sf.manufacturing_step_id) === String(stepId) && 
-                      sf.field_label === fieldInfo.label
-                  );
-
-                  if (fieldDef) {
-                      const value = getStepValue(ros.id, fieldDef.field_id);
-                      if (value !== null && value !== undefined && value !== '') {
-                          let displayValue = String(value);
-                          if (fieldDef.field_options?.unit) {
-                              displayValue += ` ${fieldDef.field_options.unit}`;
-                          }
-                          cellValues.push(displayValue);
-                      }
-                  }
-              });
-              
-              rowData.values.push(cellValues.length > 0 ? cellValues.join(', ') : '-');
-          });
-
-          return rowData;
-      });
-
-      console.log('Final table rows:', JSON.stringify(rows, null, 2));
-      
-      return { headers, rows };
-    };
-    
-    if (isLoading) return { headers: [], rows: [] };
-    return getPreviousStepsData();
-  }, [orderStep, allOrderSteps, allStepFields, getStepValue, isLoading]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -337,29 +228,35 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           )}
 
           {/* Previous Steps Data */}
-          {prevStepsHeaders.length > 0 && (
+          {previousOrderSteps.length > 0 && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
                 <History className="h-3 w-3" />
-                Previous Steps Data
+                Previous Steps
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-200">
-                      <th className="p-2 text-left font-semibold border border-gray-300">Metric</th>
-                      {prevStepsHeaders.map((header, index) => (
-                        <th key={index} className="p-2 text-left font-semibold border border-gray-300">{header}</th>
-                      ))}
+                      <th className="p-2 text-left font-semibold border border-gray-300">Step</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Status</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Worker</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Started</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Completed</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {prevStepsRows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-b border-gray-300">
-                        <td className="p-2 font-medium border border-gray-300">{row.label}</td>
-                        {row.values.map((value, valueIndex) => (
-                          <td key={valueIndex} className="p-2 border border-gray-300">{value}</td>
-                        ))}
+                    {previousOrderSteps.map((step) => (
+                      <tr key={step.id} className="border-b border-gray-300">
+                        <td className="p-2 font-medium border border-gray-300">{step.manufacturing_steps?.step_name || 'N/A'}</td>
+                        <td className="p-2 border border-gray-300 capitalize">{step.status.replace('_', ' ')}</td>
+                        <td className="p-2 border border-gray-300">{step.workers?.name || 'N/A'}</td>
+                        <td className="p-2 border border-gray-300">
+                          {step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}
+                        </td>
+                        <td className="p-2 border border-gray-300">
+                          {step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
