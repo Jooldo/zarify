@@ -83,6 +83,37 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     }
   }, [order, manufacturingSteps, orderSteps]);
 
+  // Add: When the dialog opens and order number matches, log all step data
+  React.useEffect(() => {
+    if (open && order && order.order_number === "MO000004") {
+      // Fetch all manufacturing steps
+      console.log("[DEBUG/MO000004] All manufacturing steps for merchant:", manufacturingSteps);
+      // Fetch all order steps for order
+      const relevantOrderSteps = orderSteps.filter(os => os.manufacturing_order_id === order.id);
+      console.log("[DEBUG/MO000004] All order steps for this order:", relevantOrderSteps);
+
+      // For each order step, log all field values
+      relevantOrderSteps.forEach(os => {
+        // Get step fields from definition
+        const def = manufacturingSteps.find(d => d.id === os.manufacturing_step_id);
+        let stepFields = [];
+        if (def) stepFields = getStepFields(def.id);
+        console.log(`[DEBUG/MO000004] Step: ${def?.step_name || os.manufacturing_step_id} (${os.id})`);
+        stepFields.forEach(field => {
+          const value = getStepValue(os.id, field.field_id);
+          console.log(`   Field "${field.field_label}": ${value ?? "(empty/null)"}`);
+        });
+      });
+    }
+  }, [
+    open,
+    order,
+    orderSteps,
+    manufacturingSteps,
+    getStepFields,
+    getStepValue,
+  ]);
+
   const previousStepsData = useMemo(() => {
     if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {
       return [];
