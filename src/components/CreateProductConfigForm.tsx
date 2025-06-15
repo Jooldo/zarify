@@ -27,6 +27,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [sizeValue, setSizeValue] = useState('');
   const [weightInGrams, setWeightInGrams] = useState('');
   const [threshold, setThreshold] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productCodeExists, setProductCodeExists] = useState(false);
@@ -54,6 +55,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setSizeValue(initialData.sizeValue || '');
       setWeightInGrams(initialData.weightInGrams || '');
       setThreshold(initialData.threshold || '');
+      setImageUrl(initialData.image_url || '');
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
       setOpenMaterialSelectors(new Array(initialData.rawMaterials?.length || 1).fill(false));
@@ -170,6 +172,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         is_active: isActive,
         product_code: productCode,
         threshold: threshold ? parseInt(threshold) : undefined,
+        image_url: imageUrl,
         rawMaterials: rawMaterials.filter(material => material.material && material.quantity > 0)
       };
 
@@ -269,6 +272,18 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
                 min="0"
               />
               <p className="text-xs text-gray-500 mt-1">Minimum stock level before alert</p>
+            </div>
+
+            <div>
+              <Label htmlFor="imageUrl" className="text-sm font-medium">Image URL</Label>
+              <Input
+                id="imageUrl"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="e.g. https://example.com/image.jpg"
+                className="h-10 text-sm mt-2"
+              />
+              <p className="text-xs text-gray-500 mt-1">Optional: Provide a URL for the product image.</p>
             </div>
 
             {/* Product Code Warning */}

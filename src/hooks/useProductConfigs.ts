@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +30,7 @@ export interface ProductConfig {
   created_at?: string;
   updated_at?: string;
   threshold?: number;
+  image_url?: string;
   product_config_materials?: ProductConfigMaterial[];
 }
 
@@ -43,6 +43,7 @@ interface CreateProductConfigData {
   weight_range?: string;
   is_active?: boolean;
   threshold?: number;
+  image_url?: string;
   rawMaterials?: Array<{
     material: string;
     quantity: number;

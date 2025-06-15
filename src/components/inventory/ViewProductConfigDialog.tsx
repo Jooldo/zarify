@@ -1,4 +1,3 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Package, Warehouse, Calendar, Target } from 'lucide-react';
@@ -15,6 +14,7 @@ interface ProductConfig {
   created_at: string;
   updated_at: string;
   threshold?: number;
+  image_url?: string;
   product_config_materials?: {
     raw_material_id: string;
     quantity_required: number;
@@ -76,6 +76,15 @@ const ViewProductConfigDialog = ({ config }: ViewProductConfigDialogProps) => {
 
   return (
     <div className="space-y-3 max-w-4xl">
+      {config.image_url && (
+        <div className="mb-4">
+          <img
+            src={config.image_url}
+            alt={config.product_code}
+            className="w-full h-48 object-cover rounded-lg"
+          />
+        </div>
+      )}
       {/* Header Section */}
       <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center justify-between mb-0.5">

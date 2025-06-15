@@ -77,7 +77,8 @@ const PublicCatalogue = () => {
             category,
             subcategory,
             size_value,
-            weight_range
+            weight_range,
+            image_url
           )
         `)
         .eq('catalogue_id', catalogueData.id)
@@ -371,8 +372,15 @@ const PublicCatalogue = () => {
               const cartItem = cart.find(c => c.product_config_id === item.product_config_id);
               
               return (
-                <Card key={item.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
+                <Card key={item.id} className="hover:shadow-md transition-shadow flex flex-col">
+                  {item.product_configs.image_url && (
+                    <img
+                      src={item.product_configs.image_url}
+                      alt={item.product_configs.product_code}
+                      className="w-full h-40 object-cover rounded-t-lg"
+                    />
+                  )}
+                  <CardContent className="p-4 flex-grow flex flex-col justify-between">
                     <div className="space-y-3">
                       {item.is_featured && (
                         <Badge className="mb-2">Featured</Badge>
@@ -397,7 +405,9 @@ const PublicCatalogue = () => {
                           ₹{item.custom_price}
                         </div>
                       )}
+                    </div>
 
+                    <div className="mt-4">
                       {cartItem ? (
                         <div className="flex items-center justify-center gap-3 p-2 bg-gray-50 rounded">
                           <Button

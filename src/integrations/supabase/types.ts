@@ -1161,6 +1161,7 @@ export type Database = {
           category: string
           created_at: string | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           merchant_id: string
           product_code: string
@@ -1174,6 +1175,7 @@ export type Database = {
           category: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           merchant_id: string
           product_code: string
@@ -1187,6 +1189,7 @@ export type Database = {
           category?: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           merchant_id?: string
           product_code?: string
