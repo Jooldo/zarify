@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import ProductConfigDetails from './config/ProductConfigDetails';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreateProductConfigFormProps {
   onClose: () => void;
@@ -27,7 +29,8 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
   const [sizeValue, setSizeValue] = useState('');
   const [weightInGrams, setWeightInGrams] = useState('');
   const [threshold, setThreshold] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productCodeExists, setProductCodeExists] = useState(false);
@@ -55,7 +58,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
       setSizeValue(initialData.sizeValue || '');
       setWeightInGrams(initialData.weightInGrams || '');
       setThreshold(initialData.threshold || '');
-      setImageUrl(initialData.image_url || '');
+      setImagePreview(initialData.image_url || null);
       setIsActive(initialData.isActive ?? true);
       setRawMaterials(initialData.rawMaterials || [{ material: '', quantity: 0, unit: 'grams' }]);
       setOpenMaterialSelectors(new Array(initialData.rawMaterials?.length || 1).fill(false));
@@ -85,6 +88,14 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
     checkDuplicate();
   }, [category, product, weightInGrams, checkProductCodeExists, isUpdate, sizeValue]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const addMaterial = () => {
     setRawMaterials([...rawMaterials, { material: '', quantity: 0, unit: 'grams' }]);
@@ -163,6 +174,28 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
 
     try {
       const productCode = generateProductCode();
+      let finalImageUrl = isUpdate ? initialData.image_url : null;
+
+      if (imageFile) {
+        const fileName = `${Date.now()}_${imageFile.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product_images')
+          .upload(fileName, imageFile, {
+            cacheControl: '3600',
+            upsert: isUpdate,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('product_images')
+          .getPublicUrl(uploadData.path);
+        
+        finalImageUrl = urlData.publicUrl;
+      }
+
 
       const productConfigData = {
         category,
@@ -172,7 +205,7 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
         is_active: isActive,
         product_code: productCode,
         threshold: threshold ? parseInt(threshold) : undefined,
-        image_url: imageUrl,
+        image_url: finalImageUrl,
         rawMaterials: rawMaterials.filter(material => material.material && material.quantity > 0)
       };
 
@@ -275,15 +308,26 @@ const CreateProductConfigForm = ({ onClose, onSubmit, initialData, isUpdate = fa
             </div>
 
             <div>
-              <Label htmlFor="imageUrl" className="text-sm font-medium">Image URL</Label>
-              <Input
-                id="imageUrl"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="e.g. https://example.com/image.jpg"
-                className="h-10 text-sm mt-2"
-              />
-              <p className="text-xs text-gray-500 mt-1">Optional: Provide a URL for the product image.</p>
+              <Label htmlFor="imageUpload" className="text-sm font-medium">Product Image</Label>
+              <div className="mt-2 flex items-center gap-4">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Product preview" className="h-20 w-20 object-cover rounded-md border" />
+                ) : (
+                  <div className="h-20 w-20 bg-gray-100 rounded-md border flex items-center justify-center text-gray-400">
+                    <Search className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="flex-grow">
+                  <Input
+                    id="imageUpload"
+                    type="file"
+                    accept="image/png, image/jpeg, image/gif"
+                    onChange={handleImageChange}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Upload a PNG, JPG, or GIF file.</p>
+                </div>
+              </div>
             </div>
 
             {/* Product Code Warning */}
