@@ -16,13 +16,16 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery<Tables<'manufacturing_order_steps'>[]>({
-    queryKey: ['manufacturing_order_steps'],
+  const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery({
+    queryKey: ['manufacturing_order_steps_with_steps'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
-        .select('*');
-      if (error) throw error;
+        .select('*, manufacturing_steps(*)');
+      if (error) {
+        console.error("Error fetching order steps with manufacturing steps", error);
+        throw error;
+      }
       return data || [];
     },
   });

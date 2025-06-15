@@ -101,24 +101,30 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         {previousStepsData.map((prevStep, index) => (
             <div key={index}>
               <h5 className="font-semibold mb-2">{`Step ${prevStep.stepOrder}: ${prevStep.stepName}`}</h5>
-              <div className="overflow-x-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {prevStep.values.map((item, idx) => (
-                        <TableHead key={idx}>{item.label}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      {prevStep.values.map((item, idx) => (
-                        <TableCell key={idx}>{item.value}</TableCell>
-                      ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
+              {prevStep.values.length > 0 ? (
+                <div className="overflow-x-auto border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {prevStep.values.map((item, idx) => (
+                          <TableHead key={idx}>{item.label}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        {prevStep.values.map((item, idx) => (
+                          <TableCell key={idx}>{item.value}</TableCell>
+                        ))}
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <Alert>
+                  <AlertDescription>No fields or data recorded for this step.</AlertDescription>
+                </Alert>
+              )}
             </div>
         ))}
       </div>
