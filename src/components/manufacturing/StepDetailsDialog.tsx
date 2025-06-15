@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -150,23 +149,29 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
           const fieldName = field.field_name.toLowerCase();
           
-          if (field.field_type === 'date' && fieldName.includes('due')) {
-            const parsedDate = new Date(value);
-            if (!isNaN(parsedDate.getTime())) {
-                stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
-            }
-          } else if (fieldName.includes('quantity')) {
-            if (fieldName.includes('assigned')) {
+          switch(fieldName) {
+            case 'due_date':
+              if (field.field_type === 'date') {
+                const parsedDate = new Date(value);
+                if (!isNaN(parsedDate.getTime())) {
+                    stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
+                }
+              }
+              break;
+            case 'quantity_assigned':
               stepFieldValues.quantityAssigned = displayValue;
-            } else if (fieldName.includes('received')) {
+              break;
+            case 'quantity_received':
               stepFieldValues.quantityReceived = displayValue;
-            }
-          } else if (fieldName.includes('weight')) {
-            if (fieldName.includes('assigned')) {
+              break;
+            case 'weight_assigned':
               stepFieldValues.weightAssigned = displayValue;
-            } else if (fieldName.includes('received')) {
+              break;
+            case 'weight_received':
               stepFieldValues.weightReceived = displayValue;
-            }
+              break;
+            default:
+              break;
           }
         }
       });
