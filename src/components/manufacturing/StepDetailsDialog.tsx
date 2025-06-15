@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   orderStep,
   stepFields = []
 }) => {
-  const { getStepValue } = useManufacturingStepValues();
+  const { getStepValue, stepValues } = useManufacturingStepValues();
   const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading } = useManufacturingSteps();
 
   React.useEffect(() => {
@@ -34,9 +35,10 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       console.log('stepData:', JSON.stringify(stepData, null, 2));
       console.log('orderStep:', JSON.stringify(orderStep, null, 2));
       console.log('allOrderSteps count:', allOrderSteps.length);
-      console.log('allStepFields count:', allStepFields.length);
+      console.log('allStepFields:', allStepFields);
+      console.log('stepValues from useManufacturingStepValues:', stepValues);
     }
-  }, [open, isLoading, stepData, orderStep, allOrderSteps, allStepFields]);
+  }, [open, isLoading, stepData, orderStep, allOrderSteps, allStepFields, stepValues]);
 
   if (!stepData) return null;
 
@@ -138,9 +140,14 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         weightAssigned: 'N/A',
         weightReceived: 'N/A',
       };
+      
+      console.log(`--- Processing previous step: ${step.manufacturing_steps?.step_name}, Order Step ID: ${step.id}`);
+      console.log(`Fields for this step type:`, fieldsForStep);
 
       fieldsForStep.forEach(field => {
         const value = getStepValue(step.id, field.field_id);
+        console.log(`  - Checking field: '${field.field_label}' (name: ${field.field_name}, id: ${field.field_id})... Value found:`, value);
+        
         if (value !== null && value !== undefined && value !== '') {
           let displayValue = `${value}`;
           if (field.field_options?.unit) {
@@ -148,33 +155,34 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           }
 
           const fieldName = field.field_name.toLowerCase();
-          
-          switch(fieldName) {
-            case 'due_date':
-              if (field.field_type === 'date') {
-                const parsedDate = new Date(value);
-                if (!isNaN(parsedDate.getTime())) {
-                    stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
-                }
-              }
-              break;
-            case 'quantity_assigned':
-              stepFieldValues.quantityAssigned = displayValue;
-              break;
-            case 'quantity_received':
-              stepFieldValues.quantityReceived = displayValue;
-              break;
-            case 'weight_assigned':
-              stepFieldValues.weightAssigned = displayValue;
-              break;
-            case 'weight_received':
-              stepFieldValues.weightReceived = displayValue;
-              break;
-            default:
-              break;
+          console.log(`    > Field name: ${fieldName}, Value: ${value}, Display: ${displayValue}`);
+
+          if (field.field_type === 'date' && (fieldName.includes('due') || fieldName.includes('date'))) {
+            const parsedDate = new Date(value);
+            if (!isNaN(parsedDate.getTime())) {
+                stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
+                console.log(`      -> Matched Due Date:`, stepFieldValues.dueDate);
+            }
+          }
+          if (fieldName.includes('quantity') && fieldName.includes('assigned')) {
+            stepFieldValues.quantityAssigned = displayValue;
+            console.log(`      -> Matched Quantity Assigned:`, displayValue);
+          }
+          if (fieldName.includes('quantity') && fieldName.includes('received')) {
+            stepFieldValues.quantityReceived = displayValue;
+            console.log(`      -> Matched Quantity Received:`, displayValue);
+          }
+          if (fieldName.includes('weight') && fieldName.includes('assigned')) {
+            stepFieldValues.weightAssigned = displayValue;
+            console.log(`      -> Matched Weight Assigned:`, displayValue);
+          }
+          if (fieldName.includes('weight') && fieldName.includes('received')) {
+            stepFieldValues.weightReceived = displayValue;
+            console.log(`      -> Matched Weight Received:`, displayValue);
           }
         }
       });
+      console.log(`Final processed values for step:`, stepFieldValues);
       
       return {
         ...step,
