@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -107,102 +108,124 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   const { headers: prevStepsHeaders, rows: prevStepsRows } = React.useMemo(() => {
     const getPreviousStepsData = () => {
-      console.log('getPreviousStepsData called with orderStep:', orderStep);
+      console.log('--- Recalculating Previous Steps Data ---');
+      console.log('Current orderStep:', JSON.stringify(orderStep, null, 2));
 
-      if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order === 'undefined') {
-        console.log('Bailing out of getPreviousStepsData: orderStep is missing required properties.', { orderStep });
-        return { headers: [], rows: [] };
+      if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order !== 'number') {
+          console.warn('Bailing out: Incomplete current step data.', { 
+              hasOrderStep: !!orderStep, 
+              hasOrderId: !!orderStep?.manufacturing_order_id, 
+              hasMfgSteps: !!orderStep?.manufacturing_steps,
+              hasStepOrder: typeof orderStep?.manufacturing_steps?.step_order
+          });
+          return { headers: [], rows: [] };
       }
-      
-      console.log('All Order Steps from hook:', allOrderSteps);
-      console.log('All Step Fields from hook:', allStepFields);
 
-      // 1. Get previous order steps, sorted by their order
+      const currentStepOrder = orderStep.manufacturing_steps.step_order;
+      console.log(`Current step order is: ${currentStepOrder}`);
+
+      // 1. Filter to get all steps for the current order that occurred *before* the current step.
       const previousOrderSteps = allOrderSteps
-        .filter(
-          (os) =>
-            String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
-            os.manufacturing_steps &&
-            os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order
-        )
-        .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
-      
-      console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
+          .filter(os =>
+              String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
+              os.manufacturing_steps && typeof os.manufacturing_steps.step_order === 'number' &&
+              os.manufacturing_steps.step_order < currentStepOrder
+          )
+          .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
+
+      console.log(`Found ${previousOrderSteps.length} previous order steps:`, JSON.stringify(previousOrderSteps.map(p => ({id: p.id, name: p.manufacturing_steps.step_name, order: p.manufacturing_steps.step_order})), null, 2));
 
       if (previousOrderSteps.length === 0) {
-        return { headers: [], rows: [] };
+          console.log('No previous steps found.');
+          return { headers: [], rows: [] };
       }
 
-      // 2. Group by unique manufacturing step to create table headers
+      // 2. Create headers from unique previous steps.
       const uniqueSteps = new Map<string, { name: string; order: number }>();
       previousOrderSteps.forEach(pos => {
-        if (pos.manufacturing_steps && !uniqueSteps.has(pos.manufacturing_steps.id)) {
-          uniqueSteps.set(pos.manufacturing_steps.id, {
-            name: pos.manufacturing_steps.step_name || 'Unknown Step',
-            order: pos.manufacturing_steps.step_order,
-          });
-        }
-      });
-      const sortedUniqueSteps = Array.from(uniqueSteps.entries())
-        .sort(([, a], [, b]) => a.order - b.order);
-      
-      const headers = sortedUniqueSteps.map(([, stepInfo]) => stepInfo.name);
-      const sortedUniqueStepIds = sortedUniqueSteps.map(([id]) => id);
-      console.log('Table headers:', headers);
-
-      // 3. Collect all unique fields from these steps to create table rows
-      const distinctFieldLabels = new Map<string, { id: string; name: string; label: string; options: any }>();
-      previousOrderSteps.forEach(pos => {
-        const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
-        fieldsForThisStep.forEach(field => {
-          if (!distinctFieldLabels.has(field.field_label)) {
-            distinctFieldLabels.set(field.field_label, {
-              id: field.field_id,
-              name: field.field_name,
-              label: field.field_label,
-              options: field.field_options,
-            });
+          if (pos.manufacturing_steps && !uniqueSteps.has(pos.manufacturing_steps.id)) {
+              uniqueSteps.set(pos.manufacturing_steps.id, {
+                  name: pos.manufacturing_steps.step_name || 'Unknown Step',
+                  order: pos.manufacturing_steps.step_order,
+              });
           }
-        });
       });
-      console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
 
-      // 4. Build the table rows with aggregated values
-      const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
-        const rowData = {
-          label: fieldInfo.label,
-          values: [] as string[],
-        };
+      const sortedUniqueSteps = Array.from(uniqueSteps.entries()).sort(([, a], [, b]) => a.order - b.order);
+      const headers = sortedUniqueSteps.map(([, stepInfo]) => stepInfo.name);
+      const uniqueStepIds = sortedUniqueSteps.map(([id]) => id);
 
-        // For each unique step (column)
-        sortedUniqueStepIds.forEach(stepId => {
-          // Find all instances of this manufacturing step
-          const orderStepsForThisStep = previousOrderSteps.filter(pos => String(pos.manufacturing_step_id) === String(stepId));
-          const valuesForThisCell: string[] = [];
+      console.log('Table Headers:', headers);
+      if (headers.length === 0) {
+          console.warn('Generated 0 headers.');
+          return { headers: [], rows: [] };
+      }
 
-          // For each instance, get the value
-          orderStepsForThisStep.forEach(pos => {
-            const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
-            if (fieldForThisStep) {
-              const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
-              if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-                let value = savedValue;
-                if (fieldForThisStep.field_options?.unit) {
-                  value = `${value} ${fieldForThisStep.field_options.unit}`;
-                }
-                valuesForThisCell.push(value);
+      // 3. Find all distinct fields across all previous steps.
+      const distinctFields = new Map<string, { fieldId: string; label: string; name: string; options: any; type: string }>();
+      previousOrderSteps.forEach(pos => {
+          const fieldsForStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
+          fieldsForStep.forEach(field => {
+              if (!distinctFields.has(field.field_label)) { // Using label to group rows
+                  distinctFields.set(field.field_label, {
+                      fieldId: field.field_id,
+                      label: field.field_label,
+                      name: field.field_name,
+                      options: field.field_options,
+                      type: field.field_type
+                  });
               }
-            }
+          });
+      });
+      
+      const rowLabels = Array.from(distinctFields.values());
+      console.log('Distinct Row Labels (Metrics):', JSON.stringify(rowLabels, null, 2));
+
+      if (rowLabels.length === 0) {
+          console.warn('Found 0 distinct fields in previous steps.');
+          return { headers: [], rows: [] };
+      }
+
+      // 4. Populate rows with values.
+      const rows = rowLabels.map(fieldInfo => {
+          const rowData = {
+              label: fieldInfo.label,
+              values: [] as string[]
+          };
+
+          // For each header (column)
+          uniqueStepIds.forEach(stepId => {
+              // Find all order steps that match this column's step definition
+              const relevantOrderSteps = previousOrderSteps.filter(pos => String(pos.manufacturing_step_id) === String(stepId));
+              
+              const cellValues: string[] = [];
+              relevantOrderSteps.forEach(ros => {
+                  // Find the specific field definition for this step that matches our row's label
+                  const fieldDef = allStepFields.find(sf => 
+                      String(sf.manufacturing_step_id) === String(stepId) && 
+                      sf.field_label === fieldInfo.label
+                  );
+
+                  if (fieldDef) {
+                      const value = getStepValue(ros.id, fieldDef.field_id);
+                      if (value !== null && value !== undefined && value !== '') {
+                          let displayValue = String(value);
+                          if (fieldDef.field_options?.unit) {
+                              displayValue += ` ${fieldDef.field_options.unit}`;
+                          }
+                          cellValues.push(displayValue);
+                      }
+                  }
+              });
+              
+              rowData.values.push(cellValues.length > 0 ? cellValues.join(', ') : '-');
           });
 
-          // Join multiple values or show a placeholder
-          rowData.values.push(valuesForThisCell.length > 0 ? valuesForThisCell.join(', ') : '-');
-        });
-
-        return rowData;
+          return rowData;
       });
-      console.log('Table rows:', rows);
 
+      console.log('Final table rows:', JSON.stringify(rows, null, 2));
+      
       return { headers, rows };
     };
     
