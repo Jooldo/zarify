@@ -89,13 +89,37 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
       // Fetch all manufacturing steps
       console.log("[DEBUG/MO000004] All manufacturing steps for merchant:", manufacturingSteps);
       // Fetch all order steps for order
-      const relevantOrderSteps = orderSteps.filter(os => os.manufacturing_order_id === order.id);
+      const relevantOrderSteps = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
       console.log("[DEBUG/MO000004] All order steps for this order:", relevantOrderSteps);
 
-      // For each order step, log all field values
+      // Find "Dhol" manufacturing step definition
+      const dholDef = manufacturingSteps.find(d => (d.step_name || '').toLowerCase() === 'dhol');
+      if (!dholDef) {
+        console.warn('[DEBUG/MO000004] No manufacturing step definition named "Dhol" found');
+      } else {
+        // Find order step for "Dhol"
+        const dholOrderStep = relevantOrderSteps.find(os => String(os.manufacturing_step_id) === String(dholDef.id));
+        if (!dholOrderStep) {
+          console.warn('[DEBUG/MO000004] No order step found for "Dhol" for this order');
+        } else {
+          console.log('[DEBUG/MO000004] Found order step for "Dhol":', dholOrderStep);
+
+          // Get the fields for "Dhol"
+          const dholFields = getStepFields(dholDef.id);
+          if (!dholFields.length) {
+            console.warn('[DEBUG/MO000004] No fields configured for "Dhol" manufacturing step');
+          } else {
+            dholFields.forEach(field => {
+              const value = getStepValue(dholOrderStep.id, field.field_id);
+              console.log(`[DEBUG/MO000004] Dhol field "${field.field_label}":`, value ?? "(empty/null)");
+            });
+          }
+        }
+      }
+
+      // Continue to debug ALL steps and ALL values as before
       relevantOrderSteps.forEach(os => {
-        // Get step fields from definition
-        const def = manufacturingSteps.find(d => d.id === os.manufacturing_step_id);
+        const def = manufacturingSteps.find(d => String(d.id) === String(os.manufacturing_step_id));
         let stepFields = [];
         if (def) stepFields = getStepFields(def.id);
         console.log(`[DEBUG/MO000004] Step: ${def?.step_name || os.manufacturing_step_id} (${os.id})`);
