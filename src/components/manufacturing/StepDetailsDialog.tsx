@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,20 +24,23 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   orderStep,
   stepFields = []
 }) => {
-  const { getStepValue, stepValues } = useManufacturingStepValues();
-  const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading } = useManufacturingSteps();
+  const { getStepValue, stepValues, isLoading: isLoadingValues } = useManufacturingStepValues();
+  const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading: isLoadingSteps } = useManufacturingSteps();
+  const isLoading = isLoadingValues || isLoadingSteps;
 
   React.useEffect(() => {
     if (open) {
-      console.log('--- StepDetailsDialog DATA ---');
-      console.log('isLoading:', isLoading);
+      console.log('--- StepDetailsDialog DATA (REVISED) ---');
+      console.log('isLoading (Combined):', isLoading);
+      console.log('isLoadingValues:', isLoadingValues);
+      console.log('isLoadingSteps:', isLoadingSteps);
       console.log('stepData:', JSON.stringify(stepData, null, 2));
       console.log('orderStep:', JSON.stringify(orderStep, null, 2));
+      console.log('stepValues count:', stepValues.length);
       console.log('allOrderSteps count:', allOrderSteps.length);
-      console.log('allStepFields:', allStepFields);
-      console.log('stepValues from useManufacturingStepValues:', stepValues);
+      console.log('allStepFields count:', allStepFields.length);
     }
-  }, [open, isLoading, stepData, orderStep, allOrderSteps, allStepFields, stepValues]);
+  }, [open, isLoading, isLoadingValues, isLoadingSteps, stepData, orderStep, allOrderSteps, allStepFields, stepValues]);
 
   if (!stepData) return null;
 
@@ -141,12 +143,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         weightReceived: 'N/A',
       };
       
-      console.log(`--- Processing previous step: ${step.manufacturing_steps?.step_name}, Order Step ID: ${step.id}`);
-      console.log(`Fields for this step type:`, fieldsForStep);
-
       fieldsForStep.forEach(field => {
         const value = getStepValue(step.id, field.field_id);
-        console.log(`  - Checking field: '${field.field_label}' (name: ${field.field_name}, id: ${field.field_id})... Value found:`, value);
         
         if (value !== null && value !== undefined && value !== '') {
           let displayValue = `${value}`;
@@ -155,34 +153,27 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           }
 
           const fieldName = field.field_name.toLowerCase();
-          console.log(`    > Field name: ${fieldName}, Value: ${value}, Display: ${displayValue}`);
 
           if (field.field_type === 'date' && (fieldName.includes('due') || fieldName.includes('date'))) {
             const parsedDate = new Date(value);
             if (!isNaN(parsedDate.getTime())) {
                 stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
-                console.log(`      -> Matched Due Date:`, stepFieldValues.dueDate);
             }
           }
           if (fieldName.includes('quantity') && fieldName.includes('assigned')) {
             stepFieldValues.quantityAssigned = displayValue;
-            console.log(`      -> Matched Quantity Assigned:`, displayValue);
           }
           if (fieldName.includes('quantity') && fieldName.includes('received')) {
             stepFieldValues.quantityReceived = displayValue;
-            console.log(`      -> Matched Quantity Received:`, displayValue);
           }
           if (fieldName.includes('weight') && fieldName.includes('assigned')) {
             stepFieldValues.weightAssigned = displayValue;
-            console.log(`      -> Matched Weight Assigned:`, displayValue);
           }
           if (fieldName.includes('weight') && fieldName.includes('received')) {
             stepFieldValues.weightReceived = displayValue;
-            console.log(`      -> Matched Weight Received:`, displayValue);
           }
         }
       });
-      console.log(`Final processed values for step:`, stepFieldValues);
       
       return {
         ...step,
@@ -296,51 +287,55 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           )}
 
           {/* Previous Steps Data */}
-          {previousStepsWithFieldValues.length > 0 && (
+          {previousOrderSteps.length > 0 && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
                 <History className="h-3 w-3" />
                 Previous Steps
               </h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-gray-200">
-                      <th className="p-2 text-left font-semibold border border-gray-300">Step</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Status</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Worker</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Assigned</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Received</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Assigned</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Received</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Progress</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Started</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Completed</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Due Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previousStepsWithFieldValues.map((step) => (
-                      <tr key={step.id} className="border-b border-gray-300">
-                        <td className="p-2 font-medium border border-gray-300">{step.manufacturing_steps?.step_name || 'N/A'}</td>
-                        <td className="p-2 border border-gray-300 capitalize">{step.status.replace('_', ' ')}</td>
-                        <td className="p-2 border border-gray-300">{step.workers?.name || 'N/A'}</td>
-                        <td className="p-2 border border-gray-300">{step.quantityAssigned}</td>
-                        <td className="p-2 border border-gray-300">{step.quantityReceived}</td>
-                        <td className="p-2 border border-gray-300">{step.weightAssigned}</td>
-                        <td className="p-2 border border-gray-300">{step.weightReceived}</td>
-                        <td className="p-2 border border-gray-300">{step.progress_percentage}%</td>
-                        <td className="p-2 border border-gray-300">
-                          {step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}
-                        </td>
-                        <td className="p-2 border border-gray-300">
-                          {step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}
-                        </td>
-                        <td className="p-2 border border-gray-300">{step.dueDate}</td>
+                {isLoading ? (
+                  <p className="text-xs text-center p-4">Loading step details...</p>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="p-2 text-left font-semibold border border-gray-300">Step</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Status</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Worker</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Qty Assigned</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Qty Received</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Weight Assigned</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Weight Received</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Progress</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Started</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Completed</th>
+                        <th className="p-2 text-left font-semibold border border-gray-300">Due Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {previousStepsWithFieldValues.map((step) => (
+                        <tr key={step.id} className="border-b border-gray-300">
+                          <td className="p-2 font-medium border border-gray-300">{step.manufacturing_steps?.step_name || 'N/A'}</td>
+                          <td className="p-2 border border-gray-300 capitalize">{step.status.replace('_', ' ')}</td>
+                          <td className="p-2 border border-gray-300">{step.workers?.name || 'N/A'}</td>
+                          <td className="p-2 border border-gray-300">{step.quantityAssigned}</td>
+                          <td className="p-2 border border-gray-300">{step.quantityReceived}</td>
+                          <td className="p-2 border border-gray-300">{step.weightAssigned}</td>
+                          <td className="p-2 border border-gray-300">{step.weightReceived}</td>
+                          <td className="p-2 border border-gray-300">{step.progress_percentage}%</td>
+                          <td className="p-2 border border-gray-300">
+                            {step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}
+                          </td>
+                          <td className="p-2 border border-gray-300">
+                            {step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}
+                          </td>
+                          <td className="p-2 border border-gray-300">{step.dueDate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}
