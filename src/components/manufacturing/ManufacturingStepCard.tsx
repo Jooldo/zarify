@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,9 +103,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const stepExists = currentOrderStep !== undefined;
 
   // Check if there are subsequent steps that have been started (fix CTA logic)
-  const hasSubsequentSteps = orderSteps.some(step => 
-    step.manufacturing_order_id === data.orderId && 
-    step.manufacturing_steps?.step_order && 
+  const hasSubsequentSteps = orderSteps.some(step =>
+    step.manufacturing_order_id === data.orderId &&
+    step.manufacturing_steps && // Guard against null relationship
     step.manufacturing_steps.step_order > data.stepOrder &&
     (step.status === 'in_progress' || step.status === 'completed')
   );
