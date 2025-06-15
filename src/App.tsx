@@ -13,6 +13,7 @@ import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import PublicCatalogue from "./pages/PublicCatalogue";
 import NotFound from "./pages/NotFound";
+import AuthPage from "@/components/AuthPage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<AuthPage />} />
               <Route path="/app" element={
                 <ProtectedRoute>
                   <Index />
