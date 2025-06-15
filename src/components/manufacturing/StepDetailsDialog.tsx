@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -124,58 +123,52 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
     return filteredSteps.sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
   }, [orderStep, allOrderSteps, isLoading]);
 
-  const previousStepsWithFieldValues = React.useMemo(() => {
+  const { headers: previousStepsHeaders, rows: previousStepsRows } = React.useMemo(() => {
     if (isLoading || !previousOrderSteps.length) {
-      return [];
+      return { headers: [], rows: [] };
     }
 
-    return previousOrderSteps.map(step => {
-      const fieldsForStep = allStepFields.filter(f => String(f.manufacturing_step_id) === String(step.manufacturing_step_id));
-      
-      const stepFieldValues = {
-        dueDate: 'N/A',
-        quantityAssigned: 'N/A',
-        quantityReceived: 'N/A',
-        weightAssigned: 'N/A',
-        weightReceived: 'N/A',
-      };
+    const uniqueFields = new Map<string, { label: string; unit?: string }>();
 
+    // Collect all unique fields from previous steps
+    previousOrderSteps.forEach(step => {
+      const fieldsForStep = allStepFields.filter(
+        f => String(f.manufacturing_step_id) === String(step.manufacturing_step_id)
+      );
       fieldsForStep.forEach(field => {
-        const value = getStepValue(step.id, field.field_id);
-        if (value !== null && value !== undefined && value !== '') {
-          let displayValue = `${value}`;
-          if (field.field_options?.unit) {
-            displayValue = `${value} ${field.field_options.unit}`;
-          }
-
-          const fieldName = field.field_name.toLowerCase();
-          
-          if (field.field_type === 'date' && fieldName.includes('due')) {
-            const parsedDate = new Date(value);
-            if (!isNaN(parsedDate.getTime())) {
-                stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
-            }
-          } else if (fieldName.includes('quantity')) {
-            if (fieldName.includes('assigned')) {
-              stepFieldValues.quantityAssigned = displayValue;
-            } else if (fieldName.includes('received')) {
-              stepFieldValues.quantityReceived = displayValue;
-            }
-          } else if (fieldName.includes('weight')) {
-            if (fieldName.includes('assigned')) {
-              stepFieldValues.weightAssigned = displayValue;
-            } else if (fieldName.includes('received')) {
-              stepFieldValues.weightReceived = displayValue;
-            }
-          }
+        if (!uniqueFields.has(field.field_id)) {
+          uniqueFields.set(field.field_id, {
+            label: field.field_label,
+            unit: field.field_options?.unit,
+          });
         }
       });
-      
+    });
+
+    const headers = Array.from(uniqueFields.entries()).map(([id, { label, unit }]) => ({
+      id,
+      label: unit ? `${label} (${unit})` : label,
+    }));
+
+    const rows = previousOrderSteps.map(step => {
+      const rowData: Record<string, string> = {};
+      headers.forEach(header => {
+        const value = getStepValue(step.id, header.id);
+        rowData[header.id] = value !== null && value !== undefined && value !== '' ? String(value) : '';
+      });
+
       return {
-        ...step,
-        ...stepFieldValues
+        id: step.id,
+        stepName: step.manufacturing_steps?.step_name || 'N/A',
+        status: step.status,
+        worker: step.workers?.name || 'N/A',
+        startedAt: step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A',
+        completedAt: step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A',
+        fieldValues: rowData,
       };
     });
+
+    return { headers, rows };
   }, [previousOrderSteps, allStepFields, getStepValue, isLoading]);
 
 
@@ -283,11 +276,11 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           )}
 
           {/* Previous Steps Data */}
-          {previousStepsWithFieldValues.length > 0 && (
+          {previousStepsRows.length > 0 && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
                 <History className="h-3 w-3" />
-                Previous Steps
+                Previous Steps Data
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
@@ -296,34 +289,28 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
                       <th className="p-2 text-left font-semibold border border-gray-300">Step</th>
                       <th className="p-2 text-left font-semibold border border-gray-300">Status</th>
                       <th className="p-2 text-left font-semibold border border-gray-300">Worker</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Assigned</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Received</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Assigned</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Received</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Progress</th>
                       <th className="p-2 text-left font-semibold border border-gray-300">Started</th>
                       <th className="p-2 text-left font-semibold border border-gray-300">Completed</th>
-                      <th className="p-2 text-left font-semibold border border-gray-300">Due Date</th>
+                      {previousStepsHeaders.map(header => (
+                        <th key={header.id} className="p-2 text-left font-semibold border border-gray-300">
+                          {header.label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {previousStepsWithFieldValues.map((step) => (
-                      <tr key={step.id} className="border-b border-gray-300">
-                        <td className="p-2 font-medium border border-gray-300">{step.manufacturing_steps?.step_name || 'N/A'}</td>
-                        <td className="p-2 border border-gray-300 capitalize">{step.status.replace('_', ' ')}</td>
-                        <td className="p-2 border border-gray-300">{step.workers?.name || 'N/A'}</td>
-                        <td className="p-2 border border-gray-300">{step.quantityAssigned}</td>
-                        <td className="p-2 border border-gray-300">{step.quantityReceived}</td>
-                        <td className="p-2 border border-gray-300">{step.weightAssigned}</td>
-                        <td className="p-2 border border-gray-300">{step.weightReceived}</td>
-                        <td className="p-2 border border-gray-300">{step.progress_percentage}%</td>
-                        <td className="p-2 border border-gray-300">
-                          {step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}
-                        </td>
-                        <td className="p-2 border border-gray-300">
-                          {step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}
-                        </td>
-                        <td className="p-2 border border-gray-300">{step.dueDate}</td>
+                    {previousStepsRows.map((row) => (
+                      <tr key={row.id} className="border-b border-gray-300 odd:bg-white even:bg-gray-100">
+                        <td className="p-2 font-medium border border-gray-300">{row.stepName}</td>
+                        <td className="p-2 border border-gray-300 capitalize">{row.status.replace('_', ' ')}</td>
+                        <td className="p-2 border border-gray-300">{row.worker}</td>
+                        <td className="p-2 border border-gray-300">{row.startedAt}</td>
+                        <td className="p-2 border border-gray-300">{row.completedAt}</td>
+                        {previousStepsHeaders.map(header => (
+                          <td key={header.id} className="p-2 border border-gray-300">
+                            {row.fieldValues[header.id]}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

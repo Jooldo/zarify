@@ -1,6 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import React from 'react';
 
 export interface ManufacturingOrderStepValue {
   id: string;
@@ -25,16 +26,16 @@ export const useManufacturingStepValues = () => {
     },
   });
 
-  const getStepValues = (stepId: string) => {
+  const getStepValues = React.useCallback((stepId: string) => {
     return stepValues.filter(value => value.manufacturing_order_step_id === stepId);
-  };
+  }, [stepValues]);
 
-  const getStepValue = (stepId: string, fieldId: string) => {
+  const getStepValue = React.useCallback((stepId: string, fieldId: string) => {
     const value = stepValues.find(v => 
       v.manufacturing_order_step_id === stepId && v.field_id === fieldId
     );
     return value?.field_value;
-  };
+  }, [stepValues]);
 
   return {
     stepValues,
