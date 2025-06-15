@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,13 +7,13 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar, User, Package, Settings, Weight, Hash, Type, History } from 'lucide-react';
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingSteps, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 
 interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stepData: StepCardData | null;
-  orderStep?: any;
+  orderStep?: ManufacturingOrderStep | null;
   stepFields?: any[];
 }
 
@@ -30,7 +31,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   console.log('StepDetailsDialog - stepData:', stepData);
   console.log('StepDetailsDialog - orderStep:', orderStep);
-  console.log('StepDetailsDialog - stepFields:', stepFields);
+  console.log('StepDetailsDialog - stepFields from props:', stepFields);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -95,28 +96,38 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   const fieldValues = getFieldValues();
 
   const getPreviousStepsData = () => {
-    if (!orderStep?.manufacturing_order_id || !orderStep?.manufacturing_steps?.step_order) {
+    console.log('getPreviousStepsData called with orderStep:', orderStep);
+
+    if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order === 'undefined') {
+      console.log('Bailing out of getPreviousStepsData: orderStep is missing required properties.', { orderStep });
       return { headers: [], rows: [] };
     }
+    
+    console.log('All Order Steps from hook:', allOrderSteps);
+    console.log('All Step Fields from hook:', allStepFields);
 
     const currentOrderSteps = allOrderSteps.filter(
-      (os) => os.manufacturing_order_id === orderStep.manufacturing_order_id
+      (os) => String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id)
     );
+    console.log(`Found ${currentOrderSteps.length} steps for order ID ${orderStep.manufacturing_order_id}`);
 
     const previousOrderSteps = currentOrderSteps
       .filter(os => os.manufacturing_steps && os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order)
-      .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
+      .sort((a, b) => a.manufacturing_steps!.step_order - b.manufacturing_steps!.step_order);
+    
+    console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
 
     if (previousOrderSteps.length === 0) {
       return { headers: [], rows: [] };
     }
-
+    
     const headers = previousOrderSteps.map(pos => pos.manufacturing_steps?.step_name || 'Unknown Step');
+    console.log('Table headers:', headers);
 
     const distinctFieldLabels = new Map<string, { id: string, name: string, label: string, options: any }>();
 
     previousOrderSteps.forEach(pos => {
-      const fieldsForThisStep = allStepFields.filter(sf => sf.manufacturing_step_id === pos.manufacturing_step_id);
+      const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
       fieldsForThisStep.forEach(field => {
         if (!distinctFieldLabels.has(field.field_label)) {
           distinctFieldLabels.set(field.field_label, {
@@ -128,6 +139,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         }
       });
     });
+    console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
 
     const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
       const rowData = {
@@ -136,7 +148,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
       };
 
       previousOrderSteps.forEach(pos => {
-        const fieldForThisStep = allStepFields.find(sf => sf.manufacturing_step_id === pos.manufacturing_step_id && sf.field_label === fieldInfo.label);
+        const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
         
         let value = '-';
         if (fieldForThisStep) {
@@ -153,6 +165,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
       return rowData;
     });
+    console.log('Table rows:', rows);
 
     return { headers, rows };
   };
