@@ -160,8 +160,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             displayValue = savedValue;
             
             // Add unit information for specific field types
-            if (field.field_options?.unit) {
-              displayValue = `${value} ${field.field_options.unit}`;
+            if ((field.field_options as { unit?: string })?.unit) {
+              displayValue = `${value} ${(field.field_options as { unit: string }).unit}`;
             }
           }
         }

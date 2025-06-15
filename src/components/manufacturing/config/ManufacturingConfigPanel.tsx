@@ -31,6 +31,7 @@ export interface RequiredField {
   required: boolean;
   options?: {
     unit?: string;
+    options?: string[];
   };
 }
 
@@ -103,7 +104,7 @@ const ManufacturingConfigPanel = () => {
             label: field.field_label,
             type: field.field_type as RequiredField['type'], // Type assertion for compatibility
             required: field.is_required,
-            options: field.field_options || {}
+            options: (field.field_options as RequiredField['options']) || undefined
           }));
 
         // Use saved fields if available, otherwise use defaults (worker only)
@@ -118,7 +119,7 @@ const ManufacturingConfigPanel = () => {
           qcRequired: step.qc_required,
           requiredFields,
           estimatedDuration: step.estimated_duration_hours || 1,
-          description: step.description
+          description: step.description || ''
         };
       });
       setSteps(configSteps);
@@ -168,7 +169,8 @@ const ManufacturingConfigPanel = () => {
         order: newOrder,
         qcRequired: false,
         requiredFields: [defaultRequiredFields[0]], // Only Worker by default
-        estimatedDuration: 1
+        estimatedDuration: 1,
+        description: ''
       };
       
       // Update local state immediately

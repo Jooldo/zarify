@@ -206,7 +206,7 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
         );
 
       case 'status':
-        const statusOptions = field.field_options?.options || ['pending', 'in_progress', 'completed', 'blocked'];
+        const statusOptions = (field.field_options as { options?: string[] })?.options || ['pending', 'in_progress', 'completed', 'blocked'];
         return (
           <div key={field.id} className="space-y-2">
             <Label htmlFor={field.field_id}>
@@ -234,7 +234,7 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
         );
 
       case 'multiselect':
-        const multiselectOptions = field.field_options?.options || [];
+        const multiselectOptions = (field.field_options as { options?: string[] })?.options || [];
         return (
           <div key={field.id} className="space-y-2">
             <Label htmlFor={field.field_id}>
