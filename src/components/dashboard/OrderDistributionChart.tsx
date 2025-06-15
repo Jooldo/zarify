@@ -24,7 +24,7 @@ const OrderDistributionChart = () => {
     if (!orders) return [];
     
     const createdCount = orders.filter(o => o.status === 'Created').length;
-    const inProgressCount = orders.filter(o => o.status === 'Progress').length;
+    const inProgressCount = orders.filter(o => o.status === 'Progress' || o.status === 'Partially Fulfilled').length;
     
     return [
       { name: 'created', value: createdCount, fill: 'var(--color-created)' },
