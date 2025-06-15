@@ -3,10 +3,11 @@ import React from 'react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { Tables } from '@/integrations/supabase/types';
+import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 
 interface StepDebugLoggerProps {
   open: boolean;
-  order: Tables<'manufacturing_orders'> | null;
+  order: ManufacturingOrder | null;
   step: Tables<'manufacturing_order_steps'> | null;
 }
 
