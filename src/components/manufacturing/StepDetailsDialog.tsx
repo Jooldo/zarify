@@ -107,37 +107,48 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
       })
       .sort((a, b) => (Number(a.step_order) - Number(b.step_order)));
 
-    // Extra debug
-    console.log('[DEBUG] previousStepDefinitions:', previousStepDefinitions);
+    // All previous step definition IDs as string
+    const prevStepDefIds = previousStepDefinitions.map(psd => String(psd.id));
+    // All orderSteps for this order id (normalize id as string)
+    const prevOrderSteps = orderSteps.filter(os =>
+      String(os.manufacturing_order_id) === String(order.id) &&
+      prevStepDefIds.includes(String(os.manufacturing_step_id))
+    );
 
-    // Extra robust logging for MO000004
+    // Debug output: which prevStepDefIds and orderStep IDs exist?
+    console.log('[FIX-DEBUG] prevStepDefIds:', prevStepDefIds);
+    console.log('[FIX-DEBUG] prevOrderSteps manufacturing_step_id:', prevOrderSteps.map(os => String(os.manufacturing_step_id)));
+    console.log('[FIX-DEBUG] All orderSteps for this order:', orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id)));
+
     if (order.order_number === "MO000004") {
-      console.log('[DEBUG][MO000004] previousStepDefinitions:', previousStepDefinitions.map(psd => psd.id));
       previousStepDefinitions.forEach(prevStepDef => {
-        const matched = orderSteps.find(os =>
-          String(os.manufacturing_order_id) === String(order.id) &&
-          String(os.manufacturing_step_id) === String(prevStepDef.id)
-        );
-        console.log(`[DEBUG][MO000004] Try match prevStepDef.id=${prevStepDef.id}  ${!!matched ? 'FOUND' : 'NOT FOUND'}`);
+        const found = prevOrderSteps.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
+        console.log(`[FIX-DEBUG][MO000004] Does prevStepDef.id=${prevStepDef.id} exist in orderSteps? `, !!found);
       });
     }
 
+    // Map every previous step definition to either data or fallback
     return previousStepDefinitions.map(prevStepDef => {
-      // Be robust if order_step linkage is missing (check both id and type)
+      // Always find orderStep using string comparison!
       const prevOrderStep = orderSteps.find(os =>
         String(os.manufacturing_order_id) === String(order.id) &&
         String(os.manufacturing_step_id) === String(prevStepDef.id)
       );
 
       if (!prevOrderStep) {
-        console.log(`[DEBUG] No prevOrderStep found for step_id=${prevStepDef.id} in order_id=${order.id}`);
-        return null;
+        // Show an 'empty' item for steps with no orderStep record
+        return {
+          stepName: prevStepDef.step_name,
+          stepOrder: prevStepDef.step_order,
+          values: [],
+          missing: true
+        };
       }
 
       const fields = getStepFields(prevStepDef.id);
 
       // More debug
-      console.log(`[DEBUG] Fields for prev step ${prevStepDef.step_name} (${prevStepDef.id}) in order ${order.id}:`, fields);
+      console.log(`[FIX-DEBUG] Fields for prev step ${prevStepDef.step_name} (${prevStepDef.id}) in order ${order.id}:`, fields);
 
       const values = fields.map(field => {
         const value = getStepValue(prevOrderStep.id, field.field_id);
@@ -148,15 +159,15 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         };
       });
 
-      console.log(`[DEBUG] Prev step ${prevStepDef.step_name} values:`, values);
+      console.log(`[FIX-DEBUG] Prev step ${prevStepDef.step_name} values:`, values);
 
       return {
         stepName: prevStepDef.step_name,
         stepOrder: prevStepDef.step_order,
         values,
+        missing: false
       };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
-
+    });
   }, [step, order, manufacturingSteps, orderSteps, getStepFields, getStepValue]);
 
   const currentStepDefinition = useMemo(() => {
@@ -194,23 +205,9 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
     // Debug: Display order number for clarity
     if (order && order.order_number) {
-      // Check specifically if there are NO previous STEPS for this order in orderSteps
-      const currentStepDefinition = manufacturingSteps.find(s => s.id === step?.manufacturing_step_id);
-      let prevOrderStepsCount = 0;
-      if (currentStepDefinition) {
-        const currentOrder = typeof currentStepDefinition.step_order === "number" ? currentStepDefinition.step_order : Number(currentStepDefinition.step_order);
-        const prevStepIds = manufacturingSteps
-          .filter(s => {
-            const so = typeof s.step_order === "number" ? s.step_order : Number(s.step_order);
-            return so < currentOrder;
-          })
-          .map(s => s.id);
-
-        prevOrderStepsCount = orderSteps.filter(os =>
-          String(os.manufacturing_order_id) === String(order.id) &&
-          prevStepIds.includes(os.manufacturing_step_id)
-        ).length;
-      }
+      // Find number of prev steps with data (not just step definitions)
+      const prevDataCount = previousStepsData.filter(step => !step.missing && step.values.length > 0).length;
+      const prevDefsMissingCount = previousStepsData.filter(step => step.missing).length;
 
       return (
         <div>
@@ -220,46 +217,47 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
           {previousStepsData.length === 0 ? (
             <div className="py-4 border rounded text-center bg-muted/30 text-muted-foreground">
               No previous step data found for this order.<br />
-              {prevOrderStepsCount === 0
-                ? (
-                  <>No previous steps have been started for this order.</>
-                )
-                : (
-                  <>Previous steps exist but no data is available.</>
-                )
-              }
+              <span>
+                No previous steps have been started for this order.
+              </span>
             </div>
           ) : (
             <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
               <h4 className="font-semibold text-lg">Previous Steps Data</h4>
               {previousStepsData.map((prevStep, index) => (
-                  <div key={index}>
-                    <h5 className="font-semibold mb-2">{`Step ${prevStep.stepOrder}: ${prevStep.stepName}`}</h5>
-                    {prevStep.values.length > 0 ? (
-                      <div className="overflow-x-auto border rounded-lg">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {prevStep.values.map((item, idx) => (
-                                <TableHead key={idx}>{item.label}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              {prevStep.values.map((item, idx) => (
-                                <TableCell key={idx}>{item.value}</TableCell>
-                              ))}
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <Alert>
-                        <AlertDescription>No fields or data recorded for this step.</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
+                <div key={index}>
+                  <h5 className="font-semibold mb-2">{`Step ${prevStep.stepOrder}: ${prevStep.stepName}`}</h5>
+                  {prevStep.missing ? (
+                    <Alert>
+                      <AlertDescription>
+                        <span className="italic text-muted-foreground">Not started yet for this order.</span>
+                      </AlertDescription>
+                    </Alert>
+                  ) : prevStep.values.length > 0 ? (
+                    <div className="overflow-x-auto border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            {prevStep.values.map((item, idx) => (
+                              <TableHead key={idx}>{item.label}</TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            {prevStep.values.map((item, idx) => (
+                              <TableCell key={idx}>{item.value}{item.unit ? ` ${item.unit}` : ''}</TableCell>
+                            ))}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <Alert>
+                      <AlertDescription>No fields or data recorded for this step.</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
               ))}
             </div>
           )}
