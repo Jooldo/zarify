@@ -15,7 +15,7 @@ const LandingBenefits = () => {
           </h2>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="text-center group">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
               <DollarSign className="h-8 w-8 text-emerald-600" />
@@ -51,27 +51,25 @@ const LandingBenefits = () => {
             <div className="text-2xl font-bold text-purple-600">85%</div>
             <div className="text-gray-500 text-sm font-medium">Error Reduction</div>
           </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6 max-w-2xl">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+          
+          <div className="text-center group">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+              <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-gray-900 mb-1">Improve On-Time Delivery</h4>
-              <p className="text-gray-600 text-sm">95% on-time delivery rate with better production planning</p>
-            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Improve On-Time Delivery</h3>
+            <p className="text-gray-600 leading-relaxed mb-3 text-sm">Better production planning for on-time fulfillment</p>
+            <div className="text-2xl font-bold text-green-600">95%</div>
+            <div className="text-gray-500 text-sm font-medium">On-Time Delivery</div>
           </div>
           
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center flex-shrink-0">
-              <BarChart3 className="h-4 w-4 text-orange-600" />
+          <div className="text-center group">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+              <BarChart3 className="h-8 w-8 text-orange-600" />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-gray-900 mb-1">Better Decision Making</h4>
-              <p className="text-gray-600 text-sm">Real-time analytics and insights for informed decisions</p>
-            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Better Decision Making</h3>
+            <p className="text-gray-600 leading-relaxed mb-3 text-sm">Real-time analytics and insights for informed decisions</p>
+            <div className="text-2xl font-bold text-orange-600">40%</div>
+            <div className="text-gray-500 text-sm font-medium">Faster Insights</div>
           </div>
         </div>
       </div>
