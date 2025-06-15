@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { format } from 'date-fns';
 import type { Invoice } from '@/hooks/useInvoices';
-import type { Order } from '@/hooks/useOrders';
+import type { Order, OrderItem } from '@/hooks/useOrders';
 
 interface ViewInvoiceDialogProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
       // For now, we'll show a success message
       toast({
         title: 'Email Sent',
-        description: `Invoice ${invoice.invoice_number} has been emailed to ${order.customer.name}`,
+        description: `Invoice ${invoice.invoice_number} has been emailed to ${order.customers?.name}`,
       });
     } catch (error) {
       console.error('Error sending email:', error);
@@ -258,7 +258,7 @@ const ViewInvoiceDialog = ({ isOpen, onClose, invoice, order }: ViewInvoiceDialo
                   </tr>
                 </thead>
                 <tbody>
-                  {order.order_items.map((item) => (
+                  {order.order_items.map((item: OrderItem) => (
                     <tr key={item.id} className="border-t">
                       <td className="px-4 py-2">{item.product_configs?.product_code}</td>
                       <td className="px-4 py-2">{item.product_configs?.category}</td>
