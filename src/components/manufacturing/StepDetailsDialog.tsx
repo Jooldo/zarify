@@ -4,6 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, User, Package, Settings, Weight, Hash, Type, History } from 'lucide-react';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingSteps, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -105,109 +113,60 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
 
   const fieldValues = getFieldValues();
 
-  const { headers: prevStepsHeaders, rows: prevStepsRows } = React.useMemo(() => {
-    const getPreviousStepsData = () => {
-      console.log('getPreviousStepsData called with orderStep:', orderStep);
+  const previousStepsData = React.useMemo(() => {
+    if (isLoading || !orderStep || !orderStep.manufacturing_steps) {
+      return [];
+    }
 
-      if (!orderStep || !orderStep.manufacturing_order_id || !orderStep.manufacturing_steps || typeof orderStep.manufacturing_steps.step_order === 'undefined') {
-        console.log('Bailing out of getPreviousStepsData: orderStep is missing required properties.', { orderStep });
-        return { headers: [], rows: [] };
-      }
-      
-      console.log('All Order Steps from hook:', allOrderSteps);
-      console.log('All Step Fields from hook:', allStepFields);
+    // 1. Get previous order steps, sorted by their order
+    const previousOrderSteps = allOrderSteps
+      .filter(
+        (os) =>
+          os.manufacturing_steps &&
+          String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
+          os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order
+      )
+      .sort((a, b) => a.manufacturing_steps!.step_order - b.manufacturing_steps!.step_order);
 
-      // 1. Get previous order steps, sorted by their order
-      const previousOrderSteps = allOrderSteps
-        .filter(
-          (os) =>
-            String(os.manufacturing_order_id) === String(orderStep.manufacturing_order_id) &&
-            os.manufacturing_steps &&
-            os.manufacturing_steps.step_order < orderStep.manufacturing_steps.step_order
-        )
-        .sort((a, b) => a.manufacturing_steps.step_order - b.manufacturing_steps.step_order);
-      
-      console.log(`Found ${previousOrderSteps.length} previous steps.`, previousOrderSteps);
+    if (previousOrderSteps.length === 0) {
+      return [];
+    }
 
-      if (previousOrderSteps.length === 0) {
-        return { headers: [], rows: [] };
-      }
-
-      // 2. Group by unique manufacturing step to create table headers
-      const uniqueSteps = new Map<string, { name: string; order: number }>();
-      previousOrderSteps.forEach(pos => {
-        if (pos.manufacturing_steps && !uniqueSteps.has(pos.manufacturing_steps.id)) {
-          uniqueSteps.set(pos.manufacturing_steps.id, {
-            name: pos.manufacturing_steps.step_name || 'Unknown Step',
-            order: pos.manufacturing_steps.step_order,
-          });
-        }
-      });
-      const sortedUniqueSteps = Array.from(uniqueSteps.entries())
-        .sort(([, a], [, b]) => a.order - b.order);
-      
-      const headers = sortedUniqueSteps.map(([, stepInfo]) => stepInfo.name);
-      const sortedUniqueStepIds = sortedUniqueSteps.map(([id]) => id);
-      console.log('Table headers:', headers);
-
-      // 3. Collect all unique fields from these steps to create table rows
-      const distinctFieldLabels = new Map<string, { id: string; name: string; label: string; options: any }>();
-      previousOrderSteps.forEach(pos => {
-        const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
-        fieldsForThisStep.forEach(field => {
-          if (!distinctFieldLabels.has(field.field_label)) {
-            distinctFieldLabels.set(field.field_label, {
-              id: field.field_id,
-              name: field.field_name,
-              label: field.field_label,
-              options: field.field_options,
-            });
-          }
-        });
-      });
-      console.log('Distinct field labels:', Array.from(distinctFieldLabels.values()));
-
-      // 4. Build the table rows with aggregated values
-      const rows = Array.from(distinctFieldLabels.values()).map(fieldInfo => {
-        const rowData = {
-          label: fieldInfo.label,
-          values: [] as string[],
-        };
-
-        // For each unique step (column)
-        sortedUniqueStepIds.forEach(stepId => {
-          // Find all instances of this manufacturing step
-          const orderStepsForThisStep = previousOrderSteps.filter(pos => String(pos.manufacturing_step_id) === String(stepId));
-          const valuesForThisCell: string[] = [];
-
-          // For each instance, get the value
-          orderStepsForThisStep.forEach(pos => {
-            const fieldForThisStep = allStepFields.find(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id) && sf.field_label === fieldInfo.label);
-            if (fieldForThisStep) {
-              const savedValue = getStepValue(pos.id, fieldForThisStep.field_id);
-              if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-                let value = savedValue;
-                if (fieldForThisStep.field_options?.unit) {
-                  value = `${value} ${fieldForThisStep.field_options.unit}`;
-                }
-                valuesForThisCell.push(value);
-              }
-            }
-          });
-
-          // Join multiple values or show a placeholder
-          rowData.values.push(valuesForThisCell.length > 0 ? valuesForThisCell.join(', ') : '-');
-        });
-
-        return rowData;
-      });
-      console.log('Table rows:', rows);
-
-      return { headers, rows };
+    // 2. Process each previous step to create its own table data
+    type StepInfo = {
+      stepName: string;
+      fields: { label: string; value: string }[];
     };
     
-    if (isLoading) return { headers: [], rows: [] };
-    return getPreviousStepsData();
+    return previousOrderSteps.map(pos => {
+      const { manufacturing_steps } = pos;
+      if (!manufacturing_steps) return null;
+
+      const stepInfo: StepInfo = {
+        stepName: `${manufacturing_steps.step_name} (Step ${manufacturing_steps.step_order})`,
+        fields: [],
+      };
+
+      // Find fields configured for this step
+      const fieldsForThisStep = allStepFields.filter(sf => String(sf.manufacturing_step_id) === String(pos.manufacturing_step_id));
+
+      // Get value for each field
+      fieldsForThisStep.forEach(field => {
+        const savedValue = getStepValue(pos.id, field.field_id);
+        let displayValue = (savedValue !== null && savedValue !== undefined && savedValue !== '') ? String(savedValue) : '-';
+        
+        if (displayValue !== '-' && field.field_options?.unit) {
+          displayValue = `${displayValue} ${field.field_options.unit}`;
+        }
+
+        stepInfo.fields.push({
+          label: field.field_label,
+          value: displayValue,
+        });
+      });
+
+      return stepInfo;
+    }).filter((step): step is StepInfo => step !== null);
   }, [orderStep, allOrderSteps, allStepFields, getStepValue, isLoading]);
 
   return (
@@ -314,34 +273,41 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           )}
 
           {/* Previous Steps Data */}
-          {prevStepsHeaders.length > 0 && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
-                <History className="h-3 w-3" />
+          {previousStepsData.length > 0 && (
+            <div className="bg-gray-50 p-3 rounded-lg space-y-4">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <History className="h-4 w-4" />
                 Previous Steps Data
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-gray-200">
-                      <th className="p-2 text-left font-semibold border border-gray-300">Metric</th>
-                      {prevStepsHeaders.map((header, index) => (
-                        <th key={index} className="p-2 text-left font-semibold border border-gray-300">{header}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prevStepsRows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-b border-gray-300">
-                        <td className="p-2 font-medium border border-gray-300">{row.label}</td>
-                        {row.values.map((value, valueIndex) => (
-                          <td key={valueIndex} className="p-2 border border-gray-300">{value}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {previousStepsData.map((step, index) => (
+                <div key={index} className="bg-white p-3 rounded-md border">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">{step.stepName}</h4>
+                  {step.fields.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {step.fields.map((field, fieldIndex) => (
+                            <TableHead key={fieldIndex} className="h-8 px-2 py-1 text-xs">
+                              {field.label}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          {step.fields.map((field, fieldIndex) => (
+                            <TableCell key={fieldIndex} className="px-2 py-1 text-xs">
+                              {field.value}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-xs text-gray-500">No data fields recorded for this step.</p>
+                  )}
+                </div>
+              ))}
             </div>
           )}
           
