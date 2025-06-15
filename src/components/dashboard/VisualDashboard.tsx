@@ -1,11 +1,4 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import OrderFunnelChart from './OrderFunnelChart';
-import CriticalRawMaterials from './CriticalRawMaterials';
-import CriticalFinishedGoods from './CriticalFinishedGoods';
-import ConversationalQueryWidget from './ConversationalQueryWidget';
-import DailyInsights from './DailyInsights';
-import MerchantProfile from '../MerchantProfile';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface VisualDashboardProps {
@@ -36,39 +29,13 @@ const VisualDashboard = ({ onNavigateToTab }: VisualDashboardProps) => {
         </h1>
         <div className="flex flex-col gap-1">
           <p className="text-lg font-medium text-blue-600">{getGreeting()}</p>
-          <p className="text-gray-600 text-sm">Overview of critical operations and actionable insights</p>
+          <p className="text-gray-600 text-sm">Welcome to your dashboard. Let's get started!</p>
         </div>
       </div>
 
-      {/* Daily Insights - Full width section */}
-      <div>
-        <DailyInsights />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Funnel - Takes 1 column on large screens */}
-        <div>
-          <OrderFunnelChart />
-        </div>
-
-        {/* Ask Data Widget - Takes 1 column */}
-        <div>
-          <ConversationalQueryWidget onNavigateToTab={onNavigateToTab} />
-        </div>
-
-        {/* Critical Materials - Takes 1 column */}
-        <div className="space-y-6">
-          <CriticalRawMaterials onNavigateToProcurement={() => onNavigateToTab?.('inventory')} />
-          <CriticalFinishedGoods onNavigateToInventory={() => onNavigateToTab?.('inventory')} />
-        </div>
-      </div>
-
-      {/* Merchant Profile Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <MerchantProfile />
-        </div>
+      {/* Main Content Area */}
+      <div className="min-h-[400px] bg-gray-100 border-2 border-dashed rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">Your new dashboard starts here.</p>
       </div>
     </div>
   );
