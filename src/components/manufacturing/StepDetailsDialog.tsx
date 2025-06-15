@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import {
   Dialog,
@@ -203,55 +204,47 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
       return [];
     }
 
+    console.log('[PREVIOUS STEPS DEBUG] Starting calculation for order:', order.order_number);
+    console.log('[PREVIOUS STEPS DEBUG] Current step:', step);
+
+    // Find the current step definition
     const currentStepDefinition = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
     if (!currentStepDefinition) {
-      console.log("[DEBUG] No currentStepDefinition for step:", step);
+      console.log("[PREVIOUS STEPS DEBUG] No currentStepDefinition for step:", step);
       return [];
     }
 
-    // Defensive, parse to numbers to avoid string/number confusion
-    const currentStepOrder = typeof currentStepDefinition.step_order === "number"
-      ? currentStepDefinition.step_order
-      : Number(currentStepDefinition.step_order);
+    console.log('[PREVIOUS STEPS DEBUG] Current step definition:', currentStepDefinition);
 
-    // Get all previous step definitions based on order (fix parsing!)
-    const previousStepDefinitions = manufacturingSteps
-      .filter(s => {
-        const so = typeof s.step_order === "number" ? s.step_order : Number(s.step_order);
-        return so < currentStepOrder;
-      })
-      .sort((a, b) => (Number(a.step_order) - Number(b.step_order)));
+    // Get all order steps for this order
+    const allOrderStepsForOrder = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
+    console.log('[PREVIOUS STEPS DEBUG] All order steps for this order:', allOrderStepsForOrder);
 
-    // All previous step definition IDs as string
-    const prevStepDefIds = previousStepDefinitions.map(psd => String(psd.id));
-    // All orderSteps for this order id (normalize id as string)
-    const prevOrderSteps = orderSteps.filter(os =>
-      String(os.manufacturing_order_id) === String(order.id) &&
-      prevStepDefIds.includes(String(os.manufacturing_step_id))
-    );
+    // Get all manufacturing step definitions and sort them by step_order
+    const allStepDefinitions = manufacturingSteps
+      .slice()
+      .sort((a, b) => Number(a.step_order) - Number(b.step_order));
 
-    // Debug output: which prevStepDefIds and orderStep IDs exist?
-    console.log('[FIX-DEBUG] prevStepDefIds:', prevStepDefIds);
-    console.log('[FIX-DEBUG] prevOrderSteps manufacturing_step_id:', prevOrderSteps.map(os => String(os.manufacturing_step_id)));
-    console.log('[FIX-DEBUG] All orderSteps for this order:', orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id)));
+    console.log('[PREVIOUS STEPS DEBUG] All step definitions sorted:', allStepDefinitions);
 
-    if (order.order_number === "MO000004") {
-      previousStepDefinitions.forEach(prevStepDef => {
-        const found = prevOrderSteps.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
-        console.log(`[FIX-DEBUG][MO000004] Does prevStepDef.id=${prevStepDef.id} exist in orderSteps? `, !!found);
-      });
-    }
+    // Find current step position
+    const currentStepOrder = Number(currentStepDefinition.step_order);
+    console.log('[PREVIOUS STEPS DEBUG] Current step order:', currentStepOrder);
 
-    // Map every previous step definition to either data or fallback
-    return previousStepDefinitions.map(prevStepDef => {
-      // Always find orderStep using string comparison!
-      const prevOrderStep = orderSteps.find(os =>
-        String(os.manufacturing_order_id) === String(order.id) &&
-        String(os.manufacturing_step_id) === String(prevStepDef.id)
-      );
+    // Get all previous step definitions
+    const previousStepDefinitions = allStepDefinitions.filter(def => Number(def.step_order) < currentStepOrder);
+    console.log('[PREVIOUS STEPS DEBUG] Previous step definitions:', previousStepDefinitions);
 
-      if (!prevOrderStep) {
-        // Show an 'empty' item for steps with no orderStep record
+    // Map each previous step definition to data
+    const result = previousStepDefinitions.map(prevStepDef => {
+      console.log(`[PREVIOUS STEPS DEBUG] Processing step: ${prevStepDef.step_name} (ID: ${prevStepDef.id})`);
+
+      // Find the corresponding order step
+      const orderStep = allOrderStepsForOrder.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
+      console.log(`[PREVIOUS STEPS DEBUG] Found order step:`, orderStep);
+
+      if (!orderStep) {
+        console.log(`[PREVIOUS STEPS DEBUG] No order step found for ${prevStepDef.step_name}`);
         return {
           stepName: prevStepDef.step_name,
           stepOrder: prevStepDef.step_order,
@@ -260,13 +253,14 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         };
       }
 
+      // Get fields for this step
       const fields = getStepFields(prevStepDef.id);
+      console.log(`[PREVIOUS STEPS DEBUG] Fields for ${prevStepDef.step_name}:`, fields);
 
-      // More debug
-      console.log(`[FIX-DEBUG] Fields for prev step ${prevStepDef.step_name} (${prevStepDef.id}) in order ${order.id}:`, fields);
-
+      // Get values for each field
       const values = fields.map(field => {
-        const value = getStepValue(prevOrderStep.id, field.field_id);
+        const value = getStepValue(orderStep.id, field.field_id);
+        console.log(`[PREVIOUS STEPS DEBUG] Field "${field.field_label}" value:`, value);
         return {
           label: field.field_label,
           value: value || '-',
@@ -274,7 +268,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         };
       });
 
-      console.log(`[FIX-DEBUG] Prev step ${prevStepDef.step_name} values:`, values);
+      console.log(`[PREVIOUS STEPS DEBUG] Final values for ${prevStepDef.step_name}:`, values);
 
       return {
         stepName: prevStepDef.step_name,
@@ -283,6 +277,9 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         missing: false
       };
     });
+
+    console.log('[PREVIOUS STEPS DEBUG] Final result:', result);
+    return result;
   }, [step, order, manufacturingSteps, orderSteps, getStepFields, getStepValue]);
 
   const currentStepDefinition = useMemo(() => {
@@ -320,10 +317,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
     // Debug: Display order number for clarity
     if (order && order.order_number) {
-      // Find number of prev steps with data (not just step definitions)
-      const prevDataCount = previousStepsData.filter(step => !step.missing && step.values.length > 0).length;
-      const prevDefsMissingCount = previousStepsData.filter(step => step.missing).length;
-
       return (
         <div>
           <div className="text-xs mb-2 text-muted-foreground">
