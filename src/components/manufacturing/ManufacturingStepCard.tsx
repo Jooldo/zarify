@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -160,8 +161,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             displayValue = savedValue;
             
             // Add unit information for specific field types
-            if ((field.field_options as { unit?: string })?.unit) {
-              displayValue = `${value} ${(field.field_options as { unit: string }).unit}`;
+            if (field.field_options?.unit) {
+              displayValue = `${value} ${field.field_options.unit}`;
             }
           }
         }

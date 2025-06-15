@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import {
   Dialog,
@@ -82,6 +83,24 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     return manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
   }, [step, manufacturingSteps]);
 
+  const currentStepFields = useMemo(() => {
+    if (!currentStepDefinition) return [];
+    return getStepFields(currentStepDefinition.id);
+  }, [currentStepDefinition, getStepFields]);
+
+  const currentStepValues = useMemo(() => {
+    if (!step || currentStepFields.length === 0) return [];
+    return currentStepFields.map(field => {
+      const value = getStepValue(step.id, field.field_id);
+      return {
+        label: field.field_label,
+        value: value || '-',
+        unit: field.field_options?.unit,
+      };
+    });
+  }, [step, currentStepFields, getStepValue]);
+
+
   const renderPreviousSteps = () => {
     if (isLoadingStepsData || isLoadingValues) {
       return (
@@ -135,6 +154,46 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
       </div>
     );
   };
+
+  const renderCurrentStepData = () => {
+    if (isLoadingStepsData || isLoadingValues) {
+      return (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="ml-2">Loading current step data...</span>
+        </div>
+      );
+    }
+
+    if (currentStepValues.length === 0) {
+      return (
+        <Alert>
+          <AlertDescription>No fields configured for this step.</AlertDescription>
+        </Alert>
+      );
+    }
+    
+    return (
+      <div className="overflow-x-auto border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Field</TableHead>
+              <TableHead>Value</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {currentStepValues.map((item, idx) => (
+              <TableRow key={idx}>
+                <TableCell className="font-medium">{item.label}</TableCell>
+                <TableCell>{item.value}{item.unit ? ` ${item.unit}` : ''}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
   
   if (!step || !order) return null;
 
@@ -153,10 +212,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
           
           <div className="pt-4 border-t">
             <h4 className="font-semibold text-lg my-2">Current Step Inputs</h4>
-            {/* Current step form will go here */}
-            <p className="text-sm text-muted-foreground">
-              Input form for the current step will be displayed here.
-            </p>
+            {renderCurrentStepData()}
           </div>
         </div>
 

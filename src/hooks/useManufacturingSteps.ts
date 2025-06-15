@@ -1,14 +1,19 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 export type ManufacturingStep = Tables<'manufacturing_steps'>;
-export type ManufacturingStepField = Tables<'manufacturing_step_fields'>;
+export type ManufacturingStepField = Omit<Tables<'manufacturing_step_fields'>, 'field_options'> & {
+  field_options: { unit?: string; options?: string[] } | null;
+};
 export type ManufacturingOrderStep = Tables<'manufacturing_order_steps'> & {
   manufacturing_steps: ManufacturingStep | null;
   workers?: { name: string | null } | null;
 };
+export type ManufacturingStepWithOrderStep = ManufacturingStep & {
+    order_step: ManufacturingOrderStep | null;
+};
+
 
 export const useManufacturingSteps = () => {
   const queryClient = useQueryClient();
@@ -38,14 +43,14 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  const { data: stepFields = [], isLoading: isLoadingStepFields } = useQuery<Tables<'manufacturing_step_fields'>[]>({
+  const { data: stepFields = [], isLoading: isLoadingStepFields } = useQuery<ManufacturingStepField[]>({
     queryKey: ['manufacturing_step_fields'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_step_fields')
         .select('*');
       if (error) throw error;
-      return data || [];
+      return (data as ManufacturingStepField[]) || [];
     }
   });
 

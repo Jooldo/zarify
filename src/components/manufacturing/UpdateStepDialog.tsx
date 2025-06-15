@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -172,7 +173,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               id: field.field_id,
               label: field.field_label,
               type: field.field_type,
-              unit: (field.field_options as { unit?: string })?.unit
+              unit: field.field_options?.unit
             });
           }
         });
@@ -231,7 +232,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <div key={field.id} className="space-y-2">
                       <Label>
                         {field.field_label}
-                        {(field.field_options as { unit?: string })?.unit && ` (${(field.field_options as { unit?: string })?.unit})`}
+                        {field.field_options?.unit && ` (${field.field_options.unit})`}
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
                       {renderField(field)}
