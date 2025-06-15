@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { format } from 'date-fns';
 import { StepCardData } from './ManufacturingStepCard';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingSteps, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface StepDetailsDialogProps {
   open: boolean;
@@ -25,23 +25,19 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   orderStep,
   stepFields = []
 }) => {
-  const { getStepValue, stepValues, isLoading: isLoadingValues } = useManufacturingStepValues();
-  const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading: isLoadingSteps } = useManufacturingSteps();
-  const isLoading = isLoadingValues || isLoadingSteps;
+  const { getStepValue } = useManufacturingStepValues();
+  const { orderSteps: allOrderSteps, stepFields: allStepFields, isLoading } = useManufacturingSteps();
 
   React.useEffect(() => {
     if (open) {
-      console.log('--- StepDetailsDialog DATA (REVISED) ---');
-      console.log('isLoading (Combined):', isLoading);
-      console.log('isLoadingValues:', isLoadingValues);
-      console.log('isLoadingSteps:', isLoadingSteps);
+      console.log('--- StepDetailsDialog DATA ---');
+      console.log('isLoading:', isLoading);
       console.log('stepData:', JSON.stringify(stepData, null, 2));
       console.log('orderStep:', JSON.stringify(orderStep, null, 2));
-      console.log('stepValues count:', stepValues.length);
       console.log('allOrderSteps count:', allOrderSteps.length);
       console.log('allStepFields count:', allStepFields.length);
     }
-  }, [open, isLoading, isLoadingValues, isLoadingSteps, stepData, orderStep, allOrderSteps, allStepFields, stepValues]);
+  }, [open, isLoading, stepData, orderStep, allOrderSteps, allStepFields]);
 
   if (!stepData) return null;
 
@@ -143,10 +139,9 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         weightAssigned: 'N/A',
         weightReceived: 'N/A',
       };
-      
+
       fieldsForStep.forEach(field => {
         const value = getStepValue(step.id, field.field_id);
-        
         if (value !== null && value !== undefined && value !== '') {
           let displayValue = `${value}`;
           if (field.field_options?.unit) {
@@ -154,24 +149,24 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           }
 
           const fieldName = field.field_name.toLowerCase();
-
-          if (field.field_type === 'date' && (fieldName.includes('due') || fieldName.includes('date'))) {
+          
+          if (field.field_type === 'date' && fieldName.includes('due')) {
             const parsedDate = new Date(value);
             if (!isNaN(parsedDate.getTime())) {
                 stepFieldValues.dueDate = format(parsedDate, 'dd MMM yyyy');
             }
-          }
-          if (fieldName.includes('quantity') && fieldName.includes('assigned')) {
-            stepFieldValues.quantityAssigned = displayValue;
-          }
-          if (fieldName.includes('quantity') && fieldName.includes('received')) {
-            stepFieldValues.quantityReceived = displayValue;
-          }
-          if (fieldName.includes('weight') && fieldName.includes('assigned')) {
-            stepFieldValues.weightAssigned = displayValue;
-          }
-          if (fieldName.includes('weight') && fieldName.includes('received')) {
-            stepFieldValues.weightReceived = displayValue;
+          } else if (fieldName.includes('quantity')) {
+            if (fieldName.includes('assigned')) {
+              stepFieldValues.quantityAssigned = displayValue;
+            } else if (fieldName.includes('received')) {
+              stepFieldValues.quantityReceived = displayValue;
+            }
+          } else if (fieldName.includes('weight')) {
+            if (fieldName.includes('assigned')) {
+              stepFieldValues.weightAssigned = displayValue;
+            } else if (fieldName.includes('received')) {
+              stepFieldValues.weightReceived = displayValue;
+            }
           }
         }
       });
@@ -288,38 +283,51 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           )}
 
           {/* Previous Steps Data */}
-          {previousOrderSteps.length > 0 && (
+          {previousStepsWithFieldValues.length > 0 && (
             <div className="bg-gray-50 p-3 rounded-lg">
               <h3 className="text-xs font-medium text-gray-900 mb-2 flex items-center gap-1">
                 <History className="h-3 w-3" />
                 Previous Steps
               </h3>
-              <div className="space-y-3">
-                {isLoading ? (
-                  <p className="text-xs text-center p-4">Loading step details...</p>
-                ) : (
-                  previousStepsWithFieldValues.map((step) => (
-                    <Card key={step.id} className="bg-white shadow-sm">
-                      <CardHeader className="p-3 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-semibold">{step.manufacturing_steps?.step_name || 'N/A'}</CardTitle>
-                        <Badge className={getStatusColor(step.status)}>{step.status.replace('_', ' ').toUpperCase()}</Badge>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                          <div className="flex justify-between"><span className="text-muted-foreground">Worker:</span> <span className="font-medium">{step.workers?.name || 'N/A'}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Progress:</span> <span className="font-medium">{step.progress_percentage}%</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Qty Assigned:</span> <span className="font-medium">{step.quantityAssigned}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Qty Received:</span> <span className="font-medium">{step.quantityReceived}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Weight Assigned:</span> <span className="font-medium">{step.weightAssigned}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Weight Received:</span> <span className="font-medium">{step.weightReceived}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Started:</span> <span className="font-medium">{step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Completed:</span> <span className="font-medium">{step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}</span></div>
-                          <div className="md:col-span-2 flex justify-between border-t mt-1 pt-1"><span className="text-muted-foreground">Due Date:</span> <span className="font-medium">{step.dueDate}</span></div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="p-2 text-left font-semibold border border-gray-300">Step</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Status</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Worker</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Assigned</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Qty Received</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Assigned</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Weight Received</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Progress</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Started</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Completed</th>
+                      <th className="p-2 text-left font-semibold border border-gray-300">Due Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previousStepsWithFieldValues.map((step) => (
+                      <tr key={step.id} className="border-b border-gray-300">
+                        <td className="p-2 font-medium border border-gray-300">{step.manufacturing_steps?.step_name || 'N/A'}</td>
+                        <td className="p-2 border border-gray-300 capitalize">{step.status.replace('_', ' ')}</td>
+                        <td className="p-2 border border-gray-300">{step.workers?.name || 'N/A'}</td>
+                        <td className="p-2 border border-gray-300">{step.quantityAssigned}</td>
+                        <td className="p-2 border border-gray-300">{step.quantityReceived}</td>
+                        <td className="p-2 border border-gray-300">{step.weightAssigned}</td>
+                        <td className="p-2 border border-gray-300">{step.weightReceived}</td>
+                        <td className="p-2 border border-gray-300">{step.progress_percentage}%</td>
+                        <td className="p-2 border border-gray-300">
+                          {step.started_at ? format(new Date(step.started_at), 'dd MMM, hh:mm a') : 'N/A'}
+                        </td>
+                        <td className="p-2 border border-gray-300">
+                          {step.completed_at ? format(new Date(step.completed_at), 'dd MMM, hh:mm a') : 'N/A'}
+                        </td>
+                        <td className="p-2 border border-gray-300">{step.dueDate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
