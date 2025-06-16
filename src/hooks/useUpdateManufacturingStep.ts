@@ -19,12 +19,24 @@ interface UpdateStepData {
   workerName?: string;
 }
 
+interface UpdateStepParams {
+  stepId: string;
+  fieldValues?: Record<string, any>;
+  status?: 'pending' | 'in_progress' | 'completed';
+  progress?: number;
+  assignedWorkerId?: string;
+  notes?: string;
+  stepName?: string;
+  orderNumber?: string;
+  workerName?: string;
+}
+
 export const useUpdateManufacturingStep = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logStepStart, logStepComplete, logStepProgress, logStepAssignment } = useManufacturingStepLogging();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async ({ stepId, updates, stepName, orderNumber, workerName }: UpdateStepData) => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
@@ -78,4 +90,76 @@ export const useUpdateManufacturingStep = () => {
       });
     },
   });
+
+  const updateStep = async (params: UpdateStepParams) => {
+    const updates: UpdateStepData['updates'] = {};
+    
+    if (params.status) {
+      updates.status = params.status;
+      if (params.status === 'in_progress') {
+        updates.started_at = new Date().toISOString();
+      } else if (params.status === 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+    }
+    
+    if (params.progress !== undefined) {
+      updates.progress_percentage = params.progress;
+    }
+    
+    if (params.assignedWorkerId) {
+      updates.assigned_worker_id = params.assignedWorkerId;
+    }
+    
+    if (params.notes) {
+      updates.notes = params.notes;
+    }
+
+    // Save field values if provided
+    if (params.fieldValues) {
+      try {
+        // First, delete existing values for this step
+        await supabase
+          .from('manufacturing_order_step_values')
+          .delete()
+          .eq('manufacturing_order_step_id', params.stepId);
+
+        // Then insert new values
+        const valuesToInsert = Object.entries(params.fieldValues)
+          .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+          .map(([fieldId, value]) => ({
+            manufacturing_order_step_id: params.stepId,
+            field_id: fieldId,
+            field_value: String(value),
+            merchant_id: (window as any).merchantId // This should be set properly in your app
+          }));
+
+        if (valuesToInsert.length > 0) {
+          const { error: valuesError } = await supabase
+            .from('manufacturing_order_step_values')
+            .insert(valuesToInsert);
+
+          if (valuesError) {
+            console.error('Error saving field values:', valuesError);
+          }
+        }
+      } catch (error) {
+        console.error('Error managing field values:', error);
+      }
+    }
+
+    return mutation.mutate({
+      stepId: params.stepId,
+      updates,
+      stepName: params.stepName,
+      orderNumber: params.orderNumber,
+      workerName: params.workerName
+    });
+  };
+
+  return {
+    updateStep,
+    isUpdating: mutation.isPending,
+    mutation
+  };
 };
