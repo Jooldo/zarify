@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,7 @@ interface KanbanFilters {
 }
 
 const ProductionKanbanView = () => {
-  const { manufacturingOrders, isLoading } = useManufacturingOrders();
+  const { manufacturingOrders, isLoading, updateOrder } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const { workers } = useWorkers();
   const { createStep } = useCreateManufacturingStep();
@@ -47,6 +48,41 @@ const ProductionKanbanView = () => {
       .sort((a, b) => a.step_order - b.step_order);
   }, [manufacturingSteps]);
 
+  // Update manufacturing order status based on step completion
+  const updateOrderStatusBasedOnSteps = async (orderId: string) => {
+    const orderOrderSteps = orderSteps.filter(step => 
+      String(step.manufacturing_order_id) === String(orderId)
+    );
+    
+    if (orderOrderSteps.length === 0) return;
+
+    const totalSteps = activeSteps.length;
+    const completedSteps = orderOrderSteps.filter(step => step.status === 'completed').length;
+    const inProgressSteps = orderOrderSteps.filter(step => step.status === 'in_progress').length;
+
+    let newStatus: 'pending' | 'in_progress' | 'completed';
+    
+    if (completedSteps === totalSteps) {
+      newStatus = 'completed';
+    } else if (inProgressSteps > 0 || completedSteps > 0) {
+      newStatus = 'in_progress';
+    } else {
+      newStatus = 'pending';
+    }
+
+    const currentOrder = manufacturingOrders.find(order => order.id === orderId);
+    if (currentOrder && currentOrder.status !== newStatus) {
+      await updateOrder(orderId, { status: newStatus });
+    }
+  };
+
+  // Update order statuses when orderSteps change
+  React.useEffect(() => {
+    manufacturingOrders.forEach(order => {
+      updateOrderStatusBasedOnSteps(order.id);
+    });
+  }, [orderSteps, activeSteps, manufacturingOrders]);
+
   // Filter manufacturing orders
   const filteredOrders = useMemo(() => {
     return manufacturingOrders.filter(order => {
@@ -67,7 +103,6 @@ const ProductionKanbanView = () => {
         return false;
       }
 
-      // Remove the completed status exclusion - show all orders
       return true;
     });
   }, [manufacturingOrders, filters]);
@@ -151,6 +186,20 @@ const ProductionKanbanView = () => {
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getCardBackgroundColor = (stepStatus: string) => {
+    switch (stepStatus) {
+      case 'completed':
+        return 'bg-green-50 border-green-200';
+      case 'in_progress':
+        return 'bg-blue-50 border-blue-200';
+      case 'pending':
+      case 'not_started':
+        return 'bg-amber-50 border-amber-200';
+      default:
+        return 'bg-white border-gray-200';
     }
   };
 
@@ -293,11 +342,11 @@ const ProductionKanbanView = () => {
       {/* Enhanced Kanban Board */}
       <div className="flex gap-6 overflow-x-auto pb-6">
         {activeSteps.map((step) => (
-          <div key={step.id} className="flex-shrink-0 w-80">
+          <div key={step.id} className="flex-shrink-0 w-72">
             <Card className={`h-full ${getStepGradient(step.step_order)} ${getStepBorderColor(step.step_order)} border-2 shadow-lg hover:shadow-xl transition-all duration-300`}>
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-sm font-black ${
+                  <div className={`w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center text-xs font-black ${
                     step.step_order === 1 ? 'text-blue-600' :
                     step.step_order === 2 ? 'text-purple-600' :
                     step.step_order === 3 ? 'text-emerald-600' :
@@ -308,81 +357,79 @@ const ProductionKanbanView = () => {
                     {step.step_order}
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-gray-800">{step.step_name}</div>
-                    <div className="text-xs text-gray-600 font-normal">Production Step</div>
+                    <div className="font-bold text-gray-800 text-xs">{step.step_name}</div>
                   </div>
-                  <Badge variant="secondary" className="bg-white/80 text-gray-700 font-semibold shadow-sm">
+                  <Badge variant="secondary" className="bg-white/80 text-gray-700 font-semibold shadow-sm text-xs">
                     {ordersByStep[step.id]?.length || 0}
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-4">
+                <ScrollArea className="h-[600px] pr-2">
+                  <div className="space-y-3">
                     {ordersByStep[step.id]?.map((order) => (
-                      <Card key={order.id} className="bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 border border-white/50 hover:border-gray-200">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            {/* Enhanced Header */}
+                      <Card key={order.id} className={`${getCardBackgroundColor(order.stepStatus)} shadow-sm hover:shadow-md transition-all duration-300 border`}>
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            {/* Compact Header */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Target className="h-4 w-4 text-blue-600" />
-                                <span className="font-bold text-sm text-blue-700">
+                              <div className="flex items-center gap-1">
+                                <Target className="h-3 w-3 text-blue-600" />
+                                <span className="font-bold text-xs text-blue-700">
                                   {order.order_number}
                                 </span>
                               </div>
-                              <Badge className={`${getPriorityColor(order.priority)} shadow-sm`}>
-                                {order.priority.toUpperCase()}
+                              <Badge className={`${getPriorityColor(order.priority)} shadow-sm text-xs px-1 py-0`}>
+                                {order.priority.charAt(0).toUpperCase()}
                               </Badge>
                             </div>
 
-                            {/* Enhanced Product Info */}
-                            <div className="bg-gray-50/80 rounded-lg p-3 space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Package className="h-4 w-4 text-emerald-600" />
-                                <span className="font-semibold text-gray-800">{order.product_name}</span>
+                            {/* Compact Product Info */}
+                            <div className="bg-gray-50/80 rounded p-2 space-y-1">
+                              <div className="flex items-center gap-1 text-xs">
+                                <Package className="h-3 w-3 text-emerald-600" />
+                                <span className="font-semibold text-gray-800 truncate">{order.product_name}</span>
                               </div>
                               
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Hash className="h-4 w-4" />
-                                <span>Quantity: </span>
+                              <div className="flex items-center gap-1 text-xs text-gray-600">
+                                <Hash className="h-3 w-3" />
+                                <span>Qty: </span>
                                 <span className="font-semibold text-gray-800">{order.quantity_required}</span>
                               </div>
                             </div>
 
-                            {/* Enhanced Worker Assignment */}
+                            {/* Compact Worker Assignment */}
                             {order.assignedWorker && (
-                              <div className="flex items-center gap-2 text-sm bg-blue-50/80 rounded-lg p-2">
-                                <User className="h-4 w-4 text-blue-600" />
-                                <span className="text-gray-600">Assigned to:</span>
-                                <span className="font-semibold text-blue-700">{order.assignedWorker}</span>
+                              <div className="flex items-center gap-1 text-xs bg-blue-50/80 rounded p-1">
+                                <User className="h-3 w-3 text-blue-600" />
+                                <span className="font-semibold text-blue-700 truncate">{order.assignedWorker}</span>
                               </div>
                             )}
 
-                            {/* Enhanced Status & Timeline */}
+                            {/* Compact Status */}
                             <div className="flex items-center justify-between">
-                              <Badge className={`${getStatusColor(order.stepStatus)} border shadow-sm`}>
+                              <Badge className={`${getStatusColor(order.stepStatus)} border shadow-sm text-xs`}>
                                 {order.stepStatus === 'not_started' ? 'Not Started' : 
                                  order.stepStatus === 'in_progress' ? 'In Progress' : 
                                  order.stepStatus.replace('_', ' ').toUpperCase()}
                               </Badge>
                               
                               {order.currentStep?.started_at && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100/80 rounded px-2 py-1">
-                                  <Clock className="h-3 w-3" />
+                                <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100/80 rounded px-1">
+                                  <Clock className="h-2 w-2" />
                                   {new Date(order.currentStep.started_at).toLocaleDateString()}
                                 </div>
                               )}
                             </div>
 
-                            {/* Enhanced CTA Button */}
+                            {/* Compact CTA Button */}
                             {canStartStep(order, step) && (
                               <Button
                                 size="sm"
-                                className="w-full mt-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                className="w-full mt-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 h-7 text-xs"
                                 onClick={() => handleStartStep(order, step)}
                               >
-                                <Play className="h-4 w-4 mr-2" />
+                                <Play className="h-3 w-3 mr-1" />
                                 Start {step.step_name}
                               </Button>
                             )}
@@ -392,12 +439,11 @@ const ProductionKanbanView = () => {
                     ))}
                     
                     {ordersByStep[step.id]?.length === 0 && (
-                      <div className="text-center py-12 text-gray-500">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-white/60 rounded-full flex items-center justify-center">
-                          <Package className="h-8 w-8 opacity-40" />
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="w-12 h-12 mx-auto mb-2 bg-white/60 rounded-full flex items-center justify-center">
+                          <Package className="h-6 w-6 opacity-40" />
                         </div>
-                        <p className="text-sm font-medium">No orders in this step</p>
-                        <p className="text-xs text-gray-400 mt-1">Orders will appear here when assigned</p>
+                        <p className="text-xs font-medium">No orders in this step</p>
                       </div>
                     )}
                   </div>
