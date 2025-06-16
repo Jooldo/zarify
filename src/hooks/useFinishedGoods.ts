@@ -25,12 +25,12 @@ export interface FinishedGood {
 export const useFinishedGoods = () => {
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null); // Added error state
+  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
 
   const fetchFinishedGoods = async () => {
     setLoading(true);
-    setError(null); // Clear previous errors
+    setError(null);
     try {
       console.log('Fetching finished goods data...');
       
@@ -40,14 +40,13 @@ export const useFinishedGoods = () => {
 
       if (merchantError) {
         console.error('Error getting merchant ID:', merchantError);
-        setError(merchantError); // Set error state
+        setError(merchantError);
         throw merchantError;
       }
 
       console.log('Merchant ID:', merchantId);
 
       // Fetch all finished goods with their product configs for this merchant
-      // The required_quantity should now be updated by the calculation service
       const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
         .from('finished_goods')
         .select(`
@@ -59,19 +58,46 @@ export const useFinishedGoods = () => {
 
       if (finishedGoodsError) {
         console.error('Error fetching finished goods:', finishedGoodsError);
-        setError(finishedGoodsError); // Set error state
+        setError(finishedGoodsError);
         throw finishedGoodsError;
       }
 
-      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+      // Fetch manufacturing orders that are in progress to calculate in_manufacturing
+      const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
+        .from('manufacturing_orders')
+        .select(`
+          quantity_required,
+          product_configs!inner(product_code)
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['pending', 'in_progress', 'tagged_in']);
 
-      // Use the required_quantity directly from the database (updated by calculation service)
+      if (manufacturingOrdersError) {
+        console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
+      }
+
+      // Calculate in_manufacturing quantities by product code
+      const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
+        const productCode = order.product_configs?.product_code;
+        if (productCode) {
+          acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+      console.log('In manufacturing quantities:', inManufacturingByProduct);
+
+      // Use the required_quantity directly from the database and calculate in_manufacturing
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
-        console.log(`Product ${item.product_code}: required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${item.in_manufacturing}`);
+        const inManufacturingQuantity = inManufacturingByProduct[item.product_code] || 0;
+        
+        console.log(`Product ${item.product_code}: required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${inManufacturingQuantity}`);
         
         return {
           ...item,
-          required_quantity: item.required_quantity || 0
+          required_quantity: item.required_quantity || 0,
+          in_manufacturing: inManufacturingQuantity
         };
       }) || [];
 
@@ -81,7 +107,7 @@ export const useFinishedGoods = () => {
     } catch (err) {
       const typedError = err as Error;
       console.error('Error fetching finished goods:', typedError);
-      setError(typedError); // Ensure error state is set with the caught error
+      setError(typedError);
       toast({
         title: 'Error',
         description: 'Failed to fetch finished goods',
@@ -96,6 +122,5 @@ export const useFinishedGoods = () => {
     fetchFinishedGoods();
   }, []);
 
-  return { finishedGoods, loading, error, refetch: fetchFinishedGoods }; // Return error state
+  return { finishedGoods, loading, error, refetch: fetchFinishedGoods };
 };
-

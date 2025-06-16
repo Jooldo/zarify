@@ -1,396 +1,68 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Database } from '@/integrations/supabase/types';
 
-export interface ManufacturingOrder {
-  id: string;
-  order_number: string;
-  product_name: string;
-  product_type?: string;
-  product_config_id?: string;
-  quantity_required: number;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed';
-  due_date?: string;
-  special_instructions?: string;
-  created_by?: string;
-  merchant_id: string;
-  created_at: string;
-  updated_at: string;
-  started_at?: string;
-  completed_at?: string;
-  product_configs?: {
-    id: string;
-    product_code: string;
-    category: string;
-    subcategory: string;
-    product_config_materials?: Array<{
-      id: string;
-      raw_material_id: string;
-      quantity_required: number;
-      unit: string;
-      raw_materials: {
-        id: string;
-        name: string;
-        type: string;
-        unit: string;
-      };
-    }>;
-  };
-}
+export type ManufacturingOrderStatus = 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled' | 'tagged_in';
 
-export interface CreateManufacturingOrderData {
-  product_name: string;
-  product_type?: string;
-  product_config_id?: string;
-  quantity_required: number;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  due_date?: string;
-  special_instructions?: string;
-}
-
-// Helper function to log activities
-const logManufacturingActivity = async (
-  action: string,
-  entityId: string,
-  description: string
-) => {
-  try {
-    await supabase.rpc('log_user_activity', {
-      p_action: action,
-      p_entity_type: 'Manufacturing Order',
-      p_entity_id: entityId,
-      p_description: description
-    });
-  } catch (error) {
-    console.error('Failed to log manufacturing activity:', error);
-  }
+export type ManufacturingOrder = Database['public']['Tables']['manufacturing_orders']['Row'] & {
+  product_configs?: Database['public']['Tables']['product_configs']['Row'] | null;
 };
 
 export const useManufacturingOrders = () => {
-  const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: manufacturingOrders = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['manufacturing-orders'],
-    queryFn: async () => {
-      console.log('Fetching manufacturing orders...');
-      try {
-        // First, get manufacturing orders
-        const { data: orders, error: ordersError } = await supabase
-          .from('manufacturing_orders')
-          .select('*')
-          .order('created_at', { ascending: false });
+  const fetchManufacturingOrders = useCallback(async () => {
+    if (!user) return [];
 
-        if (ordersError) {
-          console.error('Error fetching manufacturing orders:', ordersError);
-          throw ordersError;
-        }
+    const { data: merchantId, error: merchantError } = await supabase
+      .rpc('get_user_merchant_id');
 
-        console.log('Fetched orders:', orders?.length || 0);
+    if (merchantError || !merchantId) {
+      console.error('Error fetching merchant ID:', merchantError);
+      return [];
+    }
 
-        if (!orders || orders.length === 0) {
-          return [];
-        }
+    const { data, error } = await supabase
+      .from('manufacturing_orders')
+      .select(`
+        *,
+        product_configs(*)
+      `)
+      .eq('merchant_id', merchantId)
+      .order('created_at', { ascending: false });
 
-        // Type the orders properly
-        const typedOrders = orders as Array<{
-          id: string;
-          order_number: string;
-          product_name: string;
-          product_type?: string;
-          product_config_id?: string;
-          quantity_required: number;
-          priority: 'low' | 'medium' | 'high' | 'urgent';
-          status: 'pending' | 'in_progress' | 'completed';
-          due_date?: string;
-          special_instructions?: string;
-          created_by?: string;
-          merchant_id: string;
-          created_at: string;
-          updated_at: string;
-          started_at?: string;
-          completed_at?: string;
-        }>;
+    if (error) {
+      console.error('Error fetching manufacturing orders:', error);
+      throw new Error('Could not fetch manufacturing orders');
+    }
 
-        // Get unique product config IDs
-        const productConfigIds = typedOrders
-          .map(order => order.product_config_id)
-          .filter((id): id is string => Boolean(id));
+    return data as ManufacturingOrder[];
+  }, [user]);
 
-        let productConfigsMap: Record<string, any> = {};
-
-        // Fetch product configs if we have any IDs
-        if (productConfigIds.length > 0) {
-          const { data: productConfigs, error: configsError } = await supabase
-            .from('product_configs')
-            .select(`
-              id,
-              product_code,
-              category,
-              subcategory,
-              product_config_materials (
-                id,
-                raw_material_id,
-                quantity_required,
-                unit,
-                raw_materials (
-                  id,
-                  name,
-                  type,
-                  unit
-                )
-              )
-            `)
-            .in('id', productConfigIds);
-
-          if (!configsError && productConfigs) {
-            productConfigsMap = productConfigs.reduce((acc, config) => {
-              acc[config.id] = config;
-              return acc;
-            }, {} as Record<string, any>);
-          }
-        }
-
-        // Combine orders with their product configs
-        const ordersWithConfigs: ManufacturingOrder[] = typedOrders.map(order => ({
-          ...order,
-          product_configs: order.product_config_id ? productConfigsMap[order.product_config_id] : undefined
-        }));
-
-        return ordersWithConfigs;
-      } catch (error) {
-        console.error('Error in manufacturing orders query:', error);
-        throw error;
-      }
-    },
-  });
-
-  const createOrderMutation = useMutation({
-    mutationFn: async (orderData: CreateManufacturingOrderData) => {
-      console.log('🚀 Starting manufacturing order creation with data:', orderData);
-      
-      try {
-        // Get merchant ID first
-        console.log('📍 Getting merchant ID...');
-        const { data: merchantId, error: merchantError } = await supabase
-          .rpc('get_user_merchant_id');
-
-        if (merchantError) {
-          console.error('❌ Error getting merchant ID:', merchantError);
-          throw new Error(`Failed to get merchant ID: ${merchantError.message}`);
-        }
-
-        console.log('✅ Merchant ID retrieved:', merchantId);
-
-        // Get current user
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error('❌ Error getting user:', userError);
-          throw new Error(`Failed to get user: ${userError.message}`);
-        }
-
-        console.log('✅ User retrieved:', user?.user?.id);
-        
-        // Get next order number
-        console.log('🔢 Generating order number...');
-        const { data: orderNumber, error: orderNumberError } = await supabase.rpc(
-          'get_next_manufacturing_order_number'
-        );
-
-        if (orderNumberError) {
-          console.error('❌ Error getting order number:', orderNumberError);
-          throw new Error(`Failed to generate order number: ${orderNumberError.message}`);
-        }
-
-        console.log('✅ Generated order number:', orderNumber);
-
-        // Create the manufacturing order
-        const orderToInsert = {
-          order_number: orderNumber,
-          product_name: orderData.product_name,
-          product_type: orderData.product_type || null,
-          product_config_id: orderData.product_config_id || null,
-          quantity_required: orderData.quantity_required,
-          priority: orderData.priority,
-          due_date: orderData.due_date || null,
-          special_instructions: orderData.special_instructions || null,
-          merchant_id: merchantId,
-          created_by: user?.user?.id || null,
-          status: 'pending' as const
-        };
-
-        console.log('💾 Inserting order:', orderToInsert);
-
-        const { data: order, error: insertError } = await supabase
-          .from('manufacturing_orders')
-          .insert(orderToInsert)
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('❌ Error inserting manufacturing order:', insertError);
-          throw new Error(`Failed to create order: ${insertError.message}`);
-        }
-
-        console.log('🎉 Order created successfully:', order);
-
-        // Log the activity
-        await logManufacturingActivity(
-          'Created',
-          order.id,
-          `Created manufacturing order ${order.order_number} for ${order.quantity_required} units of ${order.product_name}`
-        );
-
-        return order;
-      } catch (error) {
-        console.error('💥 Failed to create manufacturing order:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      console.log('✨ Order creation mutation successful:', data);
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      toast({
-        title: 'Success',
-        description: `Manufacturing order ${data.order_number} created successfully`,
-      });
-    },
-    onError: (error: any) => {
-      console.error('🚨 Order creation mutation failed:', error);
-      
-      let errorMessage = 'Failed to create manufacturing order';
-      
-      if (error.message?.includes('Unable to generate unique order number')) {
-        errorMessage = 'Unable to generate unique order number. Please try again.';
-      } else if (error.message?.includes('invalid input syntax for type uuid')) {
-        errorMessage = 'Invalid product configuration selected. Please check your selection.';
-      } else if (error.message?.includes('FOR UPDATE is not allowed')) {
-        errorMessage = 'Database configuration issue. Please contact support.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const updateOrderMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<ManufacturingOrder> }) => {
-      const { data, error } = await supabase
-        .from('manufacturing_orders')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Log the activity based on what was updated
-      let description = `Updated manufacturing order ${data.order_number}`;
-      if (updates.status) {
-        description = `Changed status of manufacturing order ${data.order_number} to ${updates.status}`;
-        
-        if (updates.status === 'in_progress') {
-          description += ` and started production`;
-        } else if (updates.status === 'completed') {
-          description += ` and completed production`;
-        }
-      }
-
-      await logManufacturingActivity('Updated', id, description);
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      toast({
-        title: 'Success',
-        description: 'Manufacturing order updated successfully',
-      });
-    },
-    onError: (error) => {
-      console.error('Error updating manufacturing order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update manufacturing order',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const deleteOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      // Get order details before deletion for logging
-      const { data: order } = await supabase
-        .from('manufacturing_orders')
-        .select('order_number, product_name')
-        .eq('id', orderId)
-        .single();
-
-      const { error } = await supabase
-        .from('manufacturing_orders')
-        .delete()
-        .eq('id', orderId);
-
-      if (error) throw error;
-
-      // Log the activity
-      if (order) {
-        await logManufacturingActivity(
-          'Deleted',
-          orderId,
-          `Deleted manufacturing order ${order.order_number} for ${order.product_name}`
-        );
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      toast({
-        title: 'Success',
-        description: 'Manufacturing order deleted successfully',
-      });
-    },
-    onError: (error) => {
-      console.error('Error deleting manufacturing order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete manufacturing order',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const createOrder = (orderData: CreateManufacturingOrderData) => {
-    return createOrderMutation.mutate(orderData);
-  };
-
-  const updateOrder = (id: string, updates: Partial<ManufacturingOrder>) => {
-    return updateOrderMutation.mutate({ id, updates });
-  };
-
-  const deleteOrder = (orderId: string) => {
-    return deleteOrderMutation.mutate(orderId);
-  };
-
-  return {
-    manufacturingOrders,
+  const {
+    data: manufacturingOrders = [],
     isLoading,
-    loading: isLoading,
     error,
-    createOrder,
-    updateOrder,
-    deleteOrder,
     refetch,
-    isCreating: createOrderMutation.isPending,
-    isUpdating: updateOrderMutation.isPending,
-    isDeleting: deleteOrderMutation.isPending,
+  } = useQuery({
+    queryKey: ['manufacturing-orders', user?.id],
+    queryFn: fetchManufacturingOrders,
+    enabled: !!user,
+  });
+
+  const invalidateManufacturingOrders = () => {
+    queryClient.invalidateQueries({ queryKey: ['manufacturing-orders', user?.id] });
+  };
+
+  return { 
+    manufacturingOrders, 
+    isLoading, 
+    error, 
+    refetch, 
+    invalidateManufacturingOrders 
   };
 };

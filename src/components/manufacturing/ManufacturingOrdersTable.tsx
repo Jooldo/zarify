@@ -76,6 +76,11 @@ const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, on
     }
   };
 
+  const formatStepDisplay = (stepName: string, status: string) => {
+    const statusText = status.replace('_', ' ');
+    return `${stepName} ${statusText}`;
+  };
+
   return (
     <>
       <div className="border rounded-lg">
@@ -126,10 +131,9 @@ const ManufacturingOrdersTable = ({ orders, getPriorityColor, getStatusColor, on
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium">{currentStep.stepName}</span>
-                      <Badge className={`text-xs w-fit ${getStepStatusColor(currentStep.status)}`}>
-                        {currentStep.status.replace('_', ' ')}
-                      </Badge>
+                      <span className="text-xs font-medium">
+                        {formatStepDisplay(currentStep.stepName, currentStep.status)}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>

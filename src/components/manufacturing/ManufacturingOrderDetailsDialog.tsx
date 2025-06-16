@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -96,6 +95,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
       case 'completed': return 'bg-green-100 text-green-800';
       case 'blocked': return 'bg-red-100 text-red-800';
       case 'skipped': return 'bg-yellow-100 text-yellow-800';
+      case 'tagged_in': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -221,7 +221,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         )}
                         {orderStep.workers?.name && (
                           <div>
-                            <span className="text-muted-foreground">Worker:</span>
+                            <span className="text-muted-foreground">Assigned Worker:</span>
                             <p className="font-medium">{orderStep.workers.name}</p>
                           </div>
                         )}
