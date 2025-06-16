@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,7 +107,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // FIXED CTA LOGIC - Clear and precise rules:
+  // CORRECTED CTA LOGIC - Use database status, not card props
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
     
@@ -121,8 +120,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
     // Rule 2: Step cards - show ONLY if ALL conditions are met:
     if (data.stepOrder > 0) {
-      // 2a. This step must be completed
-      const isThisStepCompleted = data.status === 'completed';
+      // 2a. This step must be completed (check DATABASE status, not card props)
+      const actualStepStatus = currentOrderStep?.status || 'pending';
+      const isThisStepCompleted = actualStepStatus === 'completed';
       
       // 2b. NO subsequent steps should be in progress or completed
       const hasSubsequentStepsStarted = thisOrderSteps.some(step => {
@@ -131,7 +131,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         const isSubsequent = stepOrder > data.stepOrder;
         const isStarted = stepStatus === 'in_progress' || stepStatus === 'completed';
         
-        console.log(`[CTA DEBUG]   Checking step ${step.manufacturing_steps?.step_name} (order ${stepOrder}): isSubsequent=${isSubsequent}, isStarted=${isStarted}`);
+        console.log(`[CTA DEBUG]   Checking step ${step.manufacturing_steps?.step_name} (order ${stepOrder}): isSubsequent=${isSubsequent}, isStarted=${isStarted}, status=${stepStatus}`);
         
         return isSubsequent && isStarted;
       });
@@ -142,7 +142,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         step.manufacturing_steps?.step_order === nextStepOrder
       );
 
-      console.log(`[CTA DEBUG] Step evaluation: isCompleted=${isThisStepCompleted}, hasSubsequentStarted=${hasSubsequentStepsStarted}, nextStepExists=${nextStepExists}`);
+      console.log(`[CTA DEBUG] Step evaluation: actualStatus=${actualStepStatus}, isCompleted=${isThisStepCompleted}, hasSubsequentStarted=${hasSubsequentStepsStarted}, nextStepExists=${nextStepExists}`);
       
       return isThisStepCompleted && !hasSubsequentStepsStarted && !nextStepExists;
     }
@@ -320,8 +320,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           {/* Status Pills */}
           {data.stepOrder > 0 && (
             <div className="flex items-center justify-between">
-              <Badge className={getStatusColor(data.status)}>
-                {data.status.replace('_', ' ').toUpperCase()}
+              <Badge className={getStatusColor(currentOrderStep?.status || data.status)}>
+                {(currentOrderStep?.status || data.status).replace('_', ' ').toUpperCase()}
               </Badge>
             </div>
           )}
