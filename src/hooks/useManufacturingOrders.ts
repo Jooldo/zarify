@@ -148,6 +148,29 @@ export const useManufacturingOrders = () => {
     },
   });
 
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase
+        .from('manufacturing_orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Manufacturing order deleted successfully!" });
+      invalidateManufacturingOrders();
+    },
+    onError: (error) => {
+      console.error('Error deleting manufacturing order:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete manufacturing order.",
+        variant: "destructive"
+      });
+    },
+  });
+
   const createOrder = async (orderData: Parameters<typeof createOrderMutation.mutateAsync>[0]) => {
     setIsCreating(true);
     try {
@@ -159,6 +182,10 @@ export const useManufacturingOrders = () => {
 
   const updateOrder = (orderId: string, updates: Partial<Pick<ManufacturingOrder, 'status' | 'priority' | 'due_date'>>) => {
     updateOrderMutation.mutate({ orderId, updates });
+  };
+
+  const deleteOrder = (orderId: string) => {
+    deleteOrderMutation.mutate(orderId);
   };
 
   const invalidateManufacturingOrders = () => {
@@ -174,6 +201,7 @@ export const useManufacturingOrders = () => {
     invalidateManufacturingOrders,
     createOrder,
     isCreating,
-    updateOrder
+    updateOrder,
+    deleteOrder
   };
 };

@@ -40,7 +40,7 @@ const ManufacturingDashboard = () => {
     overdueOrders: false,
   });
   
-  const { manufacturingOrders, isLoading, updateOrder, refetch } = useManufacturingOrders();
+  const { manufacturingOrders, isLoading, updateOrder, deleteOrder, refetch } = useManufacturingOrders();
 
   // Filter and search logic
   const filteredOrders = useMemo(() => {
@@ -149,6 +149,7 @@ const ManufacturingDashboard = () => {
       case 'pending': return 'bg-gray-100 text-gray-800';
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
+      case 'tagged_in': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -160,6 +161,10 @@ const ManufacturingDashboard = () => {
 
   const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
     updateOrder(orderId, { status });
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    deleteOrder(orderId);
   };
 
   const handleDetailsDialogClose = (open: boolean) => {
@@ -292,6 +297,8 @@ const ManufacturingDashboard = () => {
               getPriorityColor={getPriorityColor}
               getStatusColor={getStatusColor}
               onViewOrder={handleViewOrder}
+              onDeleteOrder={handleDeleteOrder}
+              onOrderUpdate={refetch}
             />
           )}
         </TabsContent>
