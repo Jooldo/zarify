@@ -63,6 +63,7 @@ export const useFinishedGoods = () => {
       }
 
       // Fetch manufacturing orders that are in progress to calculate in_manufacturing
+      // Exclude "tagged_in" status from in manufacturing calculation
       const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
         .from('manufacturing_orders')
         .select(`
@@ -70,7 +71,7 @@ export const useFinishedGoods = () => {
           product_configs!inner(product_code)
         `)
         .eq('merchant_id', merchantId)
-        .in('status', ['pending', 'in_progress', 'tagged_in']);
+        .in('status', ['pending', 'in_progress']);
 
       if (manufacturingOrdersError) {
         console.error('Error fetching manufacturing orders:', manufacturingOrdersError);

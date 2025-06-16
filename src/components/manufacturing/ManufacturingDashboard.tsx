@@ -40,7 +40,7 @@ const ManufacturingDashboard = () => {
     overdueOrders: false,
   });
   
-  const { manufacturingOrders, isLoading, updateOrder } = useManufacturingOrders();
+  const { manufacturingOrders, isLoading, updateOrder, refetch } = useManufacturingOrders();
 
   // Filter and search logic
   const filteredOrders = useMemo(() => {
@@ -160,6 +160,14 @@ const ManufacturingDashboard = () => {
 
   const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
     updateOrder(orderId, { status });
+  };
+
+  const handleDetailsDialogClose = (open: boolean) => {
+    setShowDetailsDialog(open);
+    if (!open) {
+      // Refresh orders when dialog closes to get updated data
+      refetch();
+    }
   };
 
   return (
@@ -299,7 +307,7 @@ const ManufacturingDashboard = () => {
       <ManufacturingOrderDetailsDialog
         order={selectedOrder}
         open={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
+        onOpenChange={handleDetailsDialogClose}
         onStatusUpdate={handleStatusUpdate}
         getPriorityColor={getPriorityColor}
         getStatusColor={getStatusColor}

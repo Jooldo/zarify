@@ -1,15 +1,17 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircle2, Workflow } from 'lucide-react';
+import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircle2, Workflow, ArrowUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import StartStepDialog from './StartStepDialog';
+import ManufacturingTagInDialog from './ManufacturingTagInDialog';
 
 interface ManufacturingOrderDetailsDialogProps {
   order: ManufacturingOrder | null;
@@ -30,6 +32,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
   const { stepValues } = useManufacturingStepValues();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [tagInDialogOpen, setTagInDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
 
   if (!order) return null;
@@ -55,12 +58,19 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   const nextStep = getNextStep();
   const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+  const isCompleted = order.status === 'completed';
+  const isTaggedIn = order.status === 'tagged_in';
 
   const handleStartStep = () => {
     if (nextStep) {
       setSelectedStep(nextStep);
       setStartStepDialogOpen(true);
     }
+  };
+
+  const handleTagInComplete = () => {
+    // This will trigger a refetch in the parent component
+    onOpenChange(false);
   };
 
   // Get all order steps for this order with their field data
@@ -312,9 +322,9 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </Card>
             )}
 
-            {/* Start Production Button */}
-            {nextStep && !hasStarted && (
-              <div className="flex justify-center pt-4 border-t">
+            {/* Action Buttons */}
+            <div className="flex justify-center pt-4 border-t">
+              {nextStep && !hasStarted && (
                 <Button 
                   onClick={handleStartStep}
                   className="bg-primary hover:bg-primary/90"
@@ -323,17 +333,33 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                   <Play className="h-4 w-4 mr-2" />
                   Start {nextStep.step_name}
                 </Button>
-              </div>
-            )}
+              )}
 
-            {hasStarted && (
-              <div className="flex justify-center pt-4 border-t">
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">Production Started</span>
+              {isCompleted && !isTaggedIn && (
+                <Button 
+                  onClick={() => setTagInDialogOpen(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                >
+                  <ArrowUp className="h-4 w-4 mr-2" />
+                  Tag In to Inventory
+                </Button>
+              )}
+
+              {hasStarted && !isCompleted && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Workflow className="h-5 w-5" />
+                  <span className="font-medium">Production In Progress</span>
                 </div>
-              </div>
-            )}
+              )}
+
+              {isTaggedIn && (
+                <div className="flex items-center gap-2 text-purple-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Tagged In to Inventory</span>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -343,6 +369,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
         onClose={() => setStartStepDialogOpen(false)}
         order={order}
         step={selectedStep}
+      />
+
+      <ManufacturingTagInDialog
+        order={order}
+        open={tagInDialogOpen}
+        onOpenChange={setTagInDialogOpen}
+        onTagInComplete={handleTagInComplete}
       />
     </>
   );
