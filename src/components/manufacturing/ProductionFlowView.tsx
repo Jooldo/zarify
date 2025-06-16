@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -224,12 +224,34 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [startStepDialogOpen, setStartStepDialogOpen] = useState<any>(false);
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  // Fixed loading state management
+  const [isFixedLoading, setIsFixedLoading] = useState(true);
+  const [lastDataVersion, setLastDataVersion] = useState<string>('');
 
-  // Check if we're loading critical data
-  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0;
+  // Create a data version string to detect changes
+  const currentDataVersion = useMemo(() => {
+    return `${manufacturingOrders.length}-${orderSteps.length}-${stepValues.length}`;
+  }, [manufacturingOrders.length, orderSteps.length, stepValues.length]);
+
+  // Handle initial load and data changes with fixed 1-second loading
+  useEffect(() => {
+    if (currentDataVersion !== lastDataVersion) {
+      setIsFixedLoading(true);
+      const timer = setTimeout(() => {
+        setIsFixedLoading(false);
+        setLastDataVersion(currentDataVersion);
+      }, 1000); // Fixed 1-second loading time
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentDataVersion, lastDataVersion]);
+
+  // Check if we're loading critical data or in fixed loading state
+  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0 || isFixedLoading;
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
