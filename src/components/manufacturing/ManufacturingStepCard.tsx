@@ -59,11 +59,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const { workers } = useWorkers();
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Debug logging for data received
-  console.log(`[ManufacturingStepCard] Rendering card for: ${data.stepName} (Order: ${data.orderNumber})`);
-  console.log(`[ManufacturingStepCard] Received orderSteps:`, orderSteps.length);
-  console.log(`[ManufacturingStepCard] Card data:`, data);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-gray-100 text-gray-800';
@@ -122,16 +117,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     if (subsequentStepOrder <= currentStepOrder) return false;
     
     // Check if the subsequent step is in progress or completed
-    const isStarted = step.status === 'in_progress' || step.status === 'completed';
-    
-    if (isStarted) {
-      console.log(`[ManufacturingStepCard] Found subsequent step "${step.manufacturing_steps.step_name}" (order ${subsequentStepOrder}) with status "${step.status}" for current step "${data.stepName}" (order ${currentStepOrder})`);
-    }
-    
-    return isStarted;
+    return step.status === 'in_progress' || step.status === 'completed';
   });
-
-  console.log(`[ManufacturingStepCard] hasSubsequentStepsStarted for "${data.stepName}": ${hasSubsequentStepsStarted}`);
 
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
@@ -237,14 +224,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     !orderSteps.some(step => String(step.manufacturing_order_id) === String(data.orderId))) ||
     (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentStepsStarted);
 
-  console.log(`[ManufacturingStepCard] shouldShowCTA for "${data.stepName}": ${shouldShowCTA}`);
-  console.log(`[ManufacturingStepCard] Conditions: stepName="${data.stepName}", stepOrder=${data.stepOrder}, status="${data.status}", hasSubsequentStepsStarted=${hasSubsequentStepsStarted}`);
-
-  // Additional debugging for MO000005
   if (data.orderNumber === 'MO000005' && data.stepOrder > 0 && data.status === 'completed') {
-    console.log(`[DEBUG/MO000005] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentStepsStarted} | Should Show CTA: ${shouldShowCTA}`);
+    console.log(
+      `[DEBUG] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentStepsStarted} | Should Show CTA: ${shouldShowCTA}`
+    );
     if (!hasSubsequentStepsStarted) {
-      console.log(`[DEBUG/MO000005] CTA button is visible on "${data.stepName}" because 'hasSubsequentStepsStarted' is false. Inspecting 'orderSteps' for this order:`, 
+      console.log(`[DEBUG] CTA button is visible on "${data.stepName}" because 'hasSubsequentStepsStarted' is false. Inspecting 'orderSteps' for this order:`, 
         orderSteps.filter(s => String(s.manufacturing_order_id) === String(data.orderId))
           .map(s => ({ 
             step: s.manufacturing_steps?.step_name, 
