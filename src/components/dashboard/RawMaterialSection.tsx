@@ -1,9 +1,8 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Boxes, AlertTriangle, ShoppingCart, TrendingUp, Clock } from 'lucide-react';
+import { Boxes, AlertTriangle, ShoppingCart, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 
 interface RawMaterialSectionProps {
   rawMaterials: any[];

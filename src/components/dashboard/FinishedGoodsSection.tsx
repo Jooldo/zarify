@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,12 @@ interface FinishedGoodsSectionProps {
   finishedGoods: any[];
   manufacturingOrders: any[];
   loading: boolean;
+}
+
+interface StepData {
+  step: string;
+  count: number;
+  color: string;
 }
 
 const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: FinishedGoodsSectionProps) => {
@@ -53,7 +58,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
       }
       acc[status].count += 1;
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, StepData>);
 
     const inProcessByStep = Object.values(stepData);
 
