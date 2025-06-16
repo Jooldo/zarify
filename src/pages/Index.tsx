@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -112,14 +113,14 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <SidebarProvider defaultOpen={true}>
         <div className="flex w-full min-h-screen">
           <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
-          <SidebarInset className="flex-1">
+          <SidebarInset className="overflow-auto">
             {/* Header with Sidebar Toggle */}
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger className="-ml-1" />
               {pageTitle && (
                 <div className="flex items-center gap-2 px-3">
@@ -130,80 +131,76 @@ const Index = () => {
 
             {/* Raw Material Management - Full width with its own layout */}
             {isRawMaterialTab() && (
-              <Tabs value={activeTab} className="w-full h-full">
-                <TabsContent value={activeTab} className="space-y-0 mt-0 h-full">
-                  <RawMaterialManagement 
-                    activeTab={activeTab} 
-                    onTabChange={handleNavigateToTab} 
-                  />
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <RawMaterialManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             )}
 
             {/* Finished Good Management - Full width with its own layout */}
             {isFinishedGoodTab() && (
-              <Tabs value={activeTab} className="w-full h-full">
-                <TabsContent value={activeTab} className="space-y-0 mt-0 h-full">
-                  <FinishedGoodManagement 
-                    activeTab={activeTab} 
-                    onTabChange={handleNavigateToTab} 
-                  />
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <FinishedGoodManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             )}
 
             {/* Users Management - Full width with its own layout */}
             {isUsersTab() && (
-              <UsersTab 
-                activeTab={activeTab === 'users' ? 'customers' : activeTab} 
-                onTabChange={handleNavigateToTab} 
-              />
+              <div className="px-4 sm:px-6 lg:px-8">
+                <UsersTab 
+                  activeTab={activeTab === 'users' ? 'customers' : activeTab} 
+                  onTabChange={handleNavigateToTab} 
+                />
+              </div>
             )}
 
             {/* Settings Management - Full width with its own layout */}
             {isSettingsTab() && (
-              <div className="h-full bg-background">
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
                 {activeTab === 'merchant-configurations' && (
-                  <div className="px-4 sm:px-6 lg:px-8 py-6">
-                    <MerchantConfigurations />
-                  </div>
+                  <MerchantConfigurations />
                 )}
                 {activeTab === 'general-settings' && (
-                  <div className="px-4 sm:px-6 lg:px-8 py-6">
-                    <GeneralSettings />
-                  </div>
+                  <GeneralSettings />
                 )}
               </div>
             )}
 
             {/* Other tabs with optimized layout */}
             {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && (
-              <div className="h-full bg-background">
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
                 {/* Main Content */}
-                <Tabs value={activeTab} className="w-full h-full">
-                  <TabsContent value="dashboard" className="space-y-0 mt-0 h-full">
+                <Tabs value={activeTab} className="w-full">
+                  <TabsContent value="dashboard" className="space-y-6 mt-0">
                     <VisualDashboard onNavigateToTab={handleNavigateToTab} />
                   </TabsContent>
 
                   <TabsContent value="orders" className="space-y-6 mt-0">
-                    <div className="px-4 sm:px-6 lg:px-8 py-6">
-                      <OrdersTab
-                        initialFilters={initialOrderFilters}
-                        onFiltersConsumed={handleFiltersConsumed}
-                      />
-                    </div>
+                    <OrdersTab
+                      initialFilters={initialOrderFilters}
+                      onFiltersConsumed={handleFiltersConsumed}
+                    />
                   </TabsContent>
 
                   <TabsContent value="catalogue-management" className="space-y-6 mt-0">
-                    <div className="px-4 sm:px-6 lg:px-8 py-6">
-                      <CatalogueManagement />
-                    </div>
+                    <CatalogueManagement />
                   </TabsContent>
 
                   <TabsContent value="activity" className="space-y-6 mt-0">
-                    <div className="px-4 sm:px-6 lg:px-8 py-6">
-                      <ActivityLogsTab />
-                    </div>
+                    <ActivityLogsTab />
                   </TabsContent>
                 </Tabs>
               </div>
