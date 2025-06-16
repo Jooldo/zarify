@@ -94,13 +94,17 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           orderStep ? `Status: ${orderStep.status}` : 'No order step found'
         );
 
+        // Properly type the status with a fallback
+        const stepStatus: 'pending' | 'in_progress' | 'completed' | 'blocked' = 
+          (orderStep?.status as 'pending' | 'in_progress' | 'completed' | 'blocked') || 'pending';
+
         const stepCardData: StepCardData = {
           stepName: step.step_name,
           stepOrder: step.step_order,
           orderId: order.id,
           orderNumber: order.order_number,
           productName: order.product_name,
-          status: orderStep?.status || 'pending',
+          status: stepStatus,
           progress: orderStep?.progress_percentage || 0,
           assignedWorker: orderStep?.workers?.name,
           estimatedDuration: step.estimated_duration_hours,
