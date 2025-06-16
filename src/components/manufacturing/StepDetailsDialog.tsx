@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,8 @@ import { Tables } from '@/integrations/supabase/types';
 import { useStepDetailsData } from '@/hooks/useStepDetailsData';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { format } from 'date-fns';
-import CurrentStepDisplay from './CurrentStepDisplay';
-import PreviousStepsDisplay from './PreviousStepsDisplay';
+import { CurrentStepDisplay } from './CurrentStepDisplay';
+import { PreviousStepsDisplay } from './PreviousStepsDisplay';
 
 interface StepDetailsDialogProps {
   step: Tables<'manufacturing_order_steps'> | null;
@@ -169,7 +170,7 @@ const StepDetailsDialog = ({ step, open, onOpenChange }: StepDetailsDialogProps)
             </div>
 
             {/* Current Step Display */}
-            <CurrentStepDisplay step={step} />
+            <CurrentStepDisplay currentStepValues={currentStepValues} isLoading={isLoading} />
 
             {/* Previous Steps Display */}
             <PreviousStepsDisplay previousStepsData={previousStepsData} />

@@ -9,7 +9,7 @@ export interface ManufacturingStep {
   step_name: string;
   step_order: number;
   description?: string;
-  estimated_time?: number;
+  estimated_duration_hours?: number;
   is_active: boolean;
   merchant_id: string;
   created_at: string;
@@ -53,7 +53,7 @@ export interface CreateManufacturingStepData {
   step_name: string;
   step_order: number;
   description?: string;
-  estimated_time?: number;
+  estimated_duration_hours?: number;
   is_active: boolean;
   qc_required: boolean;
 }
@@ -62,7 +62,7 @@ export interface UpdateManufacturingStepData {
   step_name?: string;
   step_order?: number;
   description?: string;
-  estimated_time?: number;
+  estimated_duration_hours?: number;
   is_active?: boolean;
   qc_required?: boolean;
 }
@@ -125,7 +125,10 @@ export const useManufacturingSteps = () => {
     mutationFn: async (stepData: CreateManufacturingStepData) => {
       const { data, error } = await supabase
         .from('manufacturing_steps')
-        .insert(stepData)
+        .insert({
+          ...stepData,
+          merchant_id: (await supabase.auth.getUser()).data.user?.user_metadata?.merchant_id || ''
+        })
         .select()
         .single();
 
