@@ -8,8 +8,8 @@ export const generateOrderRowLayout = (
     return userPosition;
   }
   
-  // Increased vertical spacing between rows from 180 to 220 to prevent card overlap
-  const rowHeight = 220;
+  // Increased vertical spacing between rows from 220 to 300 to provide more space between cards
+  const rowHeight = 300;
   const startY = 50;
   
   return {
