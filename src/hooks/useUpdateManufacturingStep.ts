@@ -75,13 +75,34 @@ export const useUpdateManufacturingStep = () => {
 
       return data;
     },
-    onSuccess: () => {
-      // Invalidate all related queries to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps-with-steps'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-step-previous-data'] });
+    onSuccess: (data) => {
+      // More targeted invalidation to reduce flickering
+      const orderId = data.manufacturing_order_id;
+      
+      // Invalidate specific queries instead of broad patterns
+      queryClient.invalidateQueries({ 
+        queryKey: ['manufacturing-orders'], 
+        exact: false 
+      });
+      
+      queryClient.invalidateQueries({ 
+        queryKey: ['manufacturing-order-steps-with-steps'], 
+        exact: false 
+      });
+      
+      queryClient.invalidateQueries({ 
+        queryKey: ['manufacturing-order-step-values'], 
+        exact: false 
+      });
+
+      // Update specific data in cache to avoid refetch
+      queryClient.setQueryData(['manufacturing-order-step-values'], (oldData: any) => {
+        if (!oldData) return oldData;
+        // Update the specific step data in cache
+        return oldData.map((item: any) => 
+          item.manufacturing_order_step_id === data.id ? { ...item, ...data } : item
+        );
+      });
       
       toast({
         title: 'Success',
@@ -171,6 +192,16 @@ export const useUpdateManufacturingStep = () => {
             throw valuesError;
           } else {
             console.log('Field values saved successfully:', insertedValues);
+            
+            // Update cache immediately to prevent flickering
+            queryClient.setQueryData(['manufacturing-order-step-values'], (oldData: any) => {
+              if (!oldData) return insertedValues;
+              // Remove old values for this step and add new ones
+              const filteredData = oldData.filter((item: any) => 
+                item.manufacturing_order_step_id !== params.stepId
+              );
+              return [...filteredData, ...insertedValues];
+            });
           }
         }
       } catch (error) {

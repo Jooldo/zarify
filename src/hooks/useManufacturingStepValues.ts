@@ -23,6 +23,8 @@ export const useManufacturingStepValues = () => {
       if (error) throw error;
       return data as ManufacturingOrderStepValue[];
     },
+    staleTime: 5000, // Consider data fresh for 5 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
   const getStepValues = (stepId: string) => {
