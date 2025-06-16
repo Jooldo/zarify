@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, User, Package, Hash, Play, Clock } from 'lucide-react';
+import { Search, User, Package, Hash, Play, Clock, CheckCircle, Pause } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -17,7 +17,6 @@ interface KanbanFilters {
   search: string;
   product: string;
   karigar: string;
-  status: string;
   priority: string;
 }
 
@@ -31,7 +30,6 @@ const ProductionKanbanView = () => {
     search: '',
     product: 'all',
     karigar: 'all',
-    status: 'all',
     priority: 'all',
   });
 
@@ -77,16 +75,20 @@ const ProductionKanbanView = () => {
     });
   }, [manufacturingOrders, filters]);
 
-  // Group orders by their current step
-  const ordersByStep = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
+  // Group orders by step and status
+  const ordersByStepAndStatus = useMemo(() => {
+    const grouped: Record<string, Record<string, any[]>> = {};
     
-    // Initialize all steps with empty arrays
+    // Initialize all steps with empty status arrays
     activeSteps.forEach(step => {
-      grouped[step.id] = [];
+      grouped[step.id] = {
+        pending: [],
+        in_progress: [],
+        completed: []
+      };
     });
 
-    // Add orders to appropriate steps
+    // Add orders to appropriate step and status
     filteredOrders.forEach(order => {
       // Get all steps for this order
       const orderOrderSteps = orderSteps.filter(step => 
@@ -94,12 +96,12 @@ const ProductionKanbanView = () => {
       );
 
       if (orderOrderSteps.length === 0) {
-        // No steps created yet - this order should appear in first step as "not started"
+        // No steps created yet - this order should appear in first step as "pending"
         if (activeSteps[0]) {
-          grouped[activeSteps[0].id].push({
+          grouped[activeSteps[0].id].pending.push({
             ...order,
             currentStep: null,
-            stepStatus: 'not_started'
+            stepStatus: 'pending'
           });
         }
       } else {
@@ -114,17 +116,13 @@ const ProductionKanbanView = () => {
 
         if (currentOrderStep && currentOrderStep.manufacturing_step_id) {
           const stepId = currentOrderStep.manufacturing_step_id;
+          const status = currentOrderStep.status;
           
-          // Only add to kanban if the step is not completed (or if it's the only step)
-          if (currentOrderStep.status !== 'completed' || sortedSteps.length === 1) {
-            if (!grouped[stepId]) {
-              grouped[stepId] = [];
-            }
-            
-            grouped[stepId].push({
+          if (grouped[stepId] && grouped[stepId][status]) {
+            grouped[stepId][status].push({
               ...order,
               currentStep: currentOrderStep,
-              stepStatus: currentOrderStep.status,
+              stepStatus: status,
               assignedWorker: currentOrderStep.workers?.name
             });
           }
@@ -135,35 +133,53 @@ const ProductionKanbanView = () => {
     // Apply karigar filter after grouping
     if (filters.karigar !== 'all') {
       Object.keys(grouped).forEach(stepId => {
-        grouped[stepId] = grouped[stepId].filter(order => {
-          return order.assignedWorker?.toLowerCase().includes(filters.karigar.toLowerCase());
-        });
-      });
-    }
-
-    // Apply status filter after grouping
-    if (filters.status !== 'all') {
-      Object.keys(grouped).forEach(stepId => {
-        grouped[stepId] = grouped[stepId].filter(order => {
-          return order.stepStatus === filters.status;
+        Object.keys(grouped[stepId]).forEach(status => {
+          grouped[stepId][status] = grouped[stepId][status].filter(order => {
+            return order.assignedWorker?.toLowerCase().includes(filters.karigar.toLowerCase());
+          });
         });
       });
     }
 
     return grouped;
-  }, [filteredOrders, orderSteps, activeSteps, filters.karigar, filters.status]);
+  }, [filteredOrders, orderSteps, activeSteps, filters.karigar]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-      case 'not_started':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 border-green-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Pause className="h-3 w-3" />;
+      case 'in_progress':
+        return <Play className="h-3 w-3" />;
+      case 'completed':
+        return <CheckCircle className="h-3 w-3" />;
+      default:
+        return <Pause className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'in_progress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      default:
+        return status;
     }
   };
 
@@ -213,7 +229,7 @@ const ProductionKanbanView = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
@@ -250,18 +266,6 @@ const ProductionKanbanView = () => {
           </SelectContent>
         </Select>
 
-        <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
-          <SelectTrigger className="w-[150px] h-8">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="not_started">Not Started</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={filters.priority} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}>
           <SelectTrigger className="w-[150px] h-8">
             <SelectValue placeholder="Priority" />
@@ -276,104 +280,130 @@ const ProductionKanbanView = () => {
         </Select>
       </div>
 
-      {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {activeSteps.map((step) => (
-          <div key={step.id} className="flex-shrink-0 w-80">
-            <Card className="h-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+      {/* Enhanced Kanban Board */}
+      <div className="space-y-8">
+        {activeSteps.map((step) => {
+          const stepOrders = ordersByStepAndStatus[step.id] || { pending: [], in_progress: [], completed: [] };
+          const totalOrders = stepOrders.pending.length + stepOrders.in_progress.length + stepOrders.completed.length;
+          
+          return (
+            <div key={step.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+              {/* Step Header */}
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">
                     {step.step_order}
                   </div>
-                  {step.step_name}
-                  <Badge variant="secondary" className="ml-auto">
-                    {ordersByStep[step.id]?.length || 0}
+                  <h3 className="text-lg font-semibold text-gray-900">{step.step_name}</h3>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {totalOrders} orders
                   </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-3">
-                    {ordersByStep[step.id]?.map((order) => (
-                      <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
-                            {/* Header */}
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-sm text-blue-600">
-                                {order.order_number}
-                              </span>
-                              <Badge className={getPriorityColor(order.priority)}>
-                                {order.priority.toUpperCase()}
-                              </Badge>
-                            </div>
+                </div>
+                {step.description && (
+                  <p className="text-sm text-gray-600 ml-11">{step.description}</p>
+                )}
+              </div>
 
-                            {/* Product & Quantity */}
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Package className="h-3 w-3" />
-                              <span>{order.product_name}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Hash className="h-3 w-3" />
-                              <span>Qty: {order.quantity_required}</span>
-                            </div>
-
-                            {/* Assigned Worker */}
-                            {order.assignedWorker && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <User className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-muted-foreground">Karigar:</span>
-                                <span className="font-medium">{order.assignedWorker}</span>
-                              </div>
-                            )}
-
-                            {/* Status */}
-                            <div className="flex items-center justify-between">
-                              <Badge className={getStatusColor(order.stepStatus)}>
-                                {order.stepStatus === 'not_started' ? 'Not Started' : 
-                                 order.stepStatus === 'in_progress' ? 'In Progress' : 
-                                 order.stepStatus.replace('_', ' ').toUpperCase()}
-                              </Badge>
-                              
-                              {order.currentStep?.started_at && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(order.currentStep.started_at).toLocaleDateString()}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* CTA Button */}
-                            {canStartStep(order, step) && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full mt-2"
-                                onClick={() => handleStartStep(order, step)}
-                              >
-                                <Play className="h-3 w-3 mr-1" />
-                                Start {step.step_name}
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    
-                    {ordersByStep[step.id]?.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No orders in this step</p>
+              {/* Status Columns */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {['pending', 'in_progress', 'completed'].map((status) => (
+                  <div key={status} className="space-y-3">
+                    {/* Status Column Header */}
+                    <div className={`p-3 rounded-lg border-2 ${getStatusColor(status)}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(status)}
+                          <span className="font-medium text-sm">{getStatusLabel(status)}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {stepOrders[status]?.length || 0}
+                        </Badge>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Orders in this status */}
+                    <ScrollArea className="h-[400px] pr-2">
+                      <div className="space-y-3">
+                        {stepOrders[status]?.map((order) => (
+                          <Card key={`${order.id}-${status}`} className="shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-blue-500 bg-white">
+                            <CardContent className="p-3">
+                              <div className="space-y-2">
+                                {/* Header */}
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-sm text-blue-600">
+                                    {order.order_number}
+                                  </span>
+                                  <Badge className={getPriorityColor(order.priority)}>
+                                    {order.priority.toUpperCase()}
+                                  </Badge>
+                                </div>
+
+                                {/* Product & Quantity */}
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Package className="h-3 w-3" />
+                                  <span>{order.product_name}</span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Hash className="h-3 w-3" />
+                                  <span>Qty: {order.quantity_required}</span>
+                                </div>
+
+                                {/* Assigned Worker */}
+                                {order.assignedWorker && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <User className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Karigar:</span>
+                                    <span className="font-medium">{order.assignedWorker}</span>
+                                  </div>
+                                )}
+
+                                {/* Timestamps */}
+                                {order.currentStep?.started_at && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    Started: {new Date(order.currentStep.started_at).toLocaleDateString()}
+                                  </div>
+                                )}
+
+                                {order.currentStep?.completed_at && (
+                                  <div className="flex items-center gap-1 text-xs text-green-600">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Completed: {new Date(order.currentStep.completed_at).toLocaleDateString()}
+                                  </div>
+                                )}
+
+                                {/* CTA Button */}
+                                {canStartStep(order, step) && status === 'pending' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full mt-2"
+                                    onClick={() => handleStartStep(order, step)}
+                                  >
+                                    <Play className="h-3 w-3 mr-1" />
+                                    Start {step.step_name}
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        
+                        {stepOrders[status]?.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Package className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs">No {status.replace('_', ' ')} orders</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
                   </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Start Step Dialog */}
