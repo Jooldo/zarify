@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,7 +107,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // FIXED CTA LOGIC - Proper database-based logic
+  // FIXED CTA LOGIC - Hide button on previous step cards
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
     console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
@@ -165,6 +164,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
       console.log(`[CTA DEBUG] Final evaluation: isHighestCompleted=${isHighestCompletedStep}, hasSubsequentActive=${hasSubsequentActiveSteps}`);
       
+      // UPDATED: Only show if this is the highest completed step AND no subsequent steps are active
       return isHighestCompletedStep && !hasSubsequentActiveSteps;
     }
 
