@@ -76,9 +76,13 @@ export const useUpdateManufacturingStep = () => {
       return data;
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps-with-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-step-previous-data'] });
+      
       toast({
         title: 'Success',
         description: 'Manufacturing step updated successfully',
@@ -88,7 +92,7 @@ export const useUpdateManufacturingStep = () => {
       console.error('Error updating manufacturing step:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update manufacturing step',
+        description: error.message || 'Failed to update manufacturing step',
         variant: 'destructive',
       });
     },
@@ -141,6 +145,7 @@ export const useUpdateManufacturingStep = () => {
 
         if (deleteError) {
           console.error('Error deleting existing values:', deleteError);
+          throw deleteError;
         }
 
         // Then insert new values with proper merchant_id
@@ -156,15 +161,16 @@ export const useUpdateManufacturingStep = () => {
         console.log('Values to insert:', valuesToInsert);
 
         if (valuesToInsert.length > 0) {
-          const { error: valuesError } = await supabase
+          const { data: insertedValues, error: valuesError } = await supabase
             .from('manufacturing_order_step_values')
-            .insert(valuesToInsert);
+            .insert(valuesToInsert)
+            .select();
 
           if (valuesError) {
             console.error('Error saving field values:', valuesError);
             throw valuesError;
           } else {
-            console.log('Field values saved successfully');
+            console.log('Field values saved successfully:', insertedValues);
           }
         }
       } catch (error) {

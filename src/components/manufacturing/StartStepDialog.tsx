@@ -87,7 +87,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     handleFieldChange(fieldId, value);
   };
 
-  const handleStartStep = async () => {
+  const handleStartStep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!merchant?.id) {
       toast({
         title: 'Error',
@@ -161,6 +164,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           description: `${step.step_name} started successfully`,
         });
 
+        // Reset form and close dialog
+        setFieldValues({});
+        setInitializedStepId(null);
         onClose();
       }
     } catch (error) {
@@ -264,7 +270,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open && !isSubmitting) {
+        onClose();
+      }
+    }}>
       <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -276,7 +286,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={handleStartStep} className="space-y-4">
           {/* Order Summary */}
           <Card>
             <CardHeader className="pb-2">
@@ -332,18 +342,23 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose} 
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button 
-              onClick={handleStartStep} 
+              type="submit"
               disabled={!isFormValid || isSubmitting}
               className="bg-primary hover:bg-primary/90"
             >
               {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
