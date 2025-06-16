@@ -67,11 +67,7 @@ const ProductionKanbanView = () => {
         return false;
       }
 
-      // Exclude completed orders from the kanban view
-      if (order.status === 'completed') {
-        return false;
-      }
-
+      // Remove the completed status exclusion - show all orders
       return true;
     });
   }, [manufacturingOrders, filters]);
@@ -275,6 +271,7 @@ const ProductionKanbanView = () => {
               <SelectItem value="not_started">Not Started</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
 
