@@ -346,7 +346,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 </Button>
               )}
 
-              {hasStarted && !isCompleted && (
+              {hasStarted && !isCompleted && !isTaggedIn && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Workflow className="h-5 w-5" />
                   <span className="font-medium">Production In Progress</span>
