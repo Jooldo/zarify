@@ -64,6 +64,8 @@ export const PreviousStepsDisplay: React.FC<PreviousStepsDisplayProps> = ({
 
   return (
     <div>
+      <h4 className="font-semibold text-lg mb-3">Previous Steps Data</h4>
+      
       {orderNumber && (
         <div className="text-xs mb-2 text-muted-foreground">
           Showing data for Order <strong>{orderNumber}</strong>
@@ -71,14 +73,12 @@ export const PreviousStepsDisplay: React.FC<PreviousStepsDisplayProps> = ({
       )}
       
       {previousStepsData.length === 0 ? (
-        <div className="py-4 border rounded text-center bg-muted/30 text-muted-foreground">
-          No previous step data found for this order.<br />
-          <span>No previous steps have been started for this order.</span>
+        <div className="py-6 border rounded text-center bg-muted/30 text-muted-foreground">
+          <p className="text-sm">No previous steps found for this order.</p>
+          <p className="text-xs mt-1">This might be the first step in the manufacturing process.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <h4 className="font-semibold text-lg">Previous Steps Data</h4>
-          
           {uniqueFieldLabels.length === 0 ? (
             <Alert>
               <AlertDescription>

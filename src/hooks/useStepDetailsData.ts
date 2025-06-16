@@ -42,7 +42,7 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | n
   }, [step, currentStepFields, getStepValue]);
 
   const previousStepsData = useMemo(() => {
-    if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {
+    if (!step || !order || !manufacturingSteps.length) {
       return [];
     }
 
@@ -51,17 +51,26 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | n
       return [];
     }
 
-    const allOrderStepsForOrder = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
+    // Get all order steps for this specific order
+    const allOrderStepsForOrder = orderSteps.filter(os => 
+      os.manufacturing_order_id === order.id
+    );
 
+    // Get all step definitions and sort by order
     const allStepDefinitions = manufacturingSteps
       .slice()
       .sort((a, b) => Number(a.step_order) - Number(b.step_order));
 
     const currentStepOrder = Number(currentStepDefinition.step_order);
-    const previousStepDefinitions = allStepDefinitions.filter(def => Number(def.step_order) < currentStepOrder);
+    const previousStepDefinitions = allStepDefinitions.filter(def => 
+      Number(def.step_order) < currentStepOrder
+    );
 
     const result = previousStepDefinitions.map(prevStepDef => {
-      const orderStep = allOrderStepsForOrder.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
+      // Find the corresponding order step
+      const orderStep = allOrderStepsForOrder.find(os => 
+        os.manufacturing_step_id === prevStepDef.id
+      );
 
       if (!orderStep) {
         return {
