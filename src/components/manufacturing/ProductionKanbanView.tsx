@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +76,7 @@ const ProductionKanbanView = () => {
     });
   }, [manufacturingOrders, filters]);
 
-  // Group orders by their current step
+  // Group orders by their highest created step
   const ordersByStep = useMemo(() => {
     const grouped: Record<string, any[]> = {};
     
@@ -86,7 +85,7 @@ const ProductionKanbanView = () => {
       grouped[step.id] = [];
     });
 
-    // Add orders to appropriate steps
+    // Add orders to their highest created step
     filteredOrders.forEach(order => {
       // Get all steps for this order
       const orderOrderSteps = orderSteps.filter(step => 
@@ -103,31 +102,23 @@ const ProductionKanbanView = () => {
           });
         }
       } else {
-        // Find the current step (highest step_order that's not completed, or the latest if all are completed)
-        const sortedSteps = orderOrderSteps.sort((a, b) => a.step_order - b.step_order);
-        
-        // Find the first non-completed step, or the last step if all are completed
-        let currentOrderStep = sortedSteps.find(step => step.status !== 'completed');
-        if (!currentOrderStep) {
-          currentOrderStep = sortedSteps[sortedSteps.length - 1];
-        }
+        // Find the step with the highest step_order (latest created step)
+        const sortedSteps = orderOrderSteps.sort((a, b) => b.step_order - a.step_order);
+        const latestOrderStep = sortedSteps[0];
 
-        if (currentOrderStep && currentOrderStep.manufacturing_step_id) {
-          const stepId = currentOrderStep.manufacturing_step_id;
+        if (latestOrderStep && latestOrderStep.manufacturing_step_id) {
+          const stepId = latestOrderStep.manufacturing_step_id;
           
-          // Only add to kanban if the step is not completed (or if it's the only step)
-          if (currentOrderStep.status !== 'completed' || sortedSteps.length === 1) {
-            if (!grouped[stepId]) {
-              grouped[stepId] = [];
-            }
-            
-            grouped[stepId].push({
-              ...order,
-              currentStep: currentOrderStep,
-              stepStatus: currentOrderStep.status,
-              assignedWorker: currentOrderStep.workers?.name
-            });
+          if (!grouped[stepId]) {
+            grouped[stepId] = [];
           }
+          
+          grouped[stepId].push({
+            ...order,
+            currentStep: latestOrderStep,
+            stepStatus: latestOrderStep.status,
+            assignedWorker: latestOrderStep.workers?.name
+          });
         }
       }
     });
