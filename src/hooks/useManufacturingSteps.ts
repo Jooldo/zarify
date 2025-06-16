@@ -218,7 +218,7 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  // Add mutation to create next step
+  // Separate mutation for creating next step
   const createNextStepMutation = useMutation({
     mutationFn: async ({ orderId, currentStepOrder }: { orderId: string; currentStepOrder: number }) => {
       console.log(`[NEXT STEP] Creating next step for order ${orderId}, current step order: ${currentStepOrder}`);
@@ -237,10 +237,8 @@ export const useManufacturingSteps = () => {
       return data;
     },
     onSuccess: () => {
-      // Refresh both order steps and manufacturing orders
       queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      
       console.log('[NEXT STEP] Successfully created next step and refreshed queries');
     },
     onError: (error: any) => {
@@ -253,7 +251,7 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  // Update step status mutation with next step creation
+  // Fixed update step status mutation without circular dependency
   const updateStepStatusMutation = useMutation({
     mutationFn: async ({ stepId, status, stepOrder, orderId }: { 
       stepId: string; 
@@ -286,22 +284,25 @@ export const useManufacturingSteps = () => {
 
       console.log(`[UPDATE STEP] Step updated successfully:`, data);
 
-      // If step is completed and we have step order and order ID, create next step
-      if (status === 'completed' && stepOrder !== undefined && orderId) {
-        console.log(`[UPDATE STEP] Step completed, attempting to create next step...`);
-        try {
-          await createNextStepMutation.mutateAsync({ orderId, currentStepOrder: stepOrder });
-        } catch (nextStepError) {
-          console.log(`[UPDATE STEP] No next step to create or error:`, nextStepError);
-          // Don't throw here as the step update was successful
-        }
-      }
-
-      return data;
+      // Return data including next step creation info
+      return { 
+        stepData: data, 
+        shouldCreateNext: status === 'completed' && stepOrder !== undefined && orderId,
+        nextStepInfo: { orderId, currentStepOrder: stepOrder }
+      };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      
+      // Create next step if needed
+      if (result.shouldCreateNext && result.nextStepInfo) {
+        try {
+          await createNextStepMutation.mutateAsync(result.nextStepInfo);
+        } catch (error) {
+          console.log(`[UPDATE STEP] No next step to create or error:`, error);
+        }
+      }
       
       toast({
         title: 'Success',
@@ -318,7 +319,6 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  // Add missing saveStepFields mutation
   const saveStepFieldsMutation = useMutation({
     mutationFn: async ({ stepId, fields }: { stepId: string; fields: any[] }) => {
       // Get current user's merchant ID
