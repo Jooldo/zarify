@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,35 +102,48 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
-  // Check if there are subsequent steps that are in progress or completed
-  const hasSubsequentStepsStarted = orderSteps.some(step => {
-    // Must be the same order
-    if (String(step.manufacturing_order_id) !== String(data.orderId)) return false;
-    
-    // Must have manufacturing step info
-    if (!step.manufacturing_steps) return false;
-
-    const currentStepOrder = Number(data.stepOrder);
-    const otherStepOrder = Number(step.manufacturing_steps.step_order);
-    
-    // Only consider steps with higher order numbers (subsequent steps)
-    if (otherStepOrder <= currentStepOrder) return false;
-    
-    // Check if the subsequent step is in progress or completed
-    return step.status === 'in_progress' || step.status === 'completed';
-  });
-
-  console.log(`[DEBUG] Card "${data.stepName}" (Order: ${data.stepOrder}) for ${data.orderNumber}:`);
-  console.log(`  - Status: ${data.status}`);
-  console.log(`  - Has Subsequent Started: ${hasSubsequentStepsStarted}`);
-  console.log(`  - Order Steps for this order:`, orderSteps
-    .filter(s => String(s.manufacturing_order_id) === String(data.orderId))
-    .map(s => ({ 
-      step: s.manufacturing_steps?.step_name, 
-      order: s.manufacturing_steps?.step_order, 
-      status: s.status 
-    }))
+  // Get all order steps for this specific order
+  const thisOrderSteps = orderSteps.filter(step => 
+    String(step.manufacturing_order_id) === String(data.orderId)
   );
+
+  // SIMPLIFIED CTA LOGIC:
+  // 1. For Manufacturing Order cards (stepOrder = 0): Show if no steps have been created yet
+  // 2. For Step cards (stepOrder > 0): Show only if step is completed AND it's the highest completed step
+  const shouldShowCTA = (() => {
+    // Manufacturing Order card - show if no manufacturing steps exist yet
+    if (data.stepName === 'Manufacturing Order' && data.stepOrder === 0) {
+      const hasAnySteps = thisOrderSteps.length > 0;
+      console.log(`[CTA DEBUG] Manufacturing Order ${data.orderNumber}: hasAnySteps=${hasAnySteps}`);
+      return !hasAnySteps;
+    }
+
+    // Step card - show only if this step is completed AND it's the highest completed step
+    if (data.stepOrder > 0 && data.status === 'completed') {
+      // Find the highest step order that is completed
+      const completedSteps = thisOrderSteps
+        .filter(step => step.status === 'completed')
+        .map(step => step.manufacturing_steps?.step_order || 0)
+        .filter(order => order > 0);
+      
+      const highestCompletedStep = completedSteps.length > 0 ? Math.max(...completedSteps) : 0;
+      const isHighestCompleted = data.stepOrder === highestCompletedStep;
+      
+      // Also check if the next step in sequence doesn't exist or is pending
+      const nextStepOrder = data.stepOrder + 1;
+      const nextStepExists = thisOrderSteps.some(step => 
+        step.manufacturing_steps?.step_order === nextStepOrder &&
+        (step.status === 'in_progress' || step.status === 'completed')
+      );
+      
+      console.log(`[CTA DEBUG] Step ${data.stepName} (${data.stepOrder}): isHighestCompleted=${isHighestCompleted}, nextStepExists=${nextStepExists}`);
+      return isHighestCompleted && !nextStepExists;
+    }
+
+    return false;
+  })();
+
+  console.log(`[CTA DEBUG] Final decision for ${data.stepName} (${data.stepOrder}): shouldShowCTA=${shouldShowCTA}`);
 
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
@@ -230,12 +242,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     // Open details dialog instead of calling onStepClick
     setDetailsDialogOpen(true);
   };
-
-  // Show CTA for Manufacturing Order if no steps exist yet, or for completed steps that don't have subsequent steps started
-  const shouldShowCTA = (data.stepName === 'Manufacturing Order' && 
-    data.status === 'pending' && 
-    !orderSteps.some(step => String(step.manufacturing_order_id) === String(data.orderId))) ||
-    (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentStepsStarted);
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
@@ -369,7 +375,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             </div>
           )}
 
-          {/* Add Step Button - Only show when appropriate and no subsequent steps exist */}
+          {/* Add Step Button - Only show when appropriate */}
           {shouldShowCTA && (
             <Button 
               variant="outline" 
