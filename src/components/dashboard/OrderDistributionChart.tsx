@@ -9,11 +9,11 @@ import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 const chartConfig = {
   created: {
     label: 'Created',
-    color: 'hsl(var(--primary))',
+    color: 'hsl(217 91% 60%)', // Blue theme color
   },
   inProgress: {
     label: 'In Progress',
-    color: 'hsl(var(--muted-foreground))',
+    color: 'hsl(142 76% 36%)', // Green theme color
   },
 };
 
@@ -41,10 +41,13 @@ const OrderDistributionChart = () => {
   }
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 border-l-4 border-l-blue-500">
       <CardHeader className="pb-0">
-        <CardTitle>Order Distribution</CardTitle>
-        <CardDescription>Created vs. In Progress</CardDescription>
+        <CardTitle className="text-gray-800 flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          Order Distribution
+        </CardTitle>
+        <CardDescription className="text-gray-600">Created vs. In Progress orders</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         {totalOrders > 0 ? (
@@ -62,14 +65,18 @@ const OrderDistributionChart = () => {
                 dataKey="value"
                 nameKey="name"
                 innerRadius={60}
-                strokeWidth={2}
+                strokeWidth={3}
+                stroke="white"
               />
               <ChartLegend content={<ChartLegendContent nameKey="name" />} />
             </PieChart>
           </ChartContainer>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-sm text-muted-foreground">No orders in 'Created' or 'In Progress' status.</p>
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+            </div>
+            <p className="text-sm text-gray-500">No orders in 'Created' or 'In Progress' status.</p>
           </div>
         )}
       </CardContent>

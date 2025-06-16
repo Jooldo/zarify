@@ -1,10 +1,9 @@
 
-import { Package, ShoppingBag, Home } from 'lucide-react';
+import { Package, ShoppingBag } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import RawMaterialInventory from './RawMaterialInventory';
 import RMProcurementTab from './procurement/RMProcurementTab';
-import RMHomeDashboard from './rawmaterial/RMHomeDashboard';
 
 interface RawMaterialManagementProps {
   activeTab: string;
@@ -20,10 +19,8 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
         return <RawMaterialInventory onRequestCreated={() => {}} />;
       case 'rm-procurement':
         return <RMProcurementTab />;
-      case 'rm-home':
-        return <RMHomeDashboard onNavigateToTab={onTabChange} />;
       default:
-        return <RMHomeDashboard onNavigateToTab={onTabChange} />;
+        return <RawMaterialInventory onRequestCreated={() => {}} />;
     }
   };
 
@@ -45,11 +42,7 @@ const RawMaterialManagement = ({ activeTab, onTabChange }: RawMaterialManagement
 
           {showTabNavigation && (
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
-                <TabsTrigger value="rm-home" className="flex items-center gap-2 data-[state=active]:bg-background">
-                  <Home className="h-4 w-4" />
-                  Home
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-muted h-12">
                 <TabsTrigger value="rm-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory

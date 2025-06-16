@@ -1,18 +1,9 @@
 
-import { Package, Factory, BarChart3 } from 'lucide-react';
+import { Package, Factory } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
 import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
-
-// Placeholder component for analytics
-const FGAnalyticsPlaceholder = () => (
-  <div className="p-8 text-center">
-    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold mb-2">Analytics</h3>
-    <p className="text-gray-500">Analytics functionality will be implemented here</p>
-  </div>
-);
 
 interface FinishedGoodManagementProps {
   activeTab: string;
@@ -28,8 +19,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
         return <FinishedGoodsInventory />;
       case 'fg-manufacturing':
         return <ManufacturingDashboard />;
-      case 'fg-analytics':
-        return <FGAnalyticsPlaceholder />;
       default:
         return <FinishedGoodsInventory />;
     }
@@ -46,14 +35,14 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 Finished Good Management
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage inventory, manufacturing, and analytics
+                Manage inventory and manufacturing
               </p>
             </div>
           </div>
 
           {showTabNavigation && (
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
+              <TabsList className="grid w-full grid-cols-2 bg-muted h-12">
                 <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory
@@ -61,10 +50,6 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Factory className="h-4 w-4" />
                   Manufacturing
-                </TabsTrigger>
-                <TabsTrigger value="fg-analytics" className="flex items-center gap-2 data-[state=active]:bg-background">
-                  <BarChart3 className="h-4 w-4" />
-                  Analytics
                 </TabsTrigger>
               </TabsList>
             </Tabs>

@@ -113,22 +113,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           icon: Hammer,
           tab: "fg-manufacturing",
         },
-        {
-          title: "Analytics",
-          icon: BarChart3,
-          tab: "fg-analytics",
-        },
       ],
     },
     {
       label: "Raw Materials",
       id: "raw-materials",
       items: [
-        {
-          title: "Home",
-          icon: Factory,
-          tab: "rm-home",
-        },
         {
           title: "Inventory",
           icon: Package,

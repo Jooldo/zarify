@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -21,6 +22,15 @@ const Index = () => {
 
   const handleNavigateToTab = (tab: string, filters?: Partial<OrderFilters>) => {
     console.log('Navigating to tab:', tab);
+    
+    // Handle removed tabs by redirecting to appropriate alternatives
+    if (tab === 'rm-home') {
+      tab = 'rm-inventory'; // Redirect rm-home to rm-inventory
+    }
+    if (tab === 'fg-analytics') {
+      tab = 'fg-inventory'; // Redirect fg-analytics to fg-inventory
+    }
+    
     if (tab === 'orders' && filters) {
       const newFilters: OrderFilters = {
         customer: '', orderStatus: '', suborderStatus: '', category: '', subcategory: '',
@@ -46,8 +56,6 @@ const Index = () => {
         return "";
       case "orders":
         return "Orders";
-      case "rm-home":
-        return "Raw Material Home";
       case "rm-inventory":
         return "Raw Material Inventory";
       case "rm-procurement":
@@ -56,8 +64,6 @@ const Index = () => {
         return "Finished Goods Inventory";
       case "fg-manufacturing":
         return "Finished Goods Manufacturing";
-      case "fg-analytics":
-        return "Finished Goods Analytics";
       case "customers":
         return "Customers";
       case "suppliers":
@@ -78,11 +84,11 @@ const Index = () => {
   };
 
   const isRawMaterialTab = () => {
-    return ['rm-home', 'rm-inventory', 'rm-procurement'].includes(activeTab);
+    return ['rm-inventory', 'rm-procurement'].includes(activeTab);
   };
 
   const isFinishedGoodTab = () => {
-    return ['fg-inventory', 'fg-manufacturing', 'fg-analytics'].includes(activeTab);
+    return ['fg-inventory', 'fg-manufacturing'].includes(activeTab);
   };
 
   const isUsersTab = () => {
