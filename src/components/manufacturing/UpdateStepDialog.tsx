@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,8 @@ interface UpdateStepDialogProps {
   previousSteps: ManufacturingOrderStep[];
 }
 
+type StepStatus = 'pending' | 'in_progress' | 'completed';
+
 const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   open,
   onOpenChange,
@@ -38,7 +39,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [initialized, setInitialized] = useState(false);
   const [formData, setFormData] = useState({
     fieldValues: {} as Record<string, any>,
-    status: '',
+    status: 'pending' as StepStatus,
   });
 
   // Initialize form data only once when dialog opens and we have all required data
@@ -54,7 +55,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
       setFormData({
         fieldValues: initialFieldValues,
-        status: currentOrderStep.status,
+        status: currentOrderStep.status as StepStatus,
       });
       
       setInitialized(true);
@@ -67,7 +68,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setInitialized(false);
       setFormData({
         fieldValues: {},
-        status: '',
+        status: 'pending' as StepStatus,
       });
     }
   }, [open]);
@@ -86,7 +87,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const handleStatusChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      status: value
+      status: value as StepStatus
     }));
   };
 
@@ -157,7 +158,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
   };
 
-  // Get all unique configured fields from previous steps for dynamic table columns
   const getAllConfiguredFields = () => {
     const allFields = new Map();
     
@@ -183,7 +183,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     return Array.from(allFields.values());
   };
 
-  // Get field value for a specific step and field
   const getFieldValueForStep = (stepId: string, fieldId: string) => {
     const value = getStepValue(stepId, fieldId);
     return value || '-';
