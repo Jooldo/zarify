@@ -1,4 +1,3 @@
-
 export const generateOrderRowLayout = (
   totalOrders: number,
   orderIndex: number,
@@ -8,8 +7,8 @@ export const generateOrderRowLayout = (
     return userPosition;
   }
   
-  // Increased vertical spacing between rows from 220 to 300 to provide more space between cards
-  const rowHeight = 300;
+  // Increased vertical spacing between rows from 300 to 350 to provide maximum space between cards
+  const rowHeight = 350;
   const startY = 50;
   
   return {
