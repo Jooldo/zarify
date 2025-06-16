@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,19 +108,28 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // UPDATED CTA LOGIC - Check if the immediate NEXT step exists
+  // ENHANCED CTA LOGIC WITH BETTER DEBUGGING
   const shouldShowCTA = (() => {
-    console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
-    console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
-      stepName: s.manufacturing_steps?.step_name,
-      stepOrder: s.step_order,
-      status: s.status
-    })));
+    console.log(`\n=== CTA DEBUG START ===`);
+    console.log(`Card: ${data.stepName} (stepOrder: ${data.stepOrder}) for order ${data.orderNumber}`);
+    console.log(`Order ID from data: ${data.orderId}`);
+    console.log(`Current order step found:`, currentOrderStep ? {
+      id: currentOrderStep.id,
+      stepOrder: currentOrderStep.step_order,
+      status: currentOrderStep.status,
+      stepName: currentOrderStep.manufacturing_steps?.step_name
+    } : 'NOT FOUND');
+    
+    console.log(`All order steps for this order (${thisOrderSteps.length} total):`);
+    thisOrderSteps.forEach(step => {
+      console.log(`  - ${step.manufacturing_steps?.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
+    });
     
     // Rule 1: Manufacturing Order cards - show only if NO manufacturing steps exist yet
     if (data.stepName === 'Manufacturing Order' && data.stepOrder === 0) {
       const hasAnySteps = thisOrderSteps.length > 0;
-      console.log(`[CTA DEBUG] Manufacturing Order: hasAnySteps=${hasAnySteps}`);
+      console.log(`Manufacturing Order rule: hasAnySteps=${hasAnySteps}`);
+      console.log(`=== CTA DEBUG END: ${!hasAnySteps} ===\n`);
       return !hasAnySteps;
     }
 
@@ -129,32 +139,40 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       const actualStepStatus = currentOrderStep?.status || 'pending';
       const isThisStepCompleted = actualStepStatus === 'completed';
       
-      console.log(`[CTA DEBUG] Current step status: ${actualStepStatus}, isCompleted: ${isThisStepCompleted}`);
+      console.log(`Step rule evaluation:`);
+      console.log(`  - Current step status from DB: ${actualStepStatus}`);
+      console.log(`  - Is completed: ${isThisStepCompleted}`);
       
       if (!isThisStepCompleted) {
-        console.log(`[CTA DEBUG] Step not completed, hiding CTA`);
+        console.log(`  - Step not completed, hiding CTA`);
+        console.log(`=== CTA DEBUG END: false ===\n`);
         return false;
       }
 
       // Check if the immediate NEXT step exists in database (step_order = current + 1)
       const nextStepOrder = data.stepOrder + 1;
+      console.log(`  - Looking for immediate next step with step_order: ${nextStepOrder}`);
+      
       const immediateNextStepExists = thisOrderSteps.some(step => {
         const stepOrder = step.step_order;
         const isImmediateNext = stepOrder === nextStepOrder;
         
         if (isImmediateNext) {
-          console.log(`[CTA DEBUG] Found immediate next step: ${step.manufacturing_steps?.step_name} (order ${stepOrder}, status ${step.status})`);
+          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
         }
         
         return isImmediateNext;
       });
 
-      console.log(`[CTA DEBUG] Final evaluation: isCompleted=${isThisStepCompleted}, immediateNextStepExists=${immediateNextStepExists}`);
+      console.log(`  - Immediate next step exists: ${immediateNextStepExists}`);
+      console.log(`  - Final result: ${isThisStepCompleted && !immediateNextStepExists}`);
+      console.log(`=== CTA DEBUG END: ${isThisStepCompleted && !immediateNextStepExists} ===\n`);
       
       // Only show if this step is completed AND the immediate next step doesn't exist
       return isThisStepCompleted && !immediateNextStepExists;
     }
 
+    console.log(`=== CTA DEBUG END: false (default) ===\n`);
     return false;
   })();
 
