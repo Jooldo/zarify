@@ -40,7 +40,7 @@ const ManufacturingDashboard = () => {
     overdueOrders: false,
   });
   
-  const { manufacturingOrders, loading, updateOrder } = useManufacturingOrders();
+  const { manufacturingOrders, isLoading, updateOrder } = useManufacturingOrders();
 
   // Filter and search logic
   const filteredOrders = useMemo(() => {
@@ -111,7 +111,7 @@ const ManufacturingDashboard = () => {
     });
   }, [manufacturingOrders, searchTerm, filters]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
