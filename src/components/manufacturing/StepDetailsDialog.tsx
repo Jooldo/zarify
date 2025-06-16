@@ -34,7 +34,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Step Details: {currentStepDefinition?.step_name}</DialogTitle>
           <DialogDescription>
@@ -42,19 +42,25 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <PreviousStepsDisplay
-            previousStepsData={previousStepsData}
-            orderNumber={order.order_number}
-            isLoading={isLoading}
-          />
-          
-          <div className="pt-4 border-t">
-            <h4 className="font-semibold text-lg my-2">Current Step Inputs</h4>
-            <CurrentStepDisplay
-              currentStepValues={currentStepValues}
+        <div className="space-y-6 py-4">
+          {/* Previous Steps Data - More prominent now */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <PreviousStepsDisplay
+              previousStepsData={previousStepsData}
+              orderNumber={order.order_number}
               isLoading={isLoading}
             />
+          </div>
+          
+          {/* Current Step Inputs */}
+          <div className="pt-4 border-t">
+            <h4 className="font-semibold text-lg mb-3">Current Step Configuration</h4>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <CurrentStepDisplay
+                currentStepValues={currentStepValues}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </div>
 
