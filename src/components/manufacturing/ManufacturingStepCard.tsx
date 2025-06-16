@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,9 +108,14 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // CORRECTED CTA LOGIC - Use database status, not card props
+  // FIXED CTA LOGIC - Proper database-based logic
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
+    console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
+      stepName: s.manufacturing_steps?.step_name,
+      stepOrder: s.manufacturing_steps?.step_order,
+      status: s.status
+    })));
     
     // Rule 1: Manufacturing Order cards - show only if NO manufacturing steps exist yet
     if (data.stepName === 'Manufacturing Order' && data.stepOrder === 0) {
@@ -118,33 +124,48 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return !hasAnySteps;
     }
 
-    // Rule 2: Step cards - show ONLY if ALL conditions are met:
+    // Rule 2: Step cards - show ONLY if this step is completed AND is the last completed step
     if (data.stepOrder > 0) {
-      // 2a. This step must be completed (check DATABASE status, not card props)
+      // Get this step's actual status from database
       const actualStepStatus = currentOrderStep?.status || 'pending';
       const isThisStepCompleted = actualStepStatus === 'completed';
       
-      // 2b. NO subsequent steps should be in progress or completed
-      const hasSubsequentStepsStarted = thisOrderSteps.some(step => {
+      console.log(`[CTA DEBUG] Current step status: ${actualStepStatus}, isCompleted: ${isThisStepCompleted}`);
+      
+      if (!isThisStepCompleted) {
+        console.log(`[CTA DEBUG] Step not completed, hiding CTA`);
+        return false;
+      }
+
+      // Find the highest completed step order
+      const completedSteps = thisOrderSteps.filter(step => step.status === 'completed');
+      const maxCompletedStepOrder = Math.max(
+        ...completedSteps.map(step => step.manufacturing_steps?.step_order || 0),
+        0
+      );
+      
+      console.log(`[CTA DEBUG] Max completed step order: ${maxCompletedStepOrder}, current step order: ${data.stepOrder}`);
+      
+      // Only show CTA if this is the highest completed step
+      const isHighestCompletedStep = data.stepOrder === maxCompletedStepOrder;
+      
+      // Also check that no steps after this one are in progress or completed
+      const hasSubsequentActiveSteps = thisOrderSteps.some(step => {
         const stepOrder = step.manufacturing_steps?.step_order || 0;
         const stepStatus = step.status;
-        const isSubsequent = stepOrder > data.stepOrder;
-        const isStarted = stepStatus === 'in_progress' || stepStatus === 'completed';
+        const isAfterCurrent = stepOrder > data.stepOrder;
+        const isActive = stepStatus === 'in_progress' || stepStatus === 'completed';
         
-        console.log(`[CTA DEBUG]   Checking step ${step.manufacturing_steps?.step_name} (order ${stepOrder}): isSubsequent=${isSubsequent}, isStarted=${isStarted}, status=${stepStatus}`);
+        if (isAfterCurrent && isActive) {
+          console.log(`[CTA DEBUG] Found subsequent active step: ${step.manufacturing_steps?.step_name} (order ${stepOrder}, status ${stepStatus})`);
+        }
         
-        return isSubsequent && isStarted;
+        return isAfterCurrent && isActive;
       });
 
-      // 2c. The immediate next step should not exist yet
-      const nextStepOrder = data.stepOrder + 1;
-      const nextStepExists = thisOrderSteps.some(step => 
-        step.manufacturing_steps?.step_order === nextStepOrder
-      );
-
-      console.log(`[CTA DEBUG] Step evaluation: actualStatus=${actualStepStatus}, isCompleted=${isThisStepCompleted}, hasSubsequentStarted=${hasSubsequentStepsStarted}, nextStepExists=${nextStepExists}`);
+      console.log(`[CTA DEBUG] Final evaluation: isHighestCompleted=${isHighestCompletedStep}, hasSubsequentActive=${hasSubsequentActiveSteps}`);
       
-      return isThisStepCompleted && !hasSubsequentStepsStarted && !nextStepExists;
+      return isHighestCompletedStep && !hasSubsequentActiveSteps;
     }
 
     return false;
