@@ -49,35 +49,42 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   // Initialize field values only when dialog opens with a new step
   useEffect(() => {
-    if (isOpen && stepId && stepId !== initializedStepId && currentStepFields.length > 0) {
+    if (isOpen && stepId && stepId !== initializedStepId) {
+      console.log('Initializing field values for step:', stepId);
       const initialValues: Record<string, any> = {};
+      
       currentStepFields.forEach(field => {
-        if (field.field_type === 'status' && field.field_options) {
-          initialValues[field.field_id] = field.field_options[0] || '';
+        if (field.field_type === 'status' && field.field_options?.options) {
+          initialValues[field.field_id] = field.field_options.options[0] || '';
         } else {
           initialValues[field.field_id] = '';
         }
       });
+      
+      console.log('Initial values:', initialValues);
       setFieldValues(initialValues);
       setInitializedStepId(stepId);
     } else if (!isOpen) {
       setFieldValues({});
       setInitializedStepId(null);
     }
-  }, [isOpen, stepId, currentStepFields.length]);
+  }, [isOpen, stepId, currentStepFields.length, initializedStepId]);
 
   if (!order || !step) {
     return null;
   }
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFieldValues(prev => {
-      const newValues = {
-        ...prev,
-        [fieldId]: value
-      };
-      return newValues;
-    });
+    console.log('Field change:', fieldId, value);
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  };
+
+  const handleSelectChange = (fieldId: string) => (value: string) => {
+    console.log('Select change:', fieldId, value);
+    handleFieldChange(fieldId, value);
   };
 
   const handleStartStep = async () => {
@@ -93,6 +100,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     setIsSubmitting(true);
 
     try {
+      console.log('Starting step with values:', fieldValues);
+      
       let orderStep = orderSteps.find(os => 
         os.manufacturing_order_id === order.id && 
         os.manufacturing_step_id === stepId
@@ -101,6 +110,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       let stepIdForUpdate = orderStep?.id;
 
       if (!orderStep) {
+        console.log('Creating new order step');
         // Get the step_order from the manufacturing_steps table
         const { data: stepData, error: stepError } = await supabase
           .from('manufacturing_steps')
@@ -108,7 +118,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           .eq('id', stepId)
           .single();
 
-        if (stepError) throw stepError;
+        if (stepError) {
+          console.error('Error fetching step data:', stepError);
+          throw stepError;
+        }
 
         const { data: newOrderStep, error: createError } = await supabase
           .from('manufacturing_order_steps')
@@ -123,16 +136,24 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('Error creating order step:', createError);
+          throw createError;
+        }
+        
         stepIdForUpdate = newOrderStep.id;
+        console.log('Created new order step:', stepIdForUpdate);
       }
 
       if (stepIdForUpdate) {
+        console.log('Updating step with ID:', stepIdForUpdate);
         await updateStep({
           stepId: stepIdForUpdate,
           fieldValues,
           status: 'in_progress',
-          progress: 0
+          progress: 0,
+          stepName: step.step_name,
+          orderNumber: order.order_number
         });
 
         toast({
@@ -143,6 +164,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         onClose();
       }
     } catch (error) {
+      console.error('Error starting step:', error);
       toast({
         title: 'Error',
         description: 'Failed to start manufacturing step',
@@ -161,9 +183,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Select
             value={value}
-            onValueChange={(val) => {
-              handleFieldChange(field.field_id, val);
-            }}
+            onValueChange={handleSelectChange(field.field_id)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
@@ -183,9 +203,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Input
             type="date"
             value={value}
-            onChange={(e) => {
-              handleFieldChange(field.field_id, e.target.value);
-            }}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
           />
         );
 
@@ -194,9 +212,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Input
             type="number"
             value={value}
-            onChange={(e) => {
-              handleFieldChange(field.field_id, e.target.value);
-            }}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder="Enter number"
           />
         );
@@ -205,15 +221,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Select
             value={value}
-            onValueChange={(val) => {
-              handleFieldChange(field.field_id, val);
-            }}
+            onValueChange={handleSelectChange(field.field_id)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              {field.field_options?.map((option: string) => (
+              {field.field_options?.options?.map((option: string) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -226,9 +240,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Textarea
             value={value}
-            onChange={(e) => {
-              handleFieldChange(field.field_id, e.target.value);
-            }}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder="Enter text"
             rows={3}
           />
@@ -238,9 +250,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         return (
           <Input
             value={value}
-            onChange={(e) => {
-              handleFieldChange(field.field_id, e.target.value);
-            }}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label}`}
           />
         );

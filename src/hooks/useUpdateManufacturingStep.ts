@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingStepLogging } from './useManufacturingStepLogging';
+import { useMerchant } from '@/hooks/useMerchant';
 
 interface UpdateStepData {
   stepId: string;
@@ -34,6 +35,7 @@ interface UpdateStepParams {
 export const useUpdateManufacturingStep = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { merchant } = useMerchant();
   const { logStepStart, logStepComplete, logStepProgress, logStepAssignment } = useManufacturingStepLogging();
 
   const mutation = useMutation({
@@ -76,6 +78,7 @@ export const useUpdateManufacturingStep = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-step-previous-data'] });
       toast({
         title: 'Success',
         description: 'Manufacturing step updated successfully',
@@ -92,6 +95,16 @@ export const useUpdateManufacturingStep = () => {
   });
 
   const updateStep = async (params: UpdateStepParams) => {
+    if (!merchant?.id) {
+      console.error('No merchant ID available');
+      toast({
+        title: 'Error',
+        description: 'Merchant information not available',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const updates: UpdateStepData['updates'] = {};
     
     if (params.status) {
@@ -118,21 +131,29 @@ export const useUpdateManufacturingStep = () => {
     // Save field values if provided
     if (params.fieldValues) {
       try {
+        console.log('Saving field values:', params.fieldValues);
+        
         // First, delete existing values for this step
-        await supabase
+        const { error: deleteError } = await supabase
           .from('manufacturing_order_step_values')
           .delete()
           .eq('manufacturing_order_step_id', params.stepId);
 
-        // Then insert new values
+        if (deleteError) {
+          console.error('Error deleting existing values:', deleteError);
+        }
+
+        // Then insert new values with proper merchant_id
         const valuesToInsert = Object.entries(params.fieldValues)
           .filter(([_, value]) => value !== undefined && value !== null && value !== '')
           .map(([fieldId, value]) => ({
             manufacturing_order_step_id: params.stepId,
             field_id: fieldId,
             field_value: String(value),
-            merchant_id: (window as any).merchantId // This should be set properly in your app
+            merchant_id: merchant.id
           }));
+
+        console.log('Values to insert:', valuesToInsert);
 
         if (valuesToInsert.length > 0) {
           const { error: valuesError } = await supabase
@@ -141,10 +162,19 @@ export const useUpdateManufacturingStep = () => {
 
           if (valuesError) {
             console.error('Error saving field values:', valuesError);
+            throw valuesError;
+          } else {
+            console.log('Field values saved successfully');
           }
         }
       } catch (error) {
         console.error('Error managing field values:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to save field values',
+          variant: 'destructive',
+        });
+        throw error;
       }
     }
 
