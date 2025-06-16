@@ -228,31 +228,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   
-  // Fixed loading state management
-  const [isFixedLoading, setIsFixedLoading] = useState(true);
-  const [lastDataVersion, setLastDataVersion] = useState<string>('');
-  const [isUpdatingStep, setIsUpdatingStep] = useState(false);
+  // Simplified loading state management - only show loading on initial load
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
-  // Create a data version string to detect changes
-  const currentDataVersion = useMemo(() => {
-    return `${manufacturingOrders.length}-${orderSteps.length}-${stepValues.length}`;
-  }, [manufacturingOrders.length, orderSteps.length, stepValues.length]);
+  // Only show loading on the very first load
+  const isLoading = (isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0) && !hasInitiallyLoaded;
 
-  // Handle initial load and data changes with fixed 2-second loading
+  // Mark as initially loaded once we have data
   useEffect(() => {
-    if (currentDataVersion !== lastDataVersion) {
-      setIsFixedLoading(true);
-      const timer = setTimeout(() => {
-        setIsFixedLoading(false);
-        setLastDataVersion(currentDataVersion);
-      }, 2000); // Fixed 2-second loading time
-
-      return () => clearTimeout(timer);
+    if (!isLoadingSteps && !isLoadingValues && manufacturingOrders.length > 0 && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true);
     }
-  }, [currentDataVersion, lastDataVersion]);
-
-  // Check if we're loading critical data or in fixed loading state
-  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0 || isFixedLoading || isUpdatingStep;
+  }, [isLoadingSteps, isLoadingValues, manufacturingOrders.length, hasInitiallyLoaded]);
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
@@ -448,15 +435,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     console.log('Previous steps for step', currentOrderStep.id, ':', steps);
     return steps;
   }, [orderSteps, currentOrderStep]);
-
-  const handleStepUpdate = useCallback(() => {
-    setIsUpdatingStep(true);
-    const timer = setTimeout(() => {
-      setIsUpdatingStep(false);
-    }, 2000); // 2-second loading after step update
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const FlowContent = () => {
     if (isLoading) {
