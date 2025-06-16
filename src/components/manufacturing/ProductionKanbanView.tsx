@@ -304,7 +304,7 @@ const ProductionKanbanView = () => {
                               <span className="font-semibold text-sm text-blue-600">
                                 {order.order_number}
                               </span>
-                              <Badge className={getPriorityColor(order.priority)} size="sm">
+                              <Badge className={getPriorityColor(order.priority)}>
                                 {order.priority.toUpperCase()}
                               </Badge>
                             </div>
@@ -331,7 +331,7 @@ const ProductionKanbanView = () => {
 
                             {/* Status */}
                             <div className="flex items-center justify-between">
-                              <Badge className={getStatusColor(order.stepStatus)} size="sm">
+                              <Badge className={getStatusColor(order.stepStatus)}>
                                 {order.stepStatus === 'not_started' ? 'Not Started' : 
                                  order.stepStatus === 'in_progress' ? 'In Progress' : 
                                  order.stepStatus.replace('_', ' ').toUpperCase()}
