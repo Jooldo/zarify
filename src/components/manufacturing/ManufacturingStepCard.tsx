@@ -107,12 +107,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // UPDATED CTA LOGIC - Use step_order from manufacturing_order_steps directly
+  // UPDATED CTA LOGIC - Check if the immediate NEXT step exists
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
     console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
       stepName: s.manufacturing_steps?.step_name,
-      stepOrder: s.step_order, // Now using step_order from manufacturing_order_steps
+      stepOrder: s.step_order,
       status: s.status
     })));
     
@@ -123,7 +123,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return !hasAnySteps;
     }
 
-    // Rule 2: Step cards - show ONLY if this step is completed AND no subsequent steps exist
+    // Rule 2: Step cards - show ONLY if this step is completed AND the immediate NEXT step doesn't exist
     if (data.stepOrder > 0) {
       // Get this step's actual status from database
       const actualStepStatus = currentOrderStep?.status || 'pending';
@@ -136,22 +136,23 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         return false;
       }
 
-      // Check if ANY subsequent step exists in database using step_order directly
-      const hasSubsequentSteps = thisOrderSteps.some(step => {
-        const stepOrder = step.step_order; // Direct access to step_order from manufacturing_order_steps
-        const isAfterCurrent = stepOrder > data.stepOrder;
+      // Check if the immediate NEXT step exists in database (step_order = current + 1)
+      const nextStepOrder = data.stepOrder + 1;
+      const immediateNextStepExists = thisOrderSteps.some(step => {
+        const stepOrder = step.step_order;
+        const isImmediateNext = stepOrder === nextStepOrder;
         
-        if (isAfterCurrent) {
-          console.log(`[CTA DEBUG] Found subsequent step: ${step.manufacturing_steps?.step_name} (order ${stepOrder}, status ${step.status})`);
+        if (isImmediateNext) {
+          console.log(`[CTA DEBUG] Found immediate next step: ${step.manufacturing_steps?.step_name} (order ${stepOrder}, status ${step.status})`);
         }
         
-        return isAfterCurrent;
+        return isImmediateNext;
       });
 
-      console.log(`[CTA DEBUG] Final evaluation: isCompleted=${isThisStepCompleted}, hasSubsequentSteps=${hasSubsequentSteps}`);
+      console.log(`[CTA DEBUG] Final evaluation: isCompleted=${isThisStepCompleted}, immediateNextStepExists=${immediateNextStepExists}`);
       
-      // Only show if this step is completed AND no subsequent steps exist at all
-      return isThisStepCompleted && !hasSubsequentSteps;
+      // Only show if this step is completed AND the immediate next step doesn't exist
+      return isThisStepCompleted && !immediateNextStepExists;
     }
 
     return false;
