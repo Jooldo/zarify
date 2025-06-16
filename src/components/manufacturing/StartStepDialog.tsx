@@ -8,7 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Package2, User } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Play, Package2, User, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -85,6 +89,12 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const handleSelectChange = (fieldId: string) => (value: string) => {
     console.log('Select change:', fieldId, value);
     handleFieldChange(fieldId, value);
+  };
+
+  const handleDateSelect = (fieldId: string) => (date: Date | undefined) => {
+    if (date) {
+      handleFieldChange(fieldId, format(date, 'yyyy-MM-dd'));
+    }
   };
 
   const handleStartStep = async (e: React.FormEvent) => {
@@ -206,11 +216,30 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
       case 'date':
         return (
-          <Input
-            type="date"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !value && "text-muted-foreground"
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={handleDateSelect(field.field_id)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         );
 
       case 'number':
