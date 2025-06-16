@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import ImageViewer from '@/components/ui/image-viewer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +31,8 @@ const PublicCatalogue = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; title: string } | null>(null);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -197,6 +200,11 @@ const PublicCatalogue = () => {
     }
   };
 
+  const handleImageClick = (imageUrl: string, productCode: string) => {
+    setSelectedImage({ url: imageUrl, title: productCode });
+    setImageViewerOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -317,134 +325,146 @@ const PublicCatalogue = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="text-center">
-            {catalogue.cover_image_url && (
-              <img
-                src={catalogue.cover_image_url}
-                alt={catalogue.name}
-                className="w-full h-48 object-cover rounded-lg mb-4"
-              />
-            )}
-            <h1 className="text-3xl font-bold mb-2">{catalogue.name}</h1>
-            {catalogue.description && (
-              <p className="text-gray-600">{catalogue.description}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Cart Summary (sticky) */}
-      {cart.length > 0 && (
-        <div className="sticky top-0 z-10 bg-blue-600 text-white">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              <span>{getTotalItems()} items in cart</span>
-              {getTotalAmount() > 0 && (
-                <span>• ₹{getTotalAmount().toFixed(2)}</span>
+    <>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b">
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="text-center">
+              {catalogue.cover_image_url && (
+                <img
+                  src={catalogue.cover_image_url}
+                  alt={catalogue.name}
+                  className="w-full h-48 object-cover rounded-lg mb-4 cursor-pointer"
+                  onClick={() => handleImageClick(catalogue.cover_image_url, catalogue.name)}
+                />
+              )}
+              <h1 className="text-3xl font-bold mb-2">{catalogue.name}</h1>
+              {catalogue.description && (
+                <p className="text-gray-600">{catalogue.description}</p>
               )}
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowOrderForm(true)}
-            >
-              Place Order
-            </Button>
           </div>
         </div>
-      )}
 
-      {/* Products Grid */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {catalogueItems.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No products available</h3>
-            <p className="text-gray-600">This catalogue is currently empty.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {catalogueItems.map((item) => {
-              const cartItem = cart.find(c => c.product_config_id === item.product_config_id);
-              
-              return (
-                <Card key={item.id} className="hover:shadow-md transition-shadow flex flex-col">
-                  {item.product_configs.image_url && (
-                    <img
-                      src={item.product_configs.image_url}
-                      alt={item.product_configs.product_code}
-                      className="w-full h-40 object-cover rounded-t-lg"
-                    />
-                  )}
-                  <CardContent className="p-4 flex-grow flex flex-col justify-between">
-                    <div className="space-y-3">
-                      {item.is_featured && (
-                        <Badge className="mb-2">Featured</Badge>
-                      )}
-                      
-                      <div>
-                        <h3 className="font-semibold">{item.product_configs.product_code}</h3>
-                        <p className="text-sm text-gray-600">
-                          {item.product_configs.category} • {item.product_configs.subcategory}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Size: {item.product_configs.size_value}m
-                        </p>
-                      </div>
-
-                      {item.custom_description && (
-                        <p className="text-sm text-gray-700">{item.custom_description}</p>
-                      )}
-
-                      {item.custom_price && (
-                        <div className="text-lg font-semibold text-green-600">
-                          ₹{item.custom_price}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4">
-                      {cartItem ? (
-                        <div className="flex items-center justify-center gap-3 p-2 bg-gray-50 rounded">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateCartQuantity(item.product_config_id, cartItem.quantity - 1)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <span className="font-medium">{cartItem.quantity}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateCartQuantity(item.product_config_id, cartItem.quantity + 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          onClick={() => addToCart(item)}
-                          className="w-full"
-                          size="sm"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add to Cart
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+        {/* Cart Summary (sticky) */}
+        {cart.length > 0 && (
+          <div className="sticky top-0 z-10 bg-blue-600 text-white">
+            <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                <span>{getTotalItems()} items in cart</span>
+                {getTotalAmount() > 0 && (
+                  <span>• ₹{getTotalAmount().toFixed(2)}</span>
+                )}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowOrderForm(true)}
+              >
+                Place Order
+              </Button>
+            </div>
           </div>
         )}
+
+        {/* Products Grid */}
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          {catalogueItems.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-semibold mb-2">No products available</h3>
+              <p className="text-gray-600">This catalogue is currently empty.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {catalogueItems.map((item) => {
+                const cartItem = cart.find(c => c.product_config_id === item.product_config_id);
+                
+                return (
+                  <Card key={item.id} className="hover:shadow-md transition-shadow flex flex-col">
+                    {item.product_configs.image_url && (
+                      <img
+                        src={item.product_configs.image_url}
+                        alt={item.product_configs.product_code}
+                        className="w-full h-40 object-cover rounded-t-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => handleImageClick(item.product_configs.image_url, item.product_configs.product_code)}
+                      />
+                    )}
+                    <CardContent className="p-4 flex-grow flex flex-col justify-between">
+                      <div className="space-y-3">
+                        {item.is_featured && (
+                          <Badge className="mb-2">Featured</Badge>
+                        )}
+                        
+                        <div>
+                          <h3 className="font-semibold">{item.product_configs.product_code}</h3>
+                          <p className="text-sm text-gray-600">
+                            {item.product_configs.category} • {item.product_configs.subcategory}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Size: {item.product_configs.size_value}m
+                          </p>
+                        </div>
+
+                        {item.custom_description && (
+                          <p className="text-sm text-gray-700">{item.custom_description}</p>
+                        )}
+
+                        {item.custom_price && (
+                          <div className="text-lg font-semibold text-green-600">
+                            ₹{item.custom_price}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4">
+                        {cartItem ? (
+                          <div className="flex items-center justify-center gap-3 p-2 bg-gray-50 rounded">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateCartQuantity(item.product_config_id, cartItem.quantity - 1)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="font-medium">{cartItem.quantity}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateCartQuantity(item.product_config_id, cartItem.quantity + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => addToCart(item)}
+                            className="w-full"
+                            size="sm"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to Cart
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Image Viewer */}
+      <ImageViewer
+        open={imageViewerOpen}
+        onOpenChange={setImageViewerOpen}
+        imageUrl={selectedImage?.url || ''}
+        title={selectedImage?.title || ''}
+      />
+    </>
   );
 };
 
