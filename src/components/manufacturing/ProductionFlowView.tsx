@@ -231,27 +231,28 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   // Fixed loading state management
   const [isFixedLoading, setIsFixedLoading] = useState(true);
   const [lastDataVersion, setLastDataVersion] = useState<string>('');
+  const [isUpdatingStep, setIsUpdatingStep] = useState(false);
 
   // Create a data version string to detect changes
   const currentDataVersion = useMemo(() => {
     return `${manufacturingOrders.length}-${orderSteps.length}-${stepValues.length}`;
   }, [manufacturingOrders.length, orderSteps.length, stepValues.length]);
 
-  // Handle initial load and data changes with fixed 1-second loading
+  // Handle initial load and data changes with fixed 2-second loading
   useEffect(() => {
     if (currentDataVersion !== lastDataVersion) {
       setIsFixedLoading(true);
       const timer = setTimeout(() => {
         setIsFixedLoading(false);
         setLastDataVersion(currentDataVersion);
-      }, 1000); // Fixed 1-second loading time
+      }, 2000); // Fixed 2-second loading time
 
       return () => clearTimeout(timer);
     }
   }, [currentDataVersion, lastDataVersion]);
 
   // Check if we're loading critical data or in fixed loading state
-  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0 || isFixedLoading;
+  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0 || isFixedLoading || isUpdatingStep;
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
@@ -447,6 +448,15 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     console.log('Previous steps for step', currentOrderStep.id, ':', steps);
     return steps;
   }, [orderSteps, currentOrderStep]);
+
+  const handleStepUpdate = useCallback(() => {
+    setIsUpdatingStep(true);
+    const timer = setTimeout(() => {
+      setIsUpdatingStep(false);
+    }, 2000); // 2-second loading after step update
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const FlowContent = () => {
     if (isLoading) {

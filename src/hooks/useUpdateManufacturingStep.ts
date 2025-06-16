@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +29,7 @@ interface UpdateStepParams {
   stepName?: string;
   orderNumber?: string;
   workerName?: string;
+  onUpdateStart?: () => void; // New callback for loading state
 }
 
 export const useUpdateManufacturingStep = () => {
@@ -128,6 +128,11 @@ export const useUpdateManufacturingStep = () => {
         variant: 'destructive',
       });
       return;
+    }
+
+    // Trigger loading state if callback provided
+    if (params.onUpdateStart) {
+      params.onUpdateStart();
     }
 
     const updates: UpdateStepData['updates'] = {};
