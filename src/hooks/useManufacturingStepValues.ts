@@ -31,12 +31,17 @@ export const useManufacturingStepValues = () => {
 
   const saveStepValueMutation = useMutation({
     mutationFn: async ({ stepId, fieldId, value }: { stepId: string; fieldId: string; value: string }) => {
+      // Get current user's merchant ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const merchantId = user?.user_metadata?.merchant_id || '';
+
       const { data, error } = await supabase
         .from('manufacturing_order_step_values')
         .upsert({
           manufacturing_order_step_id: stepId,
           field_id: fieldId,
           field_value: value,
+          merchant_id: merchantId,
         }, {
           onConflict: 'manufacturing_order_step_id,field_id'
         })

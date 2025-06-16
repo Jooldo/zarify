@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -68,8 +69,7 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
         <div className="space-y-4">
           {sortedSteps.map((step, index) => {
             const stepValues = getStepValues(step.id);
-            const assignedWorker = step.workers?.name || 
-              (step.assigned_worker_id ? workers.find(w => w.id === step.assigned_worker_id)?.name : null);
+            const assignedWorker = step.workers?.name || 'Not assigned';
 
             return (
               <Card key={step.id} className="relative">
@@ -98,15 +98,13 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
                 <CardContent className="space-y-4">
                   {/* Basic Step Info */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {assignedWorker && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Assigned Worker</span>
-                        </div>
-                        <span className="font-medium">{assignedWorker}</span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Assigned Worker</span>
                       </div>
-                    )}
+                      <span className="font-medium">{assignedWorker}</span>
+                    </div>
                     
                     {step.progress_percentage > 0 && (
                       <div>

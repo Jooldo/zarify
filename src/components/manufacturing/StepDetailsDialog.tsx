@@ -173,7 +173,7 @@ const StepDetailsDialog = ({ step, open, onOpenChange }: StepDetailsDialogProps)
             <CurrentStepDisplay currentStepValues={currentStepValues} isLoading={isLoading} />
 
             {/* Previous Steps Display */}
-            <PreviousStepsDisplay previousStepsData={previousStepsData} />
+            <PreviousStepsDisplay previousStepsData={previousStepsData} isLoading={isLoading} />
           </div>
         )}
       </DialogContent>

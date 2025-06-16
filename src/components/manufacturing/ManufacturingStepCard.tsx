@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -413,7 +414,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <StepDetailsDialog
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
-        step={currentOrderStep || null}
+        step={currentOrderStep as Tables<'manufacturing_order_steps'> || null}
       />
     </>
   );
