@@ -167,6 +167,8 @@ const ManufacturingDashboard = () => {
     if (!open) {
       // Refresh orders when dialog closes to get updated data
       refetch();
+      // Clear selected order to ensure fresh data on next open
+      setSelectedOrder(null);
     }
   };
 

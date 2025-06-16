@@ -55,6 +55,11 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
       handleSuccess();
     } catch (error) {
       console.error('Error processing Tag In:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process tag in operation.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -93,6 +98,11 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
       handleSuccess();
     } catch (error) {
       console.error('Error processing manual tag in:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process manual tag in.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -100,6 +110,8 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
 
   const updateManufacturingOrderStatus = async (manufacturedQty: number) => {
     try {
+      console.log('Updating manufacturing order status to tagged_in for order:', order.id);
+      
       const { error } = await supabase
         .from('manufacturing_orders')
         .update({ 
@@ -108,7 +120,12 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
         })
         .eq('id', order.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating manufacturing order status:', error);
+        throw error;
+      }
+      
+      console.log('Manufacturing order status updated successfully');
     } catch (error) {
       console.error('Error updating manufacturing order status:', error);
       throw error;
@@ -129,7 +146,7 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
     setNetWeight('');
     setGrossWeight('');
     
-    // Refresh data
+    // Refresh data and notify parent
     refetchFinishedGoods();
     if (onTagInComplete) {
       onTagInComplete();

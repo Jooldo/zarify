@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -69,7 +68,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   };
 
   const handleTagInComplete = () => {
-    // This will trigger a refetch in the parent component
+    // Close the dialog to trigger a refresh in the parent component
     onOpenChange(false);
   };
 
