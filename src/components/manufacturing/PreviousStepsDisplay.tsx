@@ -2,7 +2,9 @@
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 interface StepData {
   stepName: string;
@@ -13,6 +15,10 @@ interface StepData {
     unit?: string;
   }>;
   missing: boolean;
+  status?: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  workerName?: string;
 }
 
 interface PreviousStepsDisplayProps {
@@ -62,6 +68,28 @@ export const PreviousStepsDisplay: React.FC<PreviousStepsDisplayProps> = ({
     return fieldValue.unit ? `${fieldValue.value} ${fieldValue.unit}` : fieldValue.value;
   };
 
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null;
+    
+    const statusConfig = {
+      completed: { icon: CheckCircle2, color: 'bg-green-100 text-green-800' },
+      in_progress: { icon: Clock, color: 'bg-blue-100 text-blue-800' },
+      pending: { icon: AlertCircle, color: 'bg-gray-100 text-gray-800' },
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig];
+    if (!config) return null;
+    
+    const Icon = config.icon;
+    
+    return (
+      <Badge variant="outline" className={`${config.color} flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {status.replace('_', ' ').toUpperCase()}
+      </Badge>
+    );
+  };
+
   return (
     <div>
       <h4 className="font-semibold text-lg mb-3">Previous Steps Data</h4>
@@ -90,7 +118,7 @@ export const PreviousStepsDisplay: React.FC<PreviousStepsDisplayProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px] font-semibold">Step Name</TableHead>
+                    <TableHead className="min-w-[120px] font-semibold">Step Details</TableHead>
                     {uniqueFieldLabels.map((fieldLabel, index) => (
                       <TableHead key={index} className="min-w-[120px] font-semibold">
                         {fieldLabel}
@@ -102,11 +130,31 @@ export const PreviousStepsDisplay: React.FC<PreviousStepsDisplayProps> = ({
                   {previousStepsData.map((step, stepIndex) => (
                     <TableRow key={stepIndex}>
                       <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span>{step.stepName}</span>
-                          <span className="text-xs text-muted-foreground">
+                        <div className="space-y-1">
+                          <div className="font-medium">{step.stepName}</div>
+                          <div className="text-xs text-muted-foreground">
                             Step {step.stepOrder}
-                          </span>
+                          </div>
+                          {step.status && (
+                            <div className="flex items-center gap-2 mt-1">
+                              {getStatusBadge(step.status)}
+                            </div>
+                          )}
+                          {step.workerName && step.workerName !== 'Not assigned' && (
+                            <div className="text-xs text-muted-foreground">
+                              Worker: {step.workerName}
+                            </div>
+                          )}
+                          {step.startedAt && (
+                            <div className="text-xs text-muted-foreground">
+                              Started: {format(new Date(step.startedAt), 'MMM dd, HH:mm')}
+                            </div>
+                          )}
+                          {step.completedAt && (
+                            <div className="text-xs text-muted-foreground">
+                              Completed: {format(new Date(step.completedAt), 'MMM dd, HH:mm')}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       {uniqueFieldLabels.map((fieldLabel, fieldIndex) => (

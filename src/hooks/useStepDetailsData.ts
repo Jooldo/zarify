@@ -3,12 +3,18 @@ import { useMemo } from 'react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { useStoredPreviousStepsData } from '@/hooks/useStoredPreviousStepsData';
 import { Tables } from '@/integrations/supabase/types';
 
 export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | null) => {
-  const { manufacturingSteps, orderSteps, getStepFields, isLoading: isLoadingStepsData } = useManufacturingSteps();
+  const { manufacturingSteps, getStepFields, isLoading: isLoadingStepsData } = useManufacturingSteps();
   const { getStepValue, isLoading: isLoadingValues } = useManufacturingStepValues();
   const { manufacturingOrders } = useManufacturingOrders();
+  
+  // Use the new stored previous steps data hook
+  const { data: storedPreviousStepsData = [], isLoading: isLoadingStoredData } = useStoredPreviousStepsData(
+    step?.id || null
+  );
 
   const order = useMemo(() => {
     if (!step) return null;
@@ -41,73 +47,29 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | n
     return values;
   }, [step, currentStepFields, getStepValue]);
 
+  // Transform stored data to match the expected format
   const previousStepsData = useMemo(() => {
-    if (!step || !order || !manufacturingSteps.length) {
-      return [];
-    }
-
-    const currentStepDefinition = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
-    if (!currentStepDefinition) {
-      return [];
-    }
-
-    // Get all order steps for this specific order
-    const allOrderStepsForOrder = orderSteps.filter(os => 
-      os.manufacturing_order_id === order.id
-    );
-
-    // Get all step definitions and sort by order
-    const allStepDefinitions = manufacturingSteps
-      .slice()
-      .sort((a, b) => Number(a.step_order) - Number(b.step_order));
-
-    const currentStepOrder = Number(currentStepDefinition.step_order);
-    const previousStepDefinitions = allStepDefinitions.filter(def => 
-      Number(def.step_order) < currentStepOrder
-    );
-
-    const result = previousStepDefinitions.map(prevStepDef => {
-      // Find the corresponding order step
-      const orderStep = allOrderStepsForOrder.find(os => 
-        os.manufacturing_step_id === prevStepDef.id
-      );
-
-      if (!orderStep) {
-        return {
-          stepName: prevStepDef.step_name,
-          stepOrder: prevStepDef.step_order,
-          values: [],
-          missing: true
-        };
-      }
-
-      const fields = getStepFields(prevStepDef.id);
-
-      const values = fields.map(field => {
-        const value = getStepValue(orderStep.id, field.field_id);
-        return {
-          label: field.field_label,
-          value: value || '-',
-          unit: field.field_options?.unit,
-        };
-      });
-
-      return {
-        stepName: prevStepDef.step_name,
-        stepOrder: prevStepDef.step_order,
-        values,
-        missing: false
-      };
-    });
-
-    return result;
-  }, [step, order, manufacturingSteps, orderSteps, getStepFields, getStepValue]);
+    return storedPreviousStepsData.map(stepData => ({
+      stepName: stepData.stepName,
+      stepOrder: stepData.stepOrder,
+      values: Object.entries(stepData.fieldValues).map(([label, value]) => ({
+        label,
+        value,
+        unit: undefined, // Unit info is embedded in the stored value
+      })),
+      missing: stepData.missing,
+      status: stepData.status,
+      startedAt: stepData.startedAt,
+      completedAt: stepData.completedAt,
+      workerName: stepData.workerName,
+    }));
+  }, [storedPreviousStepsData]);
 
   return {
     order,
     currentStepDefinition,
     currentStepValues,
     previousStepsData,
-    isLoading: isLoadingStepsData || isLoadingValues
+    isLoading: isLoadingStepsData || isLoadingValues || isLoadingStoredData
   };
 };
