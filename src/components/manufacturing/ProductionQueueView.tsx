@@ -1,11 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
-import { Factory, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Factory, Search, Kanban, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
+import ProductionKanbanView from './ProductionKanbanView';
 import ProductionQueueFilter from './ProductionQueueFilter';
 
 interface ProductionQueueFilters {
@@ -24,6 +27,7 @@ const ProductionQueueView = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeView, setActiveView] = useState('flow');
   const [filters, setFilters] = useState<ProductionQueueFilters>({
     status: '',
     priority: '',
@@ -37,7 +41,7 @@ const ProductionQueueView = () => {
   console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
 
-  // Filter and search logic
+  // Filter and search logic for flow view
   const filteredOrders = useMemo(() => {
     return manufacturingOrders.filter(order => {
       // Text search filter
@@ -100,20 +104,47 @@ const ProductionQueueView = () => {
 
   return (
     <div className="space-y-6">
-      {/* Search and Filter Controls */}
+      {/* Header with View Toggle */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-2 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search production queue..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-8"
-            />
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Production Queue</h2>
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={activeView === 'flow' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('flow')}
+              className="h-8 px-3"
+            >
+              <Workflow className="h-4 w-4 mr-1" />
+              Flow View
+            </Button>
+            <Button
+              variant={activeView === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('kanban')}
+              className="h-8 px-3"
+            >
+              <Kanban className="h-4 w-4 mr-1" />
+              Kanban View
+            </Button>
           </div>
-          <ProductionQueueFilter onFiltersChange={setFilters} />
         </div>
+
+        {/* Search and Filter Controls - Only show for flow view */}
+        {activeView === 'flow' && (
+          <div className="flex flex-col sm:flex-row gap-2 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search production queue..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-8"
+              />
+            </div>
+            <ProductionQueueFilter onFiltersChange={setFilters} />
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -124,10 +155,16 @@ const ProductionQueueView = () => {
           </div>
         </div>
       ) : (
-        <ProductionFlowView
-          manufacturingOrders={filteredOrders}
-          onViewDetails={handleViewDetails}
-        />
+        <div>
+          {activeView === 'flow' ? (
+            <ProductionFlowView
+              manufacturingOrders={filteredOrders}
+              onViewDetails={handleViewDetails}
+            />
+          ) : (
+            <ProductionKanbanView />
+          )}
+        </div>
       )}
 
       {/* Manufacturing Order Details Dialog */}
