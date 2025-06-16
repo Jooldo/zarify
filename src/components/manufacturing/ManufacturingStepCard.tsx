@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,21 +105,33 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   // Check if there are subsequent steps that are in progress or completed
   const hasSubsequentStepsStarted = orderSteps.some(step => {
+    // Must be the same order
     if (String(step.manufacturing_order_id) !== String(data.orderId)) return false;
+    
+    // Must have manufacturing step info
     if (!step.manufacturing_steps) return false;
 
     const currentStepOrder = Number(data.stepOrder);
-    const subsequentStepOrder = Number(step.manufacturing_steps.step_order);
+    const otherStepOrder = Number(step.manufacturing_steps.step_order);
     
-    // Ensure we have valid numbers before comparing
-    if (isNaN(currentStepOrder) || isNaN(subsequentStepOrder)) return false;
-
-    // Check if this is a subsequent step (higher order number)
-    if (subsequentStepOrder <= currentStepOrder) return false;
+    // Only consider steps with higher order numbers (subsequent steps)
+    if (otherStepOrder <= currentStepOrder) return false;
     
     // Check if the subsequent step is in progress or completed
     return step.status === 'in_progress' || step.status === 'completed';
   });
+
+  console.log(`[DEBUG] Card "${data.stepName}" (Order: ${data.stepOrder}) for ${data.orderNumber}:`);
+  console.log(`  - Status: ${data.status}`);
+  console.log(`  - Has Subsequent Started: ${hasSubsequentStepsStarted}`);
+  console.log(`  - Order Steps for this order:`, orderSteps
+    .filter(s => String(s.manufacturing_order_id) === String(data.orderId))
+    .map(s => ({ 
+      step: s.manufacturing_steps?.step_name, 
+      order: s.manufacturing_steps?.step_order, 
+      status: s.status 
+    }))
+  );
 
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
@@ -223,22 +236,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     data.status === 'pending' && 
     !orderSteps.some(step => String(step.manufacturing_order_id) === String(data.orderId))) ||
     (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentStepsStarted);
-
-  if (data.orderNumber === 'MO000005' && data.stepOrder > 0 && data.status === 'completed') {
-    console.log(
-      `[DEBUG] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentStepsStarted} | Should Show CTA: ${shouldShowCTA}`
-    );
-    if (!hasSubsequentStepsStarted) {
-      console.log(`[DEBUG] CTA button is visible on "${data.stepName}" because 'hasSubsequentStepsStarted' is false. Inspecting 'orderSteps' for this order:`, 
-        orderSteps.filter(s => String(s.manufacturing_order_id) === String(data.orderId))
-          .map(s => ({ 
-            step: s.manufacturing_steps?.step_name, 
-            order: s.manufacturing_steps?.step_order, 
-            status: s.status 
-          }))
-      );
-    }
-  }
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
