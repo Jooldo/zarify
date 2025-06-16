@@ -107,12 +107,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // UPDATED CTA LOGIC - Check if subsequent step cards exist
+  // UPDATED CTA LOGIC - Use step_order from manufacturing_order_steps directly
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
     console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
       stepName: s.manufacturing_steps?.step_name,
-      stepOrder: s.manufacturing_steps?.step_order,
+      stepOrder: s.step_order, // Now using step_order from manufacturing_order_steps
       status: s.status
     })));
     
@@ -136,9 +136,9 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         return false;
       }
 
-      // Check if ANY subsequent step exists in database (regardless of status)
+      // Check if ANY subsequent step exists in database using step_order directly
       const hasSubsequentSteps = thisOrderSteps.some(step => {
-        const stepOrder = step.manufacturing_steps?.step_order || 0;
+        const stepOrder = step.step_order; // Direct access to step_order from manufacturing_order_steps
         const isAfterCurrent = stepOrder > data.stepOrder;
         
         if (isAfterCurrent) {

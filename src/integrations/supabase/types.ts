@@ -599,6 +599,7 @@ export type Database = {
           progress_percentage: number | null
           started_at: string | null
           status: string
+          step_order: number
           updated_at: string
         }
         Insert: {
@@ -613,6 +614,7 @@ export type Database = {
           progress_percentage?: number | null
           started_at?: string | null
           status?: string
+          step_order: number
           updated_at?: string
         }
         Update: {
@@ -627,6 +629,7 @@ export type Database = {
           progress_percentage?: number | null
           started_at?: string | null
           status?: string
+          step_order?: number
           updated_at?: string
         }
         Relationships: [
