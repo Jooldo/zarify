@@ -792,48 +792,6 @@ export type Database = {
           },
         ]
       }
-      manufacturing_step_previous_data: {
-        Row: {
-          created_at: string
-          id: string
-          manufacturing_order_step_id: string
-          merchant_id: string
-          previous_steps_data: Json
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          manufacturing_order_step_id: string
-          merchant_id: string
-          previous_steps_data?: Json
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          manufacturing_order_step_id?: string
-          merchant_id?: string
-          previous_steps_data?: Json
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "manufacturing_step_previous_da_manufacturing_order_step_id_fkey"
-            columns: ["manufacturing_order_step_id"]
-            isOneToOne: true
-            referencedRelation: "manufacturing_order_steps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manufacturing_step_previous_data_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manufacturing_steps: {
         Row: {
           created_at: string
