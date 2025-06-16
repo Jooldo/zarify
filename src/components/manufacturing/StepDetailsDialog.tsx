@@ -30,7 +30,18 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     isLoading
   } = useStepDetailsData(step);
 
-  if (!step || !order) return null;
+  console.log('[STEP DIALOG DEBUG] Dialog rendered with:', {
+    stepId: step?.id,
+    orderNumber: order?.order_number,
+    currentStepName: currentStepDefinition?.step_name,
+    previousStepsCount: previousStepsData.length,
+    isLoading
+  });
+
+  if (!step || !order) {
+    console.log('[STEP DIALOG DEBUG] Missing step or order, not rendering dialog');
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
