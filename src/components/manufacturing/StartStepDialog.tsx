@@ -1,100 +1,157 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Play } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import { useWorkers } from '@/hooks/useWorkers';
-import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Play, Package2, User } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
+import { useWorkers } from '@/hooks/useWorkers';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useMerchant } from '@/hooks/useMerchant';
 
 interface StartStepDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  order: ManufacturingOrder;
+  order: ManufacturingOrder | null;
   step: ManufacturingStep | null;
 }
 
-const StartStepDialog = ({ isOpen, onClose, order, step }: StartStepDialogProps) => {
-  const { toast } = useToast();
-  const { orderSteps, updateStepStatus, getStepFields } = useManufacturingSteps();
-  const { saveStepValue } = useManufacturingStepValues();
+const StartStepDialog: React.FC<StartStepDialogProps> = ({
+  isOpen,
+  onClose,
+  order,
+  step
+}) => {
+  const { stepFields, orderSteps } = useManufacturingSteps();
+  const { updateStep } = useUpdateManufacturingStep();
   const { workers } = useWorkers();
-  
+  const { merchant } = useMerchant();
+  const { toast } = useToast();
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
+  console.log('StartStepDialog render - fieldValues:', fieldValues);
+  console.log('StartStepDialog render - step:', step);
+  console.log('StartStepDialog render - isOpen:', isOpen);
+
+  const stepId = step?.id ? String(step.id) : null;
+  
+  const currentStepFields = stepFields.filter(field => {
+    const fieldStepId = String(field.manufacturing_step_id);
+    return stepId && fieldStepId === stepId;
+  });
+
+  console.log('Current step fields:', currentStepFields);
+
+  // Initialize field values only when dialog opens with a new step
   useEffect(() => {
-    if (step) {
-      const stepFields = getStepFields(step.id);
+    console.log('useEffect triggered - isOpen:', isOpen, 'stepId:', stepId, 'initializedStepId:', initializedStepId);
+    
+    if (isOpen && stepId && stepId !== initializedStepId && currentStepFields.length > 0) {
+      console.log('Initializing field values for step:', stepId);
       const initialValues: Record<string, any> = {};
-      stepFields.forEach(field => {
-        initialValues[field.field_id] = '';
+      currentStepFields.forEach(field => {
+        if (field.field_type === 'status' && field.field_options) {
+          initialValues[field.field_id] = field.field_options[0] || '';
+        } else {
+          initialValues[field.field_id] = '';
+        }
       });
+      console.log('Setting initial values:', initialValues);
       setFieldValues(initialValues);
+      setInitializedStepId(stepId);
+    } else if (!isOpen) {
+      console.log('Dialog closed - resetting state');
+      setFieldValues({});
+      setInitializedStepId(null);
     }
-  }, [step, getStepFields]);
+  }, [isOpen, stepId, currentStepFields.length]);
 
-  const handleFieldValueChange = (fieldId: string, value: any) => {
-    setFieldValues(prevValues => ({
-      ...prevValues,
-      [fieldId]: value,
-    }));
+  if (!order || !step) {
+    return null;
+  }
+
+  const handleFieldChange = (fieldId: string, value: any) => {
+    console.log('Field change - fieldId:', fieldId, 'value:', value);
+    setFieldValues(prev => {
+      const newValues = {
+        ...prev,
+        [fieldId]: value
+      };
+      console.log('Updated field values:', newValues);
+      return newValues;
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!step || !order) return;
+  const handleStartStep = async () => {
+    console.log('Starting step with values:', fieldValues);
+    
+    if (!merchant?.id) {
+      toast({
+        title: 'Error',
+        description: 'Merchant information not available',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsSubmitting(true);
+
     try {
-      // Find the corresponding order step
-      const orderStep = orderSteps.find(os => 
+      let orderStep = orderSteps.find(os => 
         os.manufacturing_order_id === order.id && 
-        os.manufacturing_step_id === step.id
+        os.manufacturing_step_id === stepId
       );
 
+      let stepIdForUpdate = orderStep?.id;
+
       if (!orderStep) {
-        throw new Error('Order step not found');
+        const { data: newOrderStep, error: createError } = await supabase
+          .from('manufacturing_order_steps')
+          .insert({
+            manufacturing_order_id: order.id,
+            manufacturing_step_id: stepId,
+            status: 'in_progress',
+            merchant_id: merchant.id,
+            started_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        stepIdForUpdate = newOrderStep.id;
       }
 
-      // Save field values first
-      const stepFields = getStepFields(step.id);
-      for (const field of stepFields) {
-        const value = fieldValues[field.field_id];
-        if (value !== undefined && value !== '') {
-          await saveStepValue(orderStep.id, field.field_id, value);
-        }
+      if (stepIdForUpdate) {
+        await updateStep({
+          stepId: stepIdForUpdate,
+          fieldValues,
+          status: 'in_progress',
+          progress: 0
+        });
+
+        toast({
+          title: 'Success',
+          description: `${step.step_name} started successfully`,
+        });
+
+        onClose();
       }
-
-      // Update step status to in_progress with step order and order ID for next step creation
-      updateStepStatus({
-        stepId: orderStep.id,
-        status: 'in_progress',
-        stepOrder: step.step_order,
-        orderId: order.id
-      });
-
-      toast({
-        title: 'Success',
-        description: `${step.step_name} started successfully`,
-      });
-
-      onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error starting step:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to start manufacturing step',
+        description: 'Failed to start manufacturing step',
         variant: 'destructive',
       });
     } finally {
@@ -102,118 +159,197 @@ const StartStepDialog = ({ isOpen, onClose, order, step }: StartStepDialogProps)
     }
   };
 
-  if (!step) {
-    return null;
-  }
+  const renderField = (field: any) => {
+    const value = fieldValues[field.field_id] || '';
+    console.log('Rendering field:', field.field_id, 'with value:', value, 'type:', field.field_type);
 
-  const stepFields = getStepFields(step.id);
+    switch (field.field_type) {
+      case 'worker':
+        return (
+          <Select
+            value={value}
+            onValueChange={(val) => {
+              console.log('Worker select change:', val);
+              handleFieldChange(field.field_id, val);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select worker" />
+            </SelectTrigger>
+            <SelectContent>
+              {workers.map(worker => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={value}
+            onChange={(e) => {
+              console.log('Date input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
+          />
+        );
+
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => {
+              console.log('Number input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
+            placeholder="Enter number"
+          />
+        );
+
+      case 'status':
+        return (
+          <Select
+            value={value}
+            onValueChange={(val) => {
+              console.log('Status select change:', val);
+              handleFieldChange(field.field_id, val);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {field.field_options?.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
+      case 'text':
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => {
+              console.log('Textarea change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
+            placeholder="Enter text"
+            rows={3}
+          />
+        );
+
+      default:
+        return (
+          <Input
+            value={value}
+            onChange={(e) => {
+              console.log('Default input change:', e.target.value);
+              handleFieldChange(field.field_id, e.target.value);
+            }}
+            placeholder={`Enter ${field.field_label}`}
+          />
+        );
+    }
+  };
+
+  const requiredFields = currentStepFields.filter(field => field.is_required);
+  const isFormValid = requiredFields.every(field => {
+    const value = fieldValues[field.field_id];
+    return value !== undefined && value !== null && value !== '';
+  });
+
+  console.log('Form validation - requiredFields:', requiredFields.map(f => f.field_id), 'isFormValid:', isFormValid);
+  console.log('Field values for validation:', fieldValues);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Start {step.step_name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Play className="h-5 w-5" />
+            Start {step.step_name}
+            <Badge variant="outline" className="ml-2">
+              {order.order_number}
+            </Badge>
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          {stepFields.map(field => {
-            switch (field.field_type) {
-              case 'worker':
-                return (
-                  <div key={field.field_id}>
-                    <Label htmlFor={field.field_id}>{field.field_label}</Label>
-                    <Select onValueChange={(value) => handleFieldValueChange(field.field_id, value)}>
-                      <SelectTrigger id={field.field_id}>
-                        <SelectValue placeholder="Select worker" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {workers.map(worker => (
-                          <SelectItem key={worker.id} value={worker.id}>
-                            {worker.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              case 'date':
-                return (
-                  <div key={field.field_id}>
-                    <Label htmlFor={field.field_id}>{field.field_label}</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[280px] justify-start text-left font-normal",
-                            !fieldValues[field.field_id] && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {fieldValues[field.field_id] ? (
-                            format(new Date(fieldValues[field.field_id]), "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={fieldValues[field.field_id] ? new Date(fieldValues[field.field_id]) : undefined}
-                          onSelect={(date) => handleFieldValueChange(field.field_id, date?.toISOString())}
-                          disabled={(date) =>
-                            date > new Date()
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                );
-              case 'number':
-                return (
-                  <div key={field.field_id}>
-                    <Label htmlFor={field.field_id}>{field.field_label}</Label>
-                    <Input
-                      type="number"
-                      id={field.field_id}
-                      value={fieldValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-                    />
-                  </div>
-                );
-              case 'text':
-                return (
-                  <div key={field.field_id}>
-                    <Label htmlFor={field.field_id}>{field.field_label}</Label>
-                    <Input
-                      type="text"
-                      id={field.field_id}
-                      value={fieldValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-                    />
-                  </div>
-                );
-              case 'multiselect':
-                return (
-                  <div key={field.field_id}>
-                    <Label htmlFor={field.field_id}>{field.field_label}</Label>
-                    <Textarea
-                      id={field.field_id}
-                      value={fieldValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-                    />
-                  </div>
-                );
-              default:
-                return null;
-            }
-          })}
-          <Button type="submit" disabled={isSubmitting}>
-            <Play className="h-4 w-4 mr-2" />
-            Start Step
-          </Button>
-        </form>
+
+        <div className="space-y-4">
+          {/* Order Summary */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Package2 className="h-4 w-4" />
+                Order Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Product:</span>
+                  <div className="font-medium">{order.product_name}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Quantity:</span>
+                  <div className="font-medium">{order.quantity_required}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step Fields */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4" />
+                {step.step_name} Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {currentStepFields.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  No configuration required for this step
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {currentStepFields.map(field => (
+                    <div key={field.field_id} className="space-y-1">
+                      <Label htmlFor={field.field_id} className="text-sm font-medium">
+                        {field.field_label}
+                        {field.is_required && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                      </Label>
+                      {renderField(field)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleStartStep} 
+              disabled={!isFormValid || isSubmitting}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

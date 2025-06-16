@@ -295,7 +295,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              {step.workers?.name || 'Not assigned'}
+                              {step.workers?.name || 
+                               (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
                             </div>
                           </TableCell>
                           <TableCell>

@@ -108,7 +108,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // UPDATED CTA LOGIC - Works with incremental step creation
+  // FIXED CTA LOGIC - Proper database-based logic
   const shouldShowCTA = (() => {
     console.log(`[CTA DEBUG] Evaluating ${data.stepName} (order ${data.stepOrder}) for order ${data.orderNumber}`);
     console.log(`[CTA DEBUG] Current order steps:`, thisOrderSteps.map(s => ({
@@ -125,7 +125,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
 
     // Rule 2: Step cards - show ONLY if this step is completed AND is the last completed step
-    // AND the next step doesn't exist yet (incremental creation)
     if (data.stepOrder > 0) {
       // Get this step's actual status from database
       const actualStepStatus = currentOrderStep?.status || 'pending';
@@ -138,25 +137,35 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         return false;
       }
 
-      // Check if this is the highest order step that exists in the database
-      const maxExistingStepOrder = Math.max(
-        ...thisOrderSteps.map(step => step.manufacturing_steps?.step_order || 0),
+      // Find the highest completed step order
+      const completedSteps = thisOrderSteps.filter(step => step.status === 'completed');
+      const maxCompletedStepOrder = Math.max(
+        ...completedSteps.map(step => step.manufacturing_steps?.step_order || 0),
         0
       );
       
-      console.log(`[CTA DEBUG] Max existing step order: ${maxExistingStepOrder}, current step order: ${data.stepOrder}`);
+      console.log(`[CTA DEBUG] Max completed step order: ${maxCompletedStepOrder}, current step order: ${data.stepOrder}`);
       
-      // Only show CTA if this is the highest existing completed step
-      const isHighestExistingStep = data.stepOrder === maxExistingStepOrder;
+      // Only show CTA if this is the highest completed step
+      const isHighestCompletedStep = data.stepOrder === maxCompletedStepOrder;
       
-      // Check if there's a next step defined in manufacturing_steps
-      const hasNextStepDefined = manufacturingSteps.some(step => 
-        step.is_active && step.step_order === data.stepOrder + 1
-      );
+      // Also check that no steps after this one are in progress or completed
+      const hasSubsequentActiveSteps = thisOrderSteps.some(step => {
+        const stepOrder = step.manufacturing_steps?.step_order || 0;
+        const stepStatus = step.status;
+        const isAfterCurrent = stepOrder > data.stepOrder;
+        const isActive = stepStatus === 'in_progress' || stepStatus === 'completed';
+        
+        if (isAfterCurrent && isActive) {
+          console.log(`[CTA DEBUG] Found subsequent active step: ${step.manufacturing_steps?.step_name} (order ${stepOrder}, status ${stepStatus})`);
+        }
+        
+        return isAfterCurrent && isActive;
+      });
 
-      console.log(`[CTA DEBUG] Final evaluation: isHighestExisting=${isHighestExistingStep}, hasNextStepDefined=${hasNextStepDefined}`);
+      console.log(`[CTA DEBUG] Final evaluation: isHighestCompleted=${isHighestCompletedStep}, hasSubsequentActive=${hasSubsequentActiveSteps}`);
       
-      return isHighestExistingStep && hasNextStepDefined;
+      return isHighestCompletedStep && !hasSubsequentActiveSteps;
     }
 
     return false;
@@ -414,7 +423,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <StepDetailsDialog
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
-        step={currentOrderStep as Tables<'manufacturing_order_steps'> || null}
+        step={currentOrderStep || null}
       />
     </>
   );

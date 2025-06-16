@@ -65,7 +65,7 @@ export const StepDebugLogger: React.FC<StepDebugLoggerProps> = ({ open, order, s
         console.log(`[DEBUG/MO000005] Started At: ${os.started_at || 'Not started'}`);
         console.log(`[DEBUG/MO000005] Completed At: ${os.completed_at || 'Not completed'}`);
         console.log(`[DEBUG/MO000005] Notes: ${os.notes || 'No notes'}`);
-        console.log(`[DEBUG/MO000005] Worker: ${os.workers?.name || 'Not assigned'}`);
+        console.log(`[DEBUG/MO000005] Assigned Worker: ${os.assigned_worker_id || 'Not assigned'}`);
 
         if (stepDefinition) {
           const stepFields = getStepFields(stepDefinition.id);

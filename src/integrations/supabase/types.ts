@@ -1570,10 +1570,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_next_manufacturing_step: {
-        Args: { p_manufacturing_order_id: string; p_current_step_order: number }
-        Returns: string
-      }
       generate_catalogue_slug: {
         Args: { catalogue_name: string; merchant_id_param: string }
         Returns: string
