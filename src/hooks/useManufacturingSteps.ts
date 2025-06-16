@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -319,6 +318,58 @@ export const useManufacturingSteps = () => {
     },
   });
 
+  // Add missing saveStepFields mutation
+  const saveStepFieldsMutation = useMutation({
+    mutationFn: async ({ stepId, fields }: { stepId: string; fields: any[] }) => {
+      // Get current user's merchant ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const merchantId = user?.user_metadata?.merchant_id || '';
+
+      // First, delete existing fields for this step
+      await supabase
+        .from('manufacturing_step_fields')
+        .delete()
+        .eq('manufacturing_step_id', stepId);
+
+      // Insert new fields
+      if (fields.length > 0) {
+        const fieldsToInsert = fields.map(field => ({
+          manufacturing_step_id: stepId,
+          field_id: field.id,
+          field_name: field.name,
+          field_label: field.label,
+          field_type: field.type,
+          is_required: field.required,
+          field_options: field.options || null,
+          merchant_id: merchantId
+        }));
+
+        const { error } = await supabase
+          .from('manufacturing_step_fields')
+          .insert(fieldsToInsert);
+
+        if (error) throw error;
+      }
+
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-step-fields'] });
+      toast({
+        title: 'Success',
+        description: 'Step fields saved successfully',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error saving step fields:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save step fields',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const createStep = (stepData: CreateManufacturingStepData) => {
     return createStepMutation.mutate(stepData);
   };
@@ -333,6 +384,10 @@ export const useManufacturingSteps = () => {
 
   const getStepFields = (stepId: string) => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
+  };
+
+  const saveStepFields = (stepId: string, fields: any[]) => {
+    return saveStepFieldsMutation.mutate({ stepId, fields });
   };
 
   return {
@@ -350,5 +405,6 @@ export const useManufacturingSteps = () => {
     createNextStep: createNextStepMutation.mutate,
     isUpdatingStep: updateStepStatusMutation.isPending,
     isCreatingNextStep: createNextStepMutation.isPending,
+    saveStepFields,
   };
 };
