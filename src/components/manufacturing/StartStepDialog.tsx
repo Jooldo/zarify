@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -116,11 +115,21 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       let stepIdForUpdate = orderStep?.id;
 
       if (!orderStep) {
+        // Get the step_order from the manufacturing_steps table
+        const { data: stepData, error: stepError } = await supabase
+          .from('manufacturing_steps')
+          .select('step_order')
+          .eq('id', stepId)
+          .single();
+
+        if (stepError) throw stepError;
+
         const { data: newOrderStep, error: createError } = await supabase
           .from('manufacturing_order_steps')
           .insert({
             manufacturing_order_id: order.id,
             manufacturing_step_id: stepId,
+            step_order: stepData.step_order,
             status: 'in_progress',
             merchant_id: merchant.id,
             started_at: new Date().toISOString()

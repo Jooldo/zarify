@@ -24,10 +24,20 @@ export const useCreateManufacturingStep = () => {
 
         if (merchantError) throw merchantError;
 
+        // Get the step_order from manufacturing_steps
+        const { data: stepData, error: stepError } = await supabase
+          .from('manufacturing_steps')
+          .select('step_order')
+          .eq('id', data.stepId)
+          .single();
+
+        if (stepError) throw stepError;
+
         // Create the manufacturing order step
         const stepToInsert = {
           manufacturing_order_id: data.manufacturingOrderId,
           manufacturing_step_id: data.stepId,
+          step_order: stepData.step_order,
           status: 'in_progress' as const,
           assigned_worker_id: data.fieldValues.worker || null,
           progress_percentage: 0,
