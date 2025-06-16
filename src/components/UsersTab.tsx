@@ -49,30 +49,30 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
           </div>
 
           <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-muted/50 h-11 p-1 rounded-lg">
+            <TabsList className="grid w-full grid-cols-3 bg-muted/10 h-12 p-1 rounded-lg border">
               <TabsTrigger 
                 value="customers" 
-                className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+                className="flex items-center gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all font-medium"
               >
                 <Users className="h-4 w-4" />
-                <span className="font-medium">Customers</span>
+                <span>Customers</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="suppliers" 
-                className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+                className="flex items-center gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all font-medium"
               >
                 <Building className="h-4 w-4" />
-                <span className="font-medium">Suppliers</span>
+                <span>Suppliers</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="workers" 
-                className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+                className="flex items-center gap-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all font-medium"
               >
                 <Hammer className="h-4 w-4" />
-                <span className="font-medium">Workers</span>
+                <span>Workers</span>
               </TabsTrigger>
             </TabsList>
-          </div>
+          </Tabs>
         </div>
       </div>
 
