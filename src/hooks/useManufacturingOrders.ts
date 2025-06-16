@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +50,24 @@ export interface CreateManufacturingOrderData {
   due_date?: string;
   special_instructions?: string;
 }
+
+// Helper function to log activities
+const logManufacturingActivity = async (
+  action: string,
+  entityId: string,
+  description: string
+) => {
+  try {
+    await supabase.rpc('log_user_activity', {
+      p_action: action,
+      p_entity_type: 'Manufacturing Order',
+      p_entity_id: entityId,
+      p_description: description
+    });
+  } catch (error) {
+    console.error('Failed to log manufacturing activity:', error);
+  }
+};
 
 export const useManufacturingOrders = () => {
   const { toast } = useToast();
@@ -218,6 +237,14 @@ export const useManufacturingOrders = () => {
         }
 
         console.log('🎉 Order created successfully:', order);
+
+        // Log the activity
+        await logManufacturingActivity(
+          'Created',
+          order.id,
+          `Created manufacturing order ${order.order_number} for ${order.quantity_required} units of ${order.product_name}`
+        );
+
         return order;
       } catch (error) {
         console.error('💥 Failed to create manufacturing order:', error);
@@ -265,6 +292,21 @@ export const useManufacturingOrders = () => {
         .single();
 
       if (error) throw error;
+
+      // Log the activity based on what was updated
+      let description = `Updated manufacturing order ${data.order_number}`;
+      if (updates.status) {
+        description = `Changed status of manufacturing order ${data.order_number} to ${updates.status}`;
+        
+        if (updates.status === 'in_progress') {
+          description += ` and started production`;
+        } else if (updates.status === 'completed') {
+          description += ` and completed production`;
+        }
+      }
+
+      await logManufacturingActivity('Updated', id, description);
+
       return data;
     },
     onSuccess: () => {
@@ -286,12 +328,28 @@ export const useManufacturingOrders = () => {
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
+      // Get order details before deletion for logging
+      const { data: order } = await supabase
+        .from('manufacturing_orders')
+        .select('order_number, product_name')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('manufacturing_orders')
         .delete()
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Log the activity
+      if (order) {
+        await logManufacturingActivity(
+          'Deleted',
+          orderId,
+          `Deleted manufacturing order ${order.order_number} for ${order.product_name}`
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });

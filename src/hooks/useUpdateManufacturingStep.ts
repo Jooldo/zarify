@@ -2,128 +2,80 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useManufacturingStepLogging } from './useManufacturingStepLogging';
 
-export interface UpdateManufacturingStepData {
+interface UpdateStepData {
   stepId: string;
-  fieldValues: Record<string, any>;
-  status?: string;
-  progress?: number;
+  updates: {
+    status?: 'pending' | 'in_progress' | 'completed';
+    progress_percentage?: number;
+    assigned_worker_id?: string;
+    notes?: string;
+    started_at?: string;
+    completed_at?: string;
+  };
+  stepName?: string;
+  orderNumber?: string;
+  workerName?: string;
 }
 
 export const useUpdateManufacturingStep = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logStepStart, logStepComplete, logStepProgress, logStepAssignment } = useManufacturingStepLogging();
 
-  const updateStepMutation = useMutation({
-    mutationFn: async (data: UpdateManufacturingStepData) => {
-      console.log('Updating manufacturing step with data:', data);
-      
-      try {
-        // Get merchant ID
-        const { data: merchantId, error: merchantError } = await supabase
-          .rpc('get_user_merchant_id');
+  return useMutation({
+    mutationFn: async ({ stepId, updates, stepName, orderNumber, workerName }: UpdateStepData) => {
+      const { data, error } = await supabase
+        .from('manufacturing_order_steps')
+        .update(updates)
+        .eq('id', stepId)
+        .select(`
+          *,
+          manufacturing_orders!inner(order_number, product_name),
+          manufacturing_steps!inner(step_name)
+        `)
+        .single();
 
-        if (merchantError) {
-          console.error('Error getting merchant ID:', merchantError);
-          throw merchantError;
-        }
+      if (error) throw error;
 
-        // Update the manufacturing order step if status or progress changed
-        if (data.status !== undefined || data.progress !== undefined) {
-          const updates: any = {};
-          if (data.status !== undefined) updates.status = data.status;
-          if (data.progress !== undefined) updates.progress_percentage = data.progress;
-          
-          // Handle worker assignment from field values
-          if (data.fieldValues.worker) {
-            updates.assigned_worker_id = data.fieldValues.worker;
-          }
+      // Log activities based on what was updated
+      const currentStepName = stepName || data.manufacturing_steps.step_name;
+      const currentOrderNumber = orderNumber || data.manufacturing_orders.order_number;
 
-          console.log('Updating step with:', updates);
-
-          const { error: updateError } = await supabase
-            .from('manufacturing_order_steps')
-            .update(updates)
-            .eq('id', data.stepId);
-
-          if (updateError) {
-            console.error('Error updating order step:', updateError);
-            throw updateError;
-          }
-        }
-
-        // Always update field values - first delete existing ones
-        console.log('Deleting existing field values for step:', data.stepId);
-        const { error: deleteError } = await supabase
-          .from('manufacturing_order_step_values')
-          .delete()
-          .eq('manufacturing_order_step_id', data.stepId);
-
-        if (deleteError) {
-          console.error('Error deleting existing values:', deleteError);
-          throw deleteError;
-        }
-
-        // Insert new field values (only non-empty ones)
-        if (data.fieldValues && Object.keys(data.fieldValues).length > 0) {
-          const fieldValuesToInsert = Object.entries(data.fieldValues)
-            .filter(([_, value]) => {
-              // Only include non-empty values
-              return value !== '' && value !== null && value !== undefined;
-            })
-            .map(([fieldId, value]) => ({
-              manufacturing_order_step_id: data.stepId,
-              field_id: fieldId,
-              field_value: String(value),
-              merchant_id: merchantId,
-            }));
-
-          console.log('Inserting field values:', fieldValuesToInsert);
-
-          if (fieldValuesToInsert.length > 0) {
-            const { error: valuesError } = await supabase
-              .from('manufacturing_order_step_values')
-              .insert(fieldValuesToInsert);
-
-            if (valuesError) {
-              console.error('Error inserting field values:', valuesError);
-              throw valuesError;
-            }
-          }
-        }
-
-        console.log('Manufacturing step updated successfully');
-        return data;
-      } catch (error) {
-        console.error('Failed to update manufacturing step:', error);
-        throw error;
+      if (updates.status === 'in_progress' && updates.started_at) {
+        await logStepStart(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber);
       }
+
+      if (updates.status === 'completed' && updates.completed_at) {
+        await logStepComplete(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber);
+      }
+
+      if (updates.progress_percentage !== undefined) {
+        await logStepProgress(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber, updates.progress_percentage);
+      }
+
+      if (updates.assigned_worker_id && workerName) {
+        await logStepAssignment(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber, workerName);
+      }
+
+      return data;
     },
-    onSuccess: async () => {
-      console.log('Update successful, refreshing data...');
-      
-      // Invalidate all related queries
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
-      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-steps'] });
       toast({
         title: 'Success',
         description: 'Manufacturing step updated successfully',
       });
     },
     onError: (error: any) => {
-      console.error('Step update failed:', error);
+      console.error('Error updating manufacturing step:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update manufacturing step',
+        description: 'Failed to update manufacturing step',
         variant: 'destructive',
       });
     },
   });
-
-  return {
-    updateStep: updateStepMutation.mutate,
-    isUpdating: updateStepMutation.isPending,
-  };
 };
