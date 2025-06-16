@@ -18,7 +18,8 @@ import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -34,6 +35,27 @@ interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails: (order: ManufacturingOrder) => void;
 }
+
+// Loading component for React Flow
+const ProductionFlowLoader = () => (
+  <div className="w-full h-full flex items-center justify-center bg-background/50 backdrop-blur-sm">
+    <div className="text-center space-y-4">
+      <div className="relative">
+        <Factory className="h-12 w-12 mx-auto text-primary animate-pulse" />
+        <div className="absolute inset-0 h-12 w-12 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">Loading Production Flow</h3>
+        <p className="text-sm text-muted-foreground">Organizing manufacturing orders and steps...</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+        {[...Array(6)].map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 // Custom node component for manufacturing orders
 const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
@@ -195,8 +217,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   manufacturingOrders,
   onViewDetails
 }) => {
-  const { orderSteps, manufacturingSteps, stepFields } = useManufacturingSteps();
-  const { stepValues } = useManufacturingStepValues();
+  const { orderSteps, manufacturingSteps, stepFields, isLoading: isLoadingSteps } = useManufacturingSteps();
+  const { stepValues, isLoading: isLoadingValues } = useManufacturingStepValues();
   const { userNodePositions, updateNodePosition, resetPositions, hasUserPosition } = useNodePositions();
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
@@ -205,6 +227,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Check if we're loading critical data
+  const isLoading = isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0;
 
   console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
 
@@ -243,6 +268,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   // Convert manufacturing orders and their steps to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
+    if (isLoading) return [];
+    
     console.log('Recalculating nodes...');
     const nodes: Node[] = [];
     
@@ -306,9 +333,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick]);
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isLoading]);
 
   const initialEdges: Edge[] = useMemo(() => {
+    if (isLoading) return [];
+    
     const edges: Edge[] = [];
     
     manufacturingOrders.forEach((order) => {
@@ -351,21 +380,25 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return edges;
-  }, [manufacturingOrders, orderSteps]);
+  }, [manufacturingOrders, orderSteps, isLoading]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Update nodes when initialNodes change (this ensures real-time updates)
   React.useEffect(() => {
-    console.log('Updating React Flow nodes due to data changes');
-    setNodes(initialNodes);
-  }, [initialNodes]);
+    if (!isLoading) {
+      console.log('Updating React Flow nodes due to data changes');
+      setNodes(initialNodes);
+    }
+  }, [initialNodes, isLoading]);
 
   // Update edges when initialEdges change
   React.useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges]);
+    if (!isLoading) {
+      setEdges(initialEdges);
+    }
+  }, [initialEdges, isLoading]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),
@@ -393,33 +426,39 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return steps;
   }, [orderSteps, currentOrderStep]);
 
-  const FlowContent = () => (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeDragStop={onNodeDragStop}
-      nodeTypes={nodeTypes}
-      fitView
-      attributionPosition="bottom-left"
-      className="bg-background"
-      panOnScroll={true}
-      panOnScrollSpeed={0.5}
-      zoomOnScroll={true}
-      zoomOnPinch={true}
-      minZoom={0.5}
-      maxZoom={1.5}
-    >
-      <Controls showZoom={true} showFitView={true} />
-      <MiniMap 
-        className="bg-background border"
-        nodeClassName={() => 'fill-primary/20'}
-      />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
-    </ReactFlow>
-  );
+  const FlowContent = () => {
+    if (isLoading) {
+      return <ProductionFlowLoader />;
+    }
+
+    return (
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        fitView
+        attributionPosition="bottom-left"
+        className="bg-background"
+        panOnScroll={true}
+        panOnScrollSpeed={0.5}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        minZoom={0.5}
+        maxZoom={1.5}
+      >
+        <Controls showZoom={true} showFitView={true} />
+        <MiniMap 
+          className="bg-background border"
+          nodeClassName={() => 'fill-primary/20'}
+        />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
+      </ReactFlow>
+    );
+  };
 
   if (isFullScreen) {
     return (
@@ -432,6 +471,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
               variant="outline"
               size="sm"
               className="bg-background/80 backdrop-blur-sm"
+              disabled={isLoading}
             >
               <RotateCcw className="h-4 w-4 mr-1" />
               Reset Layout
@@ -511,6 +551,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             variant="outline"
             size="sm"
             className="bg-background/80 backdrop-blur-sm"
+            disabled={isLoading}
           >
             <Maximize2 className="h-4 w-4 mr-1" />
             Full Screen
@@ -520,6 +561,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             variant="outline"
             size="sm"
             className="bg-background/80 backdrop-blur-sm"
+            disabled={isLoading}
           >
             <RotateCcw className="h-4 w-4 mr-1" />
             Reset Layout
@@ -539,7 +581,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             case 'urgent': return 'bg-red-500 text-white';
             case 'high': return 'bg-orange-500 text-white';
             case 'medium': return 'bg-yellow-500 text-white';
-            case 'low': return 'bg-green-500 text-white';
             default: return 'bg-gray-500 text-white';
           }
         }}
