@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
@@ -17,14 +18,17 @@ export type ManufacturingStepWithOrderStep = ManufacturingStep & {
 
 export const useManufacturingSteps = () => {
   const queryClient = useQueryClient();
+  
   const { data: manufacturingSteps = [], isLoading: isLoadingSteps } = useQuery<Tables<'manufacturing_steps'>[]>({
     queryKey: ['manufacturing_steps'],
     queryFn: async () => {
+      console.log('[useManufacturingSteps] Fetching manufacturing steps...');
       const { data, error } = await supabase
         .from('manufacturing_steps')
         .select('*')
         .order('step_order', { ascending: true });
       if (error) throw error;
+      console.log('[useManufacturingSteps] Fetched manufacturing steps:', data?.length || 0);
       return data || [];
     },
   });
@@ -32,6 +36,7 @@ export const useManufacturingSteps = () => {
   const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery<ManufacturingOrderStep[]>({
     queryKey: ['manufacturing_order_steps_with_steps'],
     queryFn: async () => {
+      console.log('[useManufacturingSteps] Fetching order steps...');
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
         .select('*, manufacturing_steps(*), workers(name)');
@@ -39,17 +44,22 @@ export const useManufacturingSteps = () => {
         console.error("Error fetching order steps with manufacturing steps", error);
         throw error;
       }
+      console.log('[useManufacturingSteps] Fetched order steps:', data?.length || 0);
       return (data as ManufacturingOrderStep[]) || [];
     },
+    // Refresh every 10 seconds to ensure we have fresh data
+    refetchInterval: 10000,
   });
 
   const { data: stepFields = [], isLoading: isLoadingStepFields } = useQuery<ManufacturingStepField[]>({
     queryKey: ['manufacturing_step_fields'],
     queryFn: async () => {
+      console.log('[useManufacturingSteps] Fetching step fields...');
       const { data, error } = await supabase
         .from('manufacturing_step_fields')
         .select('*');
       if (error) throw error;
+      console.log('[useManufacturingSteps] Fetched step fields:', data?.length || 0);
       return (data as ManufacturingStepField[]) || [];
     }
   });
