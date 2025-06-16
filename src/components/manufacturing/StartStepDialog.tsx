@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -39,10 +40,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
-  console.log('StartStepDialog render - fieldValues:', fieldValues);
-  console.log('StartStepDialog render - step:', step);
-  console.log('StartStepDialog render - isOpen:', isOpen);
-
   const stepId = step?.id ? String(step.id) : null;
   
   const currentStepFields = stepFields.filter(field => {
@@ -50,14 +47,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return stepId && fieldStepId === stepId;
   });
 
-  console.log('Current step fields:', currentStepFields);
-
   // Initialize field values only when dialog opens with a new step
   useEffect(() => {
-    console.log('useEffect triggered - isOpen:', isOpen, 'stepId:', stepId, 'initializedStepId:', initializedStepId);
-    
     if (isOpen && stepId && stepId !== initializedStepId && currentStepFields.length > 0) {
-      console.log('Initializing field values for step:', stepId);
       const initialValues: Record<string, any> = {};
       currentStepFields.forEach(field => {
         if (field.field_type === 'status' && field.field_options) {
@@ -66,11 +58,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           initialValues[field.field_id] = '';
         }
       });
-      console.log('Setting initial values:', initialValues);
       setFieldValues(initialValues);
       setInitializedStepId(stepId);
     } else if (!isOpen) {
-      console.log('Dialog closed - resetting state');
       setFieldValues({});
       setInitializedStepId(null);
     }
@@ -81,20 +71,16 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   }
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    console.log('Field change - fieldId:', fieldId, 'value:', value);
     setFieldValues(prev => {
       const newValues = {
         ...prev,
         [fieldId]: value
       };
-      console.log('Updated field values:', newValues);
       return newValues;
     });
   };
 
   const handleStartStep = async () => {
-    console.log('Starting step with values:', fieldValues);
-    
     if (!merchant?.id) {
       toast({
         title: 'Error',
@@ -157,7 +143,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         onClose();
       }
     } catch (error) {
-      console.error('Error starting step:', error);
       toast({
         title: 'Error',
         description: 'Failed to start manufacturing step',
@@ -170,7 +155,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   const renderField = (field: any) => {
     const value = fieldValues[field.field_id] || '';
-    console.log('Rendering field:', field.field_id, 'with value:', value, 'type:', field.field_type);
 
     switch (field.field_type) {
       case 'worker':
@@ -178,7 +162,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Select
             value={value}
             onValueChange={(val) => {
-              console.log('Worker select change:', val);
               handleFieldChange(field.field_id, val);
             }}
           >
@@ -201,7 +184,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             type="date"
             value={value}
             onChange={(e) => {
-              console.log('Date input change:', e.target.value);
               handleFieldChange(field.field_id, e.target.value);
             }}
           />
@@ -213,7 +195,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             type="number"
             value={value}
             onChange={(e) => {
-              console.log('Number input change:', e.target.value);
               handleFieldChange(field.field_id, e.target.value);
             }}
             placeholder="Enter number"
@@ -225,7 +206,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Select
             value={value}
             onValueChange={(val) => {
-              console.log('Status select change:', val);
               handleFieldChange(field.field_id, val);
             }}
           >
@@ -247,7 +227,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Textarea
             value={value}
             onChange={(e) => {
-              console.log('Textarea change:', e.target.value);
               handleFieldChange(field.field_id, e.target.value);
             }}
             placeholder="Enter text"
@@ -260,7 +239,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           <Input
             value={value}
             onChange={(e) => {
-              console.log('Default input change:', e.target.value);
               handleFieldChange(field.field_id, e.target.value);
             }}
             placeholder={`Enter ${field.field_label}`}
@@ -274,9 +252,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     const value = fieldValues[field.field_id];
     return value !== undefined && value !== null && value !== '';
   });
-
-  console.log('Form validation - requiredFields:', requiredFields.map(f => f.field_id), 'isFormValid:', isFormValid);
-  console.log('Field values for validation:', fieldValues);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
