@@ -99,15 +99,6 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
     };
   }, [finishedGoods, manufacturingOrders]);
 
-  const getStepColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'in_progress': return '#3b82f6';
-      case 'completed': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
-
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
