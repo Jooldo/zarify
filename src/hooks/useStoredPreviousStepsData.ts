@@ -33,7 +33,27 @@ export const useStoredPreviousStepsData = (stepId: string | null) => {
 
       if (!data) return [];
 
-      return (data.previous_steps_data as StoredPreviousStepData[]) || [];
+      // Safely cast the JSONB data to our expected type
+      const previousStepsData = data.previous_steps_data as unknown;
+      
+      // Type guard to ensure we have an array
+      if (!Array.isArray(previousStepsData)) {
+        console.warn('Previous steps data is not an array:', previousStepsData);
+        return [];
+      }
+
+      // Validate and type the array elements
+      return previousStepsData.filter((item): item is StoredPreviousStepData => {
+        return (
+          typeof item === 'object' &&
+          item !== null &&
+          'stepName' in item &&
+          'stepOrder' in item &&
+          'status' in item &&
+          'fieldValues' in item &&
+          'missing' in item
+        );
+      });
     },
     enabled: !!stepId,
   });
