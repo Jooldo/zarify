@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUp, Scan } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
@@ -22,7 +23,6 @@ interface ManufacturingTagInDialogProps {
 const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }: ManufacturingTagInDialogProps) => {
   const [activeTab, setActiveTab] = useState('manual');
   const [tagId, setTagId] = useState('');
-  const [manufacturedQuantity, setManufacturedQuantity] = useState('');
   const [netWeight, setNetWeight] = useState('');
   const [grossWeight, setGrossWeight] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,12 +46,10 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
       return;
     }
 
-    const qty = manufacturedQuantity ? parseInt(manufacturedQuantity) : order.quantity_required;
-
     setLoading(true);
     try {
       await processTagOperation(tagId, 'Tag In');
-      await updateManufacturingOrderStatus(qty);
+      await updateManufacturingOrderStatus();
       handleSuccess();
     } catch (error) {
       console.error('Error processing Tag In:', error);
@@ -70,26 +68,15 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
       return;
     }
 
-    const qty = manufacturedQuantity ? parseInt(manufacturedQuantity) : order.quantity_required;
-
-    if (!qty || qty <= 0) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid manufactured quantity.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       await manualTagIn(
         finishedGood.id,
-        qty,
+        order.quantity_required,
         netWeight ? parseFloat(netWeight) : undefined,
         grossWeight ? parseFloat(grossWeight) : undefined
       );
-      await updateManufacturingOrderStatus(qty);
+      await updateManufacturingOrderStatus();
       handleSuccess();
     } catch (error) {
       console.error('Error processing manual tag in:', error);
@@ -98,14 +85,11 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
     }
   };
 
-  const updateManufacturingOrderStatus = async (manufacturedQty: number) => {
+  const updateManufacturingOrderStatus = async () => {
     try {
       const { error } = await supabase
         .from('manufacturing_orders')
-        .update({ 
-          status: 'tagged_in',
-          manufactured_quantity: manufacturedQty
-        })
+        .update({ status: 'tagged_in' })
         .eq('id', order.id);
 
       if (error) throw error;
@@ -116,16 +100,13 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
   };
 
   const handleSuccess = () => {
-    const qty = manufacturedQuantity ? parseInt(manufacturedQuantity) : order.quantity_required;
-    
     toast({
       title: 'Success',
-      description: `Manufacturing order ${order.order_number} has been tagged in successfully with ${qty} units.`,
+      description: `Manufacturing order ${order.order_number} has been tagged in successfully.`,
     });
     
     // Reset form
     setTagId('');
-    setManufacturedQuantity('');
     setNetWeight('');
     setGrossWeight('');
     
@@ -161,26 +142,10 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
                 <span className="text-sm font-mono">{productCode || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium">Ordered Quantity:</span>
+                <span className="text-sm font-medium">Quantity:</span>
                 <span className="text-sm">{order.quantity_required}</span>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="manufacturedQuantity" className="text-sm font-medium">Manufactured Quantity</Label>
-            <Input
-              id="manufacturedQuantity"
-              type="number"
-              min="1"
-              value={manufacturedQuantity}
-              onChange={(e) => setManufacturedQuantity(e.target.value)}
-              placeholder={order.quantity_required.toString()}
-              className="h-9"
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use ordered quantity ({order.quantity_required})
-            </p>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
