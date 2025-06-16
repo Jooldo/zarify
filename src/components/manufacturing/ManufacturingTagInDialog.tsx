@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,7 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
     setLoading(true);
     try {
       await processTagOperation(tagId, 'Tag In');
-      await updateManufacturingOrderStatus(qty);
+      await updateManufacturingOrderStatus();
       handleSuccess();
     } catch (error) {
       console.error('Error processing Tag In:', error);
@@ -94,7 +93,7 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
         netWeight ? parseFloat(netWeight) : undefined,
         grossWeight ? parseFloat(grossWeight) : undefined
       );
-      await updateManufacturingOrderStatus(qty);
+      await updateManufacturingOrderStatus();
       handleSuccess();
     } catch (error) {
       console.error('Error processing manual tag in:', error);
@@ -108,15 +107,14 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
     }
   };
 
-  const updateManufacturingOrderStatus = async (manufacturedQty: number) => {
+  const updateManufacturingOrderStatus = async () => {
     try {
       console.log('Updating manufacturing order status to tagged_in for order:', order.id);
       
       const { error } = await supabase
         .from('manufacturing_orders')
         .update({ 
-          status: 'tagged_in',
-          manufactured_quantity: manufacturedQty
+          status: 'tagged_in'
         })
         .eq('id', order.id);
 
