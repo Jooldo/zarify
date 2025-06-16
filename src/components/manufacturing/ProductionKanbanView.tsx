@@ -29,10 +29,10 @@ const ProductionKanbanView = () => {
   
   const [filters, setFilters] = useState<KanbanFilters>({
     search: '',
-    product: '',
-    karigar: '',
-    status: '',
-    priority: '',
+    product: 'all',
+    karigar: 'all',
+    status: 'all',
+    priority: 'all',
   });
 
   const [selectedOrderStep, setSelectedOrderStep] = useState<{
@@ -59,12 +59,12 @@ const ProductionKanbanView = () => {
       }
 
       // Product filter
-      if (filters.product && !order.product_name.toLowerCase().includes(filters.product.toLowerCase())) {
+      if (filters.product !== 'all' && !order.product_name.toLowerCase().includes(filters.product.toLowerCase())) {
         return false;
       }
 
       // Priority filter
-      if (filters.priority && order.priority !== filters.priority) {
+      if (filters.priority !== 'all' && order.priority !== filters.priority) {
         return false;
       }
 
@@ -133,7 +133,7 @@ const ProductionKanbanView = () => {
     });
 
     // Apply karigar filter after grouping
-    if (filters.karigar) {
+    if (filters.karigar !== 'all') {
       Object.keys(grouped).forEach(stepId => {
         grouped[stepId] = grouped[stepId].filter(order => {
           return order.assignedWorker?.toLowerCase().includes(filters.karigar.toLowerCase());
@@ -142,7 +142,7 @@ const ProductionKanbanView = () => {
     }
 
     // Apply status filter after grouping
-    if (filters.status) {
+    if (filters.status !== 'all') {
       Object.keys(grouped).forEach(stepId => {
         grouped[stepId] = grouped[stepId].filter(order => {
           return order.stepStatus === filters.status;
@@ -231,7 +231,7 @@ const ProductionKanbanView = () => {
             <SelectValue placeholder="Product" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Products</SelectItem>
+            <SelectItem value="all">All Products</SelectItem>
             {Array.from(new Set(manufacturingOrders.map(o => o.product_name))).map(product => (
               <SelectItem key={product} value={product}>{product}</SelectItem>
             ))}
@@ -243,7 +243,7 @@ const ProductionKanbanView = () => {
             <SelectValue placeholder="Karigar" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Karigars</SelectItem>
+            <SelectItem value="all">All Karigars</SelectItem>
             {workers.map(worker => (
               <SelectItem key={worker.id} value={worker.name}>{worker.name}</SelectItem>
             ))}
@@ -255,7 +255,7 @@ const ProductionKanbanView = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="not_started">Not Started</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
@@ -267,7 +267,7 @@ const ProductionKanbanView = () => {
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Priorities</SelectItem>
+            <SelectItem value="all">All Priorities</SelectItem>
             <SelectItem value="urgent">Urgent</SelectItem>
             <SelectItem value="high">High</SelectItem>
             <SelectItem value="medium">Medium</SelectItem>
