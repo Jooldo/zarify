@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -18,11 +17,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [initialOrderFilters, setInitialOrderFilters] = useState<OrderFilters | null>(null);
 
-  console.log('Index component rendered with activeTab:', activeTab);
-
   const handleNavigateToTab = (tab: string, filters?: Partial<OrderFilters>) => {
-    console.log('Navigating to tab:', tab);
-    
     // Handle removed tabs by redirecting to appropriate alternatives
     if (tab === 'rm-home') {
       tab = 'rm-inventory'; // Redirect rm-home to rm-inventory
@@ -94,7 +89,6 @@ const Index = () => {
   const isUsersTab = () => {
     const userTabs = ['users', 'customers', 'suppliers', 'workers'];
     const isUserTab = userTabs.includes(activeTab);
-    console.log('Checking if user tab:', activeTab, 'Result:', isUserTab);
     return isUserTab;
   };
 
@@ -103,14 +97,6 @@ const Index = () => {
   };
 
   const pageTitle = getPageTitle();
-
-  console.log('Rendering with conditions:', {
-    isRawMaterialTab: isRawMaterialTab(),
-    isFinishedGoodTab: isFinishedGoodTab(),
-    isUsersTab: isUsersTab(),
-    isSettingsTab: isSettingsTab(),
-    activeTab
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
