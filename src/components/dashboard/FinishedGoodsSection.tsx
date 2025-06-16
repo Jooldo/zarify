@@ -60,7 +60,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
       return acc;
     }, {} as Record<string, StepData>);
 
-    const inProcessByStep = Object.values(stepData);
+    const inProcessByStep = Object.values(stepData) as StepData[];
 
     // Top and Bottom Performers (by stock levels)
     const performers = finishedGoods
