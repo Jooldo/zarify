@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,15 @@ interface StepData {
 }
 
 const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: FinishedGoodsSectionProps) => {
+  const getStepColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#f59e0b';
+      case 'in_progress': return '#3b82f6';
+      case 'completed': return '#10b981';
+      default: return '#6b7280';
+    }
+  };
+
   const finishedGoodsMetrics = useMemo(() => {
     if (!finishedGoods.length) return {
       stockDistribution: [],
