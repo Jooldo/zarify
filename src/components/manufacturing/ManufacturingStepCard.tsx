@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,8 +102,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
-  // Check if there are subsequent steps that have been started (fix CTA logic)
-  const hasSubsequentSteps = orderSteps.some(step => {
+  // Check if there are subsequent steps that are in progress or completed
+  const hasSubsequentStepsStarted = orderSteps.some(step => {
     if (String(step.manufacturing_order_id) !== String(data.orderId)) return false;
     if (!step.manufacturing_steps) return false;
 
@@ -114,8 +113,10 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     // Ensure we have valid numbers before comparing
     if (isNaN(currentStepOrder) || isNaN(subsequentStepOrder)) return false;
 
+    // Check if this is a subsequent step (higher order number)
     if (subsequentStepOrder <= currentStepOrder) return false;
     
+    // Check if the subsequent step is in progress or completed
     return step.status === 'in_progress' || step.status === 'completed';
   });
 
@@ -221,14 +222,14 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const shouldShowCTA = (data.stepName === 'Manufacturing Order' && 
     data.status === 'pending' && 
     !orderSteps.some(step => String(step.manufacturing_order_id) === String(data.orderId))) ||
-    (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentSteps);
+    (data.stepOrder > 0 && data.status === 'completed' && !hasSubsequentStepsStarted);
 
   if (data.orderNumber === 'MO000005' && data.stepOrder > 0 && data.status === 'completed') {
     console.log(
-      `[DEBUG] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentSteps} | Should Show CTA: ${shouldShowCTA}`
+      `[DEBUG] Card: "${data.stepName}" (Order: ${data.stepOrder}) | Status: ${data.status} | Has Subsequent Started Steps: ${hasSubsequentStepsStarted} | Should Show CTA: ${shouldShowCTA}`
     );
-    if (!hasSubsequentSteps) {
-      console.log(`[DEBUG] CTA button is visible on "${data.stepName}" because 'hasSubsequentSteps' is false. Inspecting 'orderSteps' for this order:`, 
+    if (!hasSubsequentStepsStarted) {
+      console.log(`[DEBUG] CTA button is visible on "${data.stepName}" because 'hasSubsequentStepsStarted' is false. Inspecting 'orderSteps' for this order:`, 
         orderSteps.filter(s => String(s.manufacturing_order_id) === String(data.orderId))
           .map(s => ({ 
             step: s.manufacturing_steps?.step_name, 
