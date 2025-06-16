@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 export type ManufacturingOrderStatus = 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled' | 'tagged_in';
 
 export type ManufacturingOrder = Database['public']['Tables']['manufacturing_orders']['Row'] & {
+  manufacturing_quantity?: number;
   product_configs?: (Database['public']['Tables']['product_configs']['Row'] & {
     product_config_materials?: (Database['public']['Tables']['product_config_materials']['Row'] & {
       raw_materials?: Database['public']['Tables']['raw_materials']['Row'];

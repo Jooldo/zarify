@@ -670,6 +670,7 @@ export type Database = {
           created_by: string | null
           due_date: string | null
           id: string
+          manufacturing_quantity: number | null
           merchant_id: string
           order_number: string
           priority: string
@@ -688,6 +689,7 @@ export type Database = {
           created_by?: string | null
           due_date?: string | null
           id?: string
+          manufacturing_quantity?: number | null
           merchant_id: string
           order_number: string
           priority: string
@@ -706,6 +708,7 @@ export type Database = {
           created_by?: string | null
           due_date?: string | null
           id?: string
+          manufacturing_quantity?: number | null
           merchant_id?: string
           order_number?: string
           priority?: string
