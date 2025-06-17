@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { calculateAndUpdateRawMaterialRequirements } from '@/services/rawMaterialCalculationService';
 
 export interface FinishedGood {
   id: string;
@@ -33,6 +34,9 @@ export const useFinishedGoods = () => {
     setError(null);
     try {
       console.log('Fetching finished goods data...');
+      
+      // First, trigger the calculation to update required_quantity in the database
+      await calculateAndUpdateRawMaterialRequirements();
       
       // First, get the merchant ID
       const { data: merchantId, error: merchantError } = await supabase
@@ -88,7 +92,7 @@ export const useFinishedGoods = () => {
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
       console.log('In manufacturing quantities:', inManufacturingByProduct);
 
-      // Use the required_quantity directly from the database and calculate in_manufacturing
+      // Use the required_quantity directly from the database (now contains remaining quantities) and calculate in_manufacturing
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
         const inManufacturingQuantity = inManufacturingByProduct[item.product_code] || 0;
         
