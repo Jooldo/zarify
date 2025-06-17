@@ -25,23 +25,37 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   // Calculate order status based on order items
   const calculateOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
-    if (!orderItems || orderItems.length === 0) return "Created";
+    console.log('Calculating order status for items:', orderItems?.map(i => ({ id: i.id, status: i.status })));
+    
+    if (!orderItems || orderItems.length === 0) {
+      console.log('No order items found, returning Created');
+      return "Created";
+    }
     
     const statuses = orderItems.map(item => item.status);
+    console.log('Item statuses:', statuses);
     
     // All items delivered
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Delivered")) {
+      console.log('All items delivered');
+      return "Delivered";
+    }
     
     // All items ready
-    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.every(s => s === "Ready")) {
+      console.log('All items ready');
+      return "Ready";
+    }
     
     // Any item in progress or partially fulfilled, or mix of statuses
     if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled") || 
         (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created"))) {
+      console.log('Some items in progress or mixed statuses');
       return "In Progress";
     }
     
     // All items created
+    console.log('All items created');
     return "Created";
   };
 
@@ -50,20 +64,22 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     try {
       console.log('Updating order status in database:', { orderId, newStatus });
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select();
 
       if (error) {
-        console.error('Error updating order status:', error);
+        console.error('Database error updating order status:', error);
         throw error;
       }
 
-      console.log('Order status updated successfully to:', newStatus);
+      console.log('Order status updated successfully in database:', data);
+      return data;
     } catch (error) {
       console.error('Failed to update order status:', error);
       throw error;
@@ -72,7 +88,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
-      console.log('Updating order item status:', { itemId: item.id, newStatus });
+      console.log('Starting item status update:', { itemId: item.id, oldStatus: item.status, newStatus });
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -82,7 +98,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       }
 
       // Update order item status
-      const { error } = await supabase
+      const { error: itemError } = await supabase
         .from('order_items')
         .update({ 
           status: newStatus,
@@ -91,12 +107,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         })
         .eq('id', item.id);
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
+      if (itemError) {
+        console.error('Database error updating order item:', itemError);
+        throw itemError;
       }
 
-      console.log('Order item status updated successfully');
+      console.log('Order item status updated successfully in database');
 
       // Calculate new order status based on all order items with the updated item
       const updatedOrderItems = order.order_items.map((orderItem: OrderItemType) => 
@@ -106,14 +122,20 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       );
       
       const newOrderStatus = calculateOrderStatus(updatedOrderItems);
-      console.log('Calculated new order status:', newOrderStatus, 'from items:', updatedOrderItems.map(i => i.status));
+      console.log('Current order status:', order.status, '| Calculated new order status:', newOrderStatus);
 
       // Update order status if it changed
       if (order.status !== newOrderStatus) {
+        console.log('Order status needs updating from', order.status, 'to', newOrderStatus);
         await updateOrderStatus(order.id, newOrderStatus);
-        console.log('Order status updated from', order.status, 'to', newOrderStatus);
+        console.log('Order status successfully updated in database');
+        
+        toast({
+          title: 'Success',
+          description: `Order status updated to ${newOrderStatus}`,
+        });
       } else {
-        console.log('Order status unchanged:', newOrderStatus);
+        console.log('Order status unchanged, no database update needed');
       }
 
       // Log activity
@@ -145,9 +167,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       }
 
       // Refresh all related data
+      console.log('Refreshing data...');
       await onOrderUpdate();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      console.log('Data refresh completed');
       
     } catch (error) {
       console.error('Error updating order item status:', error);
@@ -191,6 +216,10 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                 <div>{new Date(order.expected_delivery).toLocaleDateString()}</div>
               </div>
             )}
+            <div className="flex justify-between">
+              <Label className="text-xs text-gray-500">Order Status:</Label>
+              <Badge variant="secondary" className="text-xs h-4 px-1">{order.status || 'Created'}</Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
