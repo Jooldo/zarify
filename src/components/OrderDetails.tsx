@@ -23,63 +23,9 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { logActivity } = useActivityLog();
   const queryClient = useQueryClient();
 
-  // Calculate order status based on order items
-  const calculateOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
-    console.log('=== CALCULATING ORDER STATUS ===');
-    console.log('Order items received:', orderItems?.length);
-    console.log('Items with statuses:', orderItems?.map(i => ({ id: i.id, suborder_id: i.suborder_id, status: i.status })));
-    
-    if (!orderItems || orderItems.length === 0) {
-      console.log('No order items found, returning Created');
-      return "Created";
-    }
-    
-    const statuses = orderItems.map(item => item.status);
-    console.log('All item statuses:', statuses);
-    
-    // Count statuses
-    const statusCounts = {
-      Created: statuses.filter(s => s === "Created").length,
-      InProgress: statuses.filter(s => s === "In Progress").length,
-      PartiallyFulfilled: statuses.filter(s => s === "Partially Fulfilled").length,
-      Ready: statuses.filter(s => s === "Ready").length,
-      Delivered: statuses.filter(s => s === "Delivered").length
-    };
-    
-    console.log('Status counts:', statusCounts);
-    
-    // All items delivered
-    if (statusCounts.Delivered === orderItems.length) {
-      console.log('All items delivered -> Order status: Delivered');
-      return "Delivered";
-    }
-    
-    // All items ready
-    if (statusCounts.Ready === orderItems.length) {
-      console.log('All items ready -> Order status: Ready');
-      return "Ready";
-    }
-    
-    // Any item in progress, partially fulfilled, ready, or delivered
-    if (statusCounts.InProgress > 0 || statusCounts.PartiallyFulfilled > 0 || statusCounts.Ready > 0 || statusCounts.Delivered > 0) {
-      console.log('Some items in progress/partially fulfilled/ready/delivered -> Order status: In Progress');
-      return "In Progress";
-    }
-    
-    // All items created
-    console.log('All items still created -> Order status: Created');
-    return "Created";
-  };
-
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
-      console.log('=== STARTING ITEM STATUS UPDATE ===');
-      console.log('Item ID:', item.id);
-      console.log('Suborder ID:', item.suborder_id);
-      console.log('Old status:', item.status);
-      console.log('New status:', newStatus);
-      console.log('Order ID:', order.id);
-      console.log('Order number:', order.order_number);
+      console.log('Updating order item status:', { itemId: item.id, newStatus });
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -88,97 +34,38 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
-      console.log('Updating fulfilled quantity from', item.fulfilled_quantity, 'to', fulfilledQuantityUpdate);
-
-      // Update order item status in a transaction
-      console.log('Starting database transaction...');
-      const { data: updatedItem, error: itemError } = await supabase
+      const { error } = await supabase
         .from('order_items')
         .update({ 
           status: newStatus,
           fulfilled_quantity: fulfilledQuantityUpdate,
           updated_at: new Date().toISOString()
         })
-        .eq('id', item.id)
-        .select('*')
-        .single();
+        .eq('id', item.id);
 
-      if (itemError) {
-        console.error('Database error updating order item:', itemError);
-        throw itemError;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
       }
 
-      console.log('Order item updated successfully:', updatedItem);
+      console.log('Order item status updated successfully');
 
-      // Get ALL fresh order items from database to calculate new order status
-      console.log('Fetching all fresh order items for order:', order.id);
-      const { data: freshOrderItems, error: fetchError } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', order.id);
-
-      if (fetchError) {
-        console.error('Error fetching fresh order items:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('Fresh order items fetched:', freshOrderItems?.length);
-      console.log('Fresh items with statuses:', freshOrderItems?.map(i => ({ id: i.id, status: i.status, suborder_id: i.suborder_id })));
-      
-      const newOrderStatus = calculateOrderStatus(freshOrderItems || []);
-      console.log('Current order status in memory:', order.status);
-      console.log('Calculated new order status:', newOrderStatus);
-
-      // ALWAYS update order status in database to ensure consistency
-      console.log('Updating order status in database to:', newOrderStatus);
-      
-      const { data: updatedOrder, error: orderError } = await supabase
-        .from('orders')
-        .update({ 
-          status: newOrderStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id)
-        .select('*')
-        .single();
-
-      if (orderError) {
-        console.error('Database error updating order status:', orderError);
-        throw orderError;
-      }
-
-      console.log('Order status updated successfully in database:', updatedOrder);
-
-      // Log activity for item status change
+      // Simple activity logging
       try {
-        const itemDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
+        const description = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
         await logActivity(
           'Status Updated',
           'Order Item',
           item.suborder_id,
-          itemDescription
+          description
         );
         
-        console.log('Item activity logged successfully');
-
-        // Log activity for order status change if it actually changed
-        if (order.status !== newOrderStatus) {
-          const orderDescription = `Order ${order.order_number} status updated from "${order.status || 'Created'}" to "${newOrderStatus}" due to item status change`;
-          
-          await logActivity(
-            'Status Updated',
-            'Order',
-            order.order_number,
-            orderDescription
-          );
-          
-          console.log('Order status activity logged successfully');
-        }
+        console.log('Activity logged successfully');
         
         toast({
           title: 'Success',
-          description: `Order item and order status updated successfully`,
+          description: 'Order item status updated and logged',
         });
         
       } catch (activityError) {
@@ -191,18 +78,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         });
       }
 
-      // Refresh all related data
-      console.log('Refreshing data...');
       await onOrderUpdate();
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
-      console.log('Data refresh completed');
-      console.log('=== ITEM STATUS UPDATE COMPLETED ===');
       
     } catch (error) {
-      console.error('=== ERROR IN ITEM STATUS UPDATE ===');
-      console.error('Error details:', error);
+      console.error('Error updating order item status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update order item status',
@@ -211,6 +92,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     }
   };
 
+  
   return (
     <div className="space-y-2 max-w-full">
       {/* Order Summary - Compact vertical layout */}
@@ -242,10 +124,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                 <div>{new Date(order.expected_delivery).toLocaleDateString()}</div>
               </div>
             )}
-            <div className="flex justify-between">
-              <Label className="text-xs text-gray-500">Order Status:</Label>
-              <Badge variant="secondary" className="text-xs h-4 px-1">{order.status || 'Created'}</Badge>
-            </div>
           </div>
         </CardContent>
       </Card>
