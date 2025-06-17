@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUp, Scan } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useInventoryTags } from '@/hooks/useInventoryTags';
+import { useInventoryLogging } from '@/hooks/useInventoryLogging';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { useToast } from '@/hooks/use-toast';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +31,8 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
   
   const { finishedGoods, refetch: refetchFinishedGoods } = useFinishedGoods();
   const { processTagOperation, manualTagIn } = useInventoryTags();
+  const { logTagOperation } = useInventoryLogging();
+  const { logActivity } = useActivityLog();
   const { toast } = useToast();
 
   if (!order) return null;
@@ -51,6 +55,12 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
     setLoading(true);
     try {
       await processTagOperation(tagId, 'Tag In');
+      
+      // Log the tag operation
+      if (productCode) {
+        await logTagOperation('Tag In', tagId, productCode, qty);
+      }
+      
       await updateManufacturingOrderStatus(qty);
       handleSuccess();
     } catch (error) {
@@ -94,6 +104,12 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
         netWeight ? parseFloat(netWeight) : undefined,
         grossWeight ? parseFloat(grossWeight) : undefined
       );
+      
+      // Log the manual tag in operation
+      if (productCode) {
+        await logTagOperation('Tag In', 'MANUAL', productCode, qty);
+      }
+      
       await updateManufacturingOrderStatus(qty);
       handleSuccess();
     } catch (error) {
@@ -124,6 +140,14 @@ const ManufacturingTagInDialog = ({ order, open, onOpenChange, onTagInComplete }
         console.error('Error updating manufacturing order status:', error);
         throw error;
       }
+      
+      // Log the manufacturing order tag-in activity
+      await logActivity(
+        'Tagged In',
+        'Manufacturing Order',
+        order.id,
+        `Manufacturing order ${order.order_number} tagged in with ${manufacturedQty} units to inventory`
+      );
       
       console.log('Manufacturing order status updated successfully');
     } catch (error) {

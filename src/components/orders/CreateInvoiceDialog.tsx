@@ -1,278 +1,101 @@
-
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useInvoices } from '@/hooks/useInvoices';
-import type { Order, OrderItem } from '@/hooks/useOrders';
+import { useToast } from '@/hooks/use-toast';
+import { Order } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useOrderLogging } from '@/hooks/useOrderLogging';
 
 interface CreateInvoiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order;
-  onInvoiceCreated?: () => void;
+  onInvoiceCreated: () => void;
 }
 
 const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: CreateInvoiceDialogProps) => {
-  const { createInvoice } = useInvoices();
-  const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [taxAmount, setTaxAmount] = useState<number>(0);
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
-  const [notes, setNotes] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Allow editing of unit prices
-  const [editableItems, setEditableItems] = useState(
-    order.order_items.map(item => ({
-      ...item,
-      unit_price: item.unit_price,
-      total_price: item.unit_price * item.quantity
-    }))
-  );
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const { logInvoiceCreated } = useOrderLogging();
 
-  const handleItemPriceChange = (itemId: string, newUnitPrice: number) => {
-    setEditableItems(prev => prev.map(item => 
-      item.id === itemId 
-        ? { ...item, unit_price: newUnitPrice, total_price: newUnitPrice * item.quantity }
-        : item
-    ));
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const subtotal = editableItems.reduce((sum, item) => sum + item.total_price, 0);
-  const totalAmount = subtotal + taxAmount - discountAmount;
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
     try {
-      console.log('Order object:', order);
-      console.log('Customer object:', order.customers);
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
 
-      const invoiceData = {
-        order_id: order.id,
-        customer_id: order.customer_id || order.customers?.id,
-        invoice_date: format(invoiceDate, 'yyyy-MM-dd'),
-        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-        subtotal,
-        tax_amount: taxAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        notes,
-        status: 'Draft',
-      };
+      if (merchantError || !merchantId) {
+        throw new Error('Could not get merchant ID');
+      }
 
-      console.log('Invoice data to create:', invoiceData);
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert({
+          order_id: order.id,
+          invoice_number: invoiceNumber,
+          total_amount: order.total_amount,
+          merchant_id: merchantId,
+        })
+        .select('*')
+        .single();
 
-      const invoiceItems = editableItems.map(item => ({
-        order_item_id: item.id,
-        product_config_id: item.product_config_id || item.product_configs?.id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-      }));
+      if (error) throw error;
 
-      console.log('Invoice items to create:', invoiceItems);
+      const invoice = data;
 
-      await createInvoice(invoiceData, invoiceItems);
-      onInvoiceCreated?.();
-      onClose();
+      if (invoice) {
+        // Log the invoice creation
+        await logInvoiceCreated(order.id, order.order_number, invoice.invoice_number);
+        
+        toast({
+          title: 'Success',
+          description: `Invoice ${invoice.invoice_number} created successfully!`,
+        });
+        onInvoiceCreated();
+      }
     } catch (error) {
       console.error('Error creating invoice:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create invoice. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Invoice - Order {order.order_number}</DialogTitle>
+          <DialogTitle>Create Invoice</DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Customer Information */}
-          <div className="space-y-2">
-            <h3 className="font-medium">Customer Information</h3>
-            <div className="bg-gray-50 p-3 rounded-md">
-              <p><strong>Name:</strong> {order.customers?.name || 'N/A'}</p>
-              {order.customers?.phone && <p><strong>Phone:</strong> {order.customers.phone}</p>}
-            </div>
-          </div>
-
-          {/* Order Items with Editable Prices */}
-          <div className="space-y-2">
-            <h3 className="font-medium">Order Items (Edit prices if needed)</h3>
-            <div className="bg-gray-50 p-3 rounded-md space-y-3">
-              {editableItems.map((item) => (
-                <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded border">
-                  <div className="flex-1">
-                    <p className="font-medium">{item.product_configs?.product_code || 'N/A'}</p>
-                    <p className="text-sm text-gray-600">
-                      {item.product_configs?.category || 'N/A'} - {item.product_configs?.subcategory || 'N/A'}
-                    </p>
-                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right">
-                      <Label htmlFor={`price-${item.id}`} className="text-xs">Unit Price (₹)</Label>
-                      <Input
-                        id={`price-${item.id}`}
-                        type="number"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => handleItemPriceChange(item.id, parseFloat(e.target.value) || 0)}
-                        className="w-24 text-right"
-                      />
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Total</p>
-                      <p className="font-medium">₹{item.total_price.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Invoice Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Invoice Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !invoiceDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {invoiceDate ? format(invoiceDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={invoiceDate}
-                    onSelect={(date) => date && setInvoiceDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Due Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dueDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Financial Details */}
-          <div className="space-y-4">
-            <h3 className="font-medium">Financial Details</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tax">Tax Amount (₹)</Label>
-                <Input
-                  id="tax"
-                  type="number"
-                  step="0.01"
-                  value={taxAmount}
-                  onChange={(e) => setTaxAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="discount">Discount Amount (₹)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  step="0.01"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-md space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>₹{subtotal.toFixed(2)}</span>
-              </div>
-              {taxAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>Tax:</span>
-                  <span>₹{taxAmount.toFixed(2)}</span>
-                </div>
-              )}
-              {discountAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>Discount:</span>
-                  <span>-₹{discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>Total:</span>
-                <span>₹{totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter any additional notes for the invoice..."
-              rows={3}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="invoiceNumber">Invoice Number</Label>
+            <Input
+              id="invoiceNumber"
+              type="text"
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              required
             />
           </div>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Invoice'}
-            </Button>
-          </div>
-        </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? 'Creating...' : 'Create Invoice'}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );

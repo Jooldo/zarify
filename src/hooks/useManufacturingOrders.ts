@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { useActivityLog } from '@/hooks/useActivityLog';
 
 export type ManufacturingOrderStatus = 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled' | 'tagged_in';
 
@@ -21,6 +22,7 @@ export const useManufacturingOrders = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
   const [isCreating, setIsCreating] = useState(false);
 
   const fetchManufacturingOrders = useCallback(async () => {
@@ -106,8 +108,17 @@ export const useManufacturingOrders = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       toast({ title: "Success", description: "Manufacturing order created successfully!" });
+      
+      // Log the activity
+      await logActivity(
+        'Created',
+        'Manufacturing Order',
+        data.id,
+        `Created manufacturing order ${data.order_number} for ${data.quantity_required} units of ${data.product_name}`
+      );
+      
       invalidateManufacturingOrders();
     },
     onError: (error) => {
@@ -135,7 +146,26 @@ export const useManufacturingOrders = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
+      // Log the activity
+      if (variables.updates.status) {
+        await logActivity(
+          'Status Updated',
+          'Manufacturing Order',
+          data.id,
+          `Manufacturing order ${data.order_number} status changed to ${variables.updates.status}`
+        );
+      }
+      
+      if (variables.updates.priority) {
+        await logActivity(
+          'Priority Updated',
+          'Manufacturing Order',
+          data.id,
+          `Manufacturing order ${data.order_number} priority changed to ${variables.updates.priority}`
+        );
+      }
+      
       invalidateManufacturingOrders();
     },
     onError: (error) => {
@@ -150,15 +180,34 @@ export const useManufacturingOrders = () => {
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
+      // Get order details before deletion for logging
+      const { data: orderData } = await supabase
+        .from('manufacturing_orders')
+        .select('order_number, product_name')
+        .eq('id', orderId)
+        .single();
+
       const { error } = await supabase
         .from('manufacturing_orders')
         .delete()
         .eq('id', orderId);
 
       if (error) throw error;
+      return orderData;
     },
-    onSuccess: () => {
+    onSuccess: async (orderData) => {
       toast({ title: "Success", description: "Manufacturing order deleted successfully!" });
+      
+      // Log the activity
+      if (orderData) {
+        await logActivity(
+          'Deleted',
+          'Manufacturing Order',
+          undefined,
+          `Deleted manufacturing order ${orderData.order_number} for ${orderData.product_name}`
+        );
+      }
+      
       invalidateManufacturingOrders();
     },
     onError: (error) => {

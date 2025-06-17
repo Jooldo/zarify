@@ -1,97 +1,308 @@
-
-import { useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
+import { useToast } from '@/hooks/use-toast';
+import { useOrderLogging } from '@/hooks/useOrderLogging';
 
-export type OrderStatus = Database['public']['Enums']['order_status'];
+export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Cancelled';
 
-export type Order = Database['public']['Tables']['orders']['Row'] & {
-  order_items: OrderItem[];
-  customers: Customer | null;
-};
-
-export type OrderItem = Database['public']['Tables']['order_items']['Row'] & {
-  product_configs: ProductConfig | null;
+export interface OrderItem {
+  id: string;
+  suborder_id: string;
+  order_id: string;
+  merchant_id: string;
+  product_config_id: string;
+  quantity: number;
+  fulfilled_quantity: number;
+  unit_price: number;
+  total_price: number;
+  status: OrderStatus;
+  created_at: string;
   updated_at: string;
-};
+  product_configs?: ProductConfig;
+}
 
-export type Customer = Database['public']['Tables']['customers']['Row'];
-export type ProductConfig = Database['public']['Tables']['product_configs']['Row'];
+export interface ProductConfig {
+  id: string;
+  merchant_id: string;
+  product_code: string;
+  category: string;
+  subcategory: string;
+  size_value: number;
+  weight_range: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Customer {
+  id: string;
+  merchant_id: string;
+  name: string;
+  phone: string;
+  address: string;
+  created_at: string;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  customer_id: string;
+  total_amount: number;
+  expected_delivery?: string | null;
+  status?: OrderStatus;
+  created_at: string;
+  merchant_id: string;
+  customers?: Customer;
+  order_items: OrderItem[];
+}
 
 export const useOrders = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
+  const { logOrderCreated, logOrderStatusUpdate, logOrderItemStatusUpdate, logOrderEdited } = useOrderLogging();
 
-  const fetchOrders = useCallback(async () => {
-    if (!user) return [];
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
 
-    const { data: merchantData, error: merchantError } = await supabase
-      .from('profiles')
-      .select('merchant_id')
-      .eq('id', user.id)
-      .single();
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        setError(merchantError);
+        throw merchantError;
+      }
 
-    if (merchantError || !merchantData) {
-      console.error('Error fetching merchant ID:', merchantError);
-      return [];
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers(name),
+          order_items(
+            *,
+            product_configs(product_code)
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error);
+        setError(error);
+        throw error;
+      }
+
+      setOrders(data || []);
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error fetching orders:', typedError);
+      setError(typedError);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch orders',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-    const merchantId = merchantData.merchant_id;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select(
-        `
-        *,
-        order_items(*, product_configs(*)),
-        customers(*)
-      `
-      )
-      .eq('merchant_id', merchantId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching orders:', error);
-      throw new Error('Could not fetch orders');
-    }
-
-    return data as Order[];
-  }, [user]);
-
-  const {
-    data: orders = [],
-    isLoading: loading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['orders', user?.id],
-    queryFn: fetchOrders,
-    enabled: !!user,
-  });
-
-  const invalidateOrders = () => {
-    queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
-  };
-  
-  const updateOrderItemDetails = async (
-    itemId: string,
-    updates: { status?: OrderStatus; fulfilled_quantity?: number }
-  ) => {
-    const { error } = await supabase
-      .from('order_items')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', itemId);
-
-    if (error) {
-      console.error('Error updating order item details:', error);
-      throw new Error('Could not update order item details');
-    }
-    
-    invalidateOrders();
-    queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
-    queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
   };
 
-  return { orders, loading, error, invalidateOrders, refetch, updateOrderItemDetails };
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const createOrder = async (orderData: {
+    customer_id: string;
+    expected_delivery?: string;
+    items: Array<{
+      product_config_id: string;
+      quantity: number;
+      unit_price: number;
+    }>;
+  }) => {
+    try {
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        throw merchantError;
+      }
+
+      const { data: orderNumber, error: orderNumberError } = await supabase
+        .rpc('get_next_order_number');
+
+      if (orderNumberError) {
+        console.error('Error getting order number:', orderNumberError);
+        throw orderNumberError;
+      }
+
+      if (!orderNumber) {
+        throw new Error('Could not generate order number');
+      }
+
+      let totalAmount = 0;
+      orderData.items.forEach(item => {
+        totalAmount += item.quantity * item.unit_price;
+      });
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: orderData.customer_id,
+          expected_delivery: orderData.expected_delivery,
+          total_amount: totalAmount,
+          merchant_id: merchantId,
+        })
+        .select(`
+          *,
+          customers(name)
+        `)
+        .single();
+
+      if (orderError) throw orderError;
+
+      const orderId = order?.id;
+
+      const orderItems = orderData.items.map(item => ({
+        order_id: orderId,
+        product_config_id: item.product_config_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.quantity * item.unit_price,
+        merchant_id: merchantId,
+        suborder_id: `${orderNumber}-${item.product_config_id}`
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Log the order creation
+      if (order?.customers?.name) {
+        await logOrderCreated(order.id, order.order_number, order.customers.name, totalAmount);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Order ${orderNumber} created successfully!`,
+      });
+
+      await fetchOrders();
+      return order;
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error creating order:', typedError);
+      toast({
+        title: 'Error',
+        description: 'Failed to create order',
+        variant: 'destructive',
+      });
+      throw typedError;
+    }
+  };
+
+  const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
+    try {
+      // Get current item details for logging
+      const { data: currentItem } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          orders(order_number),
+          product_configs(product_code)
+        `)
+        .eq('id', itemId)
+        .single();
+
+      const { error } = await supabase
+        .from('order_items')
+        .update({ status })
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      // Log the status update
+      if (currentItem) {
+        await logOrderItemStatusUpdate(
+          currentItem.order_id,
+          currentItem.orders?.order_number || '',
+          currentItem.product_configs?.product_code || '',
+          currentItem.status,
+          status
+        );
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Order item status updated successfully!',
+      });
+
+      await fetchOrders();
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error updating order item status:', typedError);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order item status',
+        variant: 'destructive',
+      });
+      throw typedError;
+    }
+  };
+
+  const updateOrder = async (orderId: string, updates: Partial<Order>) => {
+    try {
+      // Get current order details for logging
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select('order_number, status')
+        .eq('id', orderId)
+        .single();
+
+      const { error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Log the update
+      if (currentOrder) {
+        const changes = Object.entries(updates)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ');
+        
+        await logOrderEdited(orderId, currentOrder.order_number, changes);
+        
+        // If status was updated, log it specifically
+        if (updates.status && currentOrder.status !== updates.status) {
+          await logOrderStatusUpdate(orderId, currentOrder.order_number, currentOrder.status, updates.status);
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Order updated successfully!',
+      });
+
+      await fetchOrders();
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error updating order:', typedError);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order',
+        variant: 'destructive',
+      });
+      throw typedError;
+    }
+  };
+
+  return { orders, loading, error, fetchOrders, createOrder, updateOrderItemStatus, updateOrder };
 };
