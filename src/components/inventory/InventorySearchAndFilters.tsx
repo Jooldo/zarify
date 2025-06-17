@@ -29,14 +29,15 @@ const InventorySearchAndFilters = ({
           className="pl-10 h-8"
         />
       </div>
-      <Select value={filterType} onValueChange={onFilterChange}>
+      <Select value={filterType || 'all'} onValueChange={(value) => onFilterChange(value === 'all' ? '' : value)}>
         <SelectTrigger className="w-40 h-8">
           <SelectValue placeholder="Filter by type" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all">All Types</SelectItem>
           {materialTypes.map((type) => (
             <SelectItem key={type} value={type}>
-              {type === 'all' ? 'All Types' : type}
+              {type}
             </SelectItem>
           ))}
         </SelectContent>

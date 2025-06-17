@@ -105,7 +105,7 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
+            <Select value={filters.category || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
@@ -120,7 +120,7 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Subcategory</Label>
-            <Select value={filters.subcategory} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value === 'all' ? '' : value }))}>
+            <Select value={filters.subcategory || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All subcategories" />
               </SelectTrigger>
@@ -135,7 +135,7 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Size Range</Label>
-            <Select value={filters.sizeRange} onValueChange={(value) => setFilters(prev => ({ ...prev, sizeRange: value === 'all' ? '' : value }))}>
+            <Select value={filters.sizeRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, sizeRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All sizes" />
               </SelectTrigger>
@@ -150,7 +150,7 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -165,7 +165,7 @@ const FinishedGoodsConfigFilter = ({ onFiltersChange, categories, subcategories 
 
           <div className="space-y-2 md:col-span-2">
             <Label>Active Status</Label>
-            <Select value={filters.isActive} onValueChange={(value) => setFilters(prev => ({ ...prev, isActive: value === 'all' ? '' : value }))}>
+            <Select value={filters.isActive || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, isActive: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All" />
               </SelectTrigger>

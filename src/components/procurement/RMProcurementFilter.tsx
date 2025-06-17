@@ -120,7 +120,7 @@ const RMProcurementFilter = ({ onFiltersChange, materialTypes, suppliers }: RMPr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -135,7 +135,7 @@ const RMProcurementFilter = ({ onFiltersChange, materialTypes, suppliers }: RMPr
 
           <div className="space-y-2">
             <Label>Material Type</Label>
-            <Select value={filters.materialType} onValueChange={(value) => setFilters(prev => ({ ...prev, materialType: value === 'all' ? '' : value }))}>
+            <Select value={filters.materialType || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, materialType: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
@@ -150,7 +150,7 @@ const RMProcurementFilter = ({ onFiltersChange, materialTypes, suppliers }: RMPr
 
           <div className="space-y-2">
             <Label>Supplier</Label>
-            <Select value={filters.supplier} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
+            <Select value={filters.supplier || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All suppliers" />
               </SelectTrigger>
