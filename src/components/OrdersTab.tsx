@@ -100,23 +100,13 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     return Array.from(customersSet).sort();
   }, [orders]);
 
+  // Fixed: Use the actual order status from database instead of calculating
   const getOverallOrderStatus = (orderId: string) => {
     const order = orders.find(o => o.order_number === orderId);
     if (!order) return "Created";
     
-    const statuses = order.order_items.map(sub => sub.status);
-    
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.every(s => s === "Ready")) return "Ready";
-    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "In Progress";
-
-    if (statuses.every(s => s === "Created")) return "Created";
-    
-    if (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created")) {
-        return "In Progress";
-    }
-    
-    return "Created";
+    // Return the actual status from the database, or default to "Created"
+    return order.status || "Created";
   };
 
   const getStatusVariant = (status: string) => {
