@@ -16,6 +16,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     .select(`
       product_config_id,
       quantity,
+      fulfilled_quantity,
       status
     `)
     .eq('merchant_id', merchantId)
@@ -28,18 +29,22 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
 
   console.log('📊 Live order items found:', liveOrderItems?.length || 0);
 
-  // Group by product_config_id and sum quantities
+  // Group by product_config_id and sum remaining quantities (quantity - fulfilled_quantity)
   const requiredQuantitiesByConfig: { [key: string]: number } = {};
   
   liveOrderItems?.forEach(item => {
     const configId = item.product_config_id;
-    if (!requiredQuantitiesByConfig[configId]) {
-      requiredQuantitiesByConfig[configId] = 0;
+    const remainingQuantity = item.quantity - (item.fulfilled_quantity || 0);
+    
+    if (remainingQuantity > 0) {
+      if (!requiredQuantitiesByConfig[configId]) {
+        requiredQuantitiesByConfig[configId] = 0;
+      }
+      requiredQuantitiesByConfig[configId] += remainingQuantity;
     }
-    requiredQuantitiesByConfig[configId] += item.quantity;
   });
 
-  console.log('📊 Required quantities by product config:', requiredQuantitiesByConfig);
+  console.log('📊 Required quantities by product config (remaining only):', requiredQuantitiesByConfig);
 
   // Update all finished goods - set required_quantity to 0 first, then update based on live orders
   const { error: resetError } = await supabase
