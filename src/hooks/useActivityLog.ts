@@ -67,7 +67,7 @@ export const useActivityLog = () => {
     description?: string
   ) => {
     try {
-      console.log('=== ATTEMPTING TO LOG ACTIVITY ===');
+      console.log('=== ACTIVITY LOG FUNCTION CALLED ===');
       console.log('Action:', action);
       console.log('Entity Type:', entityType);
       console.log('Entity ID:', entityId);
@@ -77,14 +77,9 @@ export const useActivityLog = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         console.error('No valid user session for activity logging:', userError);
-        toast({
-          title: 'Error',
-          description: 'User not authenticated',
-          variant: 'destructive',
-        });
-        return;
+        throw new Error('User not authenticated');
       }
-      console.log('User ID:', user.id);
+      console.log('✅ User authenticated:', user.id);
 
       // Get merchant ID
       const { data: merchantId, error: merchantError } = await supabase
@@ -92,17 +87,18 @@ export const useActivityLog = () => {
 
       if (merchantError) {
         console.error('Error getting merchant ID for activity logging:', merchantError);
-        toast({
-          title: 'Error',
-          description: 'Error getting merchant information',
-          variant: 'destructive',
-        });
-        return;
+        throw new Error('Error getting merchant information: ' + merchantError.message);
       }
-      console.log('Merchant ID for logging:', merchantId);
+      console.log('✅ Merchant ID retrieved:', merchantId);
 
-      // Call the RPC function
-      console.log('Calling log_user_activity RPC function...');
+      // Call the RPC function with detailed logging
+      console.log('📞 Calling log_user_activity RPC with params:', {
+        p_action: action,
+        p_entity_type: entityType,
+        p_entity_id: entityId,
+        p_description: description
+      });
+
       const { data, error } = await supabase.rpc('log_user_activity', {
         p_action: action,
         p_entity_type: entityType,
@@ -111,35 +107,27 @@ export const useActivityLog = () => {
       });
 
       if (error) {
-        console.error('RPC Error logging activity:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        toast({
-          title: 'Activity Log Error',
-          description: error.message || 'Failed to log activity',
-          variant: 'destructive',
+        console.error('❌ RPC Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
         });
-        throw error;
+        throw new Error(`Activity logging failed: ${error.message}`);
       }
       
-      console.log('Activity logged successfully, RPC returned:', data);
+      console.log('✅ RPC call successful, returned activity ID:', data);
       
       // Refresh logs after adding new one
-      console.log('Refreshing logs after activity log...');
+      console.log('🔄 Refreshing activity logs...');
       await fetchLogs();
+      console.log('✅ Activity logs refreshed');
       
-      // Show success message
-      toast({
-        title: 'Activity Logged',
-        description: 'Activity has been logged successfully',
-      });
+      return data;
       
     } catch (error) {
-      console.error('Critical error in logActivity:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to log activity: ' + (error as Error).message,
-        variant: 'destructive',
-      });
+      console.error('❌ Critical error in logActivity:', error);
+      throw error; // Re-throw so the calling code can handle it
     }
   };
 

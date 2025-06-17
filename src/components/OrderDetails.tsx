@@ -27,7 +27,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     try {
       console.log('=== ORDER ITEM STATUS UPDATE STARTED ===');
       console.log('Updating order item status:', { itemId: item.id, newStatus });
-      console.log('Order details:', { orderNumber: order.order_number, orderId: order.id });
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -55,65 +54,34 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         throw error;
       }
 
-      console.log('Order item status updated successfully in database');
+      console.log('✅ Order item status updated successfully in database');
 
-      // Enhanced debugging for activity logging
-      console.log('=== ACTIVITY LOGGING DEBUG START ===');
-      console.log('logActivity function type:', typeof logActivity);
-      console.log('logActivity function exists:', !!logActivity);
-      console.log('logActivity function:', logActivity);
-      
-      if (logActivity) {
-        console.log('✅ logActivity function is available');
-        
+      // Activity logging
+      try {
         const activityDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
-        console.log('📝 About to call logActivity with parameters:');
-        console.log('  action:', 'Status Updated');
-        console.log('  entityType:', 'Order Item');
-        console.log('  entityId:', item.suborder_id);
-        console.log('  description:', activityDescription);
+        console.log('📝 Logging activity:', activityDescription);
         
-        try {
-          console.log('🚀 Executing logActivity function...');
-          
-          const logResult = await logActivity(
-            'Status Updated',
-            'Order Item',
-            item.suborder_id,
-            activityDescription
-          );
-          
-          console.log('✅ logActivity call completed');
-          console.log('📊 Activity log result:', logResult);
-          console.log('=== ACTIVITY LOGGING DEBUG END ===');
-          
-          toast({
-            title: 'Success',
-            description: 'Order item status updated and logged',
-          });
-          
-        } catch (activityError) {
-          console.error('❌ Activity logging failed:');
-          console.error('Error type:', typeof activityError);
-          console.error('Error message:', activityError?.message);
-          console.error('Full error:', activityError);
-          console.log('=== ACTIVITY LOGGING DEBUG END (WITH ERROR) ===');
-          
-          toast({
-            title: 'Partial Success',
-            description: 'Status updated but activity logging failed',
-            variant: 'destructive',
-          });
-        }
-      } else {
-        console.error('❌ logActivity function is not available');
-        console.log('Available from useActivityLog hook:', { logActivity });
-        console.log('=== ACTIVITY LOGGING DEBUG END (NO FUNCTION) ===');
+        await logActivity(
+          'Status Updated',
+          'Order Item',
+          item.suborder_id,
+          activityDescription
+        );
+        
+        console.log('✅ Activity logged successfully');
         
         toast({
-          title: 'Warning',
-          description: 'Status updated but logging failed',
+          title: 'Success',
+          description: 'Order item status updated and logged',
+        });
+        
+      } catch (activityError) {
+        console.error('❌ Activity logging failed:', activityError);
+        
+        toast({
+          title: 'Partial Success',
+          description: 'Status updated but activity logging failed',
           variant: 'destructive',
         });
       }
