@@ -12,7 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders';
 import { Progress } from "@/components/ui/progress";
-import { useOrderLogging } from '@/hooks/useOrderLogging';
 
 interface OrderDetailsProps {
   order: any;
@@ -22,10 +21,13 @@ interface OrderDetailsProps {
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { logOrderItemStatusUpdate, logOrderStatusUpdate } = useOrderLogging();
+
+  console.log('OrderDetails - Full order object:', order);
+  console.log('OrderDetails - Order items:', order.order_items);
 
   const calculateOverallOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
     const statuses = orderItems.map(item => item.status);
+    console.log('calculateOverallOrderStatus - Item statuses:', statuses);
     
     if (statuses.every(s => s === "Delivered")) return "Delivered";
     if (statuses.every(s => s === "Ready")) return "Ready";
@@ -37,6 +39,14 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   };
 
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
+    console.log('handleItemStatusUpdate - Starting update:', { 
+      itemId: item.id, 
+      oldStatus: item.status, 
+      newStatus,
+      orderId: order.id,
+      orderNumber: order.order_number
+    });
+
     try {
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -44,6 +54,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       } else if (newStatus === 'Created') {
         fulfilledQuantityUpdate = 0;
       }
+
+      console.log('handleItemStatusUpdate - Updating item with:', {
+        status: newStatus,
+        fulfilled_quantity: fulfilledQuantityUpdate
+      });
 
       // Update the order item status and fulfilled quantity
       const { error: itemError } = await supabase
@@ -56,8 +71,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         .eq('id', item.id);
 
       if (itemError) {
+        console.error('handleItemStatusUpdate - Item update error:', itemError);
         throw itemError;
       }
+
+      console.log('handleItemStatusUpdate - Item updated successfully');
 
       // Fetch all order items to calculate new overall status
       const { data: allOrderItems, error: fetchError } = await supabase
@@ -66,8 +84,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         .eq('order_id', order.id);
 
       if (fetchError) {
+        console.error('handleItemStatusUpdate - Fetch error:', fetchError);
         throw fetchError;
       }
+
+      console.log('handleItemStatusUpdate - All order items fetched:', allOrderItems);
 
       // Update the specific item in the fetched data
       const updatedOrderItems = allOrderItems.map(orderItem => 
@@ -80,6 +101,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
       const oldOrderStatus = order.status || 'Created';
 
+      console.log('handleItemStatusUpdate - Status calculation:', {
+        oldOrderStatus,
+        newOrderStatus,
+        shouldUpdate: oldOrderStatus !== newOrderStatus
+      });
+
       // Update the overall order status
       const { error: orderError } = await supabase
         .from('orders')
@@ -90,26 +117,42 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         .eq('id', order.id);
 
       if (orderError) {
+        console.error('handleItemStatusUpdate - Order update error:', orderError);
         throw orderError;
       }
 
+      console.log('handleItemStatusUpdate - Order status updated successfully');
+
       // Log order item status update
-      await logOrderItemStatusUpdate(
-        order.id,
-        order.order_number,
-        item.product_configs?.product_code || 'Unknown',
-        item.status,
-        newStatus
-      );
+      console.log('handleItemStatusUpdate - Logging item status update...');
+      const { error: itemLogError } = await supabase.rpc('log_user_activity', {
+        p_action: 'Item Status Updated',
+        p_entity_type: 'Order Item',
+        p_entity_id: order.id,
+        p_description: `Order ${order.order_number} item ${item.product_configs?.product_code || 'Unknown'} status changed from ${item.status} to ${newStatus}`
+      });
+
+      if (itemLogError) {
+        console.error('handleItemStatusUpdate - Item log error:', itemLogError);
+      } else {
+        console.log('handleItemStatusUpdate - Item activity logged successfully');
+      }
 
       // Log order status update if it changed
       if (oldOrderStatus !== newOrderStatus) {
-        await logOrderStatusUpdate(
-          order.id,
-          order.order_number,
-          oldOrderStatus,
-          newOrderStatus
-        );
+        console.log('handleItemStatusUpdate - Logging order status update...');
+        const { error: orderLogError } = await supabase.rpc('log_user_activity', {
+          p_action: 'Status Updated',
+          p_entity_type: 'Order',
+          p_entity_id: order.id,
+          p_description: `Order ${order.order_number} status changed from ${oldOrderStatus} to ${newOrderStatus}`
+        });
+
+        if (orderLogError) {
+          console.error('handleItemStatusUpdate - Order log error:', orderLogError);
+        } else {
+          console.log('handleItemStatusUpdate - Order activity logged successfully');
+        }
       }
       
       toast({
@@ -117,12 +160,13 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         description: `Item status updated to ${newStatus}`,
       });
 
+      console.log('handleItemStatusUpdate - Refreshing data...');
       // Refresh data
       await onOrderUpdate();
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error('handleItemStatusUpdate - Full error:', error);
       toast({
         title: 'Error',
         description: `Failed to update status: ${error.message}`,
@@ -133,25 +177,43 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   // Get customer data with proper fallbacks
   const getCustomerData = () => {
+    console.log('getCustomerData - Order structure check:', {
+      hasCustomers: !!order.customers,
+      hasCustomer: !!order.customer,
+      hasCustomerName: !!order.customer_name,
+      customersData: order.customers,
+      customerData: order.customer,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone
+    });
+
     let customerName = 'Unknown Customer';
     let customerPhone = '';
     
     // Try different possible customer data structures
-    if (order.customers) {
-      customerName = order.customers.name || customerName;
+    if (order.customers && order.customers.name) {
+      customerName = order.customers.name;
       customerPhone = order.customers.phone || '';
-    } else if (order.customer) {
-      customerName = order.customer.name || customerName;
+      console.log('getCustomerData - Using order.customers');
+    } else if (order.customer && order.customer.name) {
+      customerName = order.customer.name;
       customerPhone = order.customer.phone || '';
+      console.log('getCustomerData - Using order.customer');
     } else if (order.customer_name) {
       customerName = order.customer_name;
       customerPhone = order.customer_phone || '';
+      console.log('getCustomerData - Using order.customer_name');
+    } else {
+      console.log('getCustomerData - No customer data found, using fallback');
     }
     
-    return {
+    const result = {
       name: customerName,
       phone: customerPhone
     };
+
+    console.log('getCustomerData - Final result:', result);
+    return result;
   };
 
   const customerData = getCustomerData();
