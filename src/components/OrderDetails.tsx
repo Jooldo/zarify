@@ -47,6 +47,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Order item status updated successfully');
 
+      // Log the activity
+      console.log('Logging order item status update from OrderDetails...');
       await logActivity(
         'Status Updated',
         'Order Item',

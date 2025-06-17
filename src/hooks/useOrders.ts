@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -204,14 +205,13 @@ export const useOrders = () => {
       if (itemsError) throw itemsError;
 
       // Log the order creation
-      if (order?.customers?.name) {
-        await logActivity(
-          'Created',
-          'Order',
-          order.id,
-          `Created order ${orderNumber} for ${order.customers.name} with total amount ₹${totalAmount.toFixed(2)}`
-        );
-      }
+      console.log('Logging order creation activity...');
+      await logActivity(
+        'Created',
+        'Order',
+        orderNumber,
+        `Created order ${orderNumber} for ${order?.customers?.name || 'Unknown Customer'} with total amount ₹${totalAmount.toFixed(2)}`
+      );
 
       toast({
         title: 'Success',
@@ -253,11 +253,12 @@ export const useOrders = () => {
       if (error) throw error;
 
       // Log the status update
+      console.log('Logging order item status update activity...');
       if (currentItem) {
         await logActivity(
           'Status Updated',
           'Order Item',
-          currentItem.order_id,
+          currentItem.orders?.order_number || currentItem.order_id,
           `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} status changed from ${currentItem.status} to ${status}`
         );
       }
@@ -302,20 +303,22 @@ export const useOrders = () => {
 
       // Log the status update if status changed
       if (currentItem && updates.status && currentItem.status !== updates.status) {
+        console.log('Logging order item status change activity...');
         await logActivity(
           'Status Updated',
           'Order Item',
-          currentItem.order_id,
+          currentItem.orders?.order_number || currentItem.order_id,
           `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} status changed from ${currentItem.status} to ${updates.status}`
         );
       }
 
       // Log fulfilled quantity update if changed
       if (currentItem && updates.fulfilled_quantity !== undefined && currentItem.fulfilled_quantity !== updates.fulfilled_quantity) {
+        console.log('Logging order item fulfilled quantity update activity...');
         await logActivity(
           'Updated',
           'Order Item',
-          currentItem.order_id,
+          currentItem.orders?.order_number || currentItem.order_id,
           `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} fulfilled quantity updated from ${currentItem.fulfilled_quantity} to ${updates.fulfilled_quantity}`
         );
       }
@@ -371,19 +374,21 @@ export const useOrders = () => {
           })
           .join(', ');
         
+        console.log('Logging order update activity...');
         await logActivity(
           'Updated',
           'Order',
-          orderId,
+          currentOrder.order_number,
           `Order ${currentOrder.order_number} updated: ${changes}`
         );
         
         // If status was updated, log it specifically
         if (updates.status && currentOrder.status !== updates.status) {
+          console.log('Logging order status change activity...');
           await logActivity(
             'Status Updated',
             'Order',
-            orderId,
+            currentOrder.order_number,
             `Order ${currentOrder.order_number} status changed from ${currentOrder.status} to ${updates.status}`
           );
         }
