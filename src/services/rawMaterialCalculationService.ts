@@ -17,7 +17,8 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
       product_config_id,
       quantity,
       fulfilled_quantity,
-      status
+      status,
+      suborder_id
     `)
     .eq('merchant_id', merchantId)
     .in('status', ['Created', 'In Progress']);
@@ -28,6 +29,12 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   }
 
   console.log('📊 Live order items found:', liveOrderItems?.length || 0);
+  
+  // Check for the specific suborder mentioned by user
+  const specificSuborder = liveOrderItems?.find(item => item.suborder_id === 'S-OD000005-01');
+  if (specificSuborder) {
+    console.log('🎯 Found specific suborder S-OD000005-01:', specificSuborder);
+  }
 
   // Group by product_config_id and sum remaining quantities (quantity - fulfilled_quantity)
   const requiredQuantitiesByConfig: { [key: string]: number } = {};
@@ -37,6 +44,11 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     // Always calculate remaining quantity, even if fulfilled_quantity is 0
     const remainingQuantity = item.quantity - (item.fulfilled_quantity || 0);
     
+    // Log details for specific suborder
+    if (item.suborder_id === 'S-OD000005-01') {
+      console.log(`🔍 S-OD000005-01 Details: config=${configId}, quantity=${item.quantity}, fulfilled=${item.fulfilled_quantity || 0}, remaining=${remainingQuantity}`);
+    }
+    
     // Only count if there's remaining quantity to fulfill
     if (remainingQuantity > 0) {
       if (!requiredQuantitiesByConfig[configId]) {
@@ -44,7 +56,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
       }
       requiredQuantitiesByConfig[configId] += remainingQuantity;
       
-      console.log(`📦 Order item: config ${configId}, total: ${item.quantity}, fulfilled: ${item.fulfilled_quantity || 0}, remaining: ${remainingQuantity}`);
+      console.log(`📦 Order item: config ${configId}, suborder ${item.suborder_id}, total: ${item.quantity}, fulfilled: ${item.fulfilled_quantity || 0}, remaining: ${remainingQuantity}`);
     }
   });
 
@@ -62,13 +74,14 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   }
 
   // Update finished goods with calculated required quantities
-  const updatePromises = Object.entries(requiredQuantitiesByConfig).map(([configId, quantity]) =>
-    supabase
+  const updatePromises = Object.entries(requiredQuantitiesByConfig).map(([configId, quantity]) => {
+    console.log(`🔄 Updating config ${configId} with required_quantity: ${quantity}`);
+    return supabase
       .from('finished_goods')
       .update({ required_quantity: quantity })
       .eq('merchant_id', merchantId)
-      .eq('product_config_id', configId)
-  );
+      .eq('product_config_id', configId);
+  });
 
   const updateResults = await Promise.all(updatePromises);
   const updateErrors = updateResults.filter(result => result.error);

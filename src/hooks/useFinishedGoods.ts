@@ -33,10 +33,12 @@ export const useFinishedGoods = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Fetching finished goods data...');
+      console.log('🔄 Starting fetchFinishedGoods - triggering calculation first...');
       
       // First, trigger the calculation to update required_quantity in the database
       await calculateAndUpdateRawMaterialRequirements();
+      
+      console.log('✅ Calculation completed, now fetching fresh data...');
       
       // First, get the merchant ID
       const { data: merchantId, error: merchantError } = await supabase
@@ -65,6 +67,8 @@ export const useFinishedGoods = () => {
         setError(finishedGoodsError);
         throw finishedGoodsError;
       }
+
+      console.log('📊 Raw finished goods data from database:', finishedGoodsData);
 
       // Fetch manufacturing orders that are in progress or completed (but not tagged_in) to calculate in_manufacturing
       const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
@@ -96,7 +100,7 @@ export const useFinishedGoods = () => {
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
         const inManufacturingQuantity = inManufacturingByProduct[item.product_code] || 0;
         
-        console.log(`Product ${item.product_code}: required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${inManufacturingQuantity}`);
+        console.log(`Product ${item.product_code}: database_required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${inManufacturingQuantity}`);
         
         return {
           ...item,
@@ -105,7 +109,7 @@ export const useFinishedGoods = () => {
         };
       }) || [];
 
-      console.log('Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
+      console.log('📊 Final finished goods with required quantities:', finishedGoodsWithRequiredQty);
 
       setFinishedGoods(finishedGoodsWithRequiredQty);
     } catch (err) {
