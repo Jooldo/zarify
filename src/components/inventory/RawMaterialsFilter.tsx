@@ -121,7 +121,7 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Material Type</Label>
-            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
+            <Select value={filters.type || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
@@ -136,7 +136,7 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Unit</Label>
-            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
+            <Select value={filters.unit || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All units" />
               </SelectTrigger>
@@ -151,7 +151,7 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -166,7 +166,7 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Supplier</Label>
-            <Select value={filters.supplier} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
+            <Select value={filters.supplier || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All suppliers" />
               </SelectTrigger>
@@ -181,7 +181,7 @@ const RawMaterialsFilter = ({ onFiltersChange, materialTypes, suppliers }: RawMa
 
           <div className="space-y-2">
             <Label>Stock Level</Label>
-            <Select value={filters.stockLevel} onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value === 'all' ? '' : value }))}>
+            <Select value={filters.stockLevel || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All levels" />
               </SelectTrigger>
