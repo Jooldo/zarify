@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,11 +57,16 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('✅ Order item status updated successfully in database');
 
-      // Activity logging
+      // Activity logging - this is the critical part
       try {
         const activityDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
-        console.log('📝 Logging activity:', activityDescription);
+        console.log('📝 About to call logActivity with:', {
+          action: 'Status Updated',
+          entityType: 'Order Item',
+          entityId: item.suborder_id,
+          description: activityDescription
+        });
         
         await logActivity(
           'Status Updated',
