@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useOrderLogging } from '@/hooks/useOrderLogging';
+import { useActivityLog } from '@/hooks/useActivityLog';
 
 export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Partially Fulfilled';
 
@@ -74,7 +73,7 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
-  const { logOrderCreated, logOrderStatusUpdate, logOrderItemStatusUpdate, logOrderEdited } = useOrderLogging();
+  const { logActivity } = useActivityLog();
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -206,7 +205,12 @@ export const useOrders = () => {
 
       // Log the order creation
       if (order?.customers?.name) {
-        await logOrderCreated(order.id, order.order_number, order.customers.name, totalAmount);
+        await logActivity(
+          'Created',
+          'Order',
+          order.id,
+          `Created order ${orderNumber} for ${order.customers.name} with total amount ₹${totalAmount.toFixed(2)}`
+        );
       }
 
       toast({
@@ -250,12 +254,11 @@ export const useOrders = () => {
 
       // Log the status update
       if (currentItem) {
-        await logOrderItemStatusUpdate(
+        await logActivity(
+          'Status Updated',
+          'Order Item',
           currentItem.order_id,
-          currentItem.orders?.order_number || '',
-          currentItem.product_configs?.product_code || '',
-          currentItem.status,
-          status
+          `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} status changed from ${currentItem.status} to ${status}`
         );
       }
 
@@ -299,12 +302,21 @@ export const useOrders = () => {
 
       // Log the status update if status changed
       if (currentItem && updates.status && currentItem.status !== updates.status) {
-        await logOrderItemStatusUpdate(
+        await logActivity(
+          'Status Updated',
+          'Order Item',
           currentItem.order_id,
-          currentItem.orders?.order_number || '',
-          currentItem.product_configs?.product_code || '',
-          currentItem.status,
-          updates.status
+          `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} status changed from ${currentItem.status} to ${updates.status}`
+        );
+      }
+
+      // Log fulfilled quantity update if changed
+      if (currentItem && updates.fulfilled_quantity !== undefined && currentItem.fulfilled_quantity !== updates.fulfilled_quantity) {
+        await logActivity(
+          'Updated',
+          'Order Item',
+          currentItem.order_id,
+          `Order ${currentItem.orders?.order_number || ''} item ${currentItem.product_configs?.product_code || ''} fulfilled quantity updated from ${currentItem.fulfilled_quantity} to ${updates.fulfilled_quantity}`
         );
       }
 
@@ -331,7 +343,7 @@ export const useOrders = () => {
       // Get current order details for logging
       const { data: currentOrder } = await supabase
         .from('orders')
-        .select('order_number, status')
+        .select('order_number, status, total_amount, expected_delivery')
         .eq('id', orderId)
         .single();
 
@@ -345,14 +357,35 @@ export const useOrders = () => {
       // Log the update
       if (currentOrder) {
         const changes = Object.entries(updates)
-          .map(([key, value]) => `${key}: ${value}`)
+          .map(([key, value]) => {
+            if (key === 'status' && currentOrder.status !== value) {
+              return `status: ${currentOrder.status} → ${value}`;
+            }
+            if (key === 'total_amount' && currentOrder.total_amount !== value) {
+              return `total amount: ₹${currentOrder.total_amount} → ₹${value}`;
+            }
+            if (key === 'expected_delivery' && currentOrder.expected_delivery !== value) {
+              return `expected delivery: ${currentOrder.expected_delivery || 'none'} → ${value || 'none'}`;
+            }
+            return `${key}: ${value}`;
+          })
           .join(', ');
         
-        await logOrderEdited(orderId, currentOrder.order_number, changes);
+        await logActivity(
+          'Updated',
+          'Order',
+          orderId,
+          `Order ${currentOrder.order_number} updated: ${changes}`
+        );
         
         // If status was updated, log it specifically
         if (updates.status && currentOrder.status !== updates.status) {
-          await logOrderStatusUpdate(orderId, currentOrder.order_number, currentOrder.status, updates.status);
+          await logActivity(
+            'Status Updated',
+            'Order',
+            orderId,
+            `Order ${currentOrder.order_number} status changed from ${currentOrder.status} to ${updates.status}`
+          );
         }
       }
 

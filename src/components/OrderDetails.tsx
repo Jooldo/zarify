@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,10 +48,10 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       console.log('Order item status updated successfully');
 
       await logActivity(
-        'updated',
-        'order',
+        'Status Updated',
+        'Order Item',
         order.order_number,
-        `changed status of suborder ${item.suborder_id} from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`
+        `Order ${order.order_number} item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`
       );
       
       toast({
