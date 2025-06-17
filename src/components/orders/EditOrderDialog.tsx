@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import OrderItemForm from './OrderItemForm';
 import { calculateAndUpdateRawMaterialRequirements } from '@/services/rawMaterialCalculationService';
+import { OrderStatus } from '@/hooks/useOrders';
 
 interface EditOrderDialogProps {
   isOpen: boolean;
@@ -75,6 +77,158 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
       return item;
     });
     setOrderItems(updatedItems);
+  };
+
+  const calculateOverallOrderStatus = (orderItems: any[]): OrderStatus => {
+    const statuses = orderItems.map(item => item.status);
+    console.log('EditOrderDialog - calculateOverallOrderStatus - Item statuses:', statuses);
+    
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled")) return "In Progress";
+    if (statuses.every(s => s === "Created")) return "Created";
+    if (statuses.some(s => s !== "Created")) return "In Progress";
+    
+    return "Created";
+  };
+
+  const handleItemStatusUpdate = async (item: any, newStatus: OrderStatus) => {
+    console.log('EditOrderDialog - handleItemStatusUpdate - Starting update:', { 
+      itemId: item.id, 
+      oldStatus: item.status, 
+      newStatus,
+      orderId: order.id,
+      orderNumber: order.order_number
+    });
+
+    try {
+      let fulfilledQuantityUpdate = item.fulfilled_quantity;
+      if (newStatus === 'Delivered') {
+        fulfilledQuantityUpdate = item.quantity;
+      } else if (newStatus === 'Created') {
+        fulfilledQuantityUpdate = 0;
+      }
+
+      console.log('EditOrderDialog - Updating item with:', {
+        status: newStatus,
+        fulfilled_quantity: fulfilledQuantityUpdate
+      });
+
+      // Update the order item status and fulfilled quantity
+      const { error: itemError } = await supabase
+        .from('order_items')
+        .update({ 
+          status: newStatus,
+          fulfilled_quantity: fulfilledQuantityUpdate,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+
+      if (itemError) {
+        console.error('EditOrderDialog - Item update error:', itemError);
+        throw itemError;
+      }
+
+      console.log('EditOrderDialog - Item updated successfully');
+
+      // Fetch all order items to calculate new overall status
+      const { data: allOrderItems, error: fetchError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (fetchError) {
+        console.error('EditOrderDialog - Fetch error:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('EditOrderDialog - All order items fetched:', allOrderItems);
+
+      // Update the specific item in the fetched data
+      const updatedOrderItems = allOrderItems.map(orderItem => 
+        orderItem.id === item.id 
+          ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
+          : orderItem
+      );
+
+      // Calculate new overall order status
+      const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
+      const oldOrderStatus = order.status || 'Created';
+
+      console.log('EditOrderDialog - Status calculation:', {
+        oldOrderStatus,
+        newOrderStatus,
+        shouldUpdate: oldOrderStatus !== newOrderStatus
+      });
+
+      // Update the overall order status
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ 
+          status: newOrderStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id);
+
+      if (orderError) {
+        console.error('EditOrderDialog - Order update error:', orderError);
+        throw orderError;
+      }
+
+      console.log('EditOrderDialog - Order status updated successfully');
+
+      // Log order item status update
+      console.log('EditOrderDialog - Logging item status update...');
+      const { error: itemLogError } = await supabase.rpc('log_user_activity', {
+        p_action: 'Item Status Updated',
+        p_entity_type: 'Order Item',
+        p_entity_id: order.id,
+        p_description: `Order ${order.order_number} item ${item.product_configs?.product_code || item.product_config?.product_code || 'Unknown'} status changed from ${item.status} to ${newStatus}`
+      });
+
+      if (itemLogError) {
+        console.error('EditOrderDialog - Item log error:', itemLogError);
+      } else {
+        console.log('EditOrderDialog - Item activity logged successfully');
+      }
+
+      // Log order status update if it changed
+      if (oldOrderStatus !== newOrderStatus) {
+        console.log('EditOrderDialog - Logging order status update...');
+        const { error: orderLogError } = await supabase.rpc('log_user_activity', {
+          p_action: 'Status Updated',
+          p_entity_type: 'Order',
+          p_entity_id: order.id,
+          p_description: `Order ${order.order_number} status changed from ${oldOrderStatus} to ${newOrderStatus}`
+        });
+
+        if (orderLogError) {
+          console.error('EditOrderDialog - Order log error:', orderLogError);
+        } else {
+          console.log('EditOrderDialog - Order activity logged successfully');
+        }
+      }
+      
+      toast({
+        title: 'Success',
+        description: `Item status updated to ${newStatus}`,
+      });
+
+      console.log('EditOrderDialog - Refreshing data...');
+      // Update local state immediately
+      updateOrderItem(orderItems.findIndex(i => i.id === item.id), 'status', newStatus);
+      
+      // Refresh data
+      await onOrderUpdate();
+      
+    } catch (error) {
+      console.error('EditOrderDialog - Full error:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to update status: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
   };
 
   const deleteOrderItem = async (itemId: string) => {
@@ -193,7 +347,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
     setLoading(true);
 
     try {
-      console.log('Starting order update for order:', order.id);
+      console.log('EditOrderDialog - Starting order update for order:', order.id);
 
       // Add new order items
       if (newItems.length > 0) {
@@ -264,7 +418,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
           };
         }
 
-        console.log('Updating order item:', item.id, updateData);
+        console.log('EditOrderDialog - Updating order item:', item.id, updateData);
 
         const { error: itemError } = await supabase
           .from('order_items')
@@ -289,7 +443,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
         orderUpdateData.expected_delivery = expectedDelivery;
       }
 
-      console.log('Updating order:', order.id, orderUpdateData);
+      console.log('EditOrderDialog - Updating order:', order.id, orderUpdateData);
 
       const { error: orderError } = await supabase
         .from('orders')
@@ -360,7 +514,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                 <div>
                   <Label className="text-xs">Customer Name</Label>
                   <Input
-                    value={order?.customer?.name || ''}
+                    value={order?.customer?.name || order?.customers?.name || ''}
                     disabled
                     className="h-7 text-xs bg-gray-100"
                   />
@@ -368,7 +522,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                 <div>
                   <Label className="text-xs">Phone Number</Label>
                   <Input
-                    value={order?.customer?.phone || ''}
+                    value={order?.customer?.phone || order?.customers?.phone || ''}
                     disabled
                     className="h-7 text-xs bg-gray-100"
                   />
@@ -397,7 +551,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                 <div key={item.id} className="p-2 border border-gray-200 rounded bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-xs font-medium text-gray-600">
-                      {item.suborder_id} - {item.product_config?.product_code}
+                      {item.suborder_id} - {item.product_configs?.product_code || item.product_config?.product_code}
                     </div>
                     <div className="flex items-center gap-1">
                       <Badge className={`text-xs ${getStatusColor(item.status)}`}>
@@ -457,7 +611,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                       <Label className="text-xs">Status</Label>
                       <Select
                         value={item.status}
-                        onValueChange={(value) => updateOrderItem(index, 'status', value)}
+                        onValueChange={(value) => handleItemStatusUpdate(item, value as OrderStatus)}
                       >
                         <SelectTrigger className="h-6 text-xs">
                           <SelectValue />
