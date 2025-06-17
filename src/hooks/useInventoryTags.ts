@@ -327,38 +327,70 @@ export const useInventoryTags = () => {
 
       console.log('✅ generateTag - Merchant ID obtained:', merchantId);
 
-      // Get next tag ID
-      const { data: tagId, error: tagIdError } = await supabase
-        .rpc('get_next_tag_id');
+      // Try to get next tag ID with retry logic for duplicates
+      let attempts = 0;
+      const maxAttempts = 5;
+      let newTag = null;
 
-      if (tagIdError || !tagId) {
-        console.error('❌ generateTag - Could not generate tag ID:', tagIdError);
-        throw new Error('Could not generate tag ID');
+      while (attempts < maxAttempts && !newTag) {
+        attempts++;
+        console.log(`🔄 generateTag - Attempt ${attempts} to generate unique tag ID`);
+
+        // Get next tag ID
+        const { data: tagId, error: tagIdError } = await supabase
+          .rpc('get_next_tag_id');
+
+        if (tagIdError || !tagId) {
+          console.error('❌ generateTag - Could not generate tag ID:', tagIdError);
+          throw new Error('Could not generate tag ID');
+        }
+
+        console.log('✅ generateTag - Tag ID generated:', tagId);
+
+        // Check if tag already exists
+        const { data: existingTag } = await supabase
+          .from('inventory_tags')
+          .select('tag_id')
+          .eq('tag_id', tagId)
+          .single();
+
+        if (existingTag) {
+          console.log('⚠️ generateTag - Tag already exists:', tagId, 'trying again...');
+          continue;
+        }
+
+        // Try to insert new tag
+        const { data: insertedTag, error: tagError } = await supabase
+          .from('inventory_tags')
+          .insert({
+            tag_id: tagId,
+            merchant_id: merchantId,
+            product_id: productId,
+            quantity: quantity,
+            net_weight: netWeight,
+            gross_weight: grossWeight,
+            status: 'Printed',
+          })
+          .select('*')
+          .single();
+
+        if (tagError) {
+          if (tagError.code === '23505') {
+            console.log('⚠️ generateTag - Duplicate key error, retrying with new tag ID...');
+            continue;
+          } else {
+            console.error('❌ generateTag - Error creating tag:', tagError);
+            throw tagError;
+          }
+        }
+
+        newTag = insertedTag;
+        console.log('✅ generateTag - Tag created successfully:', newTag);
       }
 
-      console.log('✅ generateTag - Tag ID generated:', tagId);
-
-      // Insert new tag with 'Printed' status
-      const { data: newTag, error: tagError } = await supabase
-        .from('inventory_tags')
-        .insert({
-          tag_id: tagId,
-          merchant_id: merchantId,
-          product_id: productId,
-          quantity: quantity,
-          net_weight: netWeight,
-          gross_weight: grossWeight,
-          status: 'Printed',
-        })
-        .select('*')
-        .single();
-
-      if (tagError) {
-        console.error('❌ generateTag - Error creating tag:', tagError);
-        throw tagError;
+      if (!newTag) {
+        throw new Error(`Failed to generate unique tag after ${maxAttempts} attempts`);
       }
-
-      console.log('✅ generateTag - Tag created successfully:', newTag);
 
       toast({
         title: 'Success',
