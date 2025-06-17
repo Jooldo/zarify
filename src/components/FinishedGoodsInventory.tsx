@@ -26,7 +26,7 @@ const FinishedGoodsInventory = () => {
   const queryClient = useQueryClient();
 
   const sortOptions = [
-    { value: 'required_quantity', label: 'Remaining Orders' },
+    { value: 'ordered_qty', label: 'Live Orders' },
     { value: 'current_stock', label: 'Current Stock' },
     { value: 'in_manufacturing', label: 'In Manufacturing' },
     { value: 'shortfall', label: 'Shortfall' }

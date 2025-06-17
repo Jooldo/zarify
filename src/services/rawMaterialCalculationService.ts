@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MaterialCalculationResult {
@@ -10,13 +11,11 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   console.log('🔄 Calculating required quantities for finished goods based on live orders...');
   
   // Get all order items from live orders (Created + In Progress status)
-  // Modified to account for remaining quantity after fulfillment
   const { data: liveOrderItems, error: orderItemsError } = await supabase
     .from('order_items')
     .select(`
       product_config_id,
       quantity,
-      fulfilled_quantity,
       status
     `)
     .eq('merchant_id', merchantId)
@@ -29,22 +28,20 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
 
   console.log('📊 Live order items found:', liveOrderItems?.length || 0);
 
-  // Group by product_config_id and sum remaining quantities (quantity - fulfilled_quantity)
+  // Group by product_config_id and sum quantities
   const requiredQuantitiesByConfig: { [key: string]: number } = {};
   
   liveOrderItems?.forEach(item => {
     const configId = item.product_config_id;
-    const remainingQuantity = Math.max(0, item.quantity - (item.fulfilled_quantity || 0));
-    
     if (!requiredQuantitiesByConfig[configId]) {
       requiredQuantitiesByConfig[configId] = 0;
     }
-    requiredQuantitiesByConfig[configId] += remainingQuantity;
+    requiredQuantitiesByConfig[configId] += item.quantity;
   });
 
-  console.log('📊 Required quantities by product config (remaining after fulfillment):', requiredQuantitiesByConfig);
+  console.log('📊 Required quantities by product config:', requiredQuantitiesByConfig);
 
-  // Update all finished goods - set required_quantity to 0 first, then update based on remaining live order quantities
+  // Update all finished goods - set required_quantity to 0 first, then update based on live orders
   const { error: resetError } = await supabase
     .from('finished_goods')
     .update({ required_quantity: 0 })
@@ -55,7 +52,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     throw resetError;
   }
 
-  // Update finished goods with calculated required quantities (only remaining quantities)
+  // Update finished goods with calculated required quantities
   const updatePromises = Object.entries(requiredQuantitiesByConfig).map(([configId, quantity]) =>
     supabase
       .from('finished_goods')
@@ -72,7 +69,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     throw new Error(`Failed to update ${updateErrors.length} finished goods`);
   }
 
-  console.log('✅ Finished goods required quantities updated successfully (accounting for partial fulfillment)');
+  console.log('✅ Finished goods required quantities updated successfully');
 };
 
 export const calculateAndUpdateRawMaterialRequirements = async (): Promise<MaterialCalculationResult[]> => {
