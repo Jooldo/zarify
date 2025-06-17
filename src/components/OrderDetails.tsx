@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,9 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   // Calculate order status based on order items
   const calculateOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
-    console.log('Calculating order status for items:', orderItems?.map(i => ({ id: i.id, status: i.status })));
+    console.log('=== CALCULATING ORDER STATUS ===');
+    console.log('Order items received:', orderItems?.length);
+    console.log('Items with statuses:', orderItems?.map(i => ({ id: i.id, suborder_id: i.suborder_id, status: i.status })));
     
     if (!orderItems || orderItems.length === 0) {
       console.log('No order items found, returning Created');
@@ -33,62 +36,51 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     }
     
     const statuses = orderItems.map(item => item.status);
-    console.log('Item statuses:', statuses);
+    console.log('All item statuses:', statuses);
+    
+    // Count statuses
+    const statusCounts = {
+      Created: statuses.filter(s => s === "Created").length,
+      InProgress: statuses.filter(s => s === "In Progress").length,
+      PartiallyFulfilled: statuses.filter(s => s === "Partially Fulfilled").length,
+      Ready: statuses.filter(s => s === "Ready").length,
+      Delivered: statuses.filter(s => s === "Delivered").length
+    };
+    
+    console.log('Status counts:', statusCounts);
     
     // All items delivered
-    if (statuses.every(s => s === "Delivered")) {
-      console.log('All items delivered');
+    if (statusCounts.Delivered === orderItems.length) {
+      console.log('All items delivered -> Order status: Delivered');
       return "Delivered";
     }
     
     // All items ready
-    if (statuses.every(s => s === "Ready")) {
-      console.log('All items ready');
+    if (statusCounts.Ready === orderItems.length) {
+      console.log('All items ready -> Order status: Ready');
       return "Ready";
     }
     
-    // Any item in progress or partially fulfilled, or mix of statuses
-    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled") || 
-        (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created"))) {
-      console.log('Some items in progress or mixed statuses');
+    // Any item in progress, partially fulfilled, ready, or delivered
+    if (statusCounts.InProgress > 0 || statusCounts.PartiallyFulfilled > 0 || statusCounts.Ready > 0 || statusCounts.Delivered > 0) {
+      console.log('Some items in progress/partially fulfilled/ready/delivered -> Order status: In Progress');
       return "In Progress";
     }
     
     // All items created
-    console.log('All items created');
+    console.log('All items still created -> Order status: Created');
     return "Created";
-  };
-
-  // Update order status in database
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      console.log('Updating order status in database:', { orderId, newStatus });
-      
-      const { data, error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId)
-        .select();
-
-      if (error) {
-        console.error('Database error updating order status:', error);
-        throw error;
-      }
-
-      console.log('Order status updated successfully in database:', data);
-      return data;
-    } catch (error) {
-      console.error('Failed to update order status:', error);
-      throw error;
-    }
   };
 
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
-      console.log('Starting item status update:', { itemId: item.id, oldStatus: item.status, newStatus });
+      console.log('=== STARTING ITEM STATUS UPDATE ===');
+      console.log('Item ID:', item.id);
+      console.log('Suborder ID:', item.suborder_id);
+      console.log('Old status:', item.status);
+      console.log('New status:', newStatus);
+      console.log('Order ID:', order.id);
+      console.log('Order number:', order.order_number);
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -97,38 +89,67 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
+      console.log('Updating fulfilled quantity from', item.fulfilled_quantity, 'to', fulfilledQuantityUpdate);
+
       // Update order item status
-      const { error: itemError } = await supabase
+      console.log('Updating order item in database...');
+      const { data: updatedItem, error: itemError } = await supabase
         .from('order_items')
         .update({ 
           status: newStatus,
           fulfilled_quantity: fulfilledQuantityUpdate,
           updated_at: new Date().toISOString()
         })
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .select('*')
+        .single();
 
       if (itemError) {
         console.error('Database error updating order item:', itemError);
         throw itemError;
       }
 
-      console.log('Order item status updated successfully in database');
+      console.log('Order item updated successfully:', updatedItem);
 
-      // Calculate new order status based on all order items with the updated item
-      const updatedOrderItems = order.order_items.map((orderItem: OrderItemType) => 
-        orderItem.id === item.id 
-          ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
-          : orderItem
-      );
+      // Get fresh order items from database to calculate new order status
+      console.log('Fetching fresh order items from database...');
+      const { data: freshOrderItems, error: fetchError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (fetchError) {
+        console.error('Error fetching fresh order items:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('Fresh order items fetched:', freshOrderItems?.length);
+      console.log('Fresh items statuses:', freshOrderItems?.map(i => ({ id: i.id, status: i.status })));
       
-      const newOrderStatus = calculateOrderStatus(updatedOrderItems);
-      console.log('Current order status:', order.status, '| Calculated new order status:', newOrderStatus);
+      const newOrderStatus = calculateOrderStatus(freshOrderItems || []);
+      console.log('Current order status:', order.status);
+      console.log('Calculated new order status:', newOrderStatus);
 
       // Update order status if it changed
       if (order.status !== newOrderStatus) {
         console.log('Order status needs updating from', order.status, 'to', newOrderStatus);
-        await updateOrderStatus(order.id, newOrderStatus);
-        console.log('Order status successfully updated in database');
+        
+        const { data: updatedOrder, error: orderError } = await supabase
+          .from('orders')
+          .update({ 
+            status: newOrderStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', order.id)
+          .select('*')
+          .single();
+
+        if (orderError) {
+          console.error('Database error updating order status:', orderError);
+          throw orderError;
+        }
+
+        console.log('Order status updated successfully in database:', updatedOrder);
         
         toast({
           title: 'Success',
@@ -173,9 +194,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
       console.log('Data refresh completed');
+      console.log('=== ITEM STATUS UPDATE COMPLETED ===');
       
     } catch (error) {
-      console.error('Error updating order item status:', error);
+      console.error('=== ERROR IN ITEM STATUS UPDATE ===');
+      console.error('Error details:', error);
       toast({
         title: 'Error',
         description: 'Failed to update order item status',
@@ -184,7 +207,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     }
   };
 
-  
   return (
     <div className="space-y-2 max-w-full">
       {/* Order Summary - Compact vertical layout */}
