@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,42 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { logActivity } = useActivityLog();
   const queryClient = useQueryClient();
 
+  // Calculate order status based on order items
+  const calculateOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
+    const statuses = orderItems.map(item => item.status);
+    
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled") || 
+        (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created"))) {
+      return "In Progress";
+    }
+    return "Created";
+  };
+
+  // Update order status in database
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error updating order status:', error);
+        throw error;
+      }
+
+      console.log('Order status updated to:', newStatus);
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      throw error;
+    }
+  };
+
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
       console.log('Updating order item status:', { itemId: item.id, newStatus });
@@ -34,6 +71,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
+      // Update order item status
       const { error } = await supabase
         .from('order_items')
         .update({ 
@@ -50,7 +88,23 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Order item status updated successfully');
 
-      // Simple activity logging
+      // Calculate new order status based on all order items
+      const updatedOrderItems = order.order_items.map((orderItem: OrderItemType) => 
+        orderItem.id === item.id 
+          ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
+          : orderItem
+      );
+      
+      const newOrderStatus = calculateOrderStatus(updatedOrderItems);
+      console.log('Calculated new order status:', newOrderStatus);
+
+      // Update order status if it changed
+      if (order.status !== newOrderStatus) {
+        await updateOrderStatus(order.id, newOrderStatus);
+        console.log('Order status updated from', order.status, 'to', newOrderStatus);
+      }
+
+      // Log activity
       try {
         const description = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
@@ -65,7 +119,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         
         toast({
           title: 'Success',
-          description: 'Order item status updated and logged',
+          description: 'Order item status updated successfully',
         });
         
       } catch (activityError) {

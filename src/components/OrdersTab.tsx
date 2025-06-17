@@ -100,7 +100,7 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     return Array.from(customersSet).sort();
   }, [orders]);
 
-  // Fixed: Use the actual order status from database instead of calculating
+  // Use the actual order status from database
   const getOverallOrderStatus = (orderId: string) => {
     const order = orders.find(o => o.order_number === orderId);
     if (!order) return "Created";
