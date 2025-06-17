@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
-import { format, addDays, differenceInDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addDays, differenceInDays, startOfWeek, endOfWeek, addHours, parseISO } from 'date-fns';
 
 interface GanttTask {
   id: string;
@@ -19,6 +19,7 @@ interface GanttTask {
   status: string;
   priority: string;
   productName: string;
+  estimatedHours: number;
 }
 
 const ProductionGanttView = () => {
@@ -44,7 +45,10 @@ const ProductionGanttView = () => {
     const tasks: GanttTask[] = [];
 
     orderSteps.forEach(orderStep => {
-      if (!orderStep.assigned_worker_id || orderStep.status === 'completed') return;
+      if (!orderStep.assigned_worker_id) return;
+      
+      // Include pending, in_progress, and recently completed tasks
+      if (!['pending', 'in_progress', 'completed'].includes(orderStep.status)) return;
 
       const order = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
       const stepDefinition = manufacturingSteps.find(s => s.id === orderStep.manufacturing_step_id);
@@ -52,10 +56,38 @@ const ProductionGanttView = () => {
 
       if (!order || !stepDefinition || !worker) return;
 
-      // Calculate start and end dates
-      const startDate = orderStep.started_at ? new Date(orderStep.started_at) : new Date();
-      const estimatedDuration = stepDefinition.estimated_duration_hours || 24;
-      const endDate = order.due_date ? new Date(order.due_date) : addDays(startDate, Math.ceil(estimatedDuration / 24));
+      // Calculate task start and end dates more accurately
+      let taskStartDate: Date;
+      let taskEndDate: Date;
+      
+      const estimatedHours = stepDefinition.estimated_duration_hours || 8;
+      
+      if (orderStep.started_at) {
+        // If already started, use the actual start date
+        taskStartDate = parseISO(orderStep.started_at);
+        
+        if (orderStep.completed_at) {
+          // If completed, use actual completion date
+          taskEndDate = parseISO(orderStep.completed_at);
+        } else {
+          // If in progress, estimate end date based on estimated duration
+          taskEndDate = addHours(taskStartDate, estimatedHours);
+        }
+      } else {
+        // If not started yet, estimate start date based on current time or order due date
+        const now = new Date();
+        const orderDueDate = order.due_date ? parseISO(order.due_date) : addDays(now, 7);
+        
+        // For pending tasks, start from now or a reasonable time
+        taskStartDate = now;
+        taskEndDate = addHours(taskStartDate, estimatedHours);
+        
+        // If this would go past the order due date, adjust backwards
+        if (taskEndDate > orderDueDate) {
+          taskEndDate = orderDueDate;
+          taskStartDate = addHours(taskEndDate, -estimatedHours);
+        }
+      }
 
       tasks.push({
         id: orderStep.id,
@@ -63,23 +95,29 @@ const ProductionGanttView = () => {
         workerName: worker.name,
         orderNumber: order.order_number,
         stepName: stepDefinition.step_name,
-        startDate,
-        endDate,
+        startDate: taskStartDate,
+        endDate: taskEndDate,
         status: orderStep.status,
         priority: order.priority,
         productName: order.product_name,
+        estimatedHours: estimatedHours,
       });
     });
 
-    return tasks;
+    return tasks.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   }, [orderSteps, manufacturingOrders, manufacturingSteps, workers]);
 
-  // Group tasks by worker
+  // Group tasks by worker and handle overlaps
   const tasksByWorker = useMemo(() => {
     const grouped: Record<string, GanttTask[]> = {};
     
     workers.forEach(worker => {
-      grouped[worker.id] = ganttTasks.filter(task => task.workerId === worker.id);
+      const workerTasks = ganttTasks.filter(task => task.workerId === worker.id);
+      
+      // Sort tasks by start date and handle overlaps by creating lanes
+      const sortedTasks = workerTasks.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      
+      grouped[worker.id] = sortedTasks;
     });
     
     return grouped;
@@ -99,23 +137,40 @@ const ProductionGanttView = () => {
     switch (status.toLowerCase()) {
       case 'pending': return 'border-gray-300 bg-gray-100';
       case 'in_progress': return 'border-blue-300 bg-blue-100';
+      case 'completed': return 'border-green-300 bg-green-100';
       default: return 'border-gray-300 bg-gray-100';
     }
   };
 
   const getTaskPosition = (task: GanttTask) => {
-    const startCol = timelineDates.findIndex(date => 
-      format(date, 'yyyy-MM-dd') === format(task.startDate, 'yyyy-MM-dd')
-    );
-    const endCol = timelineDates.findIndex(date => 
-      format(date, 'yyyy-MM-dd') === format(task.endDate, 'yyyy-MM-dd')
-    );
+    const timelineStart = timelineDates[0];
+    const timelineEnd = timelineDates[timelineDates.length - 1];
     
-    const start = Math.max(0, startCol);
-    const end = Math.min(timelineDates.length - 1, endCol);
-    const span = Math.max(1, end - start + 1);
+    // Calculate position based on actual dates within the timeline
+    const totalTimelineDays = differenceInDays(timelineEnd, timelineStart);
+    const taskStartDays = Math.max(0, differenceInDays(task.startDate, timelineStart));
+    const taskEndDays = Math.min(totalTimelineDays, differenceInDays(task.endDate, timelineStart));
     
-    return { start, span };
+    const startPercentage = (taskStartDays / totalTimelineDays) * 100;
+    const widthPercentage = Math.max(1, ((taskEndDays - taskStartDays) / totalTimelineDays) * 100);
+    
+    return { 
+      left: `${startPercentage}%`, 
+      width: `${widthPercentage}%`
+    };
+  };
+
+  const formatTaskTooltip = (task: GanttTask) => {
+    const duration = differenceInDays(task.endDate, task.startDate);
+    const durationText = duration === 0 ? 'Same day' : `${duration} day(s)`;
+    
+    return `${task.orderNumber} - ${task.stepName}
+Product: ${task.productName}
+Priority: ${task.priority}
+Status: ${task.status}
+Duration: ${durationText}
+Start: ${format(task.startDate, 'MMM dd, HH:mm')}
+End: ${format(task.endDate, 'MMM dd, HH:mm')}`;
   };
 
   return (
@@ -151,78 +206,102 @@ const ProductionGanttView = () => {
               </div>
 
               {/* Worker Rows */}
-              {workers.map((worker) => (
-                <div key={worker.id} className="grid grid-cols-[200px_1fr] gap-0 border-b min-h-[60px]">
-                  {/* Worker Info */}
-                  <div className="p-3 border-r bg-white flex flex-col justify-center">
-                    <div className="font-medium text-sm">{worker.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {tasksByWorker[worker.id]?.length || 0} tasks
+              {workers.map((worker) => {
+                const workerTasks = tasksByWorker[worker.id] || [];
+                const rowHeight = Math.max(60, workerTasks.length * 35 + 20); // Dynamic height based on task count
+                
+                return (
+                  <div key={worker.id} className="grid grid-cols-[200px_1fr] gap-0 border-b" style={{ minHeight: `${rowHeight}px` }}>
+                    {/* Worker Info */}
+                    <div className="p-3 border-r bg-white flex flex-col justify-center">
+                      <div className="font-medium text-sm">{worker.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {workerTasks.length} task{workerTasks.length !== 1 ? 's' : ''}
+                      </div>
+                      {workerTasks.length > 0 && (
+                        <div className="text-xs text-blue-600 mt-1">
+                          {workerTasks.filter(t => t.status === 'in_progress').length} in progress
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Timeline Grid */}
+                    <div className="relative grid grid-cols-21 bg-white">
+                      {timelineDates.map((_, index) => (
+                        <div
+                          key={index}
+                          className="border-r border-gray-100"
+                          style={{ minHeight: `${rowHeight}px` }}
+                        />
+                      ))}
+                      
+                      {/* Task Bars */}
+                      {workerTasks.map((task, taskIndex) => {
+                        const position = getTaskPosition(task);
+                        
+                        return (
+                          <div
+                            key={task.id}
+                            className={`absolute h-7 rounded border-2 ${getStatusColor(task.status)} ${getPriorityColor(task.priority)} shadow-sm cursor-pointer hover:shadow-md transition-shadow z-10 overflow-hidden`}
+                            style={{
+                              left: position.left,
+                              width: position.width,
+                              top: `${10 + taskIndex * 32}px`,
+                            }}
+                            title={formatTaskTooltip(task)}
+                          >
+                            <div className="px-2 py-1 text-xs truncate text-white font-medium">
+                              {task.orderNumber} - {task.stepName}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-
-                  {/* Timeline Grid */}
-                  <div className="relative grid grid-cols-21 bg-white">
-                    {timelineDates.map((_, index) => (
-                      <div
-                        key={index}
-                        className="border-r border-gray-100 min-h-[60px]"
-                      />
-                    ))}
-                    
-                    {/* Task Bars */}
-                    {tasksByWorker[worker.id]?.map((task, taskIndex) => {
-                      const { start, span } = getTaskPosition(task);
-                      if (start < 0 || start >= timelineDates.length) return null;
-                      
-                      return (
-                        <div
-                          key={task.id}
-                          className={`absolute h-8 rounded border-2 ${getStatusColor(task.status)} ${getPriorityColor(task.priority)} shadow-sm cursor-pointer hover:shadow-md transition-shadow z-10`}
-                          style={{
-                            left: `${(start / timelineDates.length) * 100}%`,
-                            width: `${(span / timelineDates.length) * 100}%`,
-                            top: `${8 + taskIndex * 16}px`,
-                          }}
-                          title={`${task.orderNumber} - ${task.stepName} (${task.productName})`}
-                        >
-                          <div className="px-2 py-1 text-xs truncate text-white font-medium">
-                            {task.orderNumber}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Legend */}
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold text-sm mb-2">Legend</h4>
-                <div className="flex flex-wrap gap-4 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded"></div>
-                    <span>Urgent</span>
+                <h4 className="font-semibold text-sm mb-3">Legend</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs font-medium mb-2">Priority:</div>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-500 rounded"></div>
+                        <span>Urgent</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                        <span>High</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                        <span>Medium</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded"></div>
+                        <span>Low</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                    <span>High</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                    <span>Medium</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span>Low</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-blue-300 bg-blue-100 rounded"></div>
-                    <span>In Progress</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-gray-300 bg-gray-100 rounded"></div>
-                    <span>Pending</span>
+                  <div>
+                    <div className="text-xs font-medium mb-2">Status:</div>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-gray-300 bg-gray-100 rounded"></div>
+                        <span>Pending</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-blue-300 bg-blue-100 rounded"></div>
+                        <span>In Progress</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-green-300 bg-green-100 rounded"></div>
+                        <span>Completed</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
