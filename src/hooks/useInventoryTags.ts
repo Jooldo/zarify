@@ -28,6 +28,7 @@ export const useInventoryTags = () => {
   const processTagOperation = async (tagId: string, operation: 'Tag In' | 'Tag Out', customerId?: string, orderId?: string, orderItemId?: string) => {
     try {
       setLoading(true);
+      console.log('🏷️ processTagOperation - Starting:', { tagId, operation, customerId, orderId, orderItemId });
 
       // Fetch tag data
       const { data: tagData, error: tagError } = await supabase
@@ -37,13 +38,16 @@ export const useInventoryTags = () => {
         .single();
 
       if (tagError) {
-        console.error('Error fetching tag:', tagError);
+        console.error('❌ processTagOperation - Error fetching tag:', tagError);
         throw tagError;
       }
 
       if (!tagData) {
+        console.error('❌ processTagOperation - Tag not found:', tagId);
         throw new Error('Tag not found');
       }
+
+      console.log('✅ processTagOperation - Tag data fetched:', tagData);
 
       // Update tag status
       const { error: updateError } = await supabase
@@ -57,9 +61,11 @@ export const useInventoryTags = () => {
         .eq('tag_id', tagId);
 
       if (updateError) {
-        console.error('Error updating tag status:', updateError);
+        console.error('❌ processTagOperation - Error updating tag status:', updateError);
         throw updateError;
       }
+
+      console.log('✅ processTagOperation - Tag status updated successfully');
 
       // Update finished goods stock
       if (tagData && tagData.product_id) {
@@ -71,6 +77,7 @@ export const useInventoryTags = () => {
           .single();
 
         if (finishedGood?.product_code) {
+          console.log('📝 processTagOperation - Logging tag operation:', { operation, tagId, productCode: finishedGood.product_code, quantity: tagData.quantity });
           await logTagOperation(operation, tagId, finishedGood.product_code, tagData.quantity);
         }
       }
@@ -80,7 +87,7 @@ export const useInventoryTags = () => {
         description: `Tag ${tagId} ${operation.toLowerCase()} operation successful!`,
       });
     } catch (error) {
-      console.error('Error processing tag operation:', error);
+      console.error('❌ processTagOperation - Full error:', error);
       toast({
         title: 'Error',
         description: 'Failed to process tag operation.',
@@ -94,6 +101,8 @@ export const useInventoryTags = () => {
 
   const getTagProductConfigByTagId = async (tagId: string): Promise<TagProductInfo | null> => {
     try {
+      console.log('🔍 getTagProductConfigByTagId - Starting for tagId:', tagId);
+      
       const { data: tagData, error: tagError } = await supabase
         .from('inventory_tags')
         .select(`
@@ -107,7 +116,7 @@ export const useInventoryTags = () => {
         .single();
 
       if (tagError) {
-        console.error('Error fetching tag product info:', tagError);
+        console.error('❌ getTagProductConfigByTagId - Error fetching tag product info:', tagError);
         toast({
           title: 'Error',
           description: 'Tag not found or invalid.',
@@ -117,6 +126,7 @@ export const useInventoryTags = () => {
       }
 
       if (!tagData) {
+        console.error('❌ getTagProductConfigByTagId - No tag data found for:', tagId);
         toast({
           title: 'Error',
           description: 'Tag not found.',
@@ -125,13 +135,14 @@ export const useInventoryTags = () => {
         return null;
       }
 
+      console.log('✅ getTagProductConfigByTagId - Success:', tagData);
       return {
         product_config_id: tagData.finished_goods.product_config_id,
         product_code: tagData.finished_goods.product_code,
         tag_quantity: tagData.quantity
       };
     } catch (error) {
-      console.error('Error getting tag product config:', error);
+      console.error('❌ getTagProductConfigByTagId - Error:', error);
       toast({
         title: 'Error',
         description: 'Failed to verify tag.',
@@ -144,22 +155,29 @@ export const useInventoryTags = () => {
   const manualTagIn = async (productId: string, quantity: number, netWeight?: number, grossWeight?: number) => {
     try {
       setLoading(true);
+      console.log('🏷️ manualTagIn - Starting:', { productId, quantity, netWeight, grossWeight });
 
       // Get merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
       if (merchantError || !merchantId) {
+        console.error('❌ manualTagIn - Could not get merchant ID:', merchantError);
         throw new Error('Could not get merchant ID');
       }
+
+      console.log('✅ manualTagIn - Merchant ID obtained:', merchantId);
 
       // Get next tag ID
       const { data: tagId, error: tagIdError } = await supabase
         .rpc('get_next_tag_id');
 
       if (tagIdError || !tagId) {
+        console.error('❌ manualTagIn - Could not generate tag ID:', tagIdError);
         throw new Error('Could not generate tag ID');
       }
+
+      console.log('✅ manualTagIn - Tag ID generated:', tagId);
 
       // Insert new tag
       const { data: newTag, error: tagError } = await supabase
@@ -177,9 +195,11 @@ export const useInventoryTags = () => {
         .single();
 
       if (tagError) {
-        console.error('Error creating tag:', tagError);
+        console.error('❌ manualTagIn - Error creating tag:', tagError);
         throw tagError;
       }
+
+      console.log('✅ manualTagIn - Tag created successfully:', newTag);
 
       // Get product code for logging
       const { data: finishedGood } = await supabase
@@ -189,6 +209,7 @@ export const useInventoryTags = () => {
         .single();
 
       if (finishedGood?.product_code) {
+        console.log('📝 manualTagIn - Logging operation for product:', finishedGood.product_code);
         await logTagOperation('Tag In', 'MANUAL', finishedGood.product_code, quantity);
       }
 
@@ -197,7 +218,7 @@ export const useInventoryTags = () => {
         description: `Manually tagged in ${quantity} units with tag ID ${newTag.tag_id}!`,
       });
     } catch (error) {
-      console.error('Error during manual tag in:', error);
+      console.error('❌ manualTagIn - Error during manual tag in:', error);
       toast({
         title: 'Error',
         description: 'Failed to manually tag in inventory.',
@@ -212,22 +233,29 @@ export const useInventoryTags = () => {
   const manualTagOut = async (productId: string, quantity: number, customerId?: string, orderId?: string, orderItemId?: string, netWeight?: number, grossWeight?: number) => {
     try {
       setLoading(true);
+      console.log('🏷️ manualTagOut - Starting:', { productId, quantity, customerId, orderId, orderItemId, netWeight, grossWeight });
 
       // Get merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
       if (merchantError || !merchantId) {
+        console.error('❌ manualTagOut - Could not get merchant ID:', merchantError);
         throw new Error('Could not get merchant ID');
       }
+
+      console.log('✅ manualTagOut - Merchant ID obtained:', merchantId);
 
       // Get next tag ID
       const { data: tagId, error: tagIdError } = await supabase
         .rpc('get_next_tag_id');
 
       if (tagIdError || !tagId) {
+        console.error('❌ manualTagOut - Could not generate tag ID:', tagIdError);
         throw new Error('Could not generate tag ID');
       }
+
+      console.log('✅ manualTagOut - Tag ID generated:', tagId);
 
       // Create a new tag for the tag out
       const { data: newTag, error: tagError } = await supabase
@@ -248,9 +276,11 @@ export const useInventoryTags = () => {
         .single();
 
       if (tagError) {
-        console.error('Error creating tag:', tagError);
+        console.error('❌ manualTagOut - Error creating tag:', tagError);
         throw tagError;
       }
+
+      console.log('✅ manualTagOut - Tag created successfully:', newTag);
 
       // Get product code for logging
       const { data: finishedGood } = await supabase
@@ -260,6 +290,7 @@ export const useInventoryTags = () => {
         .single();
 
       if (finishedGood?.product_code) {
+        console.log('📝 manualTagOut - Logging operation for product:', finishedGood.product_code);
         await logTagOperation('Tag Out', 'MANUAL', finishedGood.product_code, quantity);
       }
 
@@ -268,7 +299,7 @@ export const useInventoryTags = () => {
         description: `Manually tagged out ${quantity} units!`,
       });
     } catch (error) {
-      console.error('Error during manual tag out:', error);
+      console.error('❌ manualTagOut - Error during manual tag out:', error);
       toast({
         title: 'Error',
         description: 'Failed to manually tag out inventory.',
@@ -283,22 +314,29 @@ export const useInventoryTags = () => {
   const generateTag = async (productId: string, quantity: number, netWeight?: number, grossWeight?: number) => {
     try {
       setLoading(true);
+      console.log('🏷️ generateTag - Starting:', { productId, quantity, netWeight, grossWeight });
 
       // Get merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
       if (merchantError || !merchantId) {
+        console.error('❌ generateTag - Could not get merchant ID:', merchantError);
         throw new Error('Could not get merchant ID');
       }
+
+      console.log('✅ generateTag - Merchant ID obtained:', merchantId);
 
       // Get next tag ID
       const { data: tagId, error: tagIdError } = await supabase
         .rpc('get_next_tag_id');
 
       if (tagIdError || !tagId) {
+        console.error('❌ generateTag - Could not generate tag ID:', tagIdError);
         throw new Error('Could not generate tag ID');
       }
+
+      console.log('✅ generateTag - Tag ID generated:', tagId);
 
       // Insert new tag with 'Printed' status
       const { data: newTag, error: tagError } = await supabase
@@ -316,9 +354,11 @@ export const useInventoryTags = () => {
         .single();
 
       if (tagError) {
-        console.error('Error creating tag:', tagError);
+        console.error('❌ generateTag - Error creating tag:', tagError);
         throw tagError;
       }
+
+      console.log('✅ generateTag - Tag created successfully:', newTag);
 
       toast({
         title: 'Success',
@@ -327,7 +367,7 @@ export const useInventoryTags = () => {
 
       return newTag;
     } catch (error) {
-      console.error('Error generating tag:', error);
+      console.error('❌ generateTag - Error generating tag:', error);
       toast({
         title: 'Error',
         description: 'Failed to generate tag.',
