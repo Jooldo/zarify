@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders';
 import { Progress } from "@/components/ui/progress";
+import { useOrderLogging } from '@/hooks/useOrderLogging';
 
 interface OrderDetailsProps {
   order: any;
@@ -21,6 +22,7 @@ interface OrderDetailsProps {
 const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logOrderItemStatusUpdate, logOrderStatusUpdate } = useOrderLogging();
 
   const calculateOverallOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
     const statuses = orderItems.map(item => item.status);
@@ -76,6 +78,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       // Calculate new overall order status
       const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
+      const oldOrderStatus = order.status || 'Created';
 
       // Update the overall order status
       const { error: orderError } = await supabase
@@ -91,24 +94,27 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       }
 
       // Log order item status update
-      const { error: itemLogError } = await supabase.rpc('log_user_activity', {
-        p_action: 'Status Updated',
-        p_entity_type: 'Order Item',
-        p_entity_id: item.suborder_id,
-        p_description: `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`
-      });
+      await logOrderItemStatusUpdate(
+        order.id,
+        order.order_number,
+        item.product_configs?.product_code || 'Unknown',
+        item.status,
+        newStatus
+      );
 
-      // Log order status update
-      const { error: orderLogError } = await supabase.rpc('log_user_activity', {
-        p_action: 'Status Updated',
-        p_entity_type: 'Order',
-        p_entity_id: order.order_number,
-        p_description: `Order ${order.order_number} status updated to "${newOrderStatus}"`
-      });
+      // Log order status update if it changed
+      if (oldOrderStatus !== newOrderStatus) {
+        await logOrderStatusUpdate(
+          order.id,
+          order.order_number,
+          oldOrderStatus,
+          newOrderStatus
+        );
+      }
       
       toast({
         title: 'Success',
-        description: `Item status updated to ${newStatus} and order status updated to ${newOrderStatus}`,
+        description: `Item status updated to ${newStatus}`,
       });
 
       // Refresh data
@@ -125,22 +131,26 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     }
   };
 
-  // Get customer data - try multiple possible paths
+  // Get customer data with proper fallbacks
   const getCustomerData = () => {
-    // Try different possible customer data structures
-    const customer = order.customers || order.customer;
+    let customerName = 'Unknown Customer';
+    let customerPhone = '';
     
-    if (customer) {
-      return {
-        name: customer.name || 'Unknown Customer',
-        phone: customer.phone || ''
-      };
+    // Try different possible customer data structures
+    if (order.customers) {
+      customerName = order.customers.name || customerName;
+      customerPhone = order.customers.phone || '';
+    } else if (order.customer) {
+      customerName = order.customer.name || customerName;
+      customerPhone = order.customer.phone || '';
+    } else if (order.customer_name) {
+      customerName = order.customer_name;
+      customerPhone = order.customer_phone || '';
     }
     
-    // Fallback to direct properties on order
     return {
-      name: order.customer_name || 'Unknown Customer',
-      phone: order.customer_phone || ''
+      name: customerName,
+      phone: customerPhone
     };
   };
 
