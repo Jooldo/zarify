@@ -9,7 +9,7 @@ import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
 import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
-import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
+import { useOrderedQtyDetails, type RawMaterialProductDetail } from '@/hooks/useOrderedQtyDetails';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 import SortDropdown from '@/components/ui/sort-dropdown';
 
@@ -28,7 +28,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
-  const [productDetails, setProductDetails] = useState<any[]>([]);
+  const [productDetails, setProductDetails] = useState<RawMaterialProductDetail[]>([]);
   const [calculatedTotalRequired, setCalculatedTotalRequired] = useState<number>(0);
   const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
@@ -355,12 +355,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
       <OrderedQtyDetailsDialog
         isOpen={isOrderDetailsOpen}
         onClose={() => setIsOrderDetailsOpen(false)}
-        materialName={selectedMaterial?.name}
-        materialUnit={selectedMaterial?.unit}
         productDetails={productDetails}
         totalQuantity={calculatedTotalRequired}
         loading={orderDetailsLoading}
         isRawMaterial={true}
+        materialName={selectedMaterial?.name}
+        materialUnit={selectedMaterial?.unit}
       />
     </TooltipProvider>
   );

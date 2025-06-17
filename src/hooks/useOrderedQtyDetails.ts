@@ -14,6 +14,14 @@ export interface OrderDetail {
   suborder_id: string;
 }
 
+export interface RawMaterialProductDetail {
+  product_code: string;
+  product_name: string;
+  quantity_required: number;
+  total_material_required: number;
+  remaining_quantity: number;
+}
+
 export const useOrderedQtyDetails = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -48,7 +56,6 @@ export const useOrderedQtyDetails = () => {
       console.log('🔍 Product config ID for', productCode, ':', finishedGood.product_config_id);
 
       // Fetch order items for this product config with remaining quantities
-      // Include all statuses but filter for items with remaining quantity > 0
       const { data: orderItems, error: orderItemsError } = await supabase
         .from('order_items')
         .select(`
@@ -108,5 +115,92 @@ export const useOrderedQtyDetails = () => {
     }
   };
 
-  return { loading, fetchFinishedGoodOrderDetails };
+  const fetchRawMaterialProductDetails = async (materialId: string): Promise<RawMaterialProductDetail[]> => {
+    setLoading(true);
+    try {
+      console.log('🔍 Fetching product details for raw material:', materialId);
+      
+      // Get the merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID:', merchantError);
+        throw merchantError;
+      }
+
+      // Get all product configs that use this raw material
+      const { data: productConfigMaterials, error: pcmError } = await supabase
+        .from('product_config_materials')
+        .select(`
+          product_config_id,
+          quantity_required,
+          product_configs!inner(
+            product_code,
+            category,
+            subcategory,
+            size_value,
+            weight_range
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .eq('raw_material_id', materialId);
+
+      if (pcmError) {
+        console.error('Error fetching product config materials:', pcmError);
+        throw pcmError;
+      }
+
+      // Get finished goods with requirements for these product configs
+      const productConfigIds = productConfigMaterials?.map(pcm => pcm.product_config_id) || [];
+      
+      if (productConfigIds.length === 0) {
+        return [];
+      }
+
+      const { data: finishedGoods, error: fgError } = await supabase
+        .from('finished_goods')
+        .select('product_config_id, required_quantity, product_code')
+        .eq('merchant_id', merchantId)
+        .in('product_config_id', productConfigIds);
+
+      if (fgError) {
+        console.error('Error fetching finished goods:', fgError);
+        throw fgError;
+      }
+
+      // Calculate material requirements
+      const productDetails: RawMaterialProductDetail[] = productConfigMaterials?.map(pcm => {
+        const finishedGood = finishedGoods?.find(fg => fg.product_config_id === pcm.product_config_id);
+        const requiredQuantity = finishedGood?.required_quantity || 0;
+        const materialRequired = requiredQuantity * pcm.quantity_required;
+        
+        const productName = `${pcm.product_configs.category}-${pcm.product_configs.subcategory}-${pcm.product_configs.size_value}${pcm.product_configs.weight_range ? `-${pcm.product_configs.weight_range}` : ''}`;
+        
+        return {
+          product_code: pcm.product_configs.product_code,
+          product_name: productName,
+          quantity_required: pcm.quantity_required,
+          total_material_required: materialRequired,
+          remaining_quantity: requiredQuantity
+        };
+      }).filter(detail => detail.remaining_quantity > 0) || [];
+
+      console.log('📊 Raw material product details:', productDetails);
+      
+      return productDetails;
+    } catch (error) {
+      console.error('Error fetching raw material product details:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch product details',
+        variant: 'destructive',
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { loading, fetchFinishedGoodOrderDetails, fetchRawMaterialProductDetails };
 };
