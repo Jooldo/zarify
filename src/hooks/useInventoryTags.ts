@@ -209,7 +209,7 @@ export const useInventoryTags = () => {
     }
   };
 
-  const manualTagOut = async (productId: string, quantity: number, customerId?: string, orderId?: string) => {
+  const manualTagOut = async (productId: string, quantity: number, customerId?: string, orderId?: string, orderItemId?: string, netWeight?: number, grossWeight?: number) => {
     try {
       setLoading(true);
 
@@ -240,6 +240,9 @@ export const useInventoryTags = () => {
           status: 'inactive',
           customer_id: customerId,
           order_id: orderId,
+          order_item_id: orderItemId,
+          net_weight: netWeight,
+          gross_weight: grossWeight,
         })
         .select('*')
         .single();
@@ -277,11 +280,71 @@ export const useInventoryTags = () => {
     }
   };
 
+  const generateTag = async (productId: string, quantity: number, netWeight?: number, grossWeight?: number) => {
+    try {
+      setLoading(true);
+
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError || !merchantId) {
+        throw new Error('Could not get merchant ID');
+      }
+
+      // Get next tag ID
+      const { data: tagId, error: tagIdError } = await supabase
+        .rpc('get_next_tag_id');
+
+      if (tagIdError || !tagId) {
+        throw new Error('Could not generate tag ID');
+      }
+
+      // Insert new tag with 'Printed' status
+      const { data: newTag, error: tagError } = await supabase
+        .from('inventory_tags')
+        .insert({
+          tag_id: tagId,
+          merchant_id: merchantId,
+          product_id: productId,
+          quantity: quantity,
+          net_weight: netWeight,
+          gross_weight: grossWeight,
+          status: 'Printed',
+        })
+        .select('*')
+        .single();
+
+      if (tagError) {
+        console.error('Error creating tag:', tagError);
+        throw tagError;
+      }
+
+      toast({
+        title: 'Success',
+        description: `Tag ${newTag.tag_id} generated successfully!`,
+      });
+
+      return newTag;
+    } catch (error) {
+      console.error('Error generating tag:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate tag.',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     processTagOperation,
     getTagProductConfigByTagId,
     manualTagIn,
     manualTagOut,
+    generateTag,
   };
 };

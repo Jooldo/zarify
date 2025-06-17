@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderLogging } from '@/hooks/useOrderLogging';
 
-export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Partially Fulfilled' | 'Cancelled';
+export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Partially Fulfilled';
 
 export interface OrderItem {
   id: string;
@@ -19,7 +19,17 @@ export interface OrderItem {
   status: OrderStatus;
   created_at: string;
   updated_at: string;
-  product_configs?: ProductConfig;
+  product_configs?: {
+    id: string;
+    merchant_id: string;
+    product_code: string;
+    category: string;
+    subcategory: string;
+    size_value: number;
+    weight_range: string | null;
+    is_active: boolean;
+    created_at: string;
+  };
 }
 
 export interface ProductConfig {
@@ -52,8 +62,8 @@ export interface Order {
   status?: OrderStatus;
   created_at: string;
   updated_at?: string;
-  created_date: string; // Add this for backward compatibility
-  updated_date?: string; // Add this for backward compatibility
+  created_date: string;
+  updated_date?: string;
   merchant_id: string;
   customers?: Customer;
   order_items: OrderItem[];
@@ -86,7 +96,7 @@ export const useOrders = () => {
           customers(id, merchant_id, name, phone, address, created_at),
           order_items(
             *,
-            product_configs(product_code, category, subcategory, size_value, weight_range)
+            product_configs(id, merchant_id, product_code, category, subcategory, size_value, weight_range, is_active, created_at)
           )
         `)
         .eq('merchant_id', merchantId)
@@ -220,12 +230,6 @@ export const useOrders = () => {
 
   const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
     try {
-      // Only allow valid database statuses for the update
-      const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
-      if (!validStatuses.includes(status)) {
-        throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
-      }
-
       // Get current item details for logging
       const { data: currentItem } = await supabase
         .from('order_items')
@@ -275,14 +279,6 @@ export const useOrders = () => {
 
   const updateOrderItemDetails = async (itemId: string, updates: { status?: OrderStatus; fulfilled_quantity?: number }) => {
     try {
-      // Only allow valid database statuses for the update
-      if (updates.status) {
-        const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
-        if (!validStatuses.includes(updates.status)) {
-          throw new Error(`Invalid status: ${updates.status}. Must be one of: ${validStatuses.join(', ')}`);
-        }
-      }
-
       // Get current item details for logging
       const { data: currentItem } = await supabase
         .from('order_items')
@@ -332,14 +328,6 @@ export const useOrders = () => {
 
   const updateOrder = async (orderId: string, updates: Partial<Order>) => {
     try {
-      // Only allow valid database statuses for the update
-      if (updates.status) {
-        const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
-        if (!validStatuses.includes(updates.status)) {
-          throw new Error(`Invalid status: ${updates.status}. Must be one of: ${validStatuses.join(', ')}`);
-        }
-      }
-
       // Get current order details for logging
       const { data: currentOrder } = await supabase
         .from('orders')
@@ -391,10 +379,10 @@ export const useOrders = () => {
     loading, 
     error, 
     fetchOrders, 
-    refetch: fetchOrders, // Add alias for backward compatibility
+    refetch: fetchOrders,
     createOrder, 
     updateOrderItemStatus, 
-    updateOrderItemDetails, // Add this method
+    updateOrderItemDetails,
     updateOrder 
   };
 };

@@ -28,17 +28,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     try {
       console.log('Updating order item status:', { itemId: item.id, newStatus });
       
-      // Only allow valid database statuses
-      const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
-      if (!validStatuses.includes(newStatus)) {
-        toast({
-          title: 'Error',
-          description: `Invalid status: ${newStatus}. Please select a valid status.`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
         fulfilledQuantityUpdate = item.quantity;
@@ -46,11 +35,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
-      const updatePayload: { status: OrderStatus; fulfilled_quantity: number } = {
-        status: newStatus,
-        fulfilled_quantity: fulfilledQuantityUpdate,
-      };
-      
       const { error } = await supabase
         .from('order_items')
         .update({ 

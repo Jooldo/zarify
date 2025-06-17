@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useInventoryTags } from '@/hooks/useInventoryTags';
-import { useFinishedGoods } from '@/hooks/useFinishedGoods'; // For product list
+import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { Minus, Info } from 'lucide-react';
@@ -37,14 +37,14 @@ interface ManualTagOutFormProps {
 }
 
 const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
-  const [productId, setProductId] = useState(''); // This is product_config_id
+  const [productId, setProductId] = useState('');
   const [netWeight, setNetWeight] = useState('');
   const [grossWeight, setGrossWeight] = useState('');
   const [quantityToTagOut, setQuantityToTagOut] = useState('');
   const [customerId, setCustomerId] = useState('');
   
-  const [allCustomerOrders, setAllCustomerOrders] = useState<Order[]>([]); // All orders for customer
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]); // Orders filtered by product
+  const [allCustomerOrders, setAllCustomerOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [selectedOrderItemId, setSelectedOrderItemId] = useState('');
   
@@ -121,7 +121,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
           ...order,
           order_items: order.order_items.filter(
             item => item.product_config_id === productId &&
-                    (item.status !== 'Delivered' && item.fulfilled_quantity < item.quantity) // Only show items needing fulfillment
+                    (item.status !== 'Delivered' && item.fulfilled_quantity < item.quantity)
           ),
         }))
         .filter(order => order.order_items.length > 0);
@@ -175,7 +175,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
     setLoading(true);
     try {
       await manualTagOut(
-        productId, // This should be product_config_id, ensure manualTagOut uses this. The `productId` state variable IS product_config_id
+        productId,
         qty,
         customerId,
         selectedOrderId,
@@ -200,7 +200,6 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
 
   const selectedOrder = filteredOrders.find(order => order.id === selectedOrderId);
   const selectedOrderItem = selectedOrder?.order_items.find(item => item.id === selectedOrderItemId);
-
 
   return (
     <div className="space-y-3">
@@ -232,7 +231,6 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
             Selected Product: <strong>{selectedProductConfigData.product_code}</strong>
         </div>
       )}
-
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -285,7 +283,7 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
                 setSelectedOrderId(''); 
                 setSelectedOrderItemId(''); 
             }}
-            disabled={!productId} // Enable only after product is selected
+            disabled={!productId}
         >
           <SelectTrigger className="h-8" disabled={!productId}>
             <SelectValue placeholder={!productId ? "Select product first..." : "Select customer..."} />
@@ -299,7 +297,6 @@ const ManualTagOutForm = ({ onOperationComplete }: ManualTagOutFormProps) => {
           </SelectContent>
         </Select>
       </div>
-
 
       {customerId && productId && (
         <div className="space-y-1">
