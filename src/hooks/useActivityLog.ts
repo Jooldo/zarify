@@ -22,13 +22,32 @@ export const useActivityLog = () => {
 
   const fetchLogs = async () => {
     try {
+      console.log('Fetching activity logs...');
+      
+      // Get merchant ID first
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID for activity logs:', merchantError);
+        throw merchantError;
+      }
+
+      console.log('Merchant ID for activity logs:', merchantId);
+
       const { data, error } = await supabase
         .from('user_activity_log')
         .select('*')
+        .eq('merchant_id', merchantId)
         .order('timestamp', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching activity logs:', error);
+        throw error;
+      }
+      
+      console.log('Activity logs fetched successfully:', data?.length || 0, 'logs');
       setLogs(data || []);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
@@ -49,6 +68,8 @@ export const useActivityLog = () => {
     description?: string
   ) => {
     try {
+      console.log('Logging activity:', { action, entityType, entityId, description });
+      
       const { error } = await supabase.rpc('log_user_activity', {
         p_action: action,
         p_entity_type: entityType,
@@ -56,7 +77,12 @@ export const useActivityLog = () => {
         p_description: description
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error logging activity:', error);
+        throw error;
+      }
+      
+      console.log('Activity logged successfully');
       
       // Refresh logs after adding new one
       await fetchLogs();

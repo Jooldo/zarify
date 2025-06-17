@@ -1,18 +1,21 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Clock, User, FileText } from 'lucide-react';
+import { Search, Clock, User, FileText, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 const ActivityLogsTab = () => {
-  const { logs, loading } = useActivityLog();
+  const { logs, loading, refetch } = useActivityLog();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEntityType, setFilterEntityType] = useState('all');
   const [filterAction, setFilterAction] = useState('all');
+
+  console.log('ActivityLogsTab rendered with logs:', logs.length, 'loading:', loading);
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = 
@@ -34,6 +37,7 @@ const ActivityLogsTab = () => {
         return 'bg-green-100 text-green-800';
       case 'updated':
       case 'changed':
+      case 'status updated':
         return 'bg-blue-100 text-blue-800';
       case 'deleted':
       case 'removed':
@@ -48,6 +52,7 @@ const ActivityLogsTab = () => {
   const getEntityTypeIcon = (entityType: string) => {
     switch (entityType.toLowerCase()) {
       case 'order':
+      case 'order item':
         return '📦';
       case 'product':
         return '🏷️';
@@ -64,6 +69,11 @@ const ActivityLogsTab = () => {
 
   const uniqueEntityTypes = Array.from(new Set(logs.map(log => log.entity_type)));
   const uniqueActions = Array.from(new Set(logs.map(log => log.action)));
+
+  const handleRefresh = async () => {
+    console.log('Manually refreshing activity logs...');
+    await refetch();
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center p-8">Loading activity logs...</div>;
@@ -106,6 +116,24 @@ const ActivityLogsTab = () => {
         </Card>
       </div>
 
+      {/* Debug info */}
+      {logs.length === 0 && (
+        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded">
+          <p className="text-sm text-yellow-800">
+            No activity logs found. This could mean:
+          </p>
+          <ul className="text-sm text-yellow-700 mt-2 list-disc list-inside">
+            <li>No activities have been logged yet</li>
+            <li>There might be an issue with the logging system</li>
+            <li>Activities are being logged but not fetched properly</li>
+          </ul>
+          <Button onClick={handleRefresh} className="mt-2" variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Logs
+          </Button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="relative max-w-md">
@@ -140,6 +168,10 @@ const ActivityLogsTab = () => {
               ))}
             </SelectContent>
           </Select>
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -199,7 +231,7 @@ const ActivityLogsTab = () => {
         </Table>
       </div>
 
-      {filteredLogs.length === 0 && (
+      {filteredLogs.length === 0 && logs.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500 text-sm">No activity logs found matching your search.</p>
         </div>
