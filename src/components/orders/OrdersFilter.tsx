@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,7 +140,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Customer</Label>
-            <Select value={filters.customer || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, customer: value === 'all' ? '' : value }))}>
+            <Select value={filters.customer} onValueChange={(value) => setFilters(prev => ({ ...prev, customer: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All customers" />
               </SelectTrigger>
@@ -156,7 +155,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Order Status</Label>
-            <Select value={filters.orderStatus || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, orderStatus: value === 'all' ? '' : value }))}>
+            <Select value={filters.orderStatus} onValueChange={(value) => setFilters(prev => ({ ...prev, orderStatus: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -171,7 +170,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Suborder Status</Label>
-            <Select value={filters.suborderStatus || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, suborderStatus: value === 'all' ? '' : value }))}>
+            <Select value={filters.suborderStatus} onValueChange={(value) => setFilters(prev => ({ ...prev, suborderStatus: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -186,7 +185,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={filters.category || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
+            <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
@@ -201,7 +200,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Subcategory</Label>
-            <Select value={filters.subcategory || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value === 'all' ? '' : value }))}>
+            <Select value={filters.subcategory} onValueChange={(value) => setFilters(prev => ({ ...prev, subcategory: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All subcategories" />
               </SelectTrigger>
@@ -216,7 +215,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Date Range</Label>
-            <Select value={filters.dateRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value === 'all' ? '' : value }))}>
+            <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All dates" />
               </SelectTrigger>
@@ -249,7 +248,7 @@ const OrdersFilter = ({ onFiltersChange, customers, categories, subcategories }:
 
           <div className="space-y-2">
             <Label>Expected Delivery Range</Label>
-            <Select value={filters.expectedDeliveryRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, expectedDeliveryRange: value === 'all' ? '' : value }))}>
+            <Select value={filters.expectedDeliveryRange} onValueChange={(value) => setFilters(prev => ({ ...prev, expectedDeliveryRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All delivery dates" />
               </SelectTrigger>

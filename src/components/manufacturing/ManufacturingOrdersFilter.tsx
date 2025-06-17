@@ -116,7 +116,7 @@ const ManufacturingOrdersFilter = ({ onFiltersChange }: ManufacturingOrdersFilte
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -131,7 +131,7 @@ const ManufacturingOrdersFilter = ({ onFiltersChange }: ManufacturingOrdersFilte
 
           <div className="space-y-2">
             <Label>Priority</Label>
-            <Select value={filters.priority || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value === 'all' ? '' : value }))}>
+            <Select value={filters.priority} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All priorities" />
               </SelectTrigger>
@@ -156,7 +156,7 @@ const ManufacturingOrdersFilter = ({ onFiltersChange }: ManufacturingOrdersFilte
 
           <div className="space-y-2">
             <Label>Created Date Range</Label>
-            <Select value={filters.createdDateRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, createdDateRange: value === 'all' ? '' : value }))}>
+            <Select value={filters.createdDateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, createdDateRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All dates" />
               </SelectTrigger>

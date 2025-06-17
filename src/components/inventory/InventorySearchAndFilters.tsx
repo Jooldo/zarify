@@ -29,7 +29,7 @@ const InventorySearchAndFilters = ({
           className="pl-10 h-8"
         />
       </div>
-      <Select value={filterType || 'all'} onValueChange={onFilterChange}>
+      <Select value={filterType} onValueChange={onFilterChange}>
         <SelectTrigger className="w-40 h-8">
           <SelectValue placeholder="Filter by type" />
         </SelectTrigger>

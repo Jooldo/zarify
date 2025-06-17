@@ -103,7 +103,7 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Material Type</Label>
-            <Select value={filters.type || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
+            <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
@@ -118,7 +118,7 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
 
           <div className="space-y-2">
             <Label>Unit</Label>
-            <Select value={filters.unit || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
+            <Select value={filters.unit} onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All units" />
               </SelectTrigger>
@@ -133,7 +133,7 @@ const RawMaterialsConfigFilter = ({ onFiltersChange, materialTypes }: RawMateria
 
           <div className="space-y-2 md:col-span-2">
             <Label>Minimum Stock Range</Label>
-            <Select value={filters.minStockRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, minStockRange: value === 'all' ? '' : value }))}>
+            <Select value={filters.minStockRange} onValueChange={(value) => setFilters(prev => ({ ...prev, minStockRange: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All ranges" />
               </SelectTrigger>

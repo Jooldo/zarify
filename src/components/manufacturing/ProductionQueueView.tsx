@@ -3,13 +3,12 @@ import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Factory, Search, Kanban, Workflow, Calendar } from 'lucide-react';
+import { Factory, Search, Kanban, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionKanbanView from './ProductionKanbanView';
-import ProductionGanttView from './ProductionGanttView';
 import ProductionQueueFilter from './ProductionQueueFilter';
 
 interface ProductionQueueFilters {
@@ -103,18 +102,49 @@ const ProductionQueueView = () => {
     setDetailsDialogOpen(true);
   };
 
-  const handleViewDetailsById = (orderId: string) => {
-    const order = manufacturingOrders.find(o => o.id === orderId);
-    if (order) {
-      handleViewDetails(order);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">Production Queue</h2>
+      {/* Header with View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Production Queue</h2>
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={activeView === 'flow' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('flow')}
+              className="h-8 px-3"
+            >
+              <Workflow className="h-4 w-4 mr-1" />
+              Flow View
+            </Button>
+            <Button
+              variant={activeView === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('kanban')}
+              className="h-8 px-3"
+            >
+              <Kanban className="h-4 w-4 mr-1" />
+              Kanban View
+            </Button>
+          </div>
+        </div>
+
+        {/* Search and Filter Controls - Only show for flow view */}
+        {activeView === 'flow' && (
+          <div className="flex flex-col sm:flex-row gap-2 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search production queue..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-8"
+              />
+            </div>
+            <ProductionQueueFilter onFiltersChange={setFilters} />
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -125,51 +155,16 @@ const ProductionQueueView = () => {
           </div>
         </div>
       ) : (
-        <Tabs value={activeView} onValueChange={setActiveView} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="flow" className="flex items-center gap-2">
-              <Workflow className="h-4 w-4" />
-              Flow View
-            </TabsTrigger>
-            <TabsTrigger value="kanban" className="flex items-center gap-2">
-              <Kanban className="h-4 w-4" />
-              Kanban View
-            </TabsTrigger>
-            <TabsTrigger value="gantt" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Gantt View
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="flow" className="space-y-4">
-            {/* Search and Filter Controls - Only show for flow view */}
-            <div className="flex flex-col sm:flex-row gap-2 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search production queue..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-8"
-                />
-              </div>
-              <ProductionQueueFilter onFiltersChange={setFilters} />
-            </div>
-
+        <div>
+          {activeView === 'flow' ? (
             <ProductionFlowView
               manufacturingOrders={filteredOrders}
               onViewDetails={handleViewDetails}
             />
-          </TabsContent>
-
-          <TabsContent value="kanban">
+          ) : (
             <ProductionKanbanView />
-          </TabsContent>
-
-          <TabsContent value="gantt">
-            <ProductionGanttView onViewDetails={handleViewDetailsById} />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       )}
 
       {/* Manufacturing Order Details Dialog */}

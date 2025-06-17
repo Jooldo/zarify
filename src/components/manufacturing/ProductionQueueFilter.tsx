@@ -107,7 +107,7 @@ const ProductionQueueFilter = ({ onFiltersChange }: ProductionQueueFilterProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -122,7 +122,7 @@ const ProductionQueueFilter = ({ onFiltersChange }: ProductionQueueFilterProps) 
 
           <div className="space-y-2">
             <Label>Priority</Label>
-            <Select value={filters.priority || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value === 'all' ? '' : value }))}>
+            <Select value={filters.priority} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value === 'all' ? '' : value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="All priorities" />
               </SelectTrigger>
