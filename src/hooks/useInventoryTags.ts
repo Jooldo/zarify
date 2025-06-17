@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +48,22 @@ export const useInventoryTags = () => {
 
       console.log('✅ processTagOperation - Tag data fetched:', tagData);
 
+      // Get current finished goods stock for audit logging
+      const { data: currentFinishedGood, error: fgError } = await supabase
+        .from('finished_goods')
+        .select('current_stock, product_code')
+        .eq('id', tagData.product_id)
+        .single();
+
+      if (fgError) {
+        console.error('❌ processTagOperation - Error fetching finished goods:', fgError);
+        throw fgError;
+      }
+
+      const previousStock = currentFinishedGood.current_stock || 0;
+      const stockChange = operation === 'Tag In' ? tagData.quantity : -tagData.quantity;
+      const newStock = previousStock + stockChange;
+
       // Update tag status
       const { error: updateError } = await supabase
         .from('inventory_tags')
@@ -68,18 +83,86 @@ export const useInventoryTags = () => {
       console.log('✅ processTagOperation - Tag status updated successfully');
 
       // Update finished goods stock
-      if (tagData && tagData.product_id) {
-        // Get product code for logging
-        const { data: finishedGood } = await supabase
-          .from('finished_goods')
-          .select('product_code')
-          .eq('id', tagData.product_id)
+      const { error: stockUpdateError } = await supabase
+        .from('finished_goods')
+        .update({ 
+          current_stock: newStock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tagData.product_id);
+
+      if (stockUpdateError) {
+        console.error('❌ processTagOperation - Error updating stock:', stockUpdateError);
+        throw stockUpdateError;
+      }
+
+      console.log('✅ processTagOperation - Stock updated successfully');
+
+      // Log tag operation in audit trail
+      const { error: auditError } = await supabase
+        .from('tag_audit_log')
+        .insert({
+          tag_id: tagId,
+          product_id: tagData.product_id,
+          action: operation,
+          quantity: tagData.quantity,
+          previous_stock: previousStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: 'Current User', // We'll get this from user profile if needed
+          merchant_id: await supabase.rpc('get_user_merchant_id')
+        });
+
+      if (auditError) {
+        console.error('❌ processTagOperation - Error logging audit:', auditError);
+        // Don't throw here, audit logging shouldn't block the operation
+      } else {
+        console.log('✅ processTagOperation - Audit log created successfully');
+      }
+
+      // Update order item if this is a tag out operation
+      if (operation === 'Tag Out' && orderItemId) {
+        const { data: orderItem, error: orderItemFetchError } = await supabase
+          .from('order_items')
+          .select('quantity, fulfilled_quantity')
+          .eq('id', orderItemId)
           .single();
 
-        if (finishedGood?.product_code) {
-          console.log('📝 processTagOperation - Logging tag operation:', { operation, tagId, productCode: finishedGood.product_code, quantity: tagData.quantity });
-          await logTagOperation(operation, tagId, finishedGood.product_code, tagData.quantity);
+        if (orderItemFetchError) {
+          console.error('❌ processTagOperation - Error fetching order item:', orderItemFetchError);
+        } else {
+          const newFulfilledQuantity = Math.min(
+            orderItem.fulfilled_quantity + tagData.quantity,
+            orderItem.quantity
+          );
+
+          let newStatus = orderItem.fulfilled_quantity < orderItem.quantity ? 'In Progress' : 'Ready';
+          if (newFulfilledQuantity >= orderItem.quantity) {
+            newStatus = 'Ready';
+          } else if (newFulfilledQuantity > 0) {
+            newStatus = 'Partially Fulfilled';
+          }
+
+          const { error: orderItemUpdateError } = await supabase
+            .from('order_items')
+            .update({
+              fulfilled_quantity: newFulfilledQuantity,
+              status: newStatus as any
+            })
+            .eq('id', orderItemId);
+
+          if (orderItemUpdateError) {
+            console.error('❌ processTagOperation - Error updating order item:', orderItemUpdateError);
+          } else {
+            console.log('✅ processTagOperation - Order item updated successfully');
+          }
         }
+      }
+
+      // Log the activity using the inventory logging hook
+      if (currentFinishedGood?.product_code) {
+        console.log('📝 processTagOperation - Logging tag operation:', { operation, tagId, productCode: currentFinishedGood.product_code, quantity: tagData.quantity });
+        await logTagOperation(operation, tagId, currentFinishedGood.product_code, tagData.quantity);
       }
 
       toast({
@@ -179,6 +262,21 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagIn - Tag ID generated:', tagId);
 
+      // Get current stock for audit logging
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('finished_goods')
+        .select('current_stock, product_code')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ manualTagIn - Error fetching current stock:', fetchError);
+        throw fetchError;
+      }
+
+      const previousStock = currentProduct.current_stock || 0;
+      const newStock = previousStock + quantity;
+
       // Insert new tag
       const { data: newTag, error: tagError } = await supabase
         .from('inventory_tags')
@@ -201,20 +299,6 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagIn - Tag created successfully:', newTag);
 
-      // Get current stock and update it
-      const { data: currentProduct, error: fetchError } = await supabase
-        .from('finished_goods')
-        .select('current_stock')
-        .eq('id', productId)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ manualTagIn - Error fetching current stock:', fetchError);
-        throw fetchError;
-      }
-
-      const newStock = (currentProduct.current_stock || 0) + quantity;
-
       // Update finished goods stock (increase for tag in)
       const { error: stockUpdateError } = await supabase
         .from('finished_goods')
@@ -231,16 +315,31 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagIn - Stock updated successfully');
 
-      // Get product code for logging
-      const { data: finishedGood } = await supabase
-        .from('finished_goods')
-        .select('product_code')
-        .eq('id', productId)
-        .single();
+      // Log tag operation in audit trail
+      const { error: auditError } = await supabase
+        .from('tag_audit_log')
+        .insert({
+          tag_id: tagId,
+          product_id: productId,
+          action: 'Tag In',
+          quantity: quantity,
+          previous_stock: previousStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: 'Current User',
+          merchant_id: merchantId
+        });
 
-      if (finishedGood?.product_code) {
-        console.log('📝 manualTagIn - Logging operation for product:', finishedGood.product_code);
-        await logTagOperation('Tag In', 'MANUAL', finishedGood.product_code, quantity);
+      if (auditError) {
+        console.error('❌ manualTagIn - Error logging audit:', auditError);
+      } else {
+        console.log('✅ manualTagIn - Audit log created successfully');
+      }
+
+      // Log using inventory logging hook
+      if (currentProduct?.product_code) {
+        console.log('📝 manualTagIn - Logging operation for product:', currentProduct.product_code);
+        await logTagOperation('Tag In', 'MANUAL', currentProduct.product_code, quantity);
       }
 
       toast({
@@ -287,6 +386,21 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagOut - Tag ID generated:', tagId);
 
+      // Get current stock for audit logging
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('finished_goods')
+        .select('current_stock, product_code')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ manualTagOut - Error fetching current stock:', fetchError);
+        throw fetchError;
+      }
+
+      const previousStock = currentProduct.current_stock || 0;
+      const newStock = previousStock - quantity;
+
       // Create a new tag for the tag out
       const { data: newTag, error: tagError } = await supabase
         .from('inventory_tags')
@@ -312,20 +426,6 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagOut - Tag created successfully:', newTag);
 
-      // Get current stock and update it
-      const { data: currentProduct, error: fetchError } = await supabase
-        .from('finished_goods')
-        .select('current_stock')
-        .eq('id', productId)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ manualTagOut - Error fetching current stock:', fetchError);
-        throw fetchError;
-      }
-
-      const newStock = (currentProduct.current_stock || 0) - quantity;
-
       // Update finished goods stock (decrease for tag out)
       const { error: stockUpdateError } = await supabase
         .from('finished_goods')
@@ -342,16 +442,70 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagOut - Stock updated successfully');
 
-      // Get product code for logging
-      const { data: finishedGood } = await supabase
-        .from('finished_goods')
-        .select('product_code')
-        .eq('id', productId)
-        .single();
+      // Log tag operation in audit trail
+      const { error: auditError } = await supabase
+        .from('tag_audit_log')
+        .insert({
+          tag_id: tagId,
+          product_id: productId,
+          action: 'Tag Out',
+          quantity: quantity,
+          previous_stock: previousStock,
+          new_stock: newStock,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_name: 'Current User',
+          merchant_id: merchantId
+        });
 
-      if (finishedGood?.product_code) {
-        console.log('📝 manualTagOut - Logging operation for product:', finishedGood.product_code);
-        await logTagOperation('Tag Out', 'MANUAL', finishedGood.product_code, quantity);
+      if (auditError) {
+        console.error('❌ manualTagOut - Error logging audit:', auditError);
+      } else {
+        console.log('✅ manualTagOut - Audit log created successfully');
+      }
+
+      // Update order item if provided
+      if (orderItemId) {
+        const { data: orderItem, error: orderItemFetchError } = await supabase
+          .from('order_items')
+          .select('quantity, fulfilled_quantity')
+          .eq('id', orderItemId)
+          .single();
+
+        if (orderItemFetchError) {
+          console.error('❌ manualTagOut - Error fetching order item:', orderItemFetchError);
+        } else {
+          const newFulfilledQuantity = Math.min(
+            orderItem.fulfilled_quantity + quantity,
+            orderItem.quantity
+          );
+
+          let newStatus = 'In Progress';
+          if (newFulfilledQuantity >= orderItem.quantity) {
+            newStatus = 'Ready';
+          } else if (newFulfilledQuantity > 0) {
+            newStatus = 'Partially Fulfilled';
+          }
+
+          const { error: orderItemUpdateError } = await supabase
+            .from('order_items')
+            .update({
+              fulfilled_quantity: newFulfilledQuantity,
+              status: newStatus as any
+            })
+            .eq('id', orderItemId);
+
+          if (orderItemUpdateError) {
+            console.error('❌ manualTagOut - Error updating order item:', orderItemUpdateError);
+          } else {
+            console.log('✅ manualTagOut - Order item updated successfully');
+          }
+        }
+      }
+
+      // Log using inventory logging hook
+      if (currentProduct?.product_code) {
+        console.log('📝 manualTagOut - Logging operation for product:', currentProduct.product_code);
+        await logTagOperation('Tag Out', 'MANUAL', currentProduct.product_code, quantity);
       }
 
       toast({
