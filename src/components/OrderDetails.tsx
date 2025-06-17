@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,24 +58,23 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Order item status updated successfully in database');
 
-      // Log the activity
+      // Log the activity - simplified approach like manufacturing orders
       console.log('=== STARTING ACTIVITY LOG ===');
-      const activityDescription = `Order ${order.order_number} item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`;
-      console.log('About to call logActivity with:', {
-        action: 'Status Updated',
-        entityType: 'Order Item',
-        entityId: order.order_number,
-        description: activityDescription
-      });
+      const activityDescription = `Suborder ${item.suborder_id} status changed from "${item.status}" to "${newStatus}" (${fulfilledQuantityUpdate}/${item.quantity} fulfilled)`;
+      console.log('Logging activity with description:', activityDescription);
 
-      await logActivity(
-        'Status Updated',
-        'Order Item',
-        order.order_number,
-        activityDescription
-      );
-      
-      console.log('=== ACTIVITY LOG COMPLETED ===');
+      try {
+        await logActivity(
+          'Status Updated',
+          'Order Item',
+          item.suborder_id,
+          activityDescription
+        );
+        console.log('✅ Activity logged successfully');
+      } catch (logError) {
+        console.error('❌ Activity logging failed:', logError);
+        // Don't fail the whole operation if logging fails
+      }
       
       toast({
         title: 'Success',
