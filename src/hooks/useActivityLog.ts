@@ -67,67 +67,74 @@ export const useActivityLog = () => {
     description?: string
   ) => {
     try {
-      console.log('=== ACTIVITY LOG FUNCTION CALLED ===');
-      console.log('Action:', action);
-      console.log('Entity Type:', entityType);
-      console.log('Entity ID:', entityId);
-      console.log('Description:', description);
+      console.log('=== ACTIVITY LOG START ===');
+      console.log('Parameters:', { action, entityType, entityId, description });
       
-      // First check if we have a valid user session
+      // Check user authentication
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        console.error('No valid user session for activity logging:', userError);
+        console.error('❌ User authentication failed:', userError);
         throw new Error('User not authenticated');
       }
       console.log('✅ User authenticated:', user.id);
 
-      // Get merchant ID
+      // Check merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
       if (merchantError) {
-        console.error('Error getting merchant ID for activity logging:', merchantError);
-        throw new Error('Error getting merchant information: ' + merchantError.message);
+        console.error('❌ Merchant ID RPC error:', merchantError);
+        throw new Error('Failed to get merchant ID: ' + merchantError.message);
       }
-      console.log('✅ Merchant ID retrieved:', merchantId);
+      
+      if (!merchantId) {
+        console.error('❌ No merchant ID returned');
+        throw new Error('No merchant found for user');
+      }
+      console.log('✅ Merchant ID:', merchantId);
 
-      // Call the RPC function with detailed logging
-      console.log('📞 Calling log_user_activity RPC with params:', {
-        p_action: action,
-        p_entity_type: entityType,
-        p_entity_id: entityId,
-        p_description: description
-      });
-
-      const { data, error } = await supabase.rpc('log_user_activity', {
-        p_action: action,
-        p_entity_type: entityType,
-        p_entity_id: entityId,
-        p_description: description
-      });
-
-      if (error) {
-        console.error('❌ RPC Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
+      // Test direct insert first
+      console.log('🧪 Testing direct insert...');
+      const directInsertData = {
+        user_id: user.id,
+        user_name: 'Test User',
+        action: action,
+        entity_type: entityType,
+        entity_id: entityId,
+        description: description || 'Test description',
+        merchant_id: merchantId
+      };
+      
+      console.log('Direct insert data:', directInsertData);
+      
+      const { data: directResult, error: directError } = await supabase
+        .from('user_activity_log')
+        .insert(directInsertData)
+        .select()
+        .single();
+      
+      if (directError) {
+        console.error('❌ Direct insert failed:', directError);
+        console.error('Error details:', {
+          message: directError.message,
+          details: directError.details,
+          hint: directError.hint,
+          code: directError.code
         });
-        throw new Error(`Activity logging failed: ${error.message}`);
+        throw new Error('Direct insert failed: ' + directError.message);
       }
       
-      console.log('✅ RPC call successful, returned activity ID:', data);
+      console.log('✅ Direct insert successful:', directResult);
       
-      // Refresh logs after adding new one
-      console.log('🔄 Refreshing activity logs...');
+      // Refresh logs after successful insert
       await fetchLogs();
-      console.log('✅ Activity logs refreshed');
       
-      return data;
+      return directResult.id;
       
     } catch (error) {
-      console.error('❌ Critical error in logActivity:', error);
-      throw error; // Re-throw so the calling code can handle it
+      console.error('❌ Activity logging failed:', error);
+      console.error('Error stack:', error.stack);
+      throw error;
     }
   };
 
