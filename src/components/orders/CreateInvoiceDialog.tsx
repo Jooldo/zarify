@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -42,6 +43,7 @@ const CreateInvoiceDialog = ({ isOpen, onClose, order, onInvoiceCreated }: Creat
         .from('invoices')
         .insert({
           order_id: order.id,
+          customer_id: order.customer_id, // Add the required customer_id
           invoice_number: invoiceNumber,
           total_amount: order.total_amount,
           merchant_id: merchantId,

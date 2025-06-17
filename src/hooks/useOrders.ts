@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderLogging } from '@/hooks/useOrderLogging';
 
-export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Cancelled';
+export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Cancelled' | 'Partially Fulfilled';
 
 export interface OrderItem {
   id: string;
@@ -50,6 +51,8 @@ export interface Order {
   expected_delivery?: string | null;
   status?: OrderStatus;
   created_at: string;
+  created_date: string; // Add this for backward compatibility
+  updated_date?: string; // Add this for backward compatibility
   merchant_id: string;
   customers?: Customer;
   order_items: OrderItem[];
@@ -94,7 +97,14 @@ export const useOrders = () => {
         throw error;
       }
 
-      setOrders(data || []);
+      // Map the data to include backward compatibility fields
+      const mappedData = (data || []).map(order => ({
+        ...order,
+        created_date: order.created_at?.split('T')[0] || order.created_at,
+        updated_date: order.updated_at?.split('T')[0] || order.updated_at
+      }));
+
+      setOrders(mappedData);
     } catch (err) {
       const typedError = err as Error;
       console.error('Error fetching orders:', typedError);
@@ -256,6 +266,55 @@ export const useOrders = () => {
     }
   };
 
+  const updateOrderItemDetails = async (itemId: string, updates: { status?: OrderStatus; fulfilled_quantity?: number }) => {
+    try {
+      // Get current item details for logging
+      const { data: currentItem } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          orders(order_number),
+          product_configs(product_code)
+        `)
+        .eq('id', itemId)
+        .single();
+
+      const { error } = await supabase
+        .from('order_items')
+        .update(updates)
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      // Log the status update if status changed
+      if (currentItem && updates.status && currentItem.status !== updates.status) {
+        await logOrderItemStatusUpdate(
+          currentItem.order_id,
+          currentItem.orders?.order_number || '',
+          currentItem.product_configs?.product_code || '',
+          currentItem.status,
+          updates.status
+        );
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Order item updated successfully!',
+      });
+
+      await fetchOrders();
+    } catch (err) {
+      const typedError = err as Error;
+      console.error('Error updating order item:', typedError);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order item',
+        variant: 'destructive',
+      });
+      throw typedError;
+    }
+  };
+
   const updateOrder = async (orderId: string, updates: Partial<Order>) => {
     try {
       // Get current order details for logging
@@ -304,5 +363,15 @@ export const useOrders = () => {
     }
   };
 
-  return { orders, loading, error, fetchOrders, createOrder, updateOrderItemStatus, updateOrder };
+  return { 
+    orders, 
+    loading, 
+    error, 
+    fetchOrders, 
+    refetch: fetchOrders, // Add alias for backward compatibility
+    createOrder, 
+    updateOrderItemStatus, 
+    updateOrderItemDetails, // Add this method
+    updateOrder 
+  };
 };

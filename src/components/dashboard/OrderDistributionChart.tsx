@@ -9,11 +9,11 @@ import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 const chartConfig = {
   created: {
     label: 'Created',
-    color: 'hsl(217 91% 60%)', // Blue theme color
+    color: 'hsl(217 91% 60%)',
   },
   inProgress: {
     label: 'In Progress',
-    color: 'hsl(142 76% 36%)', // Green theme color
+    color: 'hsl(142 76% 36%)',
   },
 };
 
@@ -26,7 +26,9 @@ const OrderDistributionChart = () => {
     const allOrderItems = orders.flatMap(o => o.order_items);
     
     const createdCount = allOrderItems.filter(item => item.status === 'Created').length;
-    const inProgressCount = allOrderItems.filter(item => item.status === 'In Progress' || item.status === 'Partially Fulfilled').length;
+    const inProgressCount = allOrderItems.filter(item => 
+      item.status === 'In Progress' || item.status === 'Partially Fulfilled'
+    ).length;
     
     return [
       { name: 'created', value: createdCount, fill: 'var(--color-created)' },

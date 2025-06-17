@@ -1,13 +1,13 @@
+
 import { useState, useMemo, useEffect } from 'react';
-import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders'; // Use more specific types
-import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods'; // Use specific type
+import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders';
+import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { useInvoices } from '@/hooks/useInvoices';
 import { startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
-// import DeliveryTimeline from './orders/DeliveryTimeline'; // Removed
 
 export interface OrderFilters {
   customer: string;
@@ -65,13 +65,12 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     }
   }, [initialFilters, onFiltersConsumed]);
 
-
   const orderStats = useMemo(() => {
     const allOrderItems = orders.flatMap(order => order.order_items);
     return {
       total: allOrderItems.length,
       created: allOrderItems.filter(item => item.status === 'Created').length,
-      inProgress: allOrderItems.filter(item => item.status === 'In Progress').length,
+      inProgress: allOrderItems.filter(item => item.status === 'In Progress' || item.status === 'Partially Fulfilled').length,
       ready: allOrderItems.filter(item => item.status === 'Ready').length,
       delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
     };
@@ -110,37 +109,32 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     
     if (statuses.every(s => s === "Delivered")) return "Delivered";
     if (statuses.every(s => s === "Ready")) return "Ready";
-    // if (statuses.some(s => s === "Progress" || s === "Partially Fulfilled")) return "Progress"; // Adjusted for Partially Fulfilled
     if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "In Progress";
 
-
-    if (statuses.every(s => s === "Created")) return "Created"; // All items are 'Created'
+    if (statuses.every(s => s === "Created")) return "Created";
     
-    // Handle cases where some are Created and others are not (e.g. partially started)
-    // This logic might need refinement based on desired "overall" status behavior
     if (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created")) {
-        return "In Progress"; // Or a custom status like "Partially Started"
+        return "In Progress";
     }
     
-    return "Created"; // Default fallback
+    return "Created";
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "Created":
         return "secondary" as const;
-      case "In Progress": // Includes "In Progress" and "Partially Fulfilled"
+      case "In Progress":
       case "Partially Fulfilled":
         return "default" as const;
       case "Ready":
-        return "default" as const; // Or a different color like yellow/orange
+        return "default" as const;
       case "Delivered":
-        return "outline" as const; // Or a success color like green
+        return "outline" as const;
       default:
         return "secondary" as const;
     }
   };
-
 
   const getStockAvailable = (productCode: string) => {
     const finishedGood = finishedGoods.find(item => item.product_code === productCode);
@@ -159,23 +153,18 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       const weightRange = suborder.product_configs.weight_range || 'N/A';
       
       return {
-        // Spread all fields from suborder (FullOrderItem)
         ...suborder, 
-        // Add flattened fields from parent order
         orderId: order.order_number,
         customer: order.customers.name,
         phone: order.customers.phone || '',
-        createdDate: order.created_date,
-        updatedDate: order.updated_date,
+        createdDate: order.created_at,
+        updatedDate: order.updated_at,
         expectedDelivery: order.expected_delivery || '',
         totalOrderAmount: order.total_amount,
-        // Explicitly map product config fields to top-level for easier access
         productCode: suborder.product_configs.product_code,
         category: suborder.product_configs.category,
         subcategory: suborder.product_configs.subcategory,
-        // size is constructed
         size: `${sizeValue}" / ${weightRange}`,
-        // price is suborder.total_price
         price: suborder.total_price 
       };
     })
@@ -187,9 +176,9 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       const searchMatch = item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
              item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) || // Use flattened item.productCode
-             item.category.toLowerCase().includes(searchTerm.toLowerCase()) || // Use flattened item.category
-             item.subcategory.toLowerCase().includes(searchTerm.toLowerCase()); // Use flattened item.subcategory
+             item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
       if (!searchMatch) return false;
     }
 
@@ -197,8 +186,8 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     if (filters.customer && item.customer !== filters.customer) return false;
     if (filters.orderStatus && getOverallOrderStatus(item.orderId) !== filters.orderStatus) return false;
     if (filters.suborderStatus && item.status !== filters.suborderStatus) return false;
-    if (filters.category && item.category !== filters.category) return false; // Use flattened item.category
-    if (filters.subcategory && item.subcategory !== filters.subcategory) return false; // Use flattened item.subcategory
+    if (filters.category && item.category !== filters.category) return false;
+    if (filters.subcategory && item.subcategory !== filters.subcategory) return false;
 
     // Date range filter
     if (filters.dateRange) {
@@ -233,7 +222,6 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       const deliveryDate = new Date(item.expectedDelivery);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      // Ensure deliveryDate is also set to midnight for fair comparison
       const deliveryDateNormalized = new Date(deliveryDate);
       deliveryDateNormalized.setHours(0, 0, 0, 0);
       
@@ -283,11 +271,10 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       
       if (filters.expectedDeliveryTo) {
         const toDate = new Date(filters.expectedDeliveryTo);
-        toDate.setHours(23, 59, 59, 999); // Compare against end of day
-        if (deliveryDateNormalized > toDate) return false; // If delivery date (start of day) is after toDate (end of day)
+        toDate.setHours(23, 59, 59, 999);
+        if (deliveryDateNormalized > toDate) return false;
       }
     }
-
 
     // Quick filters
     if (filters.hasDeliveryDate && !item.expectedDelivery) return false;
@@ -300,25 +287,20 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       if (deliveryDate >= today) return false;
     }
     if (filters.lowStock) {
-      const stockAvailableVal = getStockAvailable(item.productCode); // Use flattened item.productCode
+      const stockAvailableVal = getStockAvailable(item.productCode);
       if (stockAvailableVal >= item.quantity) return false;
     }
     if (filters.stockAvailable) {
-      const stockAvailableVal = getStockAvailable(item.productCode); // Use flattened item.productCode
+      const stockAvailableVal = getStockAvailable(item.productCode);
       if (stockAvailableVal < item.quantity) return false;
     }
 
     return true;
   }), [flattenedOrders, searchTerm, filters, getOverallOrderStatus, getStockAvailable, orders]);
 
-
-  // The OrdersTable component will now handle its own skeleton based on the loading prop passed to it.
-
   return (
     <div className="space-y-4">
       <OrdersStatsHeader orderStats={orderStats} />
-      
-      {/* <DeliveryTimeline ... /> Removed */}
       
       <OrdersHeader 
         searchTerm={searchTerm} 
@@ -332,9 +314,9 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
       
       <OrdersTable 
         filteredOrders={filteredOrders}
-        orders={orders} // Pass the original orders structure
-        finishedGoods={finishedGoods} // Pass finished goods data
-        loading={loading || fgLoading} // Pass the combined loading state
+        orders={orders}
+        finishedGoods={finishedGoods}
+        loading={loading || fgLoading}
         getOverallOrderStatus={getOverallOrderStatus}
         getStatusVariant={getStatusVariant}
         getStockAvailable={getStockAvailable}

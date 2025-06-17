@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -5,16 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCheck, Truck, PieChart } from 'lucide-react'; // Added PieChart for partial
+import { CheckCheck, Truck, PieChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useQueryClient } from '@tanstack/react-query';
-import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders'; // Import OrderStatus and OrderItem type
-import { Progress } from "@/components/ui/progress"; // For visual progress
+import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders';
+import { Progress } from "@/components/ui/progress";
 
 interface OrderDetailsProps {
-  order: any; // Consider using the stronger Order type from useOrders
+  order: any;
   onOrderUpdate: () => void;
 }
 
@@ -23,8 +24,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { logActivity } = useActivityLog();
   const queryClient = useQueryClient();
 
-  // Using updateOrderItemDetails from useOrders (implicitly, as it's not directly imported here but assumed to be part of onOrderUpdate flow or similar)
-  // The direct supabase call pattern here will be updated.
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
       console.log('Updating order item status:', { itemId: item.id, newStatus });
@@ -35,16 +34,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       } else if (newStatus === 'Created') {
         fulfilledQuantityUpdate = 0;
       }
-      // For 'Progress', 'Ready', 'Partially Fulfilled', fulfilled_quantity is managed by other processes (e.g. tag-out)
-      // or preserved if manually set.
 
       const updatePayload: { status: OrderStatus; fulfilled_quantity: number } = {
         status: newStatus,
         fulfilled_quantity: fulfilledQuantityUpdate,
       };
       
-      // This part needs to call the hook's update function if we refactor fully.
-      // For now, keeping direct Supabase update as per original structure, but using refined payload.
       const { error } = await supabase
         .from('order_items')
         .update({ 
@@ -107,7 +102,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Order Date:</Label>
-              <div>{new Date(order.created_date).toLocaleDateString()}</div>
+              <div>{new Date(order.created_at).toLocaleDateString()}</div>
             </div>
             {order.expected_delivery && (
               <div className="flex justify-between">
@@ -191,6 +186,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                         <SelectItem value="Partially Fulfilled">Partially Fulfilled</SelectItem>
                         <SelectItem value="Ready">Ready</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

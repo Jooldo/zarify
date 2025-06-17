@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -84,10 +85,28 @@ export const useInventoryTags = () => {
     try {
       setLoading(true);
 
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError || !merchantId) {
+        throw new Error('Could not get merchant ID');
+      }
+
+      // Get next tag ID
+      const { data: tagId, error: tagIdError } = await supabase
+        .rpc('get_next_tag_id');
+
+      if (tagIdError || !tagId) {
+        throw new Error('Could not generate tag ID');
+      }
+
       // Insert new tag
       const { data: newTag, error: tagError } = await supabase
         .from('inventory_tags')
         .insert({
+          tag_id: tagId,
+          merchant_id: merchantId,
           product_id: productId,
           quantity: quantity,
           net_weight: netWeight,
@@ -115,7 +134,7 @@ export const useInventoryTags = () => {
 
       toast({
         title: 'Success',
-        description: `Manually tagged in ${quantity} units with tag ID ${newTag.id}!`,
+        description: `Manually tagged in ${quantity} units with tag ID ${newTag.tag_id}!`,
       });
     } catch (error) {
       console.error('Error during manual tag in:', error);
@@ -134,10 +153,28 @@ export const useInventoryTags = () => {
     try {
       setLoading(true);
 
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError || !merchantId) {
+        throw new Error('Could not get merchant ID');
+      }
+
+      // Get next tag ID
+      const { data: tagId, error: tagIdError } = await supabase
+        .rpc('get_next_tag_id');
+
+      if (tagIdError || !tagId) {
+        throw new Error('Could not generate tag ID');
+      }
+
       // Create a new tag for the tag out
       const { data: newTag, error: tagError } = await supabase
         .from('inventory_tags')
         .insert({
+          tag_id: tagId,
+          merchant_id: merchantId,
           product_id: productId,
           quantity: -quantity, // Use negative quantity for tag out
           status: 'inactive',
