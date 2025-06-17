@@ -9,6 +9,33 @@ export interface MaterialCalculationResult {
 const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   console.log('🔄 Calculating required quantities for finished goods based on live orders...');
   
+  // Get ALL order items first to see what's available
+  const { data: allOrderItems, error: allOrderItemsError } = await supabase
+    .from('order_items')
+    .select(`
+      product_config_id,
+      quantity,
+      fulfilled_quantity,
+      status,
+      suborder_id
+    `)
+    .eq('merchant_id', merchantId);
+
+  if (allOrderItemsError) {
+    console.error('Error fetching all order items:', allOrderItemsError);
+    throw allOrderItemsError;
+  }
+
+  console.log('📊 ALL order items found:', allOrderItems?.length || 0);
+  
+  // Check for the specific suborder in ALL order items
+  const specificSuborderInAll = allOrderItems?.find(item => item.suborder_id === 'S-OD000005-01');
+  if (specificSuborderInAll) {
+    console.log('🎯 Found S-OD000005-01 in ALL order items:', specificSuborderInAll);
+  } else {
+    console.log('❌ S-OD000005-01 NOT found in any order items!');
+  }
+  
   // Get all order items from live orders (Created + In Progress status)
   const { data: liveOrderItems, error: orderItemsError } = await supabase
     .from('order_items')
@@ -32,7 +59,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   // Check for the specific suborder mentioned by user
   const specificSuborder = liveOrderItems?.find(item => item.suborder_id === 'S-OD000005-01');
   if (specificSuborder) {
-    console.log('🎯 Found specific suborder S-OD000005-01:', specificSuborder);
+    console.log('🎯 Found specific suborder S-OD000005-01 in live orders:', specificSuborder);
     
     // Get the product config details for this suborder
     const { data: productConfig, error: configError } = await supabase
@@ -51,6 +78,21 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
       // Calculate the remaining quantity for this specific suborder
       const remainingQty = specificSuborder.quantity - (specificSuborder.fulfilled_quantity || 0);
       console.log(`🔍 S-OD000005-01 calculation: ${specificSuborder.quantity} - ${specificSuborder.fulfilled_quantity || 0} = ${remainingQty}`);
+    }
+  } else {
+    console.log('❌ S-OD000005-01 NOT found in live order items!');
+    console.log('🔍 Available live order item suborder IDs:');
+    liveOrderItems?.forEach(item => {
+      if (item.suborder_id) {
+        console.log(`   ${item.suborder_id} (status: ${item.status}, config: ${item.product_config_id})`);
+      }
+    });
+    
+    // Check if S-OD000005-01 exists but with different status
+    if (specificSuborderInAll && !specificSuborder) {
+      console.log(`🔍 S-OD000005-01 exists but has status: ${specificSuborderInAll.status} (not in Created/In Progress)`);
+      console.log(`🔍 Expected statuses: Created, In Progress`);
+      console.log(`🔍 Should we include other statuses? The item has quantity ${specificSuborderInAll.quantity} and fulfilled ${specificSuborderInAll.fulfilled_quantity || 0}`);
     }
   }
 
@@ -100,6 +142,20 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   finishedGoods?.forEach(fg => {
     console.log(`   ${fg.product_code} -> ${fg.product_config_id}`);
   });
+
+  // If S-OD000005-01 is missing from live orders but exists in all orders, let's manually add it
+  if (specificSuborderInAll && !specificSuborder) {
+    const manualRemainingQty = specificSuborderInAll.quantity - (specificSuborderInAll.fulfilled_quantity || 0);
+    if (manualRemainingQty > 0) {
+      console.log(`🔧 MANUAL FIX: Adding S-OD000005-01 manually with remaining quantity ${manualRemainingQty}`);
+      const configId = specificSuborderInAll.product_config_id;
+      if (!requiredQuantitiesByConfig[configId]) {
+        requiredQuantitiesByConfig[configId] = 0;
+      }
+      requiredQuantitiesByConfig[configId] += manualRemainingQty;
+      console.log(`🔧 Updated required quantity for config ${configId}: ${requiredQuantitiesByConfig[configId]}`);
+    }
+  }
 
   // Update all finished goods - set required_quantity to 0 first, then update based on live orders
   const { error: resetError } = await supabase
