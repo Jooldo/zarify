@@ -34,23 +34,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     return "Created";
   };
 
-  const logActivity = async (action: string, entityType: string, entityId: string, description: string) => {
-    try {
-      const { error } = await supabase.rpc('log_user_activity', {
-        p_action: action,
-        p_entity_type: entityType,
-        p_entity_id: entityId,
-        p_description: description
-      });
-      
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      // Silently fail activity logging to not block the main operation
-    }
-  };
-
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
@@ -60,7 +43,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
-      // Update the order item status
+      // Update the order item status and fulfilled quantity
       const { error: itemError } = await supabase
         .from('order_items')
         .update({ 
@@ -71,30 +54,30 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         .eq('id', item.id);
 
       if (itemError) {
-        throw new Error(`Failed to update order item: ${itemError.message}`);
+        throw itemError;
       }
 
-      // Fetch fresh order items to calculate overall status
-      const { data: freshOrderItems, error: fetchError } = await supabase
+      // Fetch all order items to calculate new overall status
+      const { data: allOrderItems, error: fetchError } = await supabase
         .from('order_items')
         .select('*')
         .eq('order_id', order.id);
 
       if (fetchError) {
-        throw new Error(`Failed to fetch order items: ${fetchError.message}`);
+        throw fetchError;
       }
 
-      // Update the specific item in the fresh data
-      const updatedOrderItems = freshOrderItems.map(freshItem => 
-        freshItem.id === item.id 
-          ? { ...freshItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
-          : freshItem
+      // Update the specific item in the fetched data
+      const updatedOrderItems = allOrderItems.map(orderItem => 
+        orderItem.id === item.id 
+          ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
+          : orderItem
       );
 
       // Calculate new overall order status
       const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
 
-      // Update the overall order status in the database
+      // Update the overall order status
       const { error: orderError } = await supabase
         .from('orders')
         .update({ 
@@ -104,50 +87,68 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         .eq('id', order.id);
 
       if (orderError) {
-        throw new Error(`Failed to update order status: ${orderError.message}`);
+        throw orderError;
       }
 
-      // Log activities
-      await logActivity(
-        'Status Updated',
-        'Order Item',
-        item.suborder_id,
-        `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`
-      );
+      // Log order item status update
+      const { error: itemLogError } = await supabase.rpc('log_user_activity', {
+        p_action: 'Status Updated',
+        p_entity_type: 'Order Item',
+        p_entity_id: item.suborder_id,
+        p_description: `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`
+      });
 
-      await logActivity(
-        'Status Updated',
-        'Order',
-        order.order_number,
-        `Order ${order.order_number} status updated to "${newOrderStatus}" based on item status changes`
-      );
+      // Log order status update
+      const { error: orderLogError } = await supabase.rpc('log_user_activity', {
+        p_action: 'Status Updated',
+        p_entity_type: 'Order',
+        p_entity_id: order.order_number,
+        p_description: `Order ${order.order_number} status updated to "${newOrderStatus}"`
+      });
       
       toast({
         title: 'Success',
-        description: `Order item and overall order status updated successfully`,
+        description: `Item status updated to ${newStatus} and order status updated to ${newOrderStatus}`,
       });
 
       // Refresh data
       await onOrderUpdate();
-      queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
-      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       
     } catch (error) {
+      console.error('Error updating status:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update order item status',
+        description: `Failed to update status: ${error.message}`,
         variant: 'destructive',
       });
     }
   };
 
-  // Safely get customer data
-  const customerName = order.customers?.name || order.customer?.name || 'Customer data not available';
-  const customerPhone = order.customers?.phone || order.customer?.phone || '';
+  // Get customer data - try multiple possible paths
+  const getCustomerData = () => {
+    // Try different possible customer data structures
+    const customer = order.customers || order.customer;
+    
+    if (customer) {
+      return {
+        name: customer.name || 'Unknown Customer',
+        phone: customer.phone || ''
+      };
+    }
+    
+    // Fallback to direct properties on order
+    return {
+      name: order.customer_name || 'Unknown Customer',
+      phone: order.customer_phone || ''
+    };
+  };
+
+  const customerData = getCustomerData();
   
   return (
     <div className="space-y-2 max-w-full">
-      {/* Order Summary - Compact vertical layout */}
+      {/* Order Summary */}
       <Card>
         <CardHeader className="pb-1">
           <CardTitle className="text-sm">Order Summary</CardTitle>
@@ -160,12 +161,12 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Customer:</Label>
-              <div className="font-semibold">{customerName}</div>
+              <div className="font-semibold">{customerData.name}</div>
             </div>
-            {customerPhone && (
+            {customerData.phone && (
               <div className="flex justify-between">
                 <Label className="text-xs text-gray-500">Phone:</Label>
-                <div>{customerPhone}</div>
+                <div>{customerData.phone}</div>
               </div>
             )}
             <div className="flex justify-between">
@@ -192,7 +193,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         </CardContent>
       </Card>
 
-      {/* Order Items - Compact table with smaller font sizes */}
+      {/* Order Items */}
       <Card>
         <CardHeader className="pb-1">
           <CardTitle className="text-sm">Order Items</CardTitle>
