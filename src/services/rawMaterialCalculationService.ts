@@ -34,6 +34,17 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   const specificSuborder = liveOrderItems?.find(item => item.suborder_id === 'S-OD000005-01');
   if (specificSuborder) {
     console.log('🎯 Found specific suborder S-OD000005-01:', specificSuborder);
+    
+    // Also check if this product config matches AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G
+    const { data: productConfig, error: configError } = await supabase
+      .from('product_configs')
+      .select('product_code')
+      .eq('id', specificSuborder.product_config_id)
+      .single();
+      
+    if (productConfig) {
+      console.log(`🔍 S-OD000005-01 is for product: ${productConfig.product_code}`);
+    }
   }
 
   // Group by product_config_id and sum remaining quantities (quantity - fulfilled_quantity)
@@ -61,6 +72,10 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   });
 
   console.log('📊 Required quantities by product config (remaining only):', requiredQuantitiesByConfig);
+
+  // Check specifically for the AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G product config
+  const agrProductConfigId = "430afd6f-6434-45d1-a19f-8cdd505436b3";
+  console.log(`🔍 AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G (${agrProductConfigId}) required quantity:`, requiredQuantitiesByConfig[agrProductConfigId] || 0);
 
   // Update all finished goods - set required_quantity to 0 first, then update based on live orders
   const { error: resetError } = await supabase
