@@ -1,179 +1,17 @@
 
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCheck, Truck, PieChart } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { OrderStatus, OrderItem as OrderItemType } from '@/hooks/useOrders';
 import { Progress } from "@/components/ui/progress";
 
 interface OrderDetailsProps {
   order: any;
-  onOrderUpdate: () => void;
 }
 
-const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
+const OrderDetails = ({ order }: OrderDetailsProps) => {
   console.log('OrderDetails - Full order object:', order);
   console.log('OrderDetails - Order items:', order.order_items);
-
-  const calculateOverallOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
-    const statuses = orderItems.map(item => item.status);
-    console.log('calculateOverallOrderStatus - Item statuses:', statuses);
-    
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.every(s => s === "Ready")) return "Ready";
-    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled")) return "In Progress";
-    if (statuses.every(s => s === "Created")) return "Created";
-    if (statuses.some(s => s !== "Created")) return "In Progress";
-    
-    return "Created";
-  };
-
-  const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
-    console.log('handleItemStatusUpdate - Starting update:', { 
-      itemId: item.id, 
-      oldStatus: item.status, 
-      newStatus,
-      orderId: order.id,
-      orderNumber: order.order_number
-    });
-
-    try {
-      let fulfilledQuantityUpdate = item.fulfilled_quantity;
-      if (newStatus === 'Delivered') {
-        fulfilledQuantityUpdate = item.quantity;
-      } else if (newStatus === 'Created') {
-        fulfilledQuantityUpdate = 0;
-      }
-
-      console.log('handleItemStatusUpdate - Updating item with:', {
-        status: newStatus,
-        fulfilled_quantity: fulfilledQuantityUpdate
-      });
-
-      // Update the order item status and fulfilled quantity
-      const { error: itemError } = await supabase
-        .from('order_items')
-        .update({ 
-          status: newStatus,
-          fulfilled_quantity: fulfilledQuantityUpdate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', item.id);
-
-      if (itemError) {
-        console.error('handleItemStatusUpdate - Item update error:', itemError);
-        throw itemError;
-      }
-
-      console.log('handleItemStatusUpdate - Item updated successfully');
-
-      // Fetch all order items to calculate new overall status
-      const { data: allOrderItems, error: fetchError } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', order.id);
-
-      if (fetchError) {
-        console.error('handleItemStatusUpdate - Fetch error:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('handleItemStatusUpdate - All order items fetched:', allOrderItems);
-
-      // Update the specific item in the fetched data
-      const updatedOrderItems = allOrderItems.map(orderItem => 
-        orderItem.id === item.id 
-          ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
-          : orderItem
-      );
-
-      // Calculate new overall order status
-      const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
-      const oldOrderStatus = order.status || 'Created';
-
-      console.log('handleItemStatusUpdate - Status calculation:', {
-        oldOrderStatus,
-        newOrderStatus,
-        shouldUpdate: oldOrderStatus !== newOrderStatus
-      });
-
-      // Update the overall order status
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ 
-          status: newOrderStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id);
-
-      if (orderError) {
-        console.error('handleItemStatusUpdate - Order update error:', orderError);
-        throw orderError;
-      }
-
-      console.log('handleItemStatusUpdate - Order status updated successfully');
-
-      // Log order item status update
-      console.log('handleItemStatusUpdate - Logging item status update...');
-      const { error: itemLogError } = await supabase.rpc('log_user_activity', {
-        p_action: 'Item Status Updated',
-        p_entity_type: 'Order Item',
-        p_entity_id: order.id,
-        p_description: `Order ${order.order_number} item ${item.product_configs?.product_code || 'Unknown'} status changed from ${item.status} to ${newStatus}`
-      });
-
-      if (itemLogError) {
-        console.error('handleItemStatusUpdate - Item log error:', itemLogError);
-      } else {
-        console.log('handleItemStatusUpdate - Item activity logged successfully');
-      }
-
-      // Log order status update if it changed
-      if (oldOrderStatus !== newOrderStatus) {
-        console.log('handleItemStatusUpdate - Logging order status update...');
-        const { error: orderLogError } = await supabase.rpc('log_user_activity', {
-          p_action: 'Status Updated',
-          p_entity_type: 'Order',
-          p_entity_id: order.id,
-          p_description: `Order ${order.order_number} status changed from ${oldOrderStatus} to ${newOrderStatus}`
-        });
-
-        if (orderLogError) {
-          console.error('handleItemStatusUpdate - Order log error:', orderLogError);
-        } else {
-          console.log('handleItemStatusUpdate - Order activity logged successfully');
-        }
-      }
-      
-      toast({
-        title: 'Success',
-        description: `Item status updated to ${newStatus}`,
-      });
-
-      console.log('handleItemStatusUpdate - Refreshing data...');
-      // Refresh data
-      await onOrderUpdate();
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      
-    } catch (error) {
-      console.error('handleItemStatusUpdate - Full error:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to update status: ${error.message}`,
-        variant: 'destructive',
-      });
-    }
-  };
 
   // Get customer data with proper fallbacks
   const getCustomerData = () => {
@@ -272,7 +110,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-1.5">
-            {order.order_items.map((item: OrderItemType) => {
+            {order.order_items.map((item: any) => {
               const sizeValue = item.product_configs?.size_value || 'N/A';
               const weightRange = item.product_configs?.weight_range || 'N/A';
               const sizeWeight = `${sizeValue}" / ${weightRange}`;
@@ -321,24 +159,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                       <span className="text-gray-500">Sub Amount:</span>
                       <span className="font-medium">₹{item.total_price.toLocaleString()}</span>
                     </div>
-                  </div>
-                  
-                  <div className="pt-1 border-t border-gray-300">
-                    <Select 
-                      value={item.status}
-                      onValueChange={(value) => handleItemStatusUpdate(item, value as OrderStatus)}
-                    >
-                      <SelectTrigger className="w-full h-6 text-xs">
-                        <SelectValue placeholder={`Update status (${item.status})`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Created">Created</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Partially Fulfilled">Partially Fulfilled</SelectItem>
-                        <SelectItem value="Ready">Ready</SelectItem>
-                        <SelectItem value="Delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               );

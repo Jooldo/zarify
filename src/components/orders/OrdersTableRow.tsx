@@ -115,16 +115,14 @@ const OrdersTableRow = ({
   );
 
   const handleOrderUpdateAndCloseDialogs = async () => {
-    await onOrderUpdate(); // This should refetch orders and invoices
+    await onOrderUpdate();
     setIsOrderDetailsOpen(false);
     setIsSuborderDetailsOpen(false);
     setIsEditDialogOpen(false);
-    // No need to refetchInvoices separately if onOrderUpdate handles it
   };
 
   const handleInvoiceCreated = async () => {
     await onOrderUpdate();
-    // await refetchInvoices(); // Already handled by onOrderUpdate
     setIsCreateInvoiceDialogOpen(false);
   };
 
@@ -135,13 +133,11 @@ const OrdersTableRow = ({
     quantity: item.quantity,
     fulfilled_quantity: item.fulfilled_quantity,
     unit_price: item.unit_price,
-    total_price: item.price, // item.price is suborder total_price
+    total_price: item.price,
     status: item.status as OrderStatus,
     product_config_id: item.product_config_id,
     product_configs: item.product_configs,
     updated_at: item.updatedDate,
-    // The following are part of the OrderItem type but might not be directly on `item` if it's a simplified object.
-    // Assuming they exist on `item` because it's spread from the original suborder.
     // @ts-ignore
     created_at: item.createdDate,
     // @ts-ignore
@@ -149,7 +145,6 @@ const OrdersTableRow = ({
     // @ts-ignore
     merchant_id: item.merchant_id,
   };
-
 
   return (
     <>
@@ -280,10 +275,7 @@ const OrdersTableRow = ({
             <DialogHeader>
               <DialogTitle className="text-sm">Order Details: {parentOrder.order_number}</DialogTitle>
             </DialogHeader>
-            <OrderDetails 
-              order={parentOrder} 
-              onOrderUpdate={handleOrderUpdateAndCloseDialogs} // Ensure dialog closes
-            />
+            <OrderDetails order={parentOrder} />
           </DialogContent>
         </Dialog>
       )}
@@ -294,7 +286,6 @@ const OrdersTableRow = ({
           onClose={() => setIsSuborderDetailsOpen(false)}
           suborderItem={suborderItemForDialog}
           parentOrder={parentOrder}
-          onSuborderUpdate={handleOrderUpdateAndCloseDialogs}
         />
       )}
       
@@ -302,7 +293,7 @@ const OrdersTableRow = ({
          <ViewFinishedGoodDialog
             isOpen={isViewProductOpen}
             onClose={() => setIsViewProductOpen(false)}
-            product={selectedFinishedGood} // Pass the full FinishedGood object
+            product={selectedFinishedGood}
           />
       )}
 
@@ -311,7 +302,7 @@ const OrdersTableRow = ({
           <EditOrderDialog
             isOpen={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
-            order={parentOrder} // EditOrderDialog might need to be adapted for single item editing or use SuborderDetailsDialog for edits too
+            order={parentOrder}
             onOrderUpdate={handleOrderUpdateAndCloseDialogs}
           />
           
