@@ -201,11 +201,25 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagIn - Tag created successfully:', newTag);
 
+      // Get current stock and update it
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('finished_goods')
+        .select('current_stock')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ manualTagIn - Error fetching current stock:', fetchError);
+        throw fetchError;
+      }
+
+      const newStock = (currentProduct.current_stock || 0) + quantity;
+
       // Update finished goods stock (increase for tag in)
       const { error: stockUpdateError } = await supabase
         .from('finished_goods')
         .update({ 
-          current_stock: supabase.sql`current_stock + ${quantity}`,
+          current_stock: newStock,
           updated_at: new Date().toISOString()
         })
         .eq('id', productId);
@@ -298,11 +312,25 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagOut - Tag created successfully:', newTag);
 
+      // Get current stock and update it
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('finished_goods')
+        .select('current_stock')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ manualTagOut - Error fetching current stock:', fetchError);
+        throw fetchError;
+      }
+
+      const newStock = (currentProduct.current_stock || 0) - quantity;
+
       // Update finished goods stock (decrease for tag out)
       const { error: stockUpdateError } = await supabase
         .from('finished_goods')
         .update({ 
-          current_stock: supabase.sql`current_stock - ${quantity}`,
+          current_stock: newStock,
           updated_at: new Date().toISOString()
         })
         .eq('id', productId);
