@@ -24,7 +24,6 @@ export const useActivityLog = () => {
     try {
       console.log('Fetching activity logs...');
       
-      // Get merchant ID first
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
@@ -67,73 +66,26 @@ export const useActivityLog = () => {
     description?: string
   ) => {
     try {
-      console.log('=== ACTIVITY LOG START ===');
-      console.log('Parameters:', { action, entityType, entityId, description });
+      console.log('Simple activity log:', { action, entityType, entityId, description });
       
-      // Check user authentication
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ User authentication failed:', userError);
-        throw new Error('User not authenticated');
-      }
-      console.log('✅ User authenticated:', user.id);
+      const { data, error } = await supabase.rpc('log_user_activity', {
+        p_action: action,
+        p_entity_type: entityType,
+        p_entity_id: entityId,
+        p_description: description
+      });
 
-      // Check merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
+      if (error) {
+        console.error('Activity log RPC error:', error);
+        throw error;
+      }
 
-      if (merchantError) {
-        console.error('❌ Merchant ID RPC error:', merchantError);
-        throw new Error('Failed to get merchant ID: ' + merchantError.message);
-      }
-      
-      if (!merchantId) {
-        console.error('❌ No merchant ID returned');
-        throw new Error('No merchant found for user');
-      }
-      console.log('✅ Merchant ID:', merchantId);
-
-      // Test direct insert first
-      console.log('🧪 Testing direct insert...');
-      const directInsertData = {
-        user_id: user.id,
-        user_name: 'Test User',
-        action: action,
-        entity_type: entityType,
-        entity_id: entityId,
-        description: description || 'Test description',
-        merchant_id: merchantId
-      };
-      
-      console.log('Direct insert data:', directInsertData);
-      
-      const { data: directResult, error: directError } = await supabase
-        .from('user_activity_log')
-        .insert(directInsertData)
-        .select()
-        .single();
-      
-      if (directError) {
-        console.error('❌ Direct insert failed:', directError);
-        console.error('Error details:', {
-          message: directError.message,
-          details: directError.details,
-          hint: directError.hint,
-          code: directError.code
-        });
-        throw new Error('Direct insert failed: ' + directError.message);
-      }
-      
-      console.log('✅ Direct insert successful:', directResult);
-      
-      // Refresh logs after successful insert
+      console.log('Activity logged successfully:', data);
       await fetchLogs();
-      
-      return directResult.id;
+      return data;
       
     } catch (error) {
-      console.error('❌ Activity logging failed:', error);
-      console.error('Error stack:', error.stack);
+      console.error('Failed to log activity:', error);
       throw error;
     }
   };

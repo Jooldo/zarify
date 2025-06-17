@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
-      console.log('=== ORDER ITEM STATUS UPDATE STARTED ===');
       console.log('Updating order item status:', { itemId: item.id, newStatus });
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
@@ -35,11 +33,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       } else if (newStatus === 'Created') {
         fulfilledQuantityUpdate = 0;
       }
-
-      console.log('Updating database with:', { 
-        status: newStatus, 
-        fulfilled_quantity: fulfilledQuantityUpdate 
-      });
 
       const { error } = await supabase
         .from('order_items')
@@ -55,27 +48,20 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         throw error;
       }
 
-      console.log('✅ Order item status updated successfully in database');
+      console.log('Order item status updated successfully');
 
-      // Activity logging - this is the critical part
+      // Simple activity logging
       try {
-        const activityDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
-        
-        console.log('📝 About to call logActivity with:', {
-          action: 'Status Updated',
-          entityType: 'Order Item',
-          entityId: item.suborder_id,
-          description: activityDescription
-        });
+        const description = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
         await logActivity(
           'Status Updated',
           'Order Item',
           item.suborder_id,
-          activityDescription
+          description
         );
         
-        console.log('✅ Activity logged successfully');
+        console.log('Activity logged successfully');
         
         toast({
           title: 'Success',
@@ -83,7 +69,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         });
         
       } catch (activityError) {
-        console.error('❌ Activity logging failed:', activityError);
+        console.error('Activity logging failed:', activityError);
         
         toast({
           title: 'Partial Success',
