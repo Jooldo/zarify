@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,9 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
+      console.log('=== ORDER ITEM STATUS UPDATE STARTED ===');
       console.log('Updating order item status:', { itemId: item.id, newStatus });
+      console.log('Order details:', { orderNumber: order.order_number, orderId: order.id });
       
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
@@ -33,6 +36,11 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       } else if (newStatus === 'Created') {
         fulfilledQuantityUpdate = 0;
       }
+
+      console.log('Updating database with:', { 
+        status: newStatus, 
+        fulfilled_quantity: fulfilledQuantityUpdate 
+      });
 
       const { error } = await supabase
         .from('order_items')
@@ -43,18 +51,31 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         })
         .eq('id', item.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
 
-      console.log('Order item status updated successfully');
+      console.log('Order item status updated successfully in database');
 
       // Log the activity
-      console.log('Logging order item status update from OrderDetails...');
+      console.log('=== STARTING ACTIVITY LOG ===');
+      const activityDescription = `Order ${order.order_number} item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`;
+      console.log('About to call logActivity with:', {
+        action: 'Status Updated',
+        entityType: 'Order Item',
+        entityId: order.order_number,
+        description: activityDescription
+      });
+
       await logActivity(
         'Status Updated',
         'Order Item',
         order.order_number,
-        `Order ${order.order_number} item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}", fulfilled ${fulfilledQuantityUpdate}/${item.quantity}`
+        activityDescription
       );
+      
+      console.log('=== ACTIVITY LOG COMPLETED ===');
       
       toast({
         title: 'Success',

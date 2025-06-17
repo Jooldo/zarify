@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -66,9 +67,33 @@ export const useActivityLog = () => {
     description?: string
   ) => {
     try {
-      console.log('Logging activity:', { action, entityType, entityId, description });
+      console.log('=== ATTEMPTING TO LOG ACTIVITY ===');
+      console.log('Action:', action);
+      console.log('Entity Type:', entityType);
+      console.log('Entity ID:', entityId);
+      console.log('Description:', description);
       
-      const { error } = await supabase.rpc('log_user_activity', {
+      // First check if we have a valid user session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('No valid user session for activity logging:', userError);
+        return;
+      }
+      console.log('User ID:', user.id);
+
+      // Get merchant ID
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) {
+        console.error('Error getting merchant ID for activity logging:', merchantError);
+        return;
+      }
+      console.log('Merchant ID for logging:', merchantId);
+
+      // Call the RPC function
+      console.log('Calling log_user_activity RPC function...');
+      const { data, error } = await supabase.rpc('log_user_activity', {
         p_action: action,
         p_entity_type: entityType,
         p_entity_id: entityId,
@@ -76,16 +101,23 @@ export const useActivityLog = () => {
       });
 
       if (error) {
-        console.error('Error logging activity:', error);
+        console.error('RPC Error logging activity:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
       }
       
-      console.log('Activity logged successfully');
+      console.log('Activity logged successfully, RPC returned:', data);
       
       // Refresh logs after adding new one
+      console.log('Refreshing logs after activity log...');
       await fetchLogs();
     } catch (error) {
-      console.error('Error logging activity:', error);
+      console.error('Critical error in logActivity:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to log activity',
+        variant: 'destructive',
+      });
     }
   };
 
