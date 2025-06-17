@@ -34,13 +34,17 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   
   liveOrderItems?.forEach(item => {
     const configId = item.product_config_id;
+    // Always calculate remaining quantity, even if fulfilled_quantity is 0
     const remainingQuantity = item.quantity - (item.fulfilled_quantity || 0);
     
+    // Only count if there's remaining quantity to fulfill
     if (remainingQuantity > 0) {
       if (!requiredQuantitiesByConfig[configId]) {
         requiredQuantitiesByConfig[configId] = 0;
       }
       requiredQuantitiesByConfig[configId] += remainingQuantity;
+      
+      console.log(`📦 Order item: config ${configId}, total: ${item.quantity}, fulfilled: ${item.fulfilled_quantity || 0}, remaining: ${remainingQuantity}`);
     }
   });
 
