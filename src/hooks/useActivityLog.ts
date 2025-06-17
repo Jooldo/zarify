@@ -77,6 +77,11 @@ export const useActivityLog = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         console.error('No valid user session for activity logging:', userError);
+        toast({
+          title: 'Error',
+          description: 'User not authenticated',
+          variant: 'destructive',
+        });
         return;
       }
       console.log('User ID:', user.id);
@@ -87,6 +92,11 @@ export const useActivityLog = () => {
 
       if (merchantError) {
         console.error('Error getting merchant ID for activity logging:', merchantError);
+        toast({
+          title: 'Error',
+          description: 'Error getting merchant information',
+          variant: 'destructive',
+        });
         return;
       }
       console.log('Merchant ID for logging:', merchantId);
@@ -103,6 +113,11 @@ export const useActivityLog = () => {
       if (error) {
         console.error('RPC Error logging activity:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
+        toast({
+          title: 'Activity Log Error',
+          description: error.message || 'Failed to log activity',
+          variant: 'destructive',
+        });
         throw error;
       }
       
@@ -111,11 +126,18 @@ export const useActivityLog = () => {
       // Refresh logs after adding new one
       console.log('Refreshing logs after activity log...');
       await fetchLogs();
+      
+      // Show success message
+      toast({
+        title: 'Activity Logged',
+        description: 'Activity has been logged successfully',
+      });
+      
     } catch (error) {
       console.error('Critical error in logActivity:', error);
       toast({
         title: 'Error',
-        description: 'Failed to log activity',
+        description: 'Failed to log activity: ' + (error as Error).message,
         variant: 'destructive',
       });
     }
