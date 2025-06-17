@@ -3,13 +3,12 @@ import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Factory, Search, Kanban, Workflow, ChartGantt } from 'lucide-react';
+import { Factory, Search, Kanban, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionKanbanView from './ProductionKanbanView';
-import ProductionGanttView from './ProductionGanttView';
 import ProductionQueueFilter from './ProductionQueueFilter';
 
 interface ProductionQueueFilters {
@@ -128,15 +127,6 @@ const ProductionQueueView = () => {
               <Kanban className="h-4 w-4 mr-1" />
               Kanban View
             </Button>
-            <Button
-              variant={activeView === 'gantt' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveView('gantt')}
-              className="h-8 px-3"
-            >
-              <ChartGantt className="h-4 w-4 mr-1" />
-              Gantt View
-            </Button>
           </div>
         </div>
 
@@ -171,10 +161,8 @@ const ProductionQueueView = () => {
               manufacturingOrders={filteredOrders}
               onViewDetails={handleViewDetails}
             />
-          ) : activeView === 'kanban' ? (
-            <ProductionKanbanView />
           ) : (
-            <ProductionGanttView />
+            <ProductionKanbanView />
           )}
         </div>
       )}
