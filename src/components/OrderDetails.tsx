@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,18 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
   const { logActivity } = useActivityLog();
   const queryClient = useQueryClient();
 
+  const calculateOverallOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
+    const statuses = orderItems.map(item => item.status);
+    
+    if (statuses.every(s => s === "Delivered")) return "Delivered";
+    if (statuses.every(s => s === "Ready")) return "Ready";
+    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled")) return "In Progress";
+    if (statuses.every(s => s === "Created")) return "Created";
+    if (statuses.some(s => s !== "Created")) return "In Progress";
+    
+    return "Created";
+  };
+
   const handleItemStatusUpdate = async (item: OrderItemType, newStatus: OrderStatus) => {
     try {
       console.log('Updating order item status:', { itemId: item.id, newStatus });
@@ -34,7 +47,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         fulfilledQuantityUpdate = 0;
       }
 
-      const { error } = await supabase
+      // Update the order item status
+      const { error: itemError } = await supabase
         .from('order_items')
         .update({ 
           status: newStatus,
@@ -43,29 +57,76 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         })
         .eq('id', item.id);
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
+      if (itemError) {
+        console.error('Database update error:', itemError);
+        throw itemError;
       }
 
       console.log('Order item status updated successfully');
 
-      // Simple activity logging
+      // Fetch fresh order items to calculate overall status
+      const { data: freshOrderItems, error: fetchError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (fetchError) {
+        console.error('Error fetching fresh order items:', fetchError);
+        throw fetchError;
+      }
+
+      // Update the specific item in the fresh data
+      const updatedOrderItems = freshOrderItems.map(freshItem => 
+        freshItem.id === item.id 
+          ? { ...freshItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
+          : freshItem
+      );
+
+      // Calculate new overall order status
+      const newOrderStatus = calculateOverallOrderStatus(updatedOrderItems);
+      console.log('Calculated new order status:', newOrderStatus);
+
+      // Update the overall order status in the database
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ 
+          status: newOrderStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id);
+
+      if (orderError) {
+        console.error('Error updating order status:', orderError);
+        throw orderError;
+      }
+
+      console.log('Order status updated successfully to:', newOrderStatus);
+
+      // Log activities
       try {
-        const description = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
+        const itemDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
         await logActivity(
           'Status Updated',
           'Order Item',
           item.suborder_id,
-          description
+          itemDescription
+        );
+
+        const orderDescription = `Order ${order.order_number} status updated to "${newOrderStatus}" based on item status changes`;
+        
+        await logActivity(
+          'Status Updated',
+          'Order',
+          order.order_number,
+          orderDescription
         );
         
-        console.log('Activity logged successfully');
+        console.log('Activities logged successfully');
         
         toast({
           title: 'Success',
-          description: 'Order item status updated and logged',
+          description: `Order item and overall order status updated successfully`,
         });
         
       } catch (activityError) {
