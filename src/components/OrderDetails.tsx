@@ -28,6 +28,17 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
     try {
       console.log('Updating order item status:', { itemId: item.id, newStatus });
       
+      // Only allow valid database statuses
+      const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
+      if (!validStatuses.includes(newStatus)) {
+        toast({
+          title: 'Error',
+          description: `Invalid status: ${newStatus}. Please select a valid status.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       let fulfilledQuantityUpdate = item.fulfilled_quantity;
       if (newStatus === 'Delivered') {
         fulfilledQuantityUpdate = item.quantity;
@@ -94,7 +105,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Customer:</Label>
-              <div className="font-semibold">{order.customers.name}</div>
+              <div className="font-semibold">{order.customers?.name}</div>
             </div>
             <div className="flex justify-between">
               <Label className="text-xs text-gray-500">Total Amount:</Label>
@@ -122,8 +133,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         <CardContent className="pt-0">
           <div className="space-y-1.5">
             {order.order_items.map((item: OrderItemType) => {
-              const sizeValue = item.product_configs.size_value || 'N/A';
-              const weightRange = item.product_configs.weight_range || 'N/A';
+              const sizeValue = item.product_configs?.size_value || 'N/A';
+              const weightRange = item.product_configs?.weight_range || 'N/A';
               const sizeWeight = `${sizeValue}" / ${weightRange}`;
               const fulfillmentProgress = item.quantity > 0 ? (item.fulfilled_quantity / item.quantity) * 100 : 0;
               
@@ -137,15 +148,15 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                   <div className="space-y-0.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Product Code:</span>
-                      <span className="font-medium">{item.product_configs.product_code}</span>
+                      <span className="font-medium">{item.product_configs?.product_code}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Category:</span>
-                      <span>{item.product_configs.category}</span>
+                      <span>{item.product_configs?.category}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Type:</span>
-                      <span>{item.product_configs.subcategory}</span>
+                      <span>{item.product_configs?.subcategory}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Size & Weight:</span>
@@ -186,7 +197,6 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
                         <SelectItem value="Partially Fulfilled">Partially Fulfilled</SelectItem>
                         <SelectItem value="Ready">Ready</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

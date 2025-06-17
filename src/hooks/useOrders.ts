@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderLogging } from '@/hooks/useOrderLogging';
 
-export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Cancelled' | 'Partially Fulfilled';
+export type OrderStatus = 'Created' | 'In Progress' | 'Ready' | 'Delivered' | 'Partially Fulfilled' | 'Cancelled';
 
 export interface OrderItem {
   id: string;
@@ -51,6 +51,7 @@ export interface Order {
   expected_delivery?: string | null;
   status?: OrderStatus;
   created_at: string;
+  updated_at?: string;
   created_date: string; // Add this for backward compatibility
   updated_date?: string; // Add this for backward compatibility
   merchant_id: string;
@@ -82,10 +83,10 @@ export const useOrders = () => {
         .from('orders')
         .select(`
           *,
-          customers(name),
+          customers(id, merchant_id, name, phone, address, created_at),
           order_items(
             *,
-            product_configs(product_code)
+            product_configs(product_code, category, subcategory, size_value, weight_range)
           )
         `)
         .eq('merchant_id', merchantId)
@@ -169,7 +170,7 @@ export const useOrders = () => {
         })
         .select(`
           *,
-          customers(name)
+          customers(id, merchant_id, name, phone, address, created_at)
         `)
         .single();
 
@@ -219,6 +220,12 @@ export const useOrders = () => {
 
   const updateOrderItemStatus = async (itemId: string, status: OrderStatus) => {
     try {
+      // Only allow valid database statuses for the update
+      const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
+      if (!validStatuses.includes(status)) {
+        throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
+      }
+
       // Get current item details for logging
       const { data: currentItem } = await supabase
         .from('order_items')
@@ -268,6 +275,14 @@ export const useOrders = () => {
 
   const updateOrderItemDetails = async (itemId: string, updates: { status?: OrderStatus; fulfilled_quantity?: number }) => {
     try {
+      // Only allow valid database statuses for the update
+      if (updates.status) {
+        const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
+        if (!validStatuses.includes(updates.status)) {
+          throw new Error(`Invalid status: ${updates.status}. Must be one of: ${validStatuses.join(', ')}`);
+        }
+      }
+
       // Get current item details for logging
       const { data: currentItem } = await supabase
         .from('order_items')
@@ -317,6 +332,14 @@ export const useOrders = () => {
 
   const updateOrder = async (orderId: string, updates: Partial<Order>) => {
     try {
+      // Only allow valid database statuses for the update
+      if (updates.status) {
+        const validStatuses: OrderStatus[] = ['Created', 'In Progress', 'Ready', 'Delivered', 'Partially Fulfilled'];
+        if (!validStatuses.includes(updates.status)) {
+          throw new Error(`Invalid status: ${updates.status}. Must be one of: ${validStatuses.join(', ')}`);
+        }
+      }
+
       // Get current order details for logging
       const { data: currentOrder } = await supabase
         .from('orders')

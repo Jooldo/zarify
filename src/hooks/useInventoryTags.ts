@@ -14,12 +14,18 @@ export interface InventoryTag {
   updated_at: string;
 }
 
+export interface TagProductInfo {
+  product_config_id: string;
+  product_code: string;
+  tag_quantity: number;
+}
+
 export const useInventoryTags = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logTagOperation } = useInventoryLogging();
 
-  const processTagOperation = async (tagId: string, operation: 'Tag In' | 'Tag Out') => {
+  const processTagOperation = async (tagId: string, operation: 'Tag In' | 'Tag Out', customerId?: string, orderId?: string, orderItemId?: string) => {
     try {
       setLoading(true);
 
@@ -27,7 +33,7 @@ export const useInventoryTags = () => {
       const { data: tagData, error: tagError } = await supabase
         .from('inventory_tags')
         .select('*')
-        .eq('id', tagId)
+        .eq('tag_id', tagId)
         .single();
 
       if (tagError) {
@@ -42,8 +48,13 @@ export const useInventoryTags = () => {
       // Update tag status
       const { error: updateError } = await supabase
         .from('inventory_tags')
-        .update({ status: operation === 'Tag In' ? 'active' : 'inactive' })
-        .eq('id', tagId);
+        .update({ 
+          status: operation === 'Tag In' ? 'active' : 'inactive',
+          customer_id: customerId,
+          order_id: orderId,
+          order_item_id: orderItemId
+        })
+        .eq('tag_id', tagId);
 
       if (updateError) {
         console.error('Error updating tag status:', updateError);
@@ -78,6 +89,55 @@ export const useInventoryTags = () => {
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getTagProductConfigByTagId = async (tagId: string): Promise<TagProductInfo | null> => {
+    try {
+      const { data: tagData, error: tagError } = await supabase
+        .from('inventory_tags')
+        .select(`
+          quantity,
+          finished_goods!inner(
+            product_config_id,
+            product_code
+          )
+        `)
+        .eq('tag_id', tagId)
+        .single();
+
+      if (tagError) {
+        console.error('Error fetching tag product info:', tagError);
+        toast({
+          title: 'Error',
+          description: 'Tag not found or invalid.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+
+      if (!tagData) {
+        toast({
+          title: 'Error',
+          description: 'Tag not found.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+
+      return {
+        product_config_id: tagData.finished_goods.product_config_id,
+        product_code: tagData.finished_goods.product_code,
+        tag_quantity: tagData.quantity
+      };
+    } catch (error) {
+      console.error('Error getting tag product config:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify tag.',
+        variant: 'destructive',
+      });
+      return null;
     }
   };
 
@@ -220,6 +280,7 @@ export const useInventoryTags = () => {
   return {
     loading,
     processTagOperation,
+    getTagProductConfigByTagId,
     manualTagIn,
     manualTagOut,
   };

@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders';
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
@@ -82,8 +81,8 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
     
     orders.forEach(order => {
       order.order_items.forEach(item => {
-        if (item.product_configs.category) categoriesSet.add(item.product_configs.category);
-        if (item.product_configs.subcategory) subcategoriesSet.add(item.product_configs.subcategory);
+        if (item.product_configs?.category) categoriesSet.add(item.product_configs.category);
+        if (item.product_configs?.subcategory) subcategoriesSet.add(item.product_configs.subcategory);
       });
     });
     
@@ -96,7 +95,7 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
   const customerNames = useMemo(() => {
     const customersSet = new Set<string>();
     orders.forEach(order => {
-      if (order.customers.name) customersSet.add(order.customers.name);
+      if (order.customers?.name) customersSet.add(order.customers.name);
     });
     return Array.from(customersSet).sort();
   }, [orders]);
@@ -149,21 +148,21 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
 
   const flattenedOrders = useMemo(() => orders.flatMap(order => 
     order.order_items.map(suborder => {
-      const sizeValue = suborder.product_configs.size_value || 'N/A';
-      const weightRange = suborder.product_configs.weight_range || 'N/A';
+      const sizeValue = suborder.product_configs?.size_value || 'N/A';
+      const weightRange = suborder.product_configs?.weight_range || 'N/A';
       
       return {
         ...suborder, 
         orderId: order.order_number,
-        customer: order.customers.name,
-        phone: order.customers.phone || '',
+        customer: order.customers?.name || '',
+        phone: order.customers?.phone || '',
         createdDate: order.created_at,
         updatedDate: order.updated_at,
         expectedDelivery: order.expected_delivery || '',
         totalOrderAmount: order.total_amount,
-        productCode: suborder.product_configs.product_code,
-        category: suborder.product_configs.category,
-        subcategory: suborder.product_configs.subcategory,
+        productCode: suborder.product_configs?.product_code || '',
+        category: suborder.product_configs?.category || '',
+        subcategory: suborder.product_configs?.subcategory || '',
         size: `${sizeValue}" / ${weightRange}`,
         price: suborder.total_price 
       };
