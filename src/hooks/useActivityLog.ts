@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -39,8 +38,7 @@ export const useActivityLog = () => {
         .from('user_activity_log')
         .select('*')
         .eq('merchant_id', merchantId)
-        .order('timestamp', { ascending: false })
-        .limit(100);
+        .order('timestamp', { ascending: false });
 
       if (error) {
         console.error('Error fetching activity logs:', error);
