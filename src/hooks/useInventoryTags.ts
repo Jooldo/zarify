@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -98,6 +99,14 @@ export const useInventoryTags = () => {
 
       console.log('✅ processTagOperation - Stock updated successfully');
 
+      // Get merchant ID properly
+      const { data: merchantIdData, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError || !merchantIdData) {
+        console.error('❌ processTagOperation - Error getting merchant ID:', merchantError);
+      }
+
       // Log tag operation in audit trail
       const { error: auditError } = await supabase
         .from('tag_audit_log')
@@ -109,8 +118,8 @@ export const useInventoryTags = () => {
           previous_stock: previousStock,
           new_stock: newStock,
           user_id: (await supabase.auth.getUser()).data.user?.id,
-          user_name: 'Current User', // We'll get this from user profile if needed
-          merchant_id: await supabase.rpc('get_user_merchant_id')
+          user_name: 'Current User',
+          merchant_id: merchantIdData
         });
 
       if (auditError) {
@@ -240,16 +249,16 @@ export const useInventoryTags = () => {
       setLoading(true);
       console.log('🏷️ manualTagIn - Starting:', { productId, quantity, netWeight, grossWeight });
 
-      // Get merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
+      // Get merchant ID properly
+      const { data: merchantIdData, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
-      if (merchantError || !merchantId) {
+      if (merchantError || !merchantIdData) {
         console.error('❌ manualTagIn - Could not get merchant ID:', merchantError);
         throw new Error('Could not get merchant ID');
       }
 
-      console.log('✅ manualTagIn - Merchant ID obtained:', merchantId);
+      console.log('✅ manualTagIn - Merchant ID obtained:', merchantIdData);
 
       // Get next tag ID
       const { data: tagId, error: tagIdError } = await supabase
@@ -282,7 +291,7 @@ export const useInventoryTags = () => {
         .from('inventory_tags')
         .insert({
           tag_id: tagId,
-          merchant_id: merchantId,
+          merchant_id: merchantIdData,
           product_id: productId,
           quantity: quantity,
           net_weight: netWeight,
@@ -327,7 +336,7 @@ export const useInventoryTags = () => {
           new_stock: newStock,
           user_id: (await supabase.auth.getUser()).data.user?.id,
           user_name: 'Current User',
-          merchant_id: merchantId
+          merchant_id: merchantIdData
         });
 
       if (auditError) {
@@ -364,16 +373,16 @@ export const useInventoryTags = () => {
       setLoading(true);
       console.log('🏷️ manualTagOut - Starting:', { productId, quantity, customerId, orderId, orderItemId, netWeight, grossWeight });
 
-      // Get merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
+      // Get merchant ID properly
+      const { data: merchantIdData, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
-      if (merchantError || !merchantId) {
+      if (merchantError || !merchantIdData) {
         console.error('❌ manualTagOut - Could not get merchant ID:', merchantError);
         throw new Error('Could not get merchant ID');
       }
 
-      console.log('✅ manualTagOut - Merchant ID obtained:', merchantId);
+      console.log('✅ manualTagOut - Merchant ID obtained:', merchantIdData);
 
       // Get next tag ID
       const { data: tagId, error: tagIdError } = await supabase
@@ -406,7 +415,7 @@ export const useInventoryTags = () => {
         .from('inventory_tags')
         .insert({
           tag_id: tagId,
-          merchant_id: merchantId,
+          merchant_id: merchantIdData,
           product_id: productId,
           quantity: -quantity, // Use negative quantity for tag out
           status: 'inactive',
@@ -454,7 +463,7 @@ export const useInventoryTags = () => {
           new_stock: newStock,
           user_id: (await supabase.auth.getUser()).data.user?.id,
           user_name: 'Current User',
-          merchant_id: merchantId
+          merchant_id: merchantIdData
         });
 
       if (auditError) {
