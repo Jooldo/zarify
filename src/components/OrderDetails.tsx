@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,20 +25,31 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
   // Calculate order status based on order items
   const calculateOrderStatus = (orderItems: OrderItemType[]): OrderStatus => {
+    if (!orderItems || orderItems.length === 0) return "Created";
+    
     const statuses = orderItems.map(item => item.status);
     
+    // All items delivered
     if (statuses.every(s => s === "Delivered")) return "Delivered";
+    
+    // All items ready
     if (statuses.every(s => s === "Ready")) return "Ready";
+    
+    // Any item in progress or partially fulfilled, or mix of statuses
     if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled") || 
         (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created"))) {
       return "In Progress";
     }
+    
+    // All items created
     return "Created";
   };
 
   // Update order status in database
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
+      console.log('Updating order status in database:', { orderId, newStatus });
+      
       const { error } = await supabase
         .from('orders')
         .update({ 
@@ -53,7 +63,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         throw error;
       }
 
-      console.log('Order status updated to:', newStatus);
+      console.log('Order status updated successfully to:', newStatus);
     } catch (error) {
       console.error('Failed to update order status:', error);
       throw error;
@@ -88,7 +98,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Order item status updated successfully');
 
-      // Calculate new order status based on all order items
+      // Calculate new order status based on all order items with the updated item
       const updatedOrderItems = order.order_items.map((orderItem: OrderItemType) => 
         orderItem.id === item.id 
           ? { ...orderItem, status: newStatus, fulfilled_quantity: fulfilledQuantityUpdate }
@@ -96,12 +106,14 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       );
       
       const newOrderStatus = calculateOrderStatus(updatedOrderItems);
-      console.log('Calculated new order status:', newOrderStatus);
+      console.log('Calculated new order status:', newOrderStatus, 'from items:', updatedOrderItems.map(i => i.status));
 
       // Update order status if it changed
       if (order.status !== newOrderStatus) {
         await updateOrderStatus(order.id, newOrderStatus);
         console.log('Order status updated from', order.status, 'to', newOrderStatus);
+      } else {
+        console.log('Order status unchanged:', newOrderStatus);
       }
 
       // Log activity
@@ -132,6 +144,7 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
         });
       }
 
+      // Refresh all related data
       await onOrderUpdate();
       queryClient.invalidateQueries({ queryKey: ['finished-goods'] });
       queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
