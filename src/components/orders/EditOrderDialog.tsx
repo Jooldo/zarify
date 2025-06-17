@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -488,7 +487,6 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Created': return 'bg-gray-100 text-gray-800';
-      case 'Progress': return 'bg-blue-100 text-blue-800';
       case 'In Progress': return 'bg-blue-100 text-blue-800';
       case 'Ready': return 'bg-yellow-100 text-yellow-800';
       case 'Delivered': return 'bg-green-100 text-green-800';
@@ -618,7 +616,7 @@ const EditOrderDialog = ({ isOpen, onClose, order, onOrderUpdate }: EditOrderDia
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Created">Created</SelectItem>
-                          <SelectItem value="Progress">Progress</SelectItem>
+                          <SelectItem value="In Progress">In Progress</SelectItem>
                           <SelectItem value="Ready">Ready</SelectItem>
                           <SelectItem value="Delivered">Delivered</SelectItem>
                         </SelectContent>
