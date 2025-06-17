@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MaterialCalculationResult {
@@ -35,15 +34,23 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
   if (specificSuborder) {
     console.log('🎯 Found specific suborder S-OD000005-01:', specificSuborder);
     
-    // Also check if this product config matches AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G
+    // Get the product config details for this suborder
     const { data: productConfig, error: configError } = await supabase
       .from('product_configs')
-      .select('product_code')
+      .select('product_code, id')
       .eq('id', specificSuborder.product_config_id)
       .single();
       
     if (productConfig) {
+      console.log(`🔍 S-OD000005-01 product config:`, productConfig);
       console.log(`🔍 S-OD000005-01 is for product: ${productConfig.product_code}`);
+      console.log(`🔍 S-OD000005-01 product config ID: ${productConfig.id}`);
+      console.log(`🔍 Expected AGR product config ID: 430afd6f-6434-45d1-a19f-8cdd505436b3`);
+      console.log(`🔍 Do they match? ${productConfig.id === '430afd6f-6434-45d1-a19f-8cdd505436b3'}`);
+      
+      // Calculate the remaining quantity for this specific suborder
+      const remainingQty = specificSuborder.quantity - (specificSuborder.fulfilled_quantity || 0);
+      console.log(`🔍 S-OD000005-01 calculation: ${specificSuborder.quantity} - ${specificSuborder.fulfilled_quantity || 0} = ${remainingQty}`);
     }
   }
 
@@ -73,9 +80,26 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
 
   console.log('📊 Required quantities by product config (remaining only):', requiredQuantitiesByConfig);
 
+  // Check all product configs that have requirements
+  console.log('🔍 All product configs with requirements:');
+  Object.entries(requiredQuantitiesByConfig).forEach(([configId, quantity]) => {
+    console.log(`   ${configId}: ${quantity}`);
+  });
+
   // Check specifically for the AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G product config
   const agrProductConfigId = "430afd6f-6434-45d1-a19f-8cdd505436b3";
   console.log(`🔍 AGR-SUPERHEAVYMEGHAPAYAL-10IN-40G (${agrProductConfigId}) required quantity:`, requiredQuantitiesByConfig[agrProductConfigId] || 0);
+
+  // Get all finished goods to see which product codes map to which config IDs
+  const { data: finishedGoods } = await supabase
+    .from('finished_goods')
+    .select('product_code, product_config_id')
+    .eq('merchant_id', merchantId);
+    
+  console.log('🔍 Finished goods product code mappings:');
+  finishedGoods?.forEach(fg => {
+    console.log(`   ${fg.product_code} -> ${fg.product_config_id}`);
+  });
 
   // Update all finished goods - set required_quantity to 0 first, then update based on live orders
   const { error: resetError } = await supabase
