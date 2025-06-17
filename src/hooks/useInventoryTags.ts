@@ -201,6 +201,22 @@ export const useInventoryTags = () => {
 
       console.log('✅ manualTagIn - Tag created successfully:', newTag);
 
+      // Update finished goods stock (increase for tag in)
+      const { error: stockUpdateError } = await supabase
+        .from('finished_goods')
+        .update({ 
+          current_stock: supabase.sql`current_stock + ${quantity}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', productId);
+
+      if (stockUpdateError) {
+        console.error('❌ manualTagIn - Error updating stock:', stockUpdateError);
+        throw stockUpdateError;
+      }
+
+      console.log('✅ manualTagIn - Stock updated successfully');
+
       // Get product code for logging
       const { data: finishedGood } = await supabase
         .from('finished_goods')
@@ -281,6 +297,22 @@ export const useInventoryTags = () => {
       }
 
       console.log('✅ manualTagOut - Tag created successfully:', newTag);
+
+      // Update finished goods stock (decrease for tag out)
+      const { error: stockUpdateError } = await supabase
+        .from('finished_goods')
+        .update({ 
+          current_stock: supabase.sql`current_stock - ${quantity}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', productId);
+
+      if (stockUpdateError) {
+        console.error('❌ manualTagOut - Error updating stock:', stockUpdateError);
+        throw stockUpdateError;
+      }
+
+      console.log('✅ manualTagOut - Stock updated successfully');
 
       // Get product code for logging
       const { data: finishedGood } = await supabase
