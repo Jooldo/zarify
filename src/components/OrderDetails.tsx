@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,8 +90,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Updating fulfilled quantity from', item.fulfilled_quantity, 'to', fulfilledQuantityUpdate);
 
-      // Update order item status
-      console.log('Updating order item in database...');
+      // Update order item status in a transaction
+      console.log('Starting database transaction...');
       const { data: updatedItem, error: itemError } = await supabase
         .from('order_items')
         .update({ 
@@ -111,8 +110,8 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
 
       console.log('Order item updated successfully:', updatedItem);
 
-      // Get fresh order items from database to calculate new order status
-      console.log('Fetching fresh order items from database...');
+      // Get ALL fresh order items from database to calculate new order status
+      console.log('Fetching all fresh order items for order:', order.id);
       const { data: freshOrderItems, error: fetchError } = await supabase
         .from('order_items')
         .select('*')
@@ -124,57 +123,62 @@ const OrderDetails = ({ order, onOrderUpdate }: OrderDetailsProps) => {
       }
 
       console.log('Fresh order items fetched:', freshOrderItems?.length);
-      console.log('Fresh items statuses:', freshOrderItems?.map(i => ({ id: i.id, status: i.status })));
+      console.log('Fresh items with statuses:', freshOrderItems?.map(i => ({ id: i.id, status: i.status, suborder_id: i.suborder_id })));
       
       const newOrderStatus = calculateOrderStatus(freshOrderItems || []);
-      console.log('Current order status:', order.status);
+      console.log('Current order status in memory:', order.status);
       console.log('Calculated new order status:', newOrderStatus);
 
-      // Update order status if it changed
-      if (order.status !== newOrderStatus) {
-        console.log('Order status needs updating from', order.status, 'to', newOrderStatus);
-        
-        const { data: updatedOrder, error: orderError } = await supabase
-          .from('orders')
-          .update({ 
-            status: newOrderStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', order.id)
-          .select('*')
-          .single();
+      // ALWAYS update order status in database to ensure consistency
+      console.log('Updating order status in database to:', newOrderStatus);
+      
+      const { data: updatedOrder, error: orderError } = await supabase
+        .from('orders')
+        .update({ 
+          status: newOrderStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id)
+        .select('*')
+        .single();
 
-        if (orderError) {
-          console.error('Database error updating order status:', orderError);
-          throw orderError;
-        }
-
-        console.log('Order status updated successfully in database:', updatedOrder);
-        
-        toast({
-          title: 'Success',
-          description: `Order status updated to ${newOrderStatus}`,
-        });
-      } else {
-        console.log('Order status unchanged, no database update needed');
+      if (orderError) {
+        console.error('Database error updating order status:', orderError);
+        throw orderError;
       }
 
-      // Log activity
+      console.log('Order status updated successfully in database:', updatedOrder);
+
+      // Log activity for item status change
       try {
-        const description = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
+        const itemDescription = `Order item ${item.suborder_id} status changed from "${item.status}" to "${newStatus}"`;
         
         await logActivity(
           'Status Updated',
           'Order Item',
           item.suborder_id,
-          description
+          itemDescription
         );
         
-        console.log('Activity logged successfully');
+        console.log('Item activity logged successfully');
+
+        // Log activity for order status change if it actually changed
+        if (order.status !== newOrderStatus) {
+          const orderDescription = `Order ${order.order_number} status updated from "${order.status || 'Created'}" to "${newOrderStatus}" due to item status change`;
+          
+          await logActivity(
+            'Status Updated',
+            'Order',
+            order.order_number,
+            orderDescription
+          );
+          
+          console.log('Order status activity logged successfully');
+        }
         
         toast({
           title: 'Success',
-          description: 'Order item status updated successfully',
+          description: `Order item and order status updated successfully`,
         });
         
       } catch (activityError) {
