@@ -359,7 +359,7 @@ export const useInventoryTags = () => {
           continue;
         }
 
-        // Try to insert new tag
+        // Try to insert new tag with 'active' status (since it's being generated for immediate use)
         const { data: insertedTag, error: tagError } = await supabase
           .from('inventory_tags')
           .insert({
@@ -369,7 +369,7 @@ export const useInventoryTags = () => {
             quantity: quantity,
             net_weight: netWeight,
             gross_weight: grossWeight,
-            status: 'Printed',
+            status: 'active', // Changed from 'Printed' to 'active' since this is inventory being added
           })
           .select('*')
           .single();
@@ -392,9 +392,21 @@ export const useInventoryTags = () => {
         throw new Error(`Failed to generate unique tag after ${maxAttempts} attempts`);
       }
 
+      // Get product code for logging
+      const { data: finishedGood } = await supabase
+        .from('finished_goods')
+        .select('product_code')
+        .eq('id', productId)
+        .single();
+
+      if (finishedGood?.product_code) {
+        console.log('📝 generateTag - Logging tag generation for product:', finishedGood.product_code);
+        await logTagOperation('Tag In', newTag.tag_id, finishedGood.product_code, quantity);
+      }
+
       toast({
         title: 'Success',
-        description: `Tag ${newTag.tag_id} generated successfully!`,
+        description: `Tag ${newTag.tag_id} generated and added to inventory successfully!`,
       });
 
       return newTag;
