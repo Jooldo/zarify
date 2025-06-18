@@ -231,7 +231,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         )}
                         {orderStep.workers?.name && (
                           <div>
-                            <span className="text-muted-foreground">Worker:</span>
+                            <span className="text-muted-foreground">Assigned Worker:</span>
                             <p className="font-medium">{orderStep.workers.name}</p>
                           </div>
                         )}
