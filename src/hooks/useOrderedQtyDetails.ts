@@ -55,7 +55,7 @@ export const useOrderedQtyDetails = () => {
 
       console.log('🔍 Product config ID for', productCode, ':', finishedGood.product_config_id);
 
-      // Fetch order items for this product config with remaining quantities
+      // Fetch ALL order items for this product config (not filtered by status)
       const { data: orderItems, error: orderItemsError } = await supabase
         .from('order_items')
         .select(`
@@ -118,7 +118,7 @@ export const useOrderedQtyDetails = () => {
   const fetchRawMaterialProductDetails = async (materialId: string): Promise<RawMaterialProductDetail[]> => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching product details for raw material:', materialId);
+      console.log('🔍 Fetching product details for raw material based on finished goods shortfall:', materialId);
       
       // Get the merchant ID
       const { data: merchantId, error: merchantError } = await supabase
@@ -151,7 +151,7 @@ export const useOrderedQtyDetails = () => {
         throw pcmError;
       }
 
-      // Get finished goods with requirements for these product configs
+      // Get finished goods with their stock information for these product configs
       const productConfigIds = productConfigMaterials?.map(pcm => pcm.product_config_id) || [];
       
       if (productConfigIds.length === 0) {
@@ -160,7 +160,7 @@ export const useOrderedQtyDetails = () => {
 
       const { data: finishedGoods, error: fgError } = await supabase
         .from('finished_goods')
-        .select('product_config_id, required_quantity, product_code')
+        .select('product_config_id, required_quantity, current_stock, in_manufacturing, threshold, product_code')
         .eq('merchant_id', merchantId)
         .in('product_config_id', productConfigIds);
 
@@ -169,24 +169,46 @@ export const useOrderedQtyDetails = () => {
         throw fgError;
       }
 
-      // Calculate material requirements
+      // Calculate material requirements based on finished goods shortfall
       const productDetails: RawMaterialProductDetail[] = productConfigMaterials?.map(pcm => {
         const finishedGood = finishedGoods?.find(fg => fg.product_config_id === pcm.product_config_id);
-        const requiredQuantity = finishedGood?.required_quantity || 0;
-        const materialRequired = requiredQuantity * pcm.quantity_required;
         
+        if (!finishedGood) {
+          return null;
+        }
+
+        // Calculate shortfall for this finished good
+        const liveOrderDemand = finishedGood.required_quantity || 0;
+        const totalDemand = liveOrderDemand + finishedGood.threshold;
+        const available = finishedGood.current_stock + finishedGood.in_manufacturing;
+        const shortfall = Math.max(0, totalDemand - available);
+
+        console.log(`🔍 Finished good ${finishedGood.product_code}:`);
+        console.log(`   Live order demand: ${liveOrderDemand}`);
+        console.log(`   Threshold: ${finishedGood.threshold}`);
+        console.log(`   Total demand: ${totalDemand}`);
+        console.log(`   Available (stock + manufacturing): ${available}`);
+        console.log(`   Shortfall: ${shortfall}`);
+
+        if (shortfall <= 0) {
+          return null; // No material needed if no shortfall
+        }
+
+        const materialRequired = shortfall * pcm.quantity_required;
         const productName = `${pcm.product_configs.category}-${pcm.product_configs.subcategory}-${pcm.product_configs.size_value}${pcm.product_configs.weight_range ? `-${pcm.product_configs.weight_range}` : ''}`;
         
+        console.log(`   Material required: ${materialRequired} (shortfall ${shortfall} × ${pcm.quantity_required})`);
+
         return {
           product_code: pcm.product_configs.product_code,
           product_name: productName,
           quantity_required: pcm.quantity_required,
           total_material_required: materialRequired,
-          remaining_quantity: requiredQuantity
+          remaining_quantity: shortfall
         };
-      }).filter(detail => detail.remaining_quantity > 0) || [];
+      }).filter(detail => detail !== null) || [];
 
-      console.log('📊 Raw material product details:', productDetails);
+      console.log('📊 Raw material product details based on shortfall:', productDetails);
       
       return productDetails;
     } catch (error) {
