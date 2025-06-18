@@ -11,6 +11,7 @@ import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingTagInDialog from './ManufacturingTagInDialog';
+import RawMaterialStockDisplay from './RawMaterialStockDisplay';
 
 interface ManufacturingOrderDetailsDialogProps {
   order: ManufacturingOrder | null;
@@ -180,6 +181,14 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 </div>
               </CardContent>
             </Card>
+
+            {/* Raw Material Stock Availability */}
+            {order.product_config_id && (
+              <RawMaterialStockDisplay
+                productConfigId={order.product_config_id}
+                quantityRequired={order.quantity_required}
+              />
+            )}
 
             {/* Manufacturing Steps Progress - More Compact */}
             {orderStepsWithData.length > 0 && (
