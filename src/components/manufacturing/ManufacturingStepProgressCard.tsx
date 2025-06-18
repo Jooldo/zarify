@@ -99,20 +99,43 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
 
   // Get assigned worker name
   const getAssignedWorkerName = () => {
+    console.log('Getting assigned worker name for orderStep:', orderStep);
+    console.log('Available workers:', workers);
+    
     // First check if there's a worker field in step configuration
     if (stepFields) {
       const workerField = stepFields.find(field => field.field_type === 'worker');
       if (workerField) {
         const workerId = getStepValue(orderStep.id, workerField.field_id);
+        console.log('Worker ID from step field:', workerId);
         if (workerId) {
           const worker = workers.find(w => w.id === workerId);
-          return worker?.name;
+          console.log('Found worker from step field:', worker);
+          if (worker) {
+            return worker.name;
+          }
         }
       }
     }
     
-    // Fallback to assigned worker from order step
-    return orderStep.workers?.name;
+    // Check if there's an assigned_worker_id in the orderStep
+    if (orderStep.assigned_worker_id) {
+      console.log('Assigned worker ID from orderStep:', orderStep.assigned_worker_id);
+      const worker = workers.find(w => w.id === orderStep.assigned_worker_id);
+      console.log('Found worker from assigned_worker_id:', worker);
+      if (worker) {
+        return worker.name;
+      }
+    }
+    
+    // Fallback to workers relation if it exists and has name
+    if (orderStep.workers?.name) {
+      console.log('Using worker name from relation:', orderStep.workers.name);
+      return orderStep.workers.name;
+    }
+    
+    console.log('No worker name found');
+    return null;
   };
 
   const configuredFieldValues = getConfiguredFieldValues();
