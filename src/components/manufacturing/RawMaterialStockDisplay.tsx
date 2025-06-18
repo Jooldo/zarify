@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
+import { useRawMaterials } from '@/hooks/useRawMaterials';
 
 interface RawMaterialStockDisplayProps {
   productConfigId: string | null;
@@ -14,7 +15,10 @@ const RawMaterialStockDisplay: React.FC<RawMaterialStockDisplayProps> = ({
   productConfigId,
   quantityRequired
 }) => {
-  const { productConfigs, loading } = useProductConfigs();
+  const { productConfigs, loading: configsLoading } = useProductConfigs();
+  const { rawMaterials, loading: materialsLoading } = useRawMaterials();
+
+  const loading = configsLoading || materialsLoading;
 
   if (loading) {
     return (
@@ -94,14 +98,15 @@ const RawMaterialStockDisplay: React.FC<RawMaterialStockDisplayProps> = ({
       <CardContent className="pt-0">
         <div className="space-y-3">
           {selectedProductConfig.product_config_materials.map((configMaterial) => {
-            const material = configMaterial.raw_materials;
-            if (!material) return null;
+            // Find the complete raw material data from the rawMaterials hook
+            const fullMaterial = rawMaterials.find(rm => rm.id === configMaterial.raw_material_id);
+            if (!fullMaterial) return null;
 
             const totalRequired = configMaterial.quantity_required * quantityRequired;
             const stockStatus = getStockStatus(
-              material.current_stock, 
+              fullMaterial.current_stock, 
               configMaterial.quantity_required, 
-              material.in_procurement
+              fullMaterial.in_procurement
             );
             const StatusIcon = stockStatus.icon;
             const shortUnit = getShortUnit(configMaterial.unit);
@@ -111,9 +116,9 @@ const RawMaterialStockDisplay: React.FC<RawMaterialStockDisplayProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <StatusIcon className={`h-4 w-4 ${stockStatus.color}`} />
-                    <span className="font-medium text-sm">{material.name}</span>
+                    <span className="font-medium text-sm">{fullMaterial.name}</span>
                     <Badge variant="outline" className="text-xs">
-                      {material.type}
+                      {fullMaterial.type}
                     </Badge>
                   </div>
                   <Badge 
@@ -133,23 +138,23 @@ const RawMaterialStockDisplay: React.FC<RawMaterialStockDisplayProps> = ({
                   <div>
                     <span className="text-muted-foreground">Available:</span>
                     <div className="font-semibold">
-                      {formatNumber(material.current_stock + material.in_procurement)} {shortUnit}
+                      {formatNumber(fullMaterial.current_stock + fullMaterial.in_procurement)} {shortUnit}
                     </div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Current Stock:</span>
-                    <div className="font-medium">{formatNumber(material.current_stock)} {shortUnit}</div>
+                    <div className="font-medium">{formatNumber(fullMaterial.current_stock)} {shortUnit}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">In Procurement:</span>
-                    <div className="font-medium">{formatNumber(material.in_procurement)} {shortUnit}</div>
+                    <div className="font-medium">{formatNumber(fullMaterial.in_procurement)} {shortUnit}</div>
                   </div>
                 </div>
                 
                 {stockStatus.status !== 'sufficient' && (
                   <div className="mt-2 pt-2 border-t">
                     <span className="text-xs text-muted-foreground">
-                      Shortfall: {formatNumber(Math.max(0, totalRequired - (material.current_stock + material.in_procurement)))} {shortUnit}
+                      Shortfall: {formatNumber(Math.max(0, totalRequired - (fullMaterial.current_stock + fullMaterial.in_procurement)))} {shortUnit}
                     </span>
                   </div>
                 )}
