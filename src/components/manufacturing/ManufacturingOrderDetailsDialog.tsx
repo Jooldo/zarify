@@ -36,7 +36,6 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   if (!order) return null;
 
-  // Get the first step that should be started
   const getNextStep = () => {
     const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
     
@@ -117,90 +116,92 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center justify-between">
               <div>
-                <span className="text-xl font-semibold">{order.product_name}</span>
+                <span className="text-lg font-semibold">{order.product_name}</span>
                 <p className="text-sm text-muted-foreground font-mono">{order.order_number}</p>
               </div>
               <div className="flex gap-2">
-                <Badge className={`${getPriorityColor(order.priority)}`}>
+                <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
                   {order.priority}
                 </Badge>
-                <Badge className={`${getStatusColor(order.status)}`}>
+                <Badge className={`text-xs ${getStatusColor(order.status)}`}>
                   {order.status.replace('_', ' ')}
                 </Badge>
               </div>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Order Summary */}
+          <div className="space-y-4">
+            {/* Order Summary - More Compact */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Order Summary</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Order Summary</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Package2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Quantity</span>
-                  </div>
-                  <span className="font-semibold">{order.quantity_required}</span>
-                </div>
-                
-                {order.due_date && (
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Due Date</span>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Package2 className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Quantity</span>
                     </div>
-                    <span className="font-semibold">{format(new Date(order.due_date), 'MMM dd, yyyy')}</span>
+                    <span className="font-semibold">{order.quantity_required}</span>
                   </div>
-                )}
-                
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Created</span>
+                  
+                  {order.due_date && (
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Due Date</span>
+                      </div>
+                      <span className="font-semibold text-xs">{format(new Date(order.due_date), 'MMM dd, yyyy')}</span>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Created</span>
+                    </div>
+                    <span className="font-semibold text-xs">{format(new Date(order.created_at), 'MMM dd, yyyy')}</span>
                   </div>
-                  <span className="font-semibold">{format(new Date(order.created_at), 'MMM dd, yyyy')}</span>
-                </div>
 
-                {order.product_configs && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calculator className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Product Code</span>
+                  {order.product_configs && (
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Calculator className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Product Code</span>
+                      </div>
+                      <span className="font-semibold font-mono text-xs">{order.product_configs.product_code}</span>
                     </div>
-                    <span className="font-semibold font-mono">{order.product_configs.product_code}</span>
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Manufacturing Steps Progress */}
+            {/* Manufacturing Steps Progress - More Compact */}
             {orderStepsWithData.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Workflow className="h-5 w-5" />
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Workflow className="h-4 w-4" />
                     Manufacturing Steps Progress
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="pt-0 space-y-3">
                   {orderStepsWithData.map((orderStep, index) => (
-                    <div key={orderStep.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                    <div key={orderStep.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
                             {orderStep.manufacturing_steps?.step_order}
                           </div>
                           <div>
-                            <h4 className="font-semibold">{orderStep.manufacturing_steps?.step_name}</h4>
+                            <h4 className="font-medium text-sm">{orderStep.manufacturing_steps?.step_name}</h4>
                             {orderStep.manufacturing_steps?.description && (
-                              <p className="text-sm text-muted-foreground">{orderStep.manufacturing_steps.description}</p>
+                              <p className="text-xs text-muted-foreground">{orderStep.manufacturing_steps.description}</p>
                             )}
                           </div>
                         </div>
@@ -209,42 +210,42 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                             {orderStep.status.replace('_', ' ')}
                           </Badge>
                           {orderStep.progress_percentage !== null && (
-                            <span className="text-sm font-medium">{orderStep.progress_percentage}%</span>
+                            <span className="text-xs font-medium">{orderStep.progress_percentage}%</span>
                           )}
                         </div>
                       </div>
 
-                      {/* Step timing info */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3 text-sm">
+                      {/* Step timing info - More Compact */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2 text-xs">
                         {orderStep.started_at && (
                           <div>
                             <span className="text-muted-foreground">Started:</span>
-                            <p className="font-medium">{format(new Date(orderStep.started_at), 'MMM dd, yyyy HH:mm')}</p>
+                            <p className="font-medium">{format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</p>
                           </div>
                         )}
                         {orderStep.completed_at && (
                           <div>
                             <span className="text-muted-foreground">Completed:</span>
-                            <p className="font-medium">{format(new Date(orderStep.completed_at), 'MMM dd, yyyy HH:mm')}</p>
+                            <p className="font-medium">{format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</p>
                           </div>
                         )}
                         {orderStep.workers?.name && (
                           <div>
-                            <span className="text-muted-foreground">Assigned Worker:</span>
+                            <span className="text-muted-foreground">Worker:</span>
                             <p className="font-medium">{orderStep.workers.name}</p>
                           </div>
                         )}
                       </div>
 
-                      {/* Step field data */}
+                      {/* Step field data - More Compact */}
                       {orderStep.fields.length > 0 && (
                         <div>
-                          <h5 className="font-medium mb-2 text-sm">Step Data:</h5>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <h5 className="font-medium mb-1 text-xs">Step Data:</h5>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {orderStep.fields.map((field) => (
-                              <div key={field.id} className="bg-muted/50 p-2 rounded">
-                                <span className="text-xs text-muted-foreground block">{field.field_label}:</span>
-                                <span className="text-sm font-medium">
+                              <div key={field.id} className="bg-muted/50 p-2 rounded text-xs">
+                                <span className="text-muted-foreground block">{field.field_label}:</span>
+                                <span className="font-medium">
                                   {getFieldValue(field.field_id, orderStep.values)}
                                 </span>
                               </div>
@@ -253,11 +254,11 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         </div>
                       )}
 
-                      {/* Notes */}
+                      {/* Notes - More Compact */}
                       {orderStep.notes && (
-                        <div className="mt-3 pt-3 border-t">
+                        <div className="mt-2 pt-2 border-t">
                           <span className="text-xs text-muted-foreground">Notes:</span>
-                          <p className="text-sm">{orderStep.notes}</p>
+                          <p className="text-xs">{orderStep.notes}</p>
                         </div>
                       )}
                     </div>
@@ -266,23 +267,23 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </Card>
             )}
 
-            {/* Raw Material Requirements */}
+            {/* Raw Material Requirements - More Compact */}
             {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Truck className="h-5 w-5" />
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
                     Raw Material Requirements
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Per Unit</TableHead>
-                        <TableHead>Total Required</TableHead>
-                        <TableHead>Unit</TableHead>
+                      <TableRow className="h-8">
+                        <TableHead className="py-1 text-xs">Material</TableHead>
+                        <TableHead className="py-1 text-xs">Per Unit</TableHead>
+                        <TableHead className="py-1 text-xs">Total Required</TableHead>
+                        <TableHead className="py-1 text-xs">Unit</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -290,13 +291,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         const totalRequired = material.quantity_required * order.quantity_required;
                         
                         return (
-                          <TableRow key={material.id || index}>
-                            <TableCell className="font-medium">
+                          <TableRow key={material.id || index} className="h-8">
+                            <TableCell className="py-1 text-xs font-medium">
                               {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
                             </TableCell>
-                            <TableCell>{material.quantity_required}</TableCell>
-                            <TableCell className="font-semibold">{totalRequired.toFixed(1)}</TableCell>
-                            <TableCell>{material.unit}</TableCell>
+                            <TableCell className="py-1 text-xs">{material.quantity_required}</TableCell>
+                            <TableCell className="py-1 text-xs font-semibold">{totalRequired.toFixed(1)}</TableCell>
+                            <TableCell className="py-1 text-xs">{material.unit}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -306,28 +307,28 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </Card>
             )}
 
-            {/* Special Instructions */}
+            {/* Special Instructions - More Compact */}
             {order.special_instructions && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
                     Special Instructions
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-sm">{order.special_instructions}</p>
                 </CardContent>
               </Card>
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-center pt-4 border-t">
+            <div className="flex justify-center pt-3 border-t">
               {nextStep && !hasStarted && (
                 <Button 
                   onClick={handleStartStep}
                   className="bg-primary hover:bg-primary/90"
-                  size="lg"
+                  size="default"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   Start {nextStep.step_name}
@@ -338,7 +339,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 <Button 
                   onClick={() => setTagInDialogOpen(true)}
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  size="lg"
+                  size="default"
                 >
                   <ArrowUp className="h-4 w-4 mr-2" />
                   Tag In to Inventory
@@ -347,15 +348,15 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
               {hasStarted && !isCompleted && !isTaggedIn && (
                 <div className="flex items-center gap-2 text-blue-600">
-                  <Workflow className="h-5 w-5" />
-                  <span className="font-medium">Production In Progress</span>
+                  <Workflow className="h-4 w-4" />
+                  <span className="font-medium text-sm">Production In Progress</span>
                 </div>
               )}
 
               {isTaggedIn && (
                 <div className="flex items-center gap-2 text-purple-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">Tagged In to Inventory</span>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium text-sm">Tagged In to Inventory</span>
                 </div>
               )}
             </div>

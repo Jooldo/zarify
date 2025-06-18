@@ -1,117 +1,102 @@
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Package2, Calculator, Info, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Package2, AlertTriangle } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { useToast } from '@/hooks/use-toast';
+import RawMaterialStockDisplay from './RawMaterialStockDisplay';
 
 interface CreateManufacturingOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufacturingOrderDialogProps) => {
-  const [productConfigId, setProductConfigId] = useState('');
-  const [quantityRequired, setQuantityRequired] = useState('');
+const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogProps> = ({
+  open,
+  onOpenChange
+}) => {
+  const [productConfigId, setProductConfigId] = useState<string>('');
+  const [productName, setProductName] = useState<string>('');
+  const [quantityRequired, setQuantityRequired] = useState<number>(1);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [specialInstructions, setSpecialInstructions] = useState('');
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [specialInstructions, setSpecialInstructions] = useState<string>('');
 
   const { productConfigs, loading: configsLoading } = useProductConfigs();
   const { createOrder, isCreating } = useManufacturingOrders();
+  const { toast } = useToast();
 
-  const selectedConfig = productConfigs.find(config => config.id === productConfigId);
-  const quantity = parseInt(quantityRequired) || 0;
-
-  const validateForm = () => {
-    const errors: {[key: string]: string} = {};
-
-    if (!productConfigId) {
-      errors.productConfig = 'Please select a product configuration';
+  useEffect(() => {
+    if (!open) {
+      // Reset form when dialog closes
+      setProductConfigId('');
+      setProductName('');
+      setQuantityRequired(1);
+      setPriority('medium');
+      setDueDate(undefined);
+      setSpecialInstructions('');
     }
+  }, [open]);
 
-    if (!quantityRequired || quantity <= 0) {
-      errors.quantity = 'Please enter a valid quantity greater than 0';
+  const handleProductConfigChange = (configId: string) => {
+    setProductConfigId(configId);
+    const config = productConfigs.find(c => c.id === configId);
+    if (config) {
+      setProductName(`${config.category}-${config.subcategory}-${config.size_value}${config.weight_range ? `-${config.weight_range}` : ''}`);
     }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!productConfigId || !productName || quantityRequired <= 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields correctly.',
+        variant: 'destructive',
+      });
       return;
     }
 
     try {
-      // Use the product code as product name and category as product type
-      const productName = selectedConfig?.product_code || '';
-      const productType = selectedConfig?.category || '';
-
-      console.log('Submitting manufacturing order:', {
-        product_name: productName,
-        product_type: productType,
-        product_config_id: productConfigId,
-        quantity_required: quantity,
-        priority,
-        due_date: dueDate || undefined,
-        special_instructions: specialInstructions || undefined,
-      });
-
       await createOrder({
         product_name: productName,
-        product_type: productType,
         product_config_id: productConfigId,
-        quantity_required: quantity,
+        quantity_required: quantityRequired,
         priority,
-        due_date: dueDate || undefined,
+        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         special_instructions: specialInstructions || undefined,
       });
 
-      // Reset form on success
-      setProductConfigId('');
-      setQuantityRequired('');
-      setPriority('medium');
-      setDueDate('');
-      setSpecialInstructions('');
-      setFormErrors({});
       onOpenChange(false);
     } catch (error) {
-      console.error('Form submission error:', error);
-      // Error handling is done in the hook
+      console.error('Error creating manufacturing order:', error);
     }
   };
 
-  const handleFormReset = () => {
-    setProductConfigId('');
-    setQuantityRequired('');
-    setPriority('medium');
-    setDueDate('');
-    setSpecialInstructions('');
-    setFormErrors({});
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      handleFormReset();
+  const getPriorityColor = (priorityLevel: string) => {
+    switch (priorityLevel) {
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package2 className="h-5 w-5" />
@@ -119,202 +104,135 @@ const CreateManufacturingOrderDialog = ({ open, onOpenChange }: CreateManufactur
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Product Code Selection */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Product Selection</h3>
-            
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="productConfig">Product Configuration *</Label>
-              <Select value={productConfigId} onValueChange={setProductConfigId} required>
-                <SelectTrigger className={formErrors.productConfig ? 'border-red-500' : ''}>
+              <Label htmlFor="product-config">Product Configuration *</Label>
+              <Select value={productConfigId} onValueChange={handleProductConfigChange}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select product configuration" />
                 </SelectTrigger>
                 <SelectContent>
-                  {configsLoading ? (
-                    <SelectItem value="" disabled>Loading configurations...</SelectItem>
-                  ) : productConfigs.length === 0 ? (
-                    <SelectItem value="" disabled>No product configurations found</SelectItem>
-                  ) : (
-                    productConfigs.map((config) => (
-                      <SelectItem key={config.id} value={config.id}>
-                        {config.product_code} - {config.category} {config.subcategory}
-                      </SelectItem>
-                    ))
-                  )}
+                  {productConfigs.map((config) => (
+                    <SelectItem key={config.id} value={config.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{config.product_code}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {config.category}-{config.subcategory}-{config.size_value}
+                          {config.weight_range && `-${config.weight_range}`}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {formErrors.productConfig && (
-                <div className="flex items-center gap-1 text-sm text-red-600">
-                  <AlertTriangle className="h-3 w-3" />
-                  {formErrors.productConfig}
-                </div>
-              )}
-            </div>
-
-            {/* Product Information Display */}
-            {selectedConfig && (
-              <Card className="border-blue-200 bg-blue-50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Info className="h-4 w-4" />
-                    Product Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-600">Product Code</Label>
-                      <div className="font-semibold text-blue-700">{selectedConfig.product_code}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-600">Category</Label>
-                      <div className="font-medium">{selectedConfig.category}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-600">Type</Label>
-                      <div className="font-medium">{selectedConfig.subcategory}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-600">Size</Label>
-                      <div className="font-medium">{selectedConfig.size_value}"</div>
-                    </div>
-                  </div>
-                  {selectedConfig.weight_range && (
-                    <div>
-                      <Label className="text-xs font-medium text-gray-600">Weight Range</Label>
-                      <div className="font-medium">{selectedConfig.weight_range}</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Order Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Order Details</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity Required *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={quantityRequired}
-                  onChange={(e) => setQuantityRequired(e.target.value)}
-                  placeholder="0"
-                  min="1"
-                  required
-                  className={formErrors.quantity ? 'border-red-500' : ''}
-                />
-                {formErrors.quantity && (
-                  <div className="flex items-center gap-1 text-sm text-red-600">
-                    <AlertTriangle className="h-3 w-3" />
-                    {formErrors.quantity}
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select value={priority} onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') => setPriority(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="instructions">Special Instructions</Label>
-              <Textarea
-                id="instructions"
-                value={specialInstructions}
-                onChange={(e) => setSpecialInstructions(e.target.value)}
-                placeholder="Any special instructions for this manufacturing order..."
-                rows={3}
+              <Label htmlFor="quantity">Quantity Required *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={quantityRequired}
+                onChange={(e) => setQuantityRequired(parseInt(e.target.value) || 1)}
+                placeholder="Enter quantity"
               />
             </div>
           </div>
 
-          {/* Raw Material Requirements (Auto-calculated from Product Config) */}
-          {selectedConfig && selectedConfig.product_config_materials && selectedConfig.product_config_materials.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4" />
-                <h3 className="font-semibold text-lg">Raw Material Requirements</h3>
-                <Badge variant="outline" className="text-xs">
-                  Auto-calculated from Product Config
-                </Badge>
-              </div>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold">Material</TableHead>
-                      <TableHead className="font-semibold text-center">Per Unit</TableHead>
-                      <TableHead className="font-semibold text-center">Total Required</TableHead>
-                      <TableHead className="font-semibold text-center">Unit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedConfig.product_config_materials.map((material, index) => {
-                      const totalRequired = material.quantity_required * quantity;
-                      
-                      return (
-                        <TableRow key={material.id || index}>
-                          <TableCell className="font-medium">
-                            {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
-                            <div className="text-xs text-gray-500">
-                              {material.raw_materials?.type || 'Unknown Type'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {material.quantity_required}
-                          </TableCell>
-                          <TableCell className="text-center font-semibold text-blue-600">
-                            {totalRequired.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {material.unit}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={priority} onValueChange={(value) => setPriority(value as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <span className={`px-2 py-1 rounded text-xs ${getPriorityColor('low')}`}>
+                      Low
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <span className={`px-2 py-1 rounded text-xs ${getPriorityColor('medium')}`}>
+                      Medium
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <span className={`px-2 py-1 rounded text-xs ${getPriorityColor('high')}`}>
+                      High
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="urgent">
+                    <span className={`px-2 py-1 rounded text-xs ${getPriorityColor('urgent')}`}>
+                      Urgent
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="instructions">Special Instructions</Label>
+            <Textarea
+              id="instructions"
+              value={specialInstructions}
+              onChange={(e) => setSpecialInstructions(e.target.value)}
+              placeholder="Enter any special instructions for this manufacturing order..."
+              rows={3}
+            />
+          </div>
+
+          {/* Raw Material Stock Display */}
+          {productConfigId && quantityRequired > 0 && (
+            <RawMaterialStockDisplay 
+              productConfigId={productConfigId}
+              quantityRequired={quantityRequired}
+            />
           )}
 
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
             <Button 
               type="submit" 
-              className="flex-1" 
-              disabled={isCreating || configsLoading}
+              disabled={isCreating || !productConfigId || quantityRequired <= 0}
             >
-              {isCreating ? 'Creating...' : 'Create Manufacturing Order'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancel
+              {isCreating ? 'Creating...' : 'Create Order'}
             </Button>
           </div>
         </form>

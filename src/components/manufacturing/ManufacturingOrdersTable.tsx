@@ -114,16 +114,16 @@ const ManufacturingOrdersTable = ({
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Order Number</TableHead>
-              <TableHead>Product Code</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Current Step</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="py-1 text-xs">Order Number</TableHead>
+              <TableHead className="py-1 text-xs">Product Code</TableHead>
+              <TableHead className="py-1 text-xs">Qty</TableHead>
+              <TableHead className="py-1 text-xs">Priority</TableHead>
+              <TableHead className="py-1 text-xs">Status</TableHead>
+              <TableHead className="py-1 text-xs">Current Step</TableHead>
+              <TableHead className="py-1 text-xs">Due Date</TableHead>
+              <TableHead className="py-1 text-xs">Created</TableHead>
+              <TableHead className="py-1 text-xs">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,9 +131,9 @@ const ManufacturingOrdersTable = ({
               const currentStep = getCurrentStep(order.id);
               
               return (
-                <TableRow key={order.id} className="hover:bg-muted/50">
-                  <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
-                  <TableCell className="font-mono text-sm">
+                <TableRow key={order.id} className="hover:bg-muted/50 h-10">
+                  <TableCell className="py-1 text-xs font-mono">{order.order_number}</TableCell>
+                  <TableCell className="py-1 text-xs font-mono">
                     {order.product_configs?.product_code ? (
                       <Button
                         variant="link"
@@ -146,33 +146,33 @@ const ManufacturingOrdersTable = ({
                       'N/A'
                     )}
                   </TableCell>
-                  <TableCell>{order.quantity_required}</TableCell>
-                  <TableCell>
+                  <TableCell className="py-1 text-xs">{order.quantity_required}</TableCell>
+                  <TableCell className="py-1">
                     <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
                       {order.priority}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-1">
                     <Badge className={`text-xs ${getStatusColor(order.status)}`}>
                       {order.status.replace('_', ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
+                  <TableCell className="py-1">
+                    <div className="flex flex-col">
                       <span className="text-xs font-medium">
                         {formatStepDisplay(currentStep.stepName, currentStep.status)}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {order.due_date ? format(new Date(order.due_date), 'MMM dd, yyyy') : 'Not set'}
+                  <TableCell className="py-1 text-xs">
+                    {order.due_date ? format(new Date(order.due_date), 'MMM dd') : 'Not set'}
                   </TableCell>
-                  <TableCell>
-                    {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                  <TableCell className="py-1 text-xs">
+                    {format(new Date(order.created_at), 'MMM dd')}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => onViewOrder(order)}>
+                  <TableCell className="py-1">
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={() => onViewOrder(order)} className="h-6 w-6 p-0">
                         <Eye className="h-3 w-3" />
                       </Button>
                       
@@ -181,7 +181,7 @@ const ManufacturingOrdersTable = ({
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleDeleteClick(order)}
-                          className="text-red-600 hover:text-red-700"
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -192,7 +192,7 @@ const ManufacturingOrdersTable = ({
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleTagInClick(order)}
-                          className="text-green-600 hover:text-green-700"
+                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
                         >
                           <ArrowUp className="h-3 w-3" />
                         </Button>
