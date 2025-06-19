@@ -30,8 +30,18 @@ const ROLE_COLORS = {
 };
 
 const UserRolesSection = () => {
-  const { userRoles, isLoading, assignRole, deactivateRole, isAssigning, isDeactivating } = useUserRoles();
+  console.log('🎯 UserRolesSection rendering...');
+  
+  const { userRoles, isLoading, assignRole, deactivateRole, isAssigning, isDeactivating, error } = useUserRoles();
   const { data: isAdmin } = useHasRole('admin');
+  
+  console.log('📊 UserRolesSection state:', {
+    userRoles: userRoles?.length || 0,
+    isLoading,
+    isAdmin,
+    error: error?.message || 'none'
+  });
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
@@ -83,6 +93,7 @@ const UserRolesSection = () => {
   };
 
   if (isLoading) {
+    console.log('⏳ UserRolesSection showing loading state');
     return (
       <Card>
         <CardHeader>
@@ -94,6 +105,24 @@ const UserRolesSection = () => {
       </Card>
     );
   }
+
+  if (error) {
+    console.error('❌ UserRolesSection showing error state:', error);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>User Roles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-red-600">
+            Error loading user roles: {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  console.log('✅ UserRolesSection rendering main content');
 
   return (
     <Card>

@@ -34,61 +34,70 @@ export const useUserRoles = () => {
     queryFn: async () => {
       console.log('🔍 Fetching user roles...');
       
-      // First get the user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      try {
+        // First get the user roles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
 
-      if (rolesError) {
-        console.error('Error fetching user roles:', rolesError);
-        throw rolesError;
+        console.log('📊 Raw roles data:', rolesData);
+        console.log('❌ Roles error:', rolesError);
+
+        if (rolesError) {
+          console.error('Error fetching user roles:', rolesError);
+          throw rolesError;
+        }
+
+        if (!rolesData || rolesData.length === 0) {
+          console.log('✅ No roles found, returning empty array');
+          return [];
+        }
+
+        // Get unique user IDs for profile lookup
+        const userIds = [...new Set([
+          ...rolesData.map(role => role.user_id),
+          ...rolesData.map(role => role.assigned_by).filter(Boolean)
+        ])];
+
+        console.log('👥 User IDs for profile lookup:', userIds);
+
+        // Fetch profiles for all relevant users
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds);
+
+        console.log('👤 Profiles data:', profilesData);
+        console.log('❌ Profiles error:', profilesError);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          // Continue without profiles if there's an error
+        }
+
+        // Create a profile lookup map
+        const profileLookup = (profilesData || []).reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, { first_name: string | null; last_name: string | null }>);
+
+        console.log('🗺️ Profile lookup map:', profileLookup);
+
+        // Combine roles with profile data
+        const rolesWithProfiles = rolesData.map(role => ({
+          ...role,
+          profiles: profileLookup[role.user_id] || null,
+          assigned_by_profile: role.assigned_by ? profileLookup[role.assigned_by] || null : null,
+        }));
+
+        console.log('✅ Final roles with profiles:', rolesWithProfiles);
+        return rolesWithProfiles as UserRoleWithProfile[];
+      } catch (error) {
+        console.error('🚨 Error in useUserRoles query:', error);
+        throw error;
       }
-
-      console.log('📊 Roles data:', rolesData);
-
-      if (!rolesData || rolesData.length === 0) {
-        console.log('No roles found');
-        return [];
-      }
-
-      // Get unique user IDs for profile lookup
-      const userIds = [...new Set([
-        ...rolesData.map(role => role.user_id),
-        ...rolesData.map(role => role.assigned_by).filter(Boolean)
-      ])];
-
-      console.log('👥 User IDs for profile lookup:', userIds);
-
-      // Fetch profiles for all relevant users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        // Continue without profiles if there's an error
-      }
-
-      console.log('👤 Profiles data:', profilesData);
-
-      // Create a profile lookup map
-      const profileLookup = (profilesData || []).reduce((acc, profile) => {
-        acc[profile.id] = profile;
-        return acc;
-      }, {} as Record<string, { first_name: string | null; last_name: string | null }>);
-
-      // Combine roles with profile data
-      const rolesWithProfiles = rolesData.map(role => ({
-        ...role,
-        profiles: profileLookup[role.user_id] || null,
-        assigned_by_profile: role.assigned_by ? profileLookup[role.assigned_by] || null : null,
-      }));
-
-      console.log('✅ Roles with profiles:', rolesWithProfiles);
-      return rolesWithProfiles as UserRoleWithProfile[];
     },
   });
 
@@ -190,6 +199,12 @@ export const useUserRoles = () => {
     },
   });
 
+  console.log('🔄 useUserRoles hook state:', { 
+    userRoles: userRoles?.length || 0, 
+    isLoading, 
+    error: error?.message || 'none' 
+  });
+
   return {
     userRoles,
     isLoading,
@@ -245,6 +260,8 @@ export const useHasRole = (role: string) => {
         .eq('role', role)
         .eq('is_active', true)
         .maybeSingle();
+
+      console.log('🔍 Role query result:', { roleData, roleError });
 
       if (roleError) {
         console.error('Error checking role from table:', roleError);
