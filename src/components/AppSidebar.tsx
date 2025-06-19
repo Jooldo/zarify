@@ -38,7 +38,8 @@ import {
   BarChart3,
   ChevronDown,
   Workflow,
-  BookCopy // Added new icon
+  BookCopy,
+  Shield // Added Shield icon for User Roles
 } from "lucide-react";
 
 interface AppSidebarProps {
@@ -149,6 +150,11 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
           title: "Workers",
           icon: UserCheck,
           tab: "workers",
+        },
+        {
+          title: "User Roles",
+          icon: Shield,
+          tab: "roles",
         },
       ],
     },
