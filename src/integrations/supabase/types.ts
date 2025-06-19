@@ -1665,6 +1665,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_user_has_admin_role: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       create_next_manufacturing_step: {
         Args: { p_manufacturing_order_id: string; p_current_step_order: number }
         Returns: string
