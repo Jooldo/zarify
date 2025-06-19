@@ -20,11 +20,11 @@ export interface UserRoleWithProfile extends UserRole {
   profiles?: {
     first_name: string | null;
     last_name: string | null;
-  };
+  } | null;
   assigned_by_profile?: {
     first_name: string | null;
     last_name: string | null;
-  };
+  } | null;
 }
 
 export const useUserRoles = () => {
@@ -37,11 +37,11 @@ export const useUserRoles = () => {
         .from('user_roles')
         .select(`
           *,
-          profiles:user_id (
+          profiles!user_roles_user_id_fkey (
             first_name,
             last_name
           ),
-          assigned_by_profile:assigned_by (
+          assigned_by_profile:profiles!user_roles_assigned_by_fkey (
             first_name,
             last_name
           )
@@ -68,10 +68,22 @@ export const useUserRoles = () => {
       role: string; 
       permissions?: Record<string, any>;
     }) => {
+      // Get current user's merchant_id first
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('merchant_id')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profileData?.merchant_id) {
+        throw new Error('User merchant not found');
+      }
+
       const { data, error } = await supabase
         .from('user_roles')
         .insert({
           user_id: userId,
+          merchant_id: profileData.merchant_id,
           role,
           permissions,
         })
