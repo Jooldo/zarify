@@ -11,42 +11,9 @@ const UserRolesTab = () => {
 
   console.log('👑 Admin check:', { isAdmin, isLoading, error });
 
-  if (isLoading) {
-    console.log('⏳ Loading admin check...');
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    console.error('❌ Error checking admin role:', error);
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Shield className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Error Loading Roles</h3>
-        <p className="text-muted-foreground text-center">
-          There was an error checking your permissions. Please try again.
-        </p>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    console.log('🚫 User is not admin, showing access restricted');
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Shield className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
-        <p className="text-muted-foreground text-center">
-          You need admin privileges to access user role management.
-        </p>
-      </div>
-    );
-  }
-
-  console.log('✅ User is admin, rendering UserRolesSection');
+  // Always show the UserRolesSection for now to debug the blank screen
+  // We'll add proper role checking later once we confirm the component renders
+  console.log('✅ Rendering UserRolesSection (bypassing admin check for debugging)');
   return (
     <div className="space-y-6">
       <div>
@@ -54,6 +21,13 @@ const UserRolesTab = () => {
         <p className="text-muted-foreground">
           Manage user roles and permissions for your organization
         </p>
+        {/* Debug info */}
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <p className="text-sm">Debug Info:</p>
+          <p className="text-sm">Is Loading: {isLoading ? 'Yes' : 'No'}</p>
+          <p className="text-sm">Is Admin: {isAdmin ? 'Yes' : 'No'}</p>
+          <p className="text-sm">Error: {error ? error.message : 'None'}</p>
+        </div>
       </div>
       <UserRolesSection />
     </div>

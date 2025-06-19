@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -54,7 +53,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     "raw-materials": true,
     "finished-goods": true,
     "manufacturing": true,
-    "users": true,
+    "users": true, // Keep users section open by default
     "settings": false,
   });
 
