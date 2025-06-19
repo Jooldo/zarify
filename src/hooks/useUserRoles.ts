@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,6 +32,8 @@ export const useUserRoles = () => {
   const { data: userRoles, isLoading, error } = useQuery({
     queryKey: ['user-roles'],
     queryFn: async () => {
+      console.log('🔍 Fetching user roles...');
+      
       // First get the user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
@@ -45,7 +46,10 @@ export const useUserRoles = () => {
         throw rolesError;
       }
 
+      console.log('📊 Roles data:', rolesData);
+
       if (!rolesData || rolesData.length === 0) {
+        console.log('No roles found');
         return [];
       }
 
@@ -54,6 +58,8 @@ export const useUserRoles = () => {
         ...rolesData.map(role => role.user_id),
         ...rolesData.map(role => role.assigned_by).filter(Boolean)
       ])];
+
+      console.log('👥 User IDs for profile lookup:', userIds);
 
       // Fetch profiles for all relevant users
       const { data: profilesData, error: profilesError } = await supabase
@@ -65,6 +71,8 @@ export const useUserRoles = () => {
         console.error('Error fetching profiles:', profilesError);
         // Continue without profiles if there's an error
       }
+
+      console.log('👤 Profiles data:', profilesData);
 
       // Create a profile lookup map
       const profileLookup = (profilesData || []).reduce((acc, profile) => {
@@ -79,6 +87,7 @@ export const useUserRoles = () => {
         assigned_by_profile: role.assigned_by ? profileLookup[role.assigned_by] || null : null,
       }));
 
+      console.log('✅ Roles with profiles:', rolesWithProfiles);
       return rolesWithProfiles as UserRoleWithProfile[];
     },
   });
@@ -93,6 +102,8 @@ export const useUserRoles = () => {
       role: string; 
       permissions?: Record<string, any>;
     }) => {
+      console.log('🎯 Assigning role:', { userId, role, permissions });
+      
       // Get current user's merchant_id first
       const { data: profileData } = await supabase
         .from('profiles')
@@ -120,6 +131,7 @@ export const useUserRoles = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['has-role'] });
       toast.success('Role assigned successfully');
     },
     onError: (error: any) => {
@@ -195,6 +207,8 @@ export const useCurrentUserRoles = () => {
   return useQuery({
     queryKey: ['current-user-roles'],
     queryFn: async () => {
+      console.log('🔍 Fetching current user roles...');
+      
       const { data, error } = await supabase
         .rpc('get_user_roles');
 
@@ -203,6 +217,7 @@ export const useCurrentUserRoles = () => {
         throw error;
       }
 
+      console.log('✅ Current user roles:', data);
       return data;
     },
   });
@@ -212,21 +227,34 @@ export const useHasRole = (role: string) => {
   return useQuery({
     queryKey: ['has-role', role],
     queryFn: async () => {
+      console.log('🔍 Checking if user has role:', role);
+      
       const { data: currentUser } = await supabase.auth.getUser();
-      if (!currentUser.user) return false;
-
-      const { data, error } = await supabase
-        .rpc('has_role', { 
-          _user_id: currentUser.user.id, 
-          _role: role 
-        });
-
-      if (error) {
-        console.error('Error checking role:', error);
+      if (!currentUser.user) {
+        console.log('❌ No current user');
         return false;
       }
 
-      return data;
+      console.log('👤 Current user ID:', currentUser.user.id);
+
+      // Check user roles directly from the table first
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', currentUser.user.id)
+        .eq('role', role)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error checking role from table:', roleError);
+        return false;
+      }
+
+      const hasRole = !!roleData;
+      console.log(`✅ User ${hasRole ? 'has' : 'does not have'} role '${role}'`);
+      
+      return hasRole;
     },
   });
 };
