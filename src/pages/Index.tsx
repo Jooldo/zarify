@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -65,6 +66,8 @@ const Index = () => {
         return "Suppliers";
       case "workers":
         return "Workers";
+      case "roles":
+        return "User Roles";
       case "activity":
         return "Activity Logs";
       case "catalogue-management":
@@ -87,8 +90,10 @@ const Index = () => {
   };
 
   const isUsersTab = () => {
-    const userTabs = ['users', 'customers', 'suppliers', 'workers'];
+    // Updated to include 'roles' explicitly
+    const userTabs = ['users', 'customers', 'suppliers', 'workers', 'roles'];
     const isUserTab = userTabs.includes(activeTab);
+    console.log('🔍 Checking if is users tab:', { activeTab, userTabs, isUserTab });
     return isUserTab;
   };
 
@@ -97,6 +102,8 @@ const Index = () => {
   };
 
   const pageTitle = getPageTitle();
+
+  console.log('🎯 Index component state:', { activeTab, pageTitle, isUsersTab: isUsersTab() });
 
   return (
     <div className="min-h-screen bg-gray-50">
