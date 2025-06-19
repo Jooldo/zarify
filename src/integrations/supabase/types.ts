@@ -1509,6 +1509,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          merchant_id: string
+          permissions: Json | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchant_id: string
+          permissions?: Json | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          merchant_id?: string
+          permissions?: Json | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_notifications: {
         Row: {
           created_at: string | null
@@ -1649,6 +1696,19 @@ export type Database = {
       get_user_merchant_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_roles: {
+        Args: { _user_id?: string }
+        Returns: {
+          role: string
+          permissions: Json
+          is_active: boolean
+          assigned_at: string
+        }[]
+      }
+      has_role: {
+        Args: { _user_id: string; _role: string }
+        Returns: boolean
       }
       log_user_activity: {
         Args: {

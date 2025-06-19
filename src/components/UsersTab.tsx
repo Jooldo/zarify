@@ -1,9 +1,10 @@
 
-import { Users, Building, Hammer } from 'lucide-react';
+import { Users, Building, Hammer, Shield } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CustomersSection from '@/components/users/CustomersSection';
 import SuppliersSection from '@/components/users/SuppliersSection';
 import WorkersSection from '@/components/users/WorkersSection';
+import UserRolesTab from '@/components/users/UserRolesTab';
 
 interface UsersTabProps {
   activeTab: string;
@@ -26,6 +27,9 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
       case 'workers':
         console.log('Rendering WorkersSection');
         return <WorkersSection />;
+      case 'roles':
+        console.log('Rendering UserRolesTab');
+        return <UserRolesTab />;
       default:
         console.log('Rendering default CustomersSection for tab:', activeTab);
         return <CustomersSection />;
@@ -42,13 +46,13 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
               User Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage customers, suppliers, and workers
+              Manage customers, suppliers, workers, and user roles
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
+          <TabsList className="grid w-full grid-cols-4 bg-muted h-12">
             <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Users className="h-4 w-4" />
               Customers
@@ -60,6 +64,10 @@ const UsersTab = ({ activeTab, onTabChange }: UsersTabProps) => {
             <TabsTrigger value="workers" className="flex items-center gap-2 data-[state=active]:bg-background">
               <Hammer className="h-4 w-4" />
               Workers
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Shield className="h-4 w-4" />
+              User Roles
             </TabsTrigger>
           </TabsList>
         </Tabs>
