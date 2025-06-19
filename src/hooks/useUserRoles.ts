@@ -33,28 +33,53 @@ export const useUserRoles = () => {
   const { data: userRoles, isLoading, error } = useQuery({
     queryKey: ['user-roles'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get the user roles
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          *,
-          profiles!user_roles_user_id_fkey (
-            first_name,
-            last_name
-          ),
-          assigned_by_profile:profiles!user_roles_assigned_by_fkey (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching user roles:', error);
-        throw error;
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
+        throw rolesError;
       }
 
-      return data as UserRoleWithProfile[];
+      if (!rolesData || rolesData.length === 0) {
+        return [];
+      }
+
+      // Get unique user IDs for profile lookup
+      const userIds = [...new Set([
+        ...rolesData.map(role => role.user_id),
+        ...rolesData.map(role => role.assigned_by).filter(Boolean)
+      ])];
+
+      // Fetch profiles for all relevant users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        // Continue without profiles if there's an error
+      }
+
+      // Create a profile lookup map
+      const profileLookup = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {} as Record<string, { first_name: string | null; last_name: string | null }>);
+
+      // Combine roles with profile data
+      const rolesWithProfiles = rolesData.map(role => ({
+        ...role,
+        profiles: profileLookup[role.user_id] || null,
+        assigned_by_profile: role.assigned_by ? profileLookup[role.assigned_by] || null : null,
+      }));
+
+      return rolesWithProfiles as UserRoleWithProfile[];
     },
   });
 
