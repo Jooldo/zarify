@@ -7,9 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { useInventoryTags, type TagProductInfo } from '@/hooks/useInventoryTags';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
-import { Tag, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Tag, AlertCircle, CheckCircle, Info, Package2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type OrderStatus } from '@/hooks/useOrders';
+import StepIndicator from './StepIndicator';
+import ProductPickerDialog from './ProductPickerDialog';
+import OrderCard from './OrderCard';
+import SubOrderItem from './SubOrderItem';
 
 interface OrderItem {
   id: string;
@@ -41,16 +45,27 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
   const [isVerifyingTag, setIsVerifyingTag] = useState(false);
   
   const [customerId, setCustomerId] = useState('');
-  const [orders, setOrders] = useState<Order[]>([]); // All orders for customer
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]); // Orders filtered by product
+  const [customersWithOrders, setCustomersWithOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [selectedOrderItemId, setSelectedOrderItemId] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   
   const { processTagOperation, getTagProductConfigByTagId } = useInventoryTags();
-  const { customers } = useCustomerAutocomplete();
+  const { fetchCustomersWithActiveOrders } = useCustomerAutocomplete();
   const { toast } = useToast();
+
+  const steps = ['Select Product', 'Choose Customer', 'Select Order', 'Choose Sub-Order'];
+  
+  const getCurrentStep = () => {
+    if (!scannedProductInfo) return 1;
+    if (!customerId) return 2;
+    if (!selectedOrderId) return 3;
+    return 4;
+  };
 
   const handleVerifyTag = async () => {
     if (!tagIdInput.trim()) {
@@ -61,28 +76,63 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
     setIsVerifyingTag(true);
     setTagScanError(null);
     setScannedProductInfo(null);
-    setFilteredOrders([]); // Clear previously filtered orders
-    setSelectedOrderId('');
-    setSelectedOrderItemId('');
+    resetSelections();
 
     try {
       const productInfo = await getTagProductConfigByTagId(tagIdInput.trim());
       if (productInfo) {
         setScannedProductInfo(productInfo);
-        // Customer dropdown will be enabled, and then orders will be fetched
-      } else {
-        // Error toast is handled by getTagProductConfigByTagId, or specific error can be set
-        // setTagScanError(`Tag ID ${tagIdInput.trim()} not found or product info missing.`);
+        // Fetch customers with active orders for this product
+        await fetchCustomersForProduct(productInfo.product_config_id);
       }
     } catch (error) {
-      // Error already toasted by hook
-      // setTagScanError(error.message || "Failed to verify tag.");
+      // Error already handled by hook
       setScannedProductInfo(null);
     } finally {
       setIsVerifyingTag(false);
     }
   };
-  
+
+  const handleProductSelect = async (productConfigId: string, productCode: string) => {
+    // Create a mock product info object for manual selection
+    const mockProductInfo: TagProductInfo = {
+      product_config_id: productConfigId,
+      product_code: productCode,
+      tag_quantity: 1, // This will be determined by the actual tag when scanned
+    };
+    
+    setScannedProductInfo(mockProductInfo);
+    setTagIdInput(''); // Clear tag input since we're selecting manually
+    resetSelections();
+    await fetchCustomersForProduct(productConfigId);
+  };
+
+  const fetchCustomersForProduct = async (productConfigId: string) => {
+    setLoadingCustomers(true);
+    try {
+      const customers = await fetchCustomersWithActiveOrders(productConfigId);
+      setCustomersWithOrders(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch customers with active orders',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const resetSelections = () => {
+    setCustomerId('');
+    setSelectedOrderId('');
+    setSelectedOrderItemId('');
+    setOrders([]);
+    setFilteredOrders([]);
+    setCustomersWithOrders([]);
+  };
+
   const fetchCustomerOrders = useCallback(async (custId: string) => {
     if (!custId) return;
     setLoadingOrders(true);
@@ -94,6 +144,8 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
           order_number,
           status,
           total_amount,
+          created_at,
+          expected_delivery,
           order_items (
             id,
             suborder_id,
@@ -118,7 +170,7 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
           product_configs: item.product_config
         }))
       })) || [];
-      setOrders(mappedData); // Store all customer orders
+      setOrders(mappedData);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -126,7 +178,7 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
         description: 'Failed to fetch customer orders',
         variant: 'destructive',
       });
-      setOrders([]); // Reset on error
+      setOrders([]);
     } finally {
       setLoadingOrders(false);
     }
@@ -148,10 +200,10 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
           ...order,
           order_items: order.order_items.filter(
             item => item.product_config_id === scannedProductInfo.product_config_id &&
-                    (item.status !== 'Delivered' && item.fulfilled_quantity < item.quantity) // Only show items needing fulfillment
+                    (item.status !== 'Delivered' && item.fulfilled_quantity < item.quantity)
           ),
         }))
-        .filter(order => order.order_items.length > 0); // Only include orders that have such items
+        .filter(order => order.order_items.length > 0);
       setFilteredOrders(productFiltered);
       setSelectedOrderId('');
       setSelectedOrderItemId('');
@@ -160,12 +212,11 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
     }
   }, [scannedProductInfo, orders]);
 
-
   const handleTagOut = async () => {
     if (!tagIdInput.trim() || !scannedProductInfo || !customerId || !selectedOrderId || !selectedOrderItemId) {
       toast({
         title: 'Error',
-        description: 'Tag ID, Product, Customer, Order, and Item must be selected.',
+        description: 'All fields must be completed to proceed with tag out.',
         variant: 'destructive',
       });
       return;
@@ -182,16 +233,6 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
       toast({ title: 'Info', description: 'This order item is already fully fulfilled/delivered.', variant: 'default' });
       return;
     }
-    if (scannedProductInfo.tag_quantity > (item.quantity - item.fulfilled_quantity)) {
-      toast({
-        title: 'Warning',
-        description: `Tag quantity (${scannedProductInfo.tag_quantity}) is more than remaining needed for this item (${item.quantity - item.fulfilled_quantity}). Only the needed amount will be considered fulfilled.`,
-        variant: 'default', // Or 'warning' if you have one
-      });
-      // Note: The backend processTagOperation will still use the full tag_quantity to update stock,
-      // but will cap the fulfilled_quantity update on the order_item. This behavior is in useInventoryTags.
-    }
-
 
     setLoading(true);
     try {
@@ -203,22 +244,14 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
         selectedOrderItemId
       );
       
-      // Reset tag ID and scanned product, but keep customer, order, item for potential further tag-outs
-      // on the same item with a *different tag*.
+      // Reset form but keep customer selected for potential additional tag-outs
       setTagIdInput('');
       setScannedProductInfo(null); 
       setTagScanError(null);
-      // Re-fetch orders for this customer to update displayed fulfilled quantity:
-      if (customerId) await fetchCustomerOrders(customerId); // await to ensure data is fresh before UI potentially rerenders selections
-      
-      // After refetching, the useEffect that filters orders will run again.
-      // We might need to re-select the order/item if we want to keep them selected,
-      // but often it's better to clear them to force re-selection if data changed significantly.
-      // For now, let's clear them to reflect the list might have changed.
       setSelectedOrderId('');
       setSelectedOrderItemId('');
-
-
+      
+      if (customerId) await fetchCustomerOrders(customerId);
       if (onOperationComplete) onOperationComplete();
     } catch (error) {
       console.error('Error processing tag out:', error);
@@ -230,149 +263,151 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
   const selectedOrder = filteredOrders.find(order => order.id === selectedOrderId);
   const selectedOrderItem = selectedOrder?.order_items.find(item => item.id === selectedOrderItemId);
 
-
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <Label htmlFor="tagId" className="text-xs">Tag ID</Label>
-        <div className="flex items-center gap-2">
-          <div className="relative flex-grow">
-            <Tag className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
-            <Input
-              id="tagId"
-              value={tagIdInput}
-              onChange={(e) => {
-                setTagIdInput(e.target.value);
-                setScannedProductInfo(null); // Clear product info if tag id changes
-                setTagScanError(null);
-                setFilteredOrders([]);
-                setSelectedOrderId('');
+    <div className="space-y-4">
+      <StepIndicator currentStep={getCurrentStep()} steps={steps} />
+      
+      {/* Step 1: Product Selection */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Package2 className="h-4 w-4 text-blue-600" />
+          <span className="font-medium text-sm">Step 1: Select Product</span>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="tagId" className="text-xs">Scan Tag ID</Label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-grow">
+                <Tag className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
+                <Input
+                  id="tagId"
+                  value={tagIdInput}
+                  onChange={(e) => {
+                    setTagIdInput(e.target.value);
+                    setScannedProductInfo(null);
+                    setTagScanError(null);
+                    resetSelections();
+                  }}
+                  placeholder="Enter tag ID..."
+                  className="pl-7 h-8"
+                  disabled={isVerifyingTag}
+                />
+              </div>
+              <Button onClick={handleVerifyTag} disabled={isVerifyingTag || !tagIdInput.trim()} size="sm" className="h-8 text-xs px-3">
+                {isVerifyingTag ? 'Verifying...' : 'Verify'}
+              </Button>
+            </div>
+            {tagScanError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{tagScanError}</p>}
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-xs">Or Select Manually</Label>
+            <ProductPickerDialog onProductSelect={handleProductSelect} />
+          </div>
+        </div>
+
+        {scannedProductInfo && (
+          <div className="p-3 border border-green-200 bg-green-50 rounded text-xs text-green-700">
+            <p className="flex items-center gap-1 font-medium"><CheckCircle className="h-4 w-4" />Product Selected: {scannedProductInfo.product_code}</p>
+            {tagIdInput && <p>Tag ID: {tagIdInput} (Qty: {scannedProductInfo.tag_quantity})</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Step 2: Customer Selection */}
+      {scannedProductInfo && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-medium text-sm">Step 2: Choose Customer</span>
+          </div>
+          
+          <div className="space-y-1">
+            <Label htmlFor="customer" className="text-xs">Customers with Active Orders</Label>
+            <Select 
+              value={customerId} 
+              onValueChange={(value) => {
+                setCustomerId(value);
+                setSelectedOrderId(''); 
                 setSelectedOrderItemId('');
               }}
-              placeholder="Enter tag ID & verify..."
-              className="pl-7 h-8"
-              disabled={isVerifyingTag}
-            />
-          </div>
-          <Button onClick={handleVerifyTag} disabled={isVerifyingTag || !tagIdInput.trim()} size="sm" className="h-8 text-xs px-3">
-            {isVerifyingTag ? 'Verifying...' : 'Verify Tag'}
-          </Button>
-        </div>
-        {tagScanError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{tagScanError}</p>}
-      </div>
-
-      {scannedProductInfo && (
-        <div className="p-2 border border-green-200 bg-green-50 rounded text-xs text-green-700">
-          <p className="flex items-center gap-1"><CheckCircle className="h-3 w-3" />Product Identified: <strong>{scannedProductInfo.product_code}</strong></p>
-          <p>Tag Quantity: {scannedProductInfo.tag_quantity}</p>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label htmlFor="customer" className="text-xs">Customer Name</Label>
-        <Select 
-          value={customerId} 
-          onValueChange={(value) => {
-            setCustomerId(value);
-            setFilteredOrders([]); // Orders will be fetched and filtered by useEffect
-            setSelectedOrderId(''); 
-            setSelectedOrderItemId('');
-          }}
-          disabled={!scannedProductInfo || isVerifyingTag} // Enable only after product is identified
-        >
-          <SelectTrigger className="h-8" disabled={!scannedProductInfo || isVerifyingTag}>
-            <SelectValue placeholder={!scannedProductInfo ? "Verify tag first..." : "Select customer..."} />
-          </SelectTrigger>
-          <SelectContent>
-            {customers.map((customer) => (
-              <SelectItem key={customer.id} value={customer.id}>
-                {customer.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {customerId && scannedProductInfo && (
-        <div className="space-y-1">
-          <Label htmlFor="order" className="text-xs">Order (for {scannedProductInfo.product_code})</Label>
-          <Select 
-            value={selectedOrderId} 
-            onValueChange={(value) => {
-              setSelectedOrderId(value);
-              setSelectedOrderItemId('');
-            }}
-            disabled={loadingOrders || filteredOrders.length === 0}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue placeholder={loadingOrders ? "Loading orders..." : (filteredOrders.length === 0 ? `No active orders for ${scannedProductInfo.product_code}` : "Select order...")} />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredOrders.map((order) => (
-                <SelectItem key={order.id} value={order.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">{order.order_number}</span>
-                    <Badge variant="outline" className="text-xs">{order.status}</Badge>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {selectedOrder && scannedProductInfo && (
-        <div className="space-y-1">
-          <Label htmlFor="suborder" className="text-xs">Sub-order (Item: {scannedProductInfo.product_code})</Label>
-          <Select 
-            value={selectedOrderItemId} 
-            onValueChange={setSelectedOrderItemId} 
-            disabled={selectedOrder.order_items.length === 0}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue placeholder={selectedOrder.order_items.length === 0 ? `No items of ${scannedProductInfo.product_code} in this order` : "Select sub-order..."} />
-            </SelectTrigger>
-            <SelectContent>
-              {selectedOrder.order_items.map((item) => {
-                const remainingToFulfill = item.quantity - item.fulfilled_quantity;
-                return (
-                  <SelectItem 
-                    key={item.id} 
-                    value={item.id} 
-                    // disabled logic is already handled by filtering in useEffect, but good to keep as safety
-                    disabled={item.status === 'Delivered' || remainingToFulfill <= 0}
-                  >
-                    <div className="flex flex-col text-xs">
-                      <div className="flex items-center gap-1">
-                        <span>{item.suborder_id}</span>
-                        <span className="text-muted-foreground">({item.product_configs.product_code})</span>
-                        <Badge variant={item.status === 'Delivered' ? "default" : "secondary"} className="text-xs px-1 h-4">
-                          {item.status}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Ordered: {item.quantity}, Fulfilled: {item.fulfilled_quantity} (Need: {remainingToFulfill})
-                      </div>
-                      {remainingToFulfill <= 0 && <span className="text-green-600 text-xs">Fully fulfilled</span>}
+              disabled={loadingCustomers}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder={loadingCustomers ? "Loading customers..." : (customersWithOrders.length === 0 ? `No customers with active orders for ${scannedProductInfo.product_code}` : "Select customer...")} />
+              </SelectTrigger>
+              <SelectContent>
+                {customersWithOrders.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{customer.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {customer.phone} • {customer.activeOrderCount} active order{customer.activeOrderCount !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Order Selection */}
+      {customerId && scannedProductInfo && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-medium text-sm">Step 3: Select Order ({scannedProductInfo.product_code})</span>
+          </div>
+          
+          {loadingOrders ? (
+            <div className="text-sm text-muted-foreground">Loading orders...</div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No active orders found for {scannedProductInfo.product_code}</div>
+          ) : (
+            <div className="grid gap-2 max-h-64 overflow-y-auto">
+              {filteredOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  productConfigId={scannedProductInfo.product_config_id}
+                  onSelect={setSelectedOrderId}
+                  isSelected={selectedOrderId === order.id}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 4: Sub-Order Selection */}
+      {selectedOrder && scannedProductInfo && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-medium text-sm">Step 4: Choose Sub-Order</span>
+          </div>
+          
+          <div className="grid gap-2 max-h-48 overflow-y-auto">
+            {selectedOrder.order_items.map((item) => (
+              <SubOrderItem
+                key={item.id}
+                item={item}
+                onSelect={setSelectedOrderItemId}
+                isSelected={selectedOrderItemId === item.id}
+              />
+            ))}
+          </div>
         </div>
       )}
       
-      {selectedOrderItem && scannedProductInfo && (
-        <div className="text-xs text-blue-600 p-2 border border-blue-200 bg-blue-50 rounded flex flex-col gap-1">
-            <p className="font-medium">Selected for Tag Out:</p>
-            <p>Tag ID: <strong>{tagIdInput}</strong> (Qty: {scannedProductInfo.tag_quantity})</p>
-            <p>Product: <strong>{selectedOrderItem.product_configs.product_code}</strong></p>
-            <p>Order: {selectedOrder?.order_number}, Item: {selectedOrderItem.suborder_id}</p>
-            <p>Status: {selectedOrderItem.status}, Fulfilled: {selectedOrderItem.fulfilled_quantity} / {selectedOrderItem.quantity}</p>
-            {(selectedOrderItem.status === 'Delivered' || selectedOrderItem.fulfilled_quantity >= selectedOrderItem.quantity) && 
-              <p className="text-green-600 font-medium flex items-center gap-1"><Info className="h-3 w-3" />This item is fully fulfilled.</p>
-            }
+      {/* Summary and Action */}
+      {selectedOrderItem && scannedProductInfo && tagIdInput && (
+        <div className="text-xs text-blue-600 p-3 border border-blue-200 bg-blue-50 rounded space-y-1">
+          <p className="font-medium">Ready for Tag Out:</p>
+          <p>Tag ID: <strong>{tagIdInput}</strong> (Qty: {scannedProductInfo.tag_quantity})</p>
+          <p>Product: <strong>{selectedOrderItem.product_configs.product_code}</strong></p>
+          <p>Order: {selectedOrder?.order_number}, Item: {selectedOrderItem.suborder_id}</p>
+          <p>Pending: {selectedOrderItem.quantity - selectedOrderItem.fulfilled_quantity} units</p>
         </div>
       )}
 
@@ -388,16 +423,16 @@ const TagOutForm = ({ onOperationComplete }: TagOutFormProps) => {
           (selectedOrderItem?.status === 'Delivered') || 
           (selectedOrderItem && selectedOrderItem.fulfilled_quantity >= selectedOrderItem.quantity)
         }
-        className="w-full h-8 text-xs"
+        className="w-full h-10"
       >
-        {loading ? 'Processing...' : 'Tag Out'}
+        {loading ? 'Processing Tag Out...' : 'Complete Tag Out'}
       </Button>
 
       <div className="text-xs text-muted-foreground space-y-1">
-        <p>• Enter Tag ID and click "Verify Tag" to identify the product.</p>
-        <p>• Select customer to view their active orders for the identified product.</p>
-        <p>• Choose the relevant order and sub-order item.</p>
-        <p>• Items already 'Delivered' or fully fulfilled cannot be selected.</p>
+        <p>• Select a product by scanning a tag or choosing manually from inventory</p>
+        <p>• Only customers with active orders for the selected product will be shown</p>
+        <p>• Choose the relevant order and sub-order item to fulfill</p>
+        <p>• Items that are fully fulfilled cannot be selected for tag out</p>
       </div>
     </div>
   );
