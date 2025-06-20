@@ -56,6 +56,23 @@ const ProductionFlowLoader = () => (
   </div>
 );
 
+// Empty state component
+const EmptyProductionFlow = () => (
+  <div className="w-full h-full flex items-center justify-center bg-background">
+    <div className="text-center space-y-4 p-8">
+      <div className="relative">
+        <Factory className="h-16 w-16 mx-auto text-muted-foreground/50" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-xl font-semibold text-foreground">No Manufacturing Orders</h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Create your first manufacturing order to see the production flow visualization here.
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
 // Custom node component for manufacturing orders
 const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
@@ -252,19 +269,29 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   }, [stepFields]);
   
+  // Debug logging
+  useEffect(() => {
+    console.log('ProductionFlowView Debug:', {
+      manufacturingOrdersCount: manufacturingOrders.length,
+      isLoadingSteps,
+      isLoadingValues,
+      isInitialized
+    });
+  }, [manufacturingOrders.length, isLoadingSteps, isLoadingValues, isInitialized]);
+  
   // Simplified loading state
   const isLoading = (isLoadingSteps || isLoadingValues) && !isInitialized;
 
   // Initialize only once when data is ready
   useEffect(() => {
-    if (!isLoadingSteps && !isLoadingValues && manufacturingOrders.length > 0 && !isInitialized) {
+    if (!isLoadingSteps && !isLoadingValues && !isInitialized) {
       // Small delay to ensure smooth initialization
       const timer = setTimeout(() => {
         setIsInitialized(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingSteps, isLoadingValues, manufacturingOrders.length, isInitialized]);
+  }, [isLoadingSteps, isLoadingValues, isInitialized]);
 
   // Stable callback references
   const handleViewDetails = useCallback((order: ManufacturingOrder) => {
@@ -295,7 +322,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   // Generate nodes and edges without automatic view fitting
   const { initialNodes, initialEdges } = useMemo(() => {
-    if (!isInitialized || manufacturingOrders.length === 0) {
+    if (!isInitialized) {
+      return { initialNodes: [], initialEdges: [] };
+    }
+    
+    console.log('Generating nodes for orders:', manufacturingOrders.length);
+    
+    if (manufacturingOrders.length === 0) {
       return { initialNodes: [], initialEdges: [] };
     }
     
@@ -377,6 +410,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       }
     });
 
+    console.log('Generated nodes:', nodes.length, 'edges:', edges.length);
     return { initialNodes: nodes, initialEdges: edges };
   }, [manufacturingOrders, handleViewDetails, handleStepClick, handleNextStepClick, isInitialized]);
 
@@ -385,7 +419,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
   // Update nodes and edges only when necessary
   useEffect(() => {
-    if (isInitialized && initialNodes.length >= 0) {
+    if (isInitialized) {
+      console.log('Setting nodes and edges:', initialNodes.length, initialEdges.length);
       setNodes(initialNodes);
       setEdges(initialEdges);
     }
@@ -399,21 +434,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   // Optimized initialization with proper view fitting
   const onInit = useCallback((reactFlowInstance: ReactFlowInstance) => {
     setReactFlowInstance(reactFlowInstance);
-    // Ensure proper initial view after a brief delay
-    setTimeout(() => {
-      if (reactFlowInstance && initialNodes.length > 0) {
-        reactFlowInstance.fitView({ 
-          padding: 0.2,
-          includeHiddenNodes: false,
-          minZoom: 0.4,
-          maxZoom: 1.0,
-          duration: 300
-        });
-      }
-    }, 150);
-  }, [initialNodes.length]);
+    // Manual fit view only when user clicks the button
+  }, []);
 
-  // Reset to first card view
+  // Manual fit view function
   const resetToFirstCard = useCallback(() => {
     if (reactFlowInstance && nodes.length > 0) {
       reactFlowInstance.fitView({ 
@@ -450,6 +474,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       return <ProductionFlowLoader />;
     }
 
+    // Show empty state if no manufacturing orders
+    if (manufacturingOrders.length === 0) {
+      return <EmptyProductionFlow />;
+    }
+
     return (
       <ReactFlow
         nodes={nodes}
@@ -467,7 +496,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         zoomOnPinch={true}
         minZoom={0.2}
         maxZoom={1.2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
         nodesDraggable={false} // Disable node dragging completely
         nodesConnectable={false}
         elementsSelectable={true}
@@ -478,7 +506,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           maxZoom: 1.0
         }}
       >
-        <Controls showZoom={true} showFitView={true} />
+        <Controls showZoom={true} showFitView={false} />
         <MiniMap 
           className="bg-background border"
           nodeClassName={() => 'fill-primary/20'}
@@ -587,7 +615,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             variant="outline"
             size="sm"
             className="bg-background/80 backdrop-blur-sm"
-            disabled={isLoading}
+            disabled={isLoading || manufacturingOrders.length === 0}
           >
             <Workflow className="h-4 w-4 mr-1" />
             Fit View
@@ -607,7 +635,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             case 'urgent': return 'bg-red-500 text-white';
             case 'high': return 'bg-orange-500 text-white';
             case 'medium': return 'bg-yellow-500 text-white';
-            case 'low': return 'bg-green-500 text-white';
             default: return 'bg-gray-500 text-white';
           }
         }}
