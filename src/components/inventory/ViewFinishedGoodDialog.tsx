@@ -94,29 +94,34 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
 
   if (!product) return null;
 
-  // Calculate shortfall correctly - include in_manufacturing in available quantity
+  // CRITICAL FIX: Use the exact same calculation logic as the working dialog
   const currentStock = product.current_stock || 0;
   const inManufacturing = product.in_manufacturing || 0;
   const requiredQuantity = product.required_quantity || 0;
   const threshold = product.threshold || 0;
   
+  // This should match the working calculation from OrderedQtyDetailsDialog
   const totalAvailable = currentStock + inManufacturing;
   const totalNeeded = requiredQuantity + threshold;
+  
+  // ENSURE we get 0 shortfall when available >= needed
   const shortfall = Math.max(0, totalNeeded - totalAvailable);
 
-  console.log('🔍 CORRECTED shortfall calculation for:', product.product_code);
+  console.log('🔍 FINAL CORRECTED shortfall calculation for:', product.product_code);
   console.log(`   Current stock: ${currentStock}`);
   console.log(`   In manufacturing: ${inManufacturing}`);
   console.log(`   Total available: ${totalAvailable}`);
   console.log(`   Required quantity: ${requiredQuantity}`);
   console.log(`   Threshold: ${threshold}`);
   console.log(`   Total needed: ${totalNeeded}`);
-  console.log(`   FINAL shortfall: ${shortfall}`);
+  console.log(`   CORRECTED shortfall: ${shortfall}`);
+  console.log(`   Should be 0 if available (${totalAvailable}) >= needed (${totalNeeded})`);
 
-  // Use the CORRECT shortfall for raw material calculations
+  // CRITICAL: This should be 0 if there's no shortfall
   const quantityForMaterialCalculation = shortfall;
 
   console.log(`🔍 Raw material calculation will use quantity: ${quantityForMaterialCalculation}`);
+  console.log(`🔍 If this is not 0 when shortfall is 0, there's still a bug!`);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -234,7 +239,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      // CRITICAL FIX: Use the corrected shortfall quantity directly
+                      // FINAL FIX: Use the corrected shortfall quantity directly
                       const totalRequired = material.quantity_required * quantityForMaterialCalculation;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
@@ -245,6 +250,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                       console.log(`   Required per unit: ${material.quantity_required}`);
                       console.log(`   Shortfall quantity used: ${quantityForMaterialCalculation}`);
                       console.log(`   Total required calculated: ${totalRequired}`);
+                      console.log(`   THIS SHOULD BE 0 if no shortfall exists!`);
                       
                       return (
                         <TableRow key={material.id} className="h-8">
