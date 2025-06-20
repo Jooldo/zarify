@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { format, subDays, subWeeks, subMonths, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
-import { TrendingUp, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { TrendingUp, Calendar as CalendarIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ProductCodeSelector from '@/components/orders/ProductCodeSelector';
 
@@ -204,6 +204,10 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
     }
   };
 
+  const clearProductCode = () => {
+    setSelectedProductCode('');
+  };
+
   if (loading) {
     return (
       <Card className="w-full">
@@ -320,13 +324,27 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
                 </SelectContent>
               </Select>
             )}
+          </div>
 
-            <div className="w-48">
+          {/* Product Code Filter Row */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 max-w-sm">
               <ProductCodeSelector
                 value={selectedProductCode}
                 onChange={setSelectedProductCode}
               />
             </div>
+            {selectedProductCode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearProductCode}
+                className="h-8 px-2"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear product code</span>
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
