@@ -22,6 +22,11 @@ interface FilterState {
   status: string;
   priority: string;
   productName: string;
+  dueDateFrom: Date | null;
+  dueDateTo: Date | null;
+  createdDateRange: string;
+  hasSpecialInstructions: boolean;
+  overdueOrders: boolean;
 }
 
 const ManufacturingDashboard: React.FC<ManufacturingDashboardProps> = ({ onViewFlow }) => {
@@ -35,6 +40,11 @@ const ManufacturingDashboard: React.FC<ManufacturingDashboardProps> = ({ onViewF
     status: '',
     priority: '',
     productName: '',
+    dueDateFrom: null,
+    dueDateTo: null,
+    createdDateRange: '',
+    hasSpecialInstructions: false,
+    overdueOrders: false,
   });
   const { toast } = useToast();
 
@@ -70,6 +80,10 @@ const ManufacturingDashboard: React.FC<ManufacturingDashboardProps> = ({ onViewF
     }
   }, [onViewFlow]);
 
+  const handleFiltersChange = (newFilters: any) => {
+    setFilter(newFilters);
+  };
+
   const filteredOrders = useMemo(() => {
     return manufacturingOrders.filter(order => {
       if (filter.search && !order.order_number.toLowerCase().includes(filter.search.toLowerCase()) &&
@@ -82,7 +96,17 @@ const ManufacturingDashboard: React.FC<ManufacturingDashboardProps> = ({ onViewF
       if (filter.priority && order.priority !== filter.priority) {
         return false;
       }
-       if (filter.productName && !order.product_name.toLowerCase().includes(filter.productName.toLowerCase())) {
+      if (filter.productName && !order.product_name.toLowerCase().includes(filter.productName.toLowerCase())) {
+        return false;
+      }
+      // Add more filter logic as needed for the new filter properties
+      if (filter.dueDateFrom && order.due_date && new Date(order.due_date) < filter.dueDateFrom) {
+        return false;
+      }
+      if (filter.dueDateTo && order.due_date && new Date(order.due_date) > filter.dueDateTo) {
+        return false;
+      }
+      if (filter.overdueOrders && order.due_date && new Date(order.due_date) > new Date()) {
         return false;
       }
       return true;
@@ -173,7 +197,7 @@ const ManufacturingDashboard: React.FC<ManufacturingDashboardProps> = ({ onViewF
         </Button>
       </div>
 
-      <ManufacturingOrdersFilter filter={filter} setFilter={setFilter} />
+      <ManufacturingOrdersFilter onFiltersChange={handleFiltersChange} />
 
       <ManufacturingOrdersTable
         orders={filteredOrders}
