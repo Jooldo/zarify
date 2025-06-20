@@ -20,6 +20,18 @@ export const useManufacturingStepValues = () => {
     },
   });
 
+  // Helper function to get a specific step value
+  const getStepValue = (stepId: string, fieldId: string) => {
+    return stepValues.find(
+      value => value.manufacturing_order_step_id === stepId && value.field_id === fieldId
+    )?.field_value || '';
+  };
+
+  // Helper function to get all values for a step
+  const getStepValues = (stepId: string) => {
+    return stepValues.filter(value => value.manufacturing_order_step_id === stepId);
+  };
+
   // Real-time subscription for step values
   useEffect(() => {
     const channel = supabase
@@ -44,5 +56,10 @@ export const useManufacturingStepValues = () => {
     };
   }, [queryClient]);
 
-  return { stepValues, isLoading };
+  return { 
+    stepValues, 
+    isLoading, 
+    getStepValue, 
+    getStepValues 
+  };
 };

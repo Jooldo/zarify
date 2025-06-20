@@ -10,7 +10,7 @@ import {
 } from '@/services/manufacturingOrderService';
 import { useManufacturingOrdersRealtime } from './useManufacturingOrdersRealtime';
 
-export { ManufacturingOrder, CreateManufacturingOrderData } from '@/types/manufacturingOrders';
+export type { ManufacturingOrder, CreateManufacturingOrderData } from '@/types/manufacturingOrders';
 
 export const useManufacturingOrders = () => {
   const [manufacturingOrders, setManufacturingOrders] = useState<ManufacturingOrder[]>([]);
