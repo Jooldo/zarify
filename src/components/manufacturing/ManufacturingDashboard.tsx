@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +29,7 @@ const ManufacturingDashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrderForFlow, setSelectedOrderForFlow] = useState<ManufacturingOrder | null>(null);
   const [filters, setFilters] = useState<ManufacturingFilters>({
     status: '',
     priority: '',
@@ -158,6 +158,11 @@ const ManufacturingDashboard = () => {
   const handleViewOrder = (order: ManufacturingOrder) => {
     setSelectedOrder(order);
     setShowDetailsDialog(true);
+  };
+
+  const handleViewFlow = (order: ManufacturingOrder) => {
+    setSelectedOrderForFlow(order);
+    setActiveTab('queue');
   };
 
   const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
@@ -298,12 +303,13 @@ const ManufacturingDashboard = () => {
               onViewOrder={handleViewOrder}
               onDeleteOrder={handleDeleteOrder}
               onOrderUpdate={refetch}
+              onViewFlow={handleViewFlow}
             />
           )}
         </TabsContent>
         
         <TabsContent value="queue" className="mt-4">
-          <ProductionQueueView />
+          <ProductionQueueView selectedOrderForFlow={selectedOrderForFlow} />
         </TabsContent>
       </Tabs>
 

@@ -1,15 +1,15 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Factory, Search, Kanban, Workflow } from 'lucide-react';
-import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { Factory, Search, Kanban, Workflow, X } from 'lucide-react';
+import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionKanbanView from './ProductionKanbanView';
 import ProductionQueueFilter from './ProductionQueueFilter';
+import { Badge } from '@/components/ui/badge';
 
 interface ProductionQueueFilters {
   status: string;
@@ -21,7 +21,11 @@ interface ProductionQueueFilters {
   urgentOnly: boolean;
 }
 
-const ProductionQueueView = () => {
+interface ProductionQueueViewProps {
+  selectedOrderForFlow?: ManufacturingOrder | null;
+}
+
+const ProductionQueueView = ({ selectedOrderForFlow }: ProductionQueueViewProps) => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -37,6 +41,24 @@ const ProductionQueueView = () => {
     hasCompletedSteps: false,
     urgentOnly: false,
   });
+
+  // Apply filter when selectedOrderForFlow changes
+  useEffect(() => {
+    if (selectedOrderForFlow) {
+      setFilters(prev => ({
+        ...prev,
+        orderNumber: selectedOrderForFlow.order_number,
+      }));
+      setSearchTerm('');
+    }
+  }, [selectedOrderForFlow]);
+
+  const clearOrderFilter = () => {
+    setFilters(prev => ({
+      ...prev,
+      orderNumber: '',
+    }));
+  };
 
   console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
@@ -102,12 +124,29 @@ const ProductionQueueView = () => {
     setDetailsDialogOpen(true);
   };
 
+  const isOrderFiltered = Boolean(filters.orderNumber);
+
   return (
     <div className="space-y-6">
       {/* Header with View Toggle */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Production Queue</h2>
+          {isOrderFiltered && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Order: {filters.orderNumber}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearOrderFilter}
+                  className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            </div>
+          )}
           <div className="flex items-center border rounded-lg p-1">
             <Button
               variant={activeView === 'flow' ? 'default' : 'ghost'}
@@ -130,8 +169,8 @@ const ProductionQueueView = () => {
           </div>
         </div>
 
-        {/* Search and Filter Controls - Only show for flow view */}
-        {activeView === 'flow' && (
+        {/* Search and Filter Controls - Only show for flow view and when not filtered by order */}
+        {activeView === 'flow' && !isOrderFiltered && (
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
