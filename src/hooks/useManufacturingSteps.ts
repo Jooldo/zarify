@@ -11,6 +11,8 @@ export type ManufacturingStepField = Omit<Tables<'manufacturing_step_fields'>, '
 export type ManufacturingOrderStep = Tables<'manufacturing_order_steps'> & {
   manufacturing_steps: ManufacturingStep | null;
   workers?: { name: string | null } | null;
+  quantityAssigned?: number;
+  rawMaterialWeightAssigned?: number;
 };
 export type ManufacturingStepWithOrderStep = ManufacturingStep & {
     order_step: ManufacturingOrderStep | null;
@@ -36,7 +38,7 @@ export const useManufacturingSteps = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
-        .select('*, manufacturing_steps(*), workers(name)');
+        .select('*, manufacturing_steps(*), workers(name), quantityAssigned, rawMaterialWeightAssigned');
       if (error) {
         console.error("Error fetching order steps with manufacturing steps", error);
         throw error;
