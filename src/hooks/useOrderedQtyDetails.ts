@@ -116,7 +116,7 @@ export const useOrderedQtyDetails = () => {
             product_code,
             category,
             subcategory,
-            finished_goods!inner(
+            finished_goods(
               current_stock,
               threshold,
               required_quantity
@@ -135,7 +135,15 @@ export const useOrderedQtyDetails = () => {
 
       finishedGoodsUsingMaterial?.forEach(item => {
         const productCode = item.product_configs.product_code;
-        const finishedGood = item.product_configs.finished_goods;
+        const finishedGoodsArray = item.product_configs.finished_goods;
+        
+        // Handle the case where finished_goods might be an array
+        const finishedGood = Array.isArray(finishedGoodsArray) ? finishedGoodsArray[0] : finishedGoodsArray;
+        
+        if (!finishedGood) {
+          console.log(`No finished good found for product code: ${productCode}`);
+          return;
+        }
         
         // FIXED CALCULATION: Use proper shortfall calculation including manufacturing
         const liveOrderDemand = finishedGood.required_quantity || 0;
