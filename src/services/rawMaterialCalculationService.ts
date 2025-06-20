@@ -218,7 +218,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
 
     console.log('📊 Raw materials found:', rawMaterialsData?.length || 0);
 
-    // Fetch finished goods WITH manufacturing orders data
+    // CRITICAL FIX: Fetch finished goods WITH manufacturing orders data
     const { data: finishedGoodsData, error: finishedGoodsError } = await supabase
       .from('finished_goods')
       .select(`
@@ -238,7 +238,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
 
     console.log('📊 Finished goods found:', finishedGoodsData?.length || 0);
 
-    // UPDATED: Fetch manufacturing orders and calculate in_manufacturing quantities for finished goods
+    // CRITICAL FIX: Fetch manufacturing orders to calculate in_manufacturing quantities
     const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
       .from('manufacturing_orders')
       .select(`
@@ -252,7 +252,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
       console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
     }
 
-    // Calculate in_manufacturing quantities by product code for finished goods
+    // Calculate in_manufacturing quantities by product code
     const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
       const productCode = order.product_configs?.product_code;
       if (productCode) {
@@ -280,15 +280,6 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
 
     console.log('📊 Product config materials found:', productConfigMaterials?.length || 0);
 
-    // UPDATED: Update raw material in_manufacturing quantities by calling the database function
-    console.log('🔄 Updating raw material in_manufacturing quantities...');
-    const { error: updateManufacturingError } = await supabase.rpc('update_raw_material_manufacturing_quantities');
-    if (updateManufacturingError) {
-      console.error('Error updating raw material manufacturing quantities:', updateManufacturingError);
-    } else {
-      console.log('✅ Raw material in_manufacturing quantities updated');
-    }
-
     // Calculate required quantities for each raw material
     const calculationResults: MaterialCalculationResult[] = [];
     
@@ -315,7 +306,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
           // Use the required_quantity that should now be updated from live orders
           const liveOrderDemand = finishedGood.required_quantity || 0;
           
-          // Get the in_manufacturing quantity for this specific product from finished goods manufacturing
+          // CRITICAL FIX: Get the in_manufacturing quantity for this specific product
           const inManufacturing = inManufacturingByProduct[finishedGood.product_code] || 0;
           
           console.log(`     🎯 Finished good: ${finishedGood.product_code}`);
@@ -324,7 +315,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
           console.log(`        In manufacturing: ${inManufacturing}`);
           console.log(`        Threshold: ${finishedGood.threshold}`);
           
-          // Calculate shortfall considering finished goods in manufacturing
+          // FIXED CALCULATION: Include in_manufacturing in available quantity
           const totalDemand = liveOrderDemand + finishedGood.threshold;
           const available = finishedGood.current_stock + inManufacturing;
           const shortfall = Math.max(0, totalDemand - available);
@@ -343,7 +334,7 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
         });
       });
 
-      // UPDATED: Calculate shortfall considering raw material in_manufacturing (which is now updated automatically)
+      // Calculate shortfall for this material
       const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
 
       console.log(`   📊 SUMMARY for ${material.name}:`);
@@ -351,7 +342,6 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
       console.log(`      Minimum stock: ${material.minimum_stock}`);
       console.log(`      Current stock: ${material.current_stock}`);
       console.log(`      In procurement: ${material.in_procurement}`);
-      console.log(`      In manufacturing (auto-calculated): ${material.in_manufacturing || 0}`);
       console.log(`      Material shortfall: ${materialShortfall}`);
 
       calculationResults.push({

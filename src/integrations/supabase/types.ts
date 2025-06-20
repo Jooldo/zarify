@@ -541,64 +541,6 @@ export type Database = {
           },
         ]
       }
-      manufacturing_material_reservations: {
-        Row: {
-          created_at: string
-          id: string
-          manufacturing_order_id: string
-          merchant_id: string
-          quantity_consumed: number | null
-          quantity_reserved: number
-          raw_material_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          manufacturing_order_id: string
-          merchant_id: string
-          quantity_consumed?: number | null
-          quantity_reserved: number
-          raw_material_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          manufacturing_order_id?: string
-          merchant_id?: string
-          quantity_consumed?: number | null
-          quantity_reserved?: number
-          raw_material_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_manufacturing_order"
-            columns: ["manufacturing_order_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturing_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_merchant"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_raw_material"
-            columns: ["raw_material_id"]
-            isOneToOne: false
-            referencedRelation: "raw_materials"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manufacturing_order_step_values: {
         Row: {
           created_at: string
@@ -1359,7 +1301,6 @@ export type Database = {
           created_at: string | null
           current_stock: number | null
           id: string
-          in_manufacturing: number | null
           in_procurement: number | null
           last_updated: string | null
           merchant_id: string
@@ -1378,7 +1319,6 @@ export type Database = {
           created_at?: string | null
           current_stock?: number | null
           id?: string
-          in_manufacturing?: number | null
           in_procurement?: number | null
           last_updated?: string | null
           merchant_id: string
@@ -1397,7 +1337,6 @@ export type Database = {
           created_at?: string | null
           current_stock?: number | null
           id?: string
-          in_manufacturing?: number | null
           in_procurement?: number | null
           last_updated?: string | null
           merchant_id?: string
@@ -1730,10 +1669,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      consume_reserved_materials: {
-        Args: { p_manufacturing_order_id: string }
-        Returns: undefined
-      }
       create_next_manufacturing_step: {
         Args: { p_manufacturing_order_id: string; p_current_step_order: number }
         Returns: string
@@ -1787,18 +1722,6 @@ export type Database = {
           p_description?: string
         }
         Returns: string
-      }
-      release_reserved_materials: {
-        Args: { p_manufacturing_order_id: string }
-        Returns: undefined
-      }
-      reserve_raw_materials_for_manufacturing_order: {
-        Args: { p_manufacturing_order_id: string }
-        Returns: undefined
-      }
-      update_raw_material_manufacturing_quantities: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
     }
     Enums: {
