@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -21,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory } from 'lucide-react';
+import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow } from 'lucide-react';
 import { format } from 'date-fns';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -67,10 +66,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const [selectedStep, setSelectedStep] = useState<any>(null);
   
   // Cast data to ManufacturingOrder since we know the structure
-  const orderData = data as unknown as ManufacturingOrder & { 
-    onViewDetails: (order: ManufacturingOrder) => void;
-    sequenceNumber: number;
-  };
+  const orderData = data as unknown as ManufacturingOrder & { onViewDetails: (order: ManufacturingOrder) => void };
   
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -121,14 +117,8 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
   return (
     <>
-      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer relative" onClick={handleCardClick}>
+      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
         <Handle type="target" position={Position.Left} />
-        
-        {/* Sequence number badge */}
-        <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg z-10">
-          {orderData.sequenceNumber}
-        </div>
-        
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div>
@@ -400,7 +390,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         hasUserPosition(orderNodeId) ? userNodePositions[orderNodeId] : undefined
       );
       
-      // Add manufacturing order node with sequence number
+      // Add manufacturing order node
       nodes.push({
         id: orderNodeId,
         type: 'manufacturingOrder',
@@ -408,7 +398,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         data: { 
           ...order, 
           onViewDetails: handleViewDetails,
-          sequenceNumber: orderIndex + 1,
         } as unknown as Record<string, unknown>,
       });
 
@@ -460,7 +449,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     
     const edges: Edge[] = [];
     
-    manufacturingOrders.forEach((order, orderIndex) => {
+    manufacturingOrders.forEach((order) => {
       const orderStepsFiltered = orderSteps.filter(step => 
         step.manufacturing_order_id === order.id && 
         step.status !== 'pending'
@@ -493,43 +482,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
               stroke: '#3b82f6', 
               strokeWidth: 2,
               strokeDasharray: '5,5'
-            },
-          });
-        }
-      }
-      
-      // Connect to next order if it exists
-      if (orderIndex < manufacturingOrders.length - 1) {
-        const nextOrder = manufacturingOrders[orderIndex + 1];
-        const hasCurrentSteps = orderStepsFiltered.length > 0;
-        
-        if (hasCurrentSteps) {
-          // Connect from last step to next order
-          const lastStep = orderStepsFiltered[orderStepsFiltered.length - 1];
-          edges.push({
-            id: `edge-step-${lastStep.id}-order-${nextOrder.id}`,
-            source: `step-${lastStep.id}`,
-            target: `order-${nextOrder.id}`,
-            type: 'smoothstep',
-            animated: false,
-            style: { 
-              stroke: '#10b981', 
-              strokeWidth: 2,
-              strokeDasharray: '10,5'
-            },
-          });
-        } else {
-          // Connect from order to next order
-          edges.push({
-            id: `edge-order-${order.id}-order-${nextOrder.id}`,
-            source: `order-${order.id}`,
-            target: `order-${nextOrder.id}`,
-            type: 'smoothstep',
-            animated: false,
-            style: { 
-              stroke: '#10b981', 
-              strokeWidth: 2,
-              strokeDasharray: '10,5'
             },
           });
         }
@@ -571,11 +523,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     [setEdges]
   );
 
+  // Get current order step data for update dialog with improved debugging
   const currentOrderStep = selectedOrderStep;
   const currentStepFields = stepFields.filter(field => 
     field.manufacturing_step_id === currentOrderStep?.manufacturing_step_id
   );
   
+  // Improved previous steps calculation with debugging
   const previousSteps = useMemo(() => {
     if (!currentOrderStep) return [];
     
