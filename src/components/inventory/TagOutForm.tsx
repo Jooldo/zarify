@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,11 +27,14 @@ interface OrderItem {
     product_code: string;
   };
 }
+
 interface Order {
   id: string;
   order_number: string;
   status: string;
   total_amount: number;
+  created_at: string;
+  expected_delivery?: string;
   order_items: OrderItem[];
 }
 
