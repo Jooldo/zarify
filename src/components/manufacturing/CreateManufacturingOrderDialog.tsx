@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useProductConfigs } from '@/hooks/useProductConfigs';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import RawMaterialStockDisplay from './RawMaterialStockDisplay';
 
 interface CreateManufacturingOrderDialogProps {
@@ -31,6 +31,7 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [specialInstructions, setSpecialInstructions] = useState<string>('');
+  const [stockValidation, setStockValidation] = useState<{isValid: boolean, insufficientMaterials: string[]}>({isValid: true, insufficientMaterials: []});
 
   const { productConfigs, loading: configsLoading } = useProductConfigs();
   const { createOrder, isCreating } = useManufacturingOrders();
@@ -56,6 +57,59 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
     }
   };
 
+  const validateStockAvailability = async (configId: string, quantity: number) => {
+    if (!configId || quantity <= 0) {
+      setStockValidation({isValid: true, insufficientMaterials: []});
+      return;
+    }
+
+    try {
+      // Check if we have enough raw materials for this quantity
+      const { data: materialRequirements, error } = await supabase
+        .from('product_config_materials')
+        .select(`
+          quantity_required,
+          raw_materials(
+            id,
+            name,
+            current_stock,
+            unit
+          )
+        `)
+        .eq('product_config_id', configId);
+
+      if (error) throw error;
+
+      const insufficientMaterials: string[] = [];
+      
+      materialRequirements?.forEach(requirement => {
+        const requiredQuantity = requirement.quantity_required * quantity;
+        const availableStock = requirement.raw_materials?.current_stock || 0;
+        
+        if (availableStock < requiredQuantity) {
+          insufficientMaterials.push(
+            `${requirement.raw_materials?.name}: need ${requiredQuantity} ${requirement.raw_materials?.unit}, have ${availableStock} ${requirement.raw_materials?.unit}`
+          );
+        }
+      });
+
+      setStockValidation({
+        isValid: insufficientMaterials.length === 0,
+        insufficientMaterials
+      });
+    } catch (error) {
+      console.error('Error validating stock:', error);
+      setStockValidation({isValid: false, insufficientMaterials: ['Error checking stock availability']});
+    }
+  };
+
+  // Validate stock when product config or quantity changes
+  useEffect(() => {
+    if (productConfigId && quantityRequired > 0) {
+      validateStockAvailability(productConfigId, quantityRequired);
+    }
+  }, [productConfigId, quantityRequired]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -63,6 +117,15 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields correctly.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!stockValidation.isValid) {
+      toast({
+        title: 'Insufficient Stock',
+        description: 'Cannot create manufacturing order due to insufficient raw material stock.',
         variant: 'destructive',
       });
       return;
@@ -140,6 +203,23 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
               />
             </div>
           </div>
+
+          {/* Stock Validation Alert */}
+          {!stockValidation.isValid && productConfigId && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-red-800 mb-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">Insufficient Stock</span>
+              </div>
+              <div className="space-y-1">
+                {stockValidation.insufficientMaterials.map((material, index) => (
+                  <div key={index} className="text-sm text-red-700">
+                    • {material}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -230,7 +310,7 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
             </Button>
             <Button 
               type="submit" 
-              disabled={isCreating || !productConfigId || quantityRequired <= 0}
+              disabled={isCreating || !productConfigId || quantityRequired <= 0 || !stockValidation.isValid}
             >
               {isCreating ? 'Creating...' : 'Create Order'}
             </Button>

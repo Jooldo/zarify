@@ -12,7 +12,7 @@ export interface RawMaterial {
   minimum_stock: number;
   required: number;
   in_procurement: number;
-  in_manufacturing: number; // Added this property
+  in_manufacturing: number; // Reserved materials (deducted from current_stock)
   shortfall: number;
   supplier_name?: string;
   supplier_id?: string;
@@ -57,8 +57,11 @@ export const useRawMaterials = () => {
 
       // Use the database values directly (calculation service should have updated them)
       const materialsWithCalculations = rawMaterialsData?.map(material => {
-        // Calculate shortfall for this material using database values - REMOVE Math.max to allow negative values (surplus)
-        const shortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement + (material.in_manufacturing || 0));
+        // Calculate shortfall for this material using new logic:
+        // Shortfall = (required + minimum_stock) - (current_stock + in_procurement)
+        // Note: in_manufacturing represents reserved materials already deducted from current_stock
+        const actualAvailableStock = material.current_stock + material.in_procurement;
+        const shortfall = (material.required + material.minimum_stock) - actualAvailableStock;
 
         if (material.name.includes('Chain') || material.name.includes('M Chain')) {
           console.log(`🔍 DEBUG M Chain material: ${material.name}`);
@@ -66,9 +69,10 @@ export const useRawMaterials = () => {
           console.log(`   Current stock: ${material.current_stock}`);
           console.log(`   Minimum stock: ${material.minimum_stock}`);
           console.log(`   In procurement: ${material.in_procurement}`);
-          console.log(`   In manufacturing: ${material.in_manufacturing || 0}`);
+          console.log(`   In manufacturing (reserved): ${material.in_manufacturing || 0}`);
+          console.log(`   Actual available stock: ${actualAvailableStock}`);
           console.log(`   Calculated shortfall: ${shortfall}`);
-          console.log(`   Formula: (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement} + ${material.in_manufacturing || 0})`);
+          console.log(`   Formula: (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement})`);
         }
 
         return {

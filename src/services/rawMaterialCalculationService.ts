@@ -335,15 +335,18 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
         });
       });
 
-      // Calculate shortfall for this material - NOW INCLUDING in_manufacturing
-      const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement + material.in_manufacturing));
+      // Calculate shortfall for this material - Fixed to use actual available stock (current_stock - in_manufacturing + in_procurement)
+      // Since in_manufacturing represents reserved materials that have been deducted from current_stock
+      const actualAvailableStock = material.current_stock + material.in_procurement;
+      const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - actualAvailableStock);
 
       console.log(`   📊 SUMMARY for ${material.name}:`);
       console.log(`      Total required: ${totalRequired}`);
       console.log(`      Minimum stock: ${material.minimum_stock}`);
       console.log(`      Current stock: ${material.current_stock}`);
       console.log(`      In procurement: ${material.in_procurement}`);
-      console.log(`      In manufacturing: ${material.in_manufacturing}`);
+      console.log(`      In manufacturing (reserved): ${material.in_manufacturing}`);
+      console.log(`      Actual available stock: ${actualAvailableStock}`);
       console.log(`      Material shortfall: ${materialShortfall}`);
 
       calculationResults.push({

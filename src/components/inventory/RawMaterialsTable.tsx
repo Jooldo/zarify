@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +67,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   };
 
   const getInventoryStatus = (currentStock: number, inProcurement: number, inManufacturing: number, required: number, minimumStock: number) => {
-    const shortfall = Math.max(0, (required + minimumStock) - (currentStock + inProcurement + inManufacturing));
+    // Use the actual available stock for status calculation
+    const actualAvailableStock = currentStock + inProcurement;
+    const shortfall = Math.max(0, (required + minimumStock) - actualAvailableStock);
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
@@ -80,7 +81,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   };
 
   const getShortfallTooltip = () => {
-    return "Shortfall = (Ordered Qty + Minimum Stock) - (Current Stock + In Procurement + In Manufacturing). Positive values indicate shortfall, negative values indicate surplus.";
+    return "Shortfall = (Required Qty + Minimum Stock) - (Current Stock + In Procurement). In Manufacturing shows reserved materials already deducted from Current Stock.";
   };
 
   const handleViewMaterial = (material: RawMaterial) => {
@@ -209,7 +210,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Quantity of this material currently reserved for manufacturing orders</p>
+                      <p className="max-w-xs">Quantity of this material reserved for manufacturing orders (already deducted from Current Stock)</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -222,7 +223,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Required Quantity + Min Stock) - (Current Stock + In Procurement + In Manufacturing). Positive values indicate shortage, negative indicate surplus.</p>
+                      <p className="max-w-xs">Shortage calculation: (Required Quantity + Min Stock) - (Current Stock + In Procurement). In Manufacturing is already reserved from Current Stock.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -256,8 +257,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               const StatusIcon = statusInfo.icon;
               const shortUnit = getShortUnit(material.unit);
               
-              // Updated shortfall calculation to include in_manufacturing
-              const recalculatedShortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement + (material.in_manufacturing || 0));
+              // Use the shortfall calculated in the hook (which uses the correct formula)
+              const shortfall = material.shortfall;
               
               return (
                 <TableRow key={material.id} className="h-10">
@@ -293,19 +294,19 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                     </span>
                   </TableCell>
                   <TableCell className="px-2 py-1 text-center">
-                    {recalculatedShortfall === 0 ? (
+                    {shortfall === 0 ? (
                       <span className="text-sm font-medium text-gray-600">
                         0 {shortUnit}
                       </span>
                     ) : (
                       <div 
                         className="cursor-help flex items-center justify-center gap-1"
-                        title="Shortage calculation: (Quantity Required + Min Stock) - (Current Stock + In Procurement + In Manufacturing). Positive values indicate shortage, negative indicate surplus."
+                        title={getShortfallTooltip()}
                       >
-                        <span className={`text-sm font-medium ${recalculatedShortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {formatIndianNumber(Math.abs(recalculatedShortfall))} {shortUnit}
+                        <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
                         </span>
-                        {recalculatedShortfall > 0 ? (
+                        {shortfall > 0 ? (
                           <ArrowDown className="h-4 w-4 text-red-600" />
                         ) : (
                           <ArrowUp className="h-4 w-4 text-green-600" />
