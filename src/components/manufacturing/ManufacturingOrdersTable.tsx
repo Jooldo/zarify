@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, ArrowUp, Workflow } from 'lucide-react';
+import { Eye, Trash2, ArrowUp } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -19,7 +20,6 @@ interface ManufacturingOrdersTableProps {
   onViewOrder: (order: ManufacturingOrder) => void;
   onDeleteOrder?: (orderId: string) => void;
   onOrderUpdate?: () => void;
-  onViewFlow?: (order: ManufacturingOrder) => void;
 }
 
 const ManufacturingOrdersTable = ({ 
@@ -28,8 +28,7 @@ const ManufacturingOrdersTable = ({
   getStatusColor, 
   onViewOrder, 
   onDeleteOrder,
-  onOrderUpdate,
-  onViewFlow
+  onOrderUpdate 
 }: ManufacturingOrdersTableProps) => {
   const [isViewProductOpen, setIsViewProductOpen] = useState(false);
   const [selectedProductForView, setSelectedProductForView] = useState<FinishedGood | null>(null);
@@ -110,12 +109,6 @@ const ManufacturingOrdersTable = ({
     return `${stepName} ${statusText}`;
   };
 
-  const handleFlowClick = (order: ManufacturingOrder) => {
-    if (onViewFlow) {
-      onViewFlow(order);
-    }
-  };
-
   return (
     <>
       <div className="border rounded-lg">
@@ -181,16 +174,6 @@ const ManufacturingOrdersTable = ({
                     <div className="flex items-center gap-1">
                       <Button variant="outline" size="sm" onClick={() => onViewOrder(order)} className="h-6 w-6 p-0">
                         <Eye className="h-3 w-3" />
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleFlowClick(order)}
-                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
-                        title="View Production Flow"
-                      >
-                        <Workflow className="h-3 w-3" />
                       </Button>
                       
                       {order.status === 'pending' && (
