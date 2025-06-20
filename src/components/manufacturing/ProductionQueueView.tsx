@@ -23,9 +23,10 @@ interface ProductionQueueFilters {
 
 interface ProductionQueueViewProps {
   selectedOrderForFlow?: ManufacturingOrder | null;
+  onClearOrderFilter?: () => void;
 }
 
-const ProductionQueueView = ({ selectedOrderForFlow }: ProductionQueueViewProps) => {
+const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: ProductionQueueViewProps) => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -58,12 +59,15 @@ const ProductionQueueView = ({ selectedOrderForFlow }: ProductionQueueViewProps)
       ...prev,
       orderNumber: '',
     }));
+    // Notify parent component to clear the selectedOrderForFlow state
+    if (onClearOrderFilter) {
+      onClearOrderFilter();
+    }
   };
 
   console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
 
-  // Filter and search logic for flow view
   const filteredOrders = useMemo(() => {
     return manufacturingOrders.filter(order => {
       // Text search filter

@@ -165,6 +165,10 @@ const ManufacturingDashboard = () => {
     setActiveTab('queue');
   };
 
+  const handleClearOrderFilter = () => {
+    setSelectedOrderForFlow(null);
+  };
+
   const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
     updateOrder(orderId, { status });
   };
@@ -309,7 +313,10 @@ const ManufacturingDashboard = () => {
         </TabsContent>
         
         <TabsContent value="queue" className="mt-4">
-          <ProductionQueueView selectedOrderForFlow={selectedOrderForFlow} />
+          <ProductionQueueView 
+            selectedOrderForFlow={selectedOrderForFlow} 
+            onClearOrderFilter={handleClearOrderFilter}
+          />
         </TabsContent>
       </Tabs>
 
