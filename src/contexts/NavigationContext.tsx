@@ -1,53 +1,27 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+export type NavigationTab = 'dashboard' | 'orders' | 'inventory' | 'manufacturing' | 'procurement' | 'users' | 'config';
+
+interface ProductionQueueFilters {
+  status: string;
+  priority: string;
+  productName: string;
+  orderNumber: string;
+  hasInProgressSteps: boolean;
+  hasCompletedSteps: boolean;
+  urgentOnly: boolean;
+}
 
 interface NavigationContextType {
-  showPageHeaders: boolean;
-  showTabNavigation: boolean;
-  togglePageHeaders: () => void;
-  toggleTabNavigation: () => void;
+  activeTab: NavigationTab;
+  setActiveTab: (tab: NavigationTab) => void;
+  productionQueueFilters: ProductionQueueFilters | null;
+  setProductionQueueFilters: (filters: ProductionQueueFilters) => void;
+  clearProductionQueueFilters: () => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
-
-export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [showPageHeaders, setShowPageHeaders] = useState(() => {
-    const saved = localStorage.getItem('show-page-headers');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-  
-  const [showTabNavigation, setShowTabNavigation] = useState(() => {
-    const saved = localStorage.getItem('show-tab-navigation');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('show-page-headers', JSON.stringify(showPageHeaders));
-  }, [showPageHeaders]);
-
-  useEffect(() => {
-    localStorage.setItem('show-tab-navigation', JSON.stringify(showTabNavigation));
-  }, [showTabNavigation]);
-
-  const togglePageHeaders = () => {
-    setShowPageHeaders(prev => !prev);
-  };
-
-  const toggleTabNavigation = () => {
-    setShowTabNavigation(prev => !prev);
-  };
-
-  return (
-    <NavigationContext.Provider value={{
-      showPageHeaders,
-      showTabNavigation,
-      togglePageHeaders,
-      toggleTabNavigation,
-    }}>
-      {children}
-    </NavigationContext.Provider>
-  );
-};
 
 export const useNavigation = () => {
   const context = useContext(NavigationContext);
@@ -55,4 +29,29 @@ export const useNavigation = () => {
     throw new Error('useNavigation must be used within a NavigationProvider');
   }
   return context;
+};
+
+interface NavigationProviderProps {
+  children: ReactNode;
+}
+
+export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
+  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [productionQueueFilters, setProductionQueueFilters] = useState<ProductionQueueFilters | null>(null);
+
+  const clearProductionQueueFilters = () => {
+    setProductionQueueFilters(null);
+  };
+
+  return (
+    <NavigationContext.Provider value={{
+      activeTab,
+      setActiveTab,
+      productionQueueFilters,
+      setProductionQueueFilters,
+      clearProductionQueueFilters,
+    }}>
+      {children}
+    </NavigationContext.Provider>
+  );
 };
