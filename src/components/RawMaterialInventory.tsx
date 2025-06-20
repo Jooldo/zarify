@@ -24,6 +24,7 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
     { value: 'ordered_qty', label: 'Required Quantity' },
     { value: 'current_stock', label: 'Current Stock' },
     { value: 'in_procurement', label: 'In Procurement' },
+    { value: 'in_manufacturing', label: 'In Manufacturing' },
     { value: 'shortfall', label: 'Shortfall' }
   ];
 
@@ -80,15 +81,20 @@ const RawMaterialInventory = ({ onRequestCreated }: RawMaterialInventoryProps) =
 
   const filteredMaterials = applyFilters(rawMaterials, filters);
 
-  // Calculate material stats
+  // Calculate material stats - updated to include in_manufacturing in shortfall calculation
   const materialStats = useMemo(() => {
-    const critical = rawMaterials.filter(material => material.shortfall > 0).length;
-    const low = rawMaterials.filter(material => 
-      material.shortfall === 0 && material.current_stock <= material.minimum_stock
-    ).length;
-    const good = rawMaterials.filter(material => 
-      material.shortfall === 0 && material.current_stock > material.minimum_stock
-    ).length;
+    const critical = rawMaterials.filter(material => {
+      const recalculatedShortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement + (material.in_manufacturing || 0));
+      return recalculatedShortfall > 0;
+    }).length;
+    const low = rawMaterials.filter(material => {
+      const recalculatedShortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement + (material.in_manufacturing || 0));
+      return recalculatedShortfall === 0 && material.current_stock <= material.minimum_stock;
+    }).length;
+    const good = rawMaterials.filter(material => {
+      const recalculatedShortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement + (material.in_manufacturing || 0));
+      return recalculatedShortfall === 0 && material.current_stock > material.minimum_stock;
+    }).length;
     const total = rawMaterials.length;
 
     return { total, critical, low, good };

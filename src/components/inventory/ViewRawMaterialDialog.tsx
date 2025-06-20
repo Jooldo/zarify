@@ -56,6 +56,12 @@ const ViewRawMaterialDialog = ({ isOpen, onOpenChange, material }: ViewRawMateri
               <div className="text-lg">{material.in_procurement} {material.unit}</div>
             </div>
             <div>
+              <Label className="font-medium">In Manufacturing:</Label>
+              <div className="text-lg font-bold text-purple-600">
+                {material.in_manufacturing || 0} {material.unit}
+              </div>
+            </div>
+            <div>
               <Label className="font-medium">Stock Status:</Label>
               <Badge variant={status.variant} className="text-sm">
                 {status.label}

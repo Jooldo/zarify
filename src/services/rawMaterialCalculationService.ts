@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MaterialCalculationResult {
@@ -334,14 +335,15 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
         });
       });
 
-      // Calculate shortfall for this material
-      const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement));
+      // Calculate shortfall for this material - NOW INCLUDING in_manufacturing
+      const materialShortfall = Math.max(0, totalRequired + material.minimum_stock - (material.current_stock + material.in_procurement + material.in_manufacturing));
 
       console.log(`   📊 SUMMARY for ${material.name}:`);
       console.log(`      Total required: ${totalRequired}`);
       console.log(`      Minimum stock: ${material.minimum_stock}`);
       console.log(`      Current stock: ${material.current_stock}`);
       console.log(`      In procurement: ${material.in_procurement}`);
+      console.log(`      In manufacturing: ${material.in_manufacturing}`);
       console.log(`      Material shortfall: ${materialShortfall}`);
 
       calculationResults.push({
