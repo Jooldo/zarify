@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,8 +171,6 @@ const ManufacturingDashboard = () => {
   const handleDetailsDialogClose = (open: boolean) => {
     setShowDetailsDialog(open);
     if (!open) {
-      // Refresh orders when dialog closes to get updated data
-      refetch();
       // Clear selected order to ensure fresh data on next open
       setSelectedOrder(null);
     }

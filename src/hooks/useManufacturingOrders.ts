@@ -1,5 +1,6 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ManufacturingOrder, CreateManufacturingOrderData } from '@/types/manufacturingOrders';
 import { 
@@ -13,34 +14,35 @@ import { useManufacturingOrdersRealtime } from './useManufacturingOrdersRealtime
 export type { ManufacturingOrder, CreateManufacturingOrderData } from '@/types/manufacturingOrders';
 
 export const useManufacturingOrders = () => {
-  const [manufacturingOrders, setManufacturingOrders] = useState<ManufacturingOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const orders = await fetchManufacturingOrders();
-      setManufacturingOrders(orders);
-    } catch (error) {
-      console.error('Error fetching manufacturing orders:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch manufacturing orders',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  // Use React Query for data fetching with proper caching and invalidation
+  const { data: manufacturingOrders = [], isLoading, refetch } = useQuery<ManufacturingOrder[]>({
+    queryKey: ['manufacturing-orders'],
+    queryFn: async () => {
+      try {
+        return await fetchManufacturingOrders();
+      } catch (error) {
+        console.error('Error fetching manufacturing orders:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch manufacturing orders',
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+  });
 
-  // Set up real-time subscriptions
-  useManufacturingOrdersRealtime(fetchOrders);
+  // Set up real-time subscriptions with proper invalidation
+  useManufacturingOrdersRealtime(() => {
+    console.log('Real-time update received, invalidating manufacturing orders cache');
+    queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+  });
 
   const createOrder = async (data: CreateManufacturingOrderData) => {
     try {
-      setIsCreating(true);
       await createManufacturingOrder(data);
 
       toast({
@@ -48,7 +50,8 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order created successfully',
       });
 
-      await fetchOrders();
+      // Invalidate and refetch the orders
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error in createOrder:', error);
       toast({
@@ -57,8 +60,6 @@ export const useManufacturingOrders = () => {
         variant: 'destructive',
       });
       throw error;
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -71,7 +72,8 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order updated successfully',
       });
 
-      await fetchOrders();
+      // Invalidate and refetch the orders
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error updating manufacturing order:', error);
       toast({
@@ -92,7 +94,8 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order deleted successfully',
       });
 
-      await fetchOrders();
+      // Invalidate and refetch the orders
+      await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error deleting manufacturing order:', error);
       toast({
@@ -104,17 +107,13 @@ export const useManufacturingOrders = () => {
     }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
   return {
     manufacturingOrders,
     isLoading,
     createOrder,
-    isCreating,
+    isCreating: false, // We can add a separate mutation state if needed
     updateOrder,
     deleteOrder,
-    refetch: fetchOrders,
+    refetch,
   };
 };
