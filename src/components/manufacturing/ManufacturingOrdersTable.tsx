@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -102,7 +101,6 @@ const ManufacturingOrdersTable = ({
       return { stepName: 'Not Started', status: 'pending' };
     }
     
-    // Find the highest step order that has been created for this order
     const highestStep = currentOrderSteps
       .sort((a, b) => (b.manufacturing_steps?.step_order || 0) - (a.manufacturing_steps?.step_order || 0))[0];
     
@@ -119,19 +117,19 @@ const ManufacturingOrdersTable = ({
 
   return (
     <>
-      <div className="border rounded-lg">
+      <div className="bg-white rounded-lg border border-gray-200">
         <Table>
-          <TableHeader>
-            <TableRow className="h-8">
-              <TableHead className="py-1 text-xs">Order Number</TableHead>
-              <TableHead className="py-1 text-xs">Product Code</TableHead>
-              <TableHead className="py-1 text-xs">Qty</TableHead>
-              <TableHead className="py-1 text-xs">Priority</TableHead>
-              <TableHead className="py-1 text-xs">Status</TableHead>
-              <TableHead className="py-1 text-xs">Current Step</TableHead>
-              <TableHead className="py-1 text-xs">Due Date</TableHead>
-              <TableHead className="py-1 text-xs">Created</TableHead>
-              <TableHead className="py-1 text-xs">Actions</TableHead>
+          <TableHeader className="bg-gray-50/50">
+            <TableRow className="h-12 border-b border-gray-200">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Order Number</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Product Code</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Qty</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Priority</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Status</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Current Step</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Due Date</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Created</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -139,13 +137,13 @@ const ManufacturingOrdersTable = ({
               const currentStep = getCurrentStep(order.id);
               
               return (
-                <TableRow key={order.id} className="hover:bg-muted/50 h-10">
-                  <TableCell className="py-1 text-xs font-mono">{order.order_number}</TableCell>
-                  <TableCell className="py-1 text-xs font-mono">
+                <TableRow key={order.id} className="h-16 border-b border-gray-100 hover:bg-gray-50/50">
+                  <TableCell className="py-4 px-4 text-sm font-mono">{order.order_number}</TableCell>
+                  <TableCell className="py-4 px-4 text-sm font-mono">
                     {order.product_configs?.product_code ? (
                       <Button
                         variant="link"
-                        className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800"
+                        className="h-auto p-0 text-sm font-mono text-blue-600 hover:text-blue-800"
                         onClick={() => handleProductCodeClick(order.product_configs?.product_code)}
                       >
                         {order.product_configs.product_code}
@@ -154,44 +152,49 @@ const ManufacturingOrdersTable = ({
                       'N/A'
                     )}
                   </TableCell>
-                  <TableCell className="py-1 text-xs">{order.quantity_required}</TableCell>
-                  <TableCell className="py-1">
+                  <TableCell className="py-4 px-4 text-sm">{order.quantity_required}</TableCell>
+                  <TableCell className="py-4 px-4">
                     <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
                       {order.priority}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-1">
+                  <TableCell className="py-4 px-4">
                     <Badge className={`text-xs ${getStatusColor(order.status)}`}>
                       {order.status.replace('_', ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-1">
+                  <TableCell className="py-4 px-4">
                     <div className="flex flex-col">
-                      <span className="text-xs font-medium">
+                      <span className="text-sm font-medium">
                         {formatStepDisplay(currentStep.stepName, currentStep.status)}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 text-xs">
+                  <TableCell className="py-4 px-4 text-sm">
                     {order.due_date ? format(new Date(order.due_date), 'MMM dd') : 'N/A'}
                   </TableCell>
-                  <TableCell className="py-1 text-xs">
+                  <TableCell className="py-4 px-4 text-sm">
                     {format(new Date(order.created_at), 'MMM dd')}
                   </TableCell>
-                  <TableCell className="py-1">
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={() => onViewOrder(order)} className="h-6 w-6 p-0">
-                        <Eye className="h-3 w-3" />
+                  <TableCell className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => onViewOrder(order)} 
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                      >
+                        <Eye className="h-3.5 w-3.5 text-gray-600" />
                       </Button>
                       
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleViewFlow(order)}
-                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50 text-blue-600 hover:text-blue-700"
                         title="View production flow"
                       >
-                        <Workflow className="h-3 w-3" />
+                        <Workflow className="h-3.5 w-3.5" />
                       </Button>
                       
                       {order.status === 'pending' && (
@@ -199,9 +202,9 @@ const ManufacturingOrdersTable = ({
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleDeleteClick(order)}
-                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                          className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50 text-red-600 hover:text-red-700"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       
@@ -210,9 +213,9 @@ const ManufacturingOrdersTable = ({
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleTagInClick(order)}
-                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                          className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50 text-green-600 hover:text-green-700"
                         >
-                          <ArrowUp className="h-3 w-3" />
+                          <ArrowUp className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
