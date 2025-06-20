@@ -2,10 +2,15 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { format, subDays, subWeeks, subMonths, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import ProductCodeSelector from '@/components/orders/ProductCodeSelector';
 
 interface OrdersReceivedTrendChartProps {
   orders: any[];
@@ -19,6 +24,9 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('daily');
   const [dateRange, setDateRange] = useState<DateRange>('thisWeek');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedProductCode, setSelectedProductCode] = useState<string>('');
+  const [customDateFrom, setCustomDateFrom] = useState<Date>();
+  const [customDateTo, setCustomDateTo] = useState<Date>();
 
   const { chartData, categories } = useMemo(() => {
     if (!orders.length) return { chartData: [], categories: [] };
@@ -27,55 +35,86 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
     let periods: Date[] = [];
     let formatString = '';
     let groupByFunction: (date: Date) => string;
+    let startDate: Date;
+    let endDate: Date;
 
     // Define time periods based on date range and interval
-    switch (dateRange) {
-      case 'today':
-        periods = [now];
-        formatString = 'HH:mm';
-        groupByFunction = (date: Date) => format(date, 'yyyy-MM-dd HH');
-        break;
-      case 'thisWeek':
-        switch (timeInterval) {
-          case 'daily':
-            periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
-            formatString = 'MMM dd';
-            groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
-            break;
-          case 'weekly':
-            periods = Array.from({ length: 4 }, (_, i) => subWeeks(now, 3 - i));
-            formatString = 'MMM dd';
-            groupByFunction = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-            break;
-          default:
-            periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
-            formatString = 'MMM dd';
-            groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+    if (dateRange === 'custom' && customDateFrom && customDateTo) {
+      startDate = customDateFrom;
+      endDate = customDateTo;
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (timeInterval === 'daily' || daysDiff <= 31) {
+        periods = [];
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          periods.push(new Date(d));
         }
-        break;
-      case 'thisMonth':
-        switch (timeInterval) {
-          case 'daily':
-            periods = Array.from({ length: 30 }, (_, i) => subDays(now, 29 - i));
-            formatString = 'MMM dd';
-            groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
-            break;
-          case 'weekly':
-            periods = Array.from({ length: 4 }, (_, i) => subWeeks(now, 3 - i));
-            formatString = 'MMM dd';
-            groupByFunction = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-            break;
-          case 'monthly':
-            periods = Array.from({ length: 6 }, (_, i) => subMonths(now, 5 - i));
-            formatString = 'MMM yyyy';
-            groupByFunction = (date: Date) => format(startOfMonth(date), 'yyyy-MM');
-            break;
-        }
-        break;
-      default:
-        periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
         formatString = 'MMM dd';
         groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+      } else if (timeInterval === 'weekly') {
+        periods = [];
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
+          periods.push(new Date(d));
+        }
+        formatString = 'MMM dd';
+        groupByFunction = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      } else {
+        periods = [];
+        for (let d = new Date(startDate); d <= endDate; d.setMonth(d.getMonth() + 1)) {
+          periods.push(new Date(d));
+        }
+        formatString = 'MMM yyyy';
+        groupByFunction = (date: Date) => format(startOfMonth(date), 'yyyy-MM');
+      }
+    } else {
+      switch (dateRange) {
+        case 'today':
+          periods = [now];
+          formatString = 'HH:mm';
+          groupByFunction = (date: Date) => format(date, 'yyyy-MM-dd HH');
+          break;
+        case 'thisWeek':
+          switch (timeInterval) {
+            case 'daily':
+              periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
+              formatString = 'MMM dd';
+              groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+              break;
+            case 'weekly':
+              periods = Array.from({ length: 4 }, (_, i) => subWeeks(now, 3 - i));
+              formatString = 'MMM dd';
+              groupByFunction = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+              break;
+            default:
+              periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
+              formatString = 'MMM dd';
+              groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+          }
+          break;
+        case 'thisMonth':
+          switch (timeInterval) {
+            case 'daily':
+              periods = Array.from({ length: 30 }, (_, i) => subDays(now, 29 - i));
+              formatString = 'MMM dd';
+              groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+              break;
+            case 'weekly':
+              periods = Array.from({ length: 4 }, (_, i) => subWeeks(now, 3 - i));
+              formatString = 'MMM dd';
+              groupByFunction = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+              break;
+            case 'monthly':
+              periods = Array.from({ length: 6 }, (_, i) => subMonths(now, 5 - i));
+              formatString = 'MMM yyyy';
+              groupByFunction = (date: Date) => format(startOfMonth(date), 'yyyy-MM');
+              break;
+          }
+          break;
+        default:
+          periods = Array.from({ length: 7 }, (_, i) => subDays(now, 6 - i));
+          formatString = 'MMM dd';
+          groupByFunction = (date: Date) => format(startOfDay(date), 'yyyy-MM-dd');
+      }
     }
 
     // Get all unique categories
@@ -89,14 +128,22 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
     });
     const allCategories = Array.from(categorySet).sort();
 
-    // Filter orders by category if selected
-    const filteredOrders = selectedCategory === 'all' 
-      ? orders 
-      : orders.filter(order => 
-          order.order_items.some((item: any) => 
-            item.product_configs?.category === selectedCategory
-          )
+    // Filter orders by category and product code if selected
+    const filteredOrders = orders.filter(order => {
+      // Category filter
+      const categoryMatch = selectedCategory === 'all' || 
+        order.order_items.some((item: any) => 
+          item.product_configs?.category === selectedCategory
         );
+      
+      // Product code filter
+      const productCodeMatch = !selectedProductCode || 
+        order.order_items.some((item: any) => 
+          item.product_configs?.product_code === selectedProductCode
+        );
+      
+      return categoryMatch && productCodeMatch;
+    });
 
     // Initialize data structure
     const dataMap = new Map<string, { orderCount: number; totalQuantity: number }>();
@@ -117,8 +164,11 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
         
         // Calculate total quantity for this order
         const orderQuantity = order.order_items.reduce((sum: number, item: any) => {
-          // Only count items that match the selected category filter
-          if (selectedCategory === 'all' || item.product_configs?.category === selectedCategory) {
+          // Only count items that match the selected filters
+          const categoryMatch = selectedCategory === 'all' || item.product_configs?.category === selectedCategory;
+          const productCodeMatch = !selectedProductCode || item.product_configs?.product_code === selectedProductCode;
+          
+          if (categoryMatch && productCodeMatch) {
             return sum + (item.quantity || 0);
           }
           return sum;
@@ -141,7 +191,7 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
     });
 
     return { chartData: data, categories: allCategories };
-  }, [orders, timeInterval, dateRange, selectedCategory]);
+  }, [orders, timeInterval, dateRange, selectedCategory, selectedProductCode, customDateFrom, customDateTo]);
 
   const chartConfig = {
     orderCount: {
@@ -156,7 +206,7 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
 
   if (loading) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -164,7 +214,7 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80 flex items-center justify-center">
+          <div className="h-96 flex items-center justify-center">
             <div className="text-muted-foreground">Loading chart data...</div>
           </div>
         </CardContent>
@@ -174,7 +224,7 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
 
   if (!orders.length) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -182,9 +232,9 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80 flex items-center justify-center">
+          <div className="h-96 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No order data available yet</p>
               <p className="text-sm">Orders will appear here once created</p>
             </div>
@@ -195,7 +245,7 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
   }
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <div className="flex flex-col space-y-4">
           <CardTitle className="flex items-center gap-2">
@@ -212,8 +262,37 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="thisWeek">This Week</SelectItem>
                 <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
+
+            {dateRange === 'custom' && (
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-40 justify-start text-left font-normal", !customDateFrom && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateFrom ? format(customDateFrom, "MMM dd, yyyy") : "From date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} initialFocus />
+                  </PopoverContent>
+                </Popover>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-40 justify-start text-left font-normal", !customDateTo && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateTo ? format(customDateTo, "MMM dd, yyyy") : "To date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
 
             <Select value={timeInterval} onValueChange={(value: TimeInterval) => setTimeInterval(value)}>
               <SelectTrigger className="w-32">
@@ -241,11 +320,18 @@ const OrdersReceivedTrendChart = ({ orders, loading }: OrdersReceivedTrendChartP
                 </SelectContent>
               </Select>
             )}
+
+            <div className="w-48">
+              <ProductCodeSelector
+                value={selectedProductCode}
+                onChange={setSelectedProductCode}
+              />
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-80">
+        <ChartContainer config={chartConfig} className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
