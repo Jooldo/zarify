@@ -49,9 +49,9 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
 
       const group = stepOrderGroups.get(stepId);
       
-      // Use quantityAssigned and rawMaterialWeightAssigned if available, otherwise fall back to order quantity
-      const assignedQuantity = orderStep.quantityAssigned || order.quantity_required;
-      const assignedWeight = orderStep.rawMaterialWeightAssigned || 0;
+      // Use order quantity since quantityAssigned and rawMaterialWeightAssigned don't exist in the database
+      const assignedQuantity = order.quantity_required;
+      const assignedWeight = 0; // Default to 0 since we don't have this data
 
       group.orders.push({
         ...order,
