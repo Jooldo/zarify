@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -169,15 +170,34 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
   return (
     <TooltipProvider>
-      <div className="bg-white rounded-lg border">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="h-8">
-              <TableHead className="py-1 px-2 text-xs font-medium">Material</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Threshold</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-blue-700 font-semibold text-xs">Required Quantity</span>
+            <TableRow className="border-b border-gray-200 bg-gray-50">
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4">Material</TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4">Type</TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4 text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <span>Current Stock</span>
+                  <ArrowUp className="h-3 w-3 text-gray-400" />
+                </div>
+              </TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4 text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <span>In Manufacturing</span>
+                  <ArrowUp className="h-3 w-3 text-gray-400" />
+                </div>
+              </TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4 text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <span>In Procurement</span>
+                  <ArrowUp className="h-3 w-3 text-gray-400" />
+                </div>
+              </TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4 text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-blue-700 font-semibold">Required</span>
+                  <ArrowUp className="h-3 w-3 text-gray-400" />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="h-3 w-3 text-blue-500 cursor-help" />
@@ -188,64 +208,18 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center">Current Stock</TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <span>In Procurement</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Quantity of this material currently being procured from suppliers</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <span>In Manufacturing</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Quantity of this material reserved for manufacturing orders (already deducted from Current Stock)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium text-center">
-                <div className="flex items-center justify-center gap-1">
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4 text-right">
+                <div className="flex items-center justify-end gap-1">
                   <span>Shortfall</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Shortage calculation: (Required Quantity + Min Stock) - (Current Stock + In Procurement). In Manufacturing is already reserved from Current Stock.</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <ArrowUp className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
-                  <span>Status</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Critical: Shortage exists; Low: Current stock below minimum; Good: Adequate stock levels</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </TableHead>
-              <TableHead className="py-1 px-2 text-xs font-medium">Actions</TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4">Status</TableHead>
+              <TableHead className="text-gray-600 font-medium text-sm py-3 px-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedMaterials.map((material) => {
+            {sortedMaterials.map((material, index) => {
               const statusInfo = getInventoryStatus(
                 material.current_stock,
                 material.in_procurement,
@@ -261,94 +235,102 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               const shortfall = material.shortfall;
               
               return (
-                <TableRow key={material.id} className="h-10">
-                  <TableCell className="py-1 px-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{material.name}</span>
-                      <Badge variant="secondary" className="text-xs px-2 py-1">
-                        {material.type}
-                      </Badge>
+                <TableRow key={material.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100 hover:bg-gray-100 transition-colors`}>
+                  <TableCell className="py-4 px-4">
+                    <div className="space-y-1">
+                      <div className="font-medium text-gray-900 text-sm">{material.name}</div>
+                      <div className="text-xs text-gray-500">No supplier</div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-xs font-medium">
-                    {formatIndianNumber(material.minimum_stock)} {shortUnit}
+                  <TableCell className="py-4 px-4">
+                    <Badge variant="outline" className="text-xs px-2 py-1 bg-gray-100 text-gray-700 border-gray-300">
+                      {material.type}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-center">
+                  <TableCell className="py-4 px-4 text-right">
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-gray-900 text-sm">{formatIndianNumber(material.current_stock)}</div>
+                      <div className="text-xs text-gray-500">{shortUnit}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4 px-4 text-right">
+                    <div className="space-y-0.5">
+                      <div className="font-medium text-blue-600 text-sm">{formatIndianNumber(material.in_manufacturing || 0)}</div>
+                      <div className="text-xs text-gray-500">{shortUnit}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4 px-4 text-right">
+                    <div className="space-y-0.5">
+                      <div className="font-medium text-orange-600 text-sm">{formatIndianNumber(material.in_procurement)}</div>
+                      <div className="text-xs text-gray-500">{shortUnit}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4 px-4 text-right">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                      className="h-auto p-0 text-sm font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-50 flex flex-col items-end"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
-                      {formatIndianNumber(material.required || 0)} {shortUnit}
+                      <div>{formatIndianNumber(material.required || 0)}</div>
+                      <div className="text-xs text-gray-500">{shortUnit}</div>
                     </Button>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-bold text-center">
-                    {formatIndianNumber(material.current_stock)} {shortUnit}
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-medium text-center">
-                    {formatIndianNumber(material.in_procurement)} {shortUnit}
-                  </TableCell>
-                  <TableCell className="py-1 px-2 text-sm font-medium text-center">
-                    <span className="text-purple-700 font-semibold">
-                      {formatIndianNumber(material.in_manufacturing || 0)} {shortUnit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-2 py-1 text-center">
+                  <TableCell className="py-4 px-4 text-right">
                     {shortfall === 0 ? (
-                      <span className="text-sm font-medium text-gray-600">
-                        0 {shortUnit}
-                      </span>
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium text-gray-600">0</div>
+                        <div className="text-xs text-gray-500">{shortUnit}</div>
+                      </div>
                     ) : (
                       <div 
-                        className="cursor-help flex items-center justify-center gap-1"
+                        className="cursor-help space-y-0.5"
                         title={getShortfallTooltip()}
                       >
-                        <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
-                        </span>
-                        {shortfall > 0 ? (
-                          <ArrowDown className="h-4 w-4 text-red-600" />
-                        ) : (
-                          <ArrowUp className="h-4 w-4 text-green-600" />
-                        )}
+                        <div className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {shortfall > 0 ? '+' : ''}{formatIndianNumber(Math.abs(shortfall))}
+                        </div>
+                        <div className="text-xs text-gray-500">{shortUnit}</div>
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="px-2 py-1">
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
-                      <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
-                      <span className={`text-xs font-medium ${statusInfo.color}`}>
-                        {statusInfo.status}
-                      </span>
-                    </div>
+                  <TableCell className="py-4 px-4">
+                    <Badge 
+                      className={`text-xs px-3 py-1.5 rounded-full font-medium ${
+                        statusInfo.status === 'Critical' ? 'bg-red-100 text-red-800 border-red-200' :
+                        statusInfo.status === 'Low' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                        'bg-gray-900 text-white border-gray-900'
+                      }`}
+                    >
+                      {statusInfo.status}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <div className="flex gap-1">
+                  <TableCell className="py-4 px-4">
+                    <div className="flex gap-2">
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-8 w-8 p-0 hover:bg-gray-100"
                         onClick={() => handleViewMaterial(material)}
                       >
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4 text-gray-600" />
                       </Button>
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-8 w-8 p-0 hover:bg-gray-100"
                         onClick={() => handleUpdateStock(material)}
                         title="Update Stock"
                       >
-                        <Edit className="h-3 w-3" />
+                        <Edit className="h-4 w-4 text-gray-600" />
                       </Button>
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-8 w-8 p-0 hover:bg-gray-100"
                         onClick={() => handleRaiseRequest(material)}
                         title="Raise Request"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4 text-gray-600" />
                       </Button>
                     </div>
                   </TableCell>
