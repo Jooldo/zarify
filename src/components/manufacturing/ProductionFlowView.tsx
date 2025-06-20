@@ -12,7 +12,6 @@ import {
   Handle,
   Position,
   BackgroundVariant,
-  OnNodeDrag,
   ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -25,7 +24,6 @@ import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import { useNodePositions } from '@/hooks/useNodePositions';
 import { generateOrderRowLayout, generateStepLayout } from '@/utils/nodeLayoutUtils';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
@@ -220,7 +218,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 }) => {
   const { orderSteps, manufacturingSteps, stepFields, isLoading: isLoadingSteps } = useManufacturingSteps();
   const { stepValues, isLoading: isLoadingValues } = useManufacturingStepValues();
-  const { userNodePositions, updateNodePosition, resetPositions, hasUserPosition } = useNodePositions();
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -296,11 +293,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   }, [manufacturingOrders, manufacturingSteps]);
 
-  const onNodeDragStop: OnNodeDrag = useCallback((event, node) => {
-    updateNodePosition(node.id, node.position);
-  }, [updateNodePosition]);
-
-  // Optimized nodes and edges generation
+  // Optimized nodes and edges generation with static positions
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!isInitialized || manufacturingOrders.length === 0) {
       return { initialNodes: [], initialEdges: [] };
@@ -311,11 +304,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     
     manufacturingOrders.forEach((order, orderIndex) => {
       const orderNodeId = `order-${order.id}`;
-      const orderPosition = generateOrderRowLayout(
-        manufacturingOrders.length,
-        orderIndex,
-        hasUserPosition(orderNodeId) ? userNodePositions[orderNodeId] : undefined
-      );
+      const orderPosition = generateOrderRowLayout(manufacturingOrders.length, orderIndex);
       
       nodes.push({
         id: orderNodeId,
@@ -325,6 +314,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           ...order, 
           onViewDetails: handleViewDetails,
         } as unknown as Record<string, unknown>,
+        draggable: false, // Disable dragging
       });
 
       const orderStepsFiltered = stableOrderSteps.current.filter(step => 
@@ -334,11 +324,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
       orderStepsFiltered.forEach((orderStep, stepIndex) => {
         const stepNodeId = `step-${orderStep.id}`;
-        const stepPosition = generateStepLayout(
-          orderPosition,
-          stepIndex,
-          hasUserPosition(stepNodeId) ? userNodePositions[stepNodeId] : undefined
-        );
+        const stepPosition = generateStepLayout(orderPosition, stepIndex);
         
         const stepStepValues = stableStepValues.current.filter(v => v.manufacturing_order_step_id === orderStep.id);
         const stepStepFields = stableStepFields.current.filter(field => 
@@ -356,6 +342,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             stepValues: stepStepValues,
             stepFields: stepStepFields,
           } as unknown as Record<string, unknown>,
+          draggable: false, // Disable dragging
         });
       });
 
@@ -391,7 +378,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [manufacturingOrders, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isInitialized]);
+  }, [manufacturingOrders, handleViewDetails, handleStepClick, handleNextStepClick, isInitialized]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -470,7 +457,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
         onInit={onInit}
         nodeTypes={nodeTypes}
         attributionPosition="bottom-left"
@@ -482,7 +468,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         minZoom={0.2}
         maxZoom={1.2}
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
-        nodesDraggable={true}
+        nodesDraggable={false} // Disable node dragging completely
         nodesConnectable={false}
         elementsSelectable={true}
         fitViewOptions={{
@@ -516,16 +502,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             >
               <Workflow className="h-4 w-4 mr-1" />
               Fit View
-            </Button>
-            <Button
-              onClick={resetPositions}
-              variant="outline"
-              size="sm"
-              className="bg-background/80 backdrop-blur-sm"
-              disabled={isLoading}
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset Layout
             </Button>
             <Button
               onClick={() => setIsFullScreen(false)}
@@ -615,16 +591,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           >
             <Workflow className="h-4 w-4 mr-1" />
             Fit View
-          </Button>
-          <Button
-            onClick={resetPositions}
-            variant="outline"
-            size="sm"
-            className="bg-background/80 backdrop-blur-sm"
-            disabled={isLoading}
-          >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reset Layout
           </Button>
         </div>
 
