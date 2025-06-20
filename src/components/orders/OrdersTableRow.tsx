@@ -50,6 +50,9 @@ const OrdersTableRow = ({
   const stockAvailable = getStockAvailable(item.productCode);
   const isStockSufficient = stockAvailable >= item.quantity;
 
+  // Find the parent order for this suborder
+  const parentOrder = orders.find(o => o.order_number === item.orderId);
+
   return (
     <>
       <TableRow className="h-16 border-b border-gray-100 hover:bg-gray-50/50">
@@ -99,7 +102,7 @@ const OrdersTableRow = ({
           {item.expectedDelivery ? format(new Date(item.expectedDelivery), 'MMM dd') : 'N/A'}
         </TableCell>
         <TableCell className="py-4 px-4">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button 
               variant="outline" 
               size="sm" 
@@ -131,13 +134,14 @@ const OrdersTableRow = ({
         </TableCell>
       </TableRow>
 
-      <SuborderDetailsDialog
-        suborder={item}
-        orders={orders}
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        onOrderUpdate={onOrderUpdate}
-      />
+      {parentOrder && (
+        <SuborderDetailsDialog
+          suborderItem={item}
+          parentOrder={parentOrder}
+          isOpen={isDetailsOpen}
+          onClose={() => setIsDetailsOpen(false)}
+        />
+      )}
 
       <EditOrderDialog
         order={orders.find(o => o.order_number === item.orderId)}
