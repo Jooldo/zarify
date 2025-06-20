@@ -320,7 +320,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   }, [manufacturingOrders, manufacturingSteps]);
 
-  // Generate nodes and edges without automatic view fitting
+  // Generate nodes and edges with stable references
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!isInitialized) {
       return { initialNodes: [], initialEdges: [] };
@@ -347,7 +347,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           ...order, 
           onViewDetails: handleViewDetails,
         } as unknown as Record<string, unknown>,
-        draggable: false, // Disable dragging
+        draggable: false,
       });
 
       const orderStepsFiltered = stableOrderSteps.current.filter(step => 
@@ -375,7 +375,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             stepValues: stepStepValues,
             stepFields: stepStepFields,
           } as unknown as Record<string, unknown>,
-          draggable: false, // Disable dragging
+          draggable: false,
         });
       });
 
@@ -384,12 +384,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
           source: `order-${order.id}`,
           target: `step-${orderStepsFiltered[0].id}`,
-          type: 'smoothstep',
-          animated: true,
+          type: 'default',
           style: { 
             stroke: '#3b82f6', 
             strokeWidth: 2,
-            strokeDasharray: '5,5'
           },
         });
 
@@ -398,12 +396,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
             source: `step-${orderStepsFiltered[i].id}`,
             target: `step-${orderStepsFiltered[i + 1].id}`,
-            type: 'smoothstep',
-            animated: true,
+            type: 'default',
             style: { 
               stroke: '#3b82f6', 
               strokeWidth: 2,
-              strokeDasharray: '5,5'
             },
           });
         }
@@ -431,10 +427,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     [setEdges]
   );
 
-  // Optimized initialization with proper view fitting
+  // Simplified initialization
   const onInit = useCallback((reactFlowInstance: ReactFlowInstance) => {
     setReactFlowInstance(reactFlowInstance);
-    // Manual fit view only when user clicks the button
   }, []);
 
   // Manual fit view function
@@ -491,10 +486,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         attributionPosition="bottom-left"
         className="bg-background"
         panOnScroll={true}
-        panOnScrollSpeed={1.0}
+        panOnScrollSpeed={0.5}
         zoomOnScroll={true}
         zoomOnPinch={true}
-        panOnDrag={true}
+        panOnDrag={[1, 2]}
         minZoom={0.1}
         maxZoom={2.0}
         nodesDraggable={false}
