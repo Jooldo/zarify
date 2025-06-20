@@ -22,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow } from 'lucide-react';
 import { format } from 'date-fns';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useNodePositions } from '@/hooks/useNodePositions';
@@ -32,6 +31,7 @@ import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
 import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { useFlowViewport } from '@/hooks/useFlowViewport';
+import { ManufacturingOrder } from '@/types/manufacturingOrders';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
