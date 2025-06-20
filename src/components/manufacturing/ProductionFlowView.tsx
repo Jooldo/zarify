@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow, Hash } from 'lucide-react';
+import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -59,28 +59,40 @@ const ProductionFlowLoader = () => (
   </div>
 );
 
-// Sequence indicator component
+// Enhanced sequence indicator component with better styling
 const SequenceIndicatorNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const sequenceData = data as { sequenceNumber: number; isFirst: boolean; isLast: boolean };
   
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="relative">
-        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-lg">
+        {/* Main circle with gradient background */}
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/70 text-white flex items-center justify-center font-bold text-xl shadow-lg border-2 border-white">
           {sequenceData.sequenceNumber}
         </div>
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-          <Hash className="w-2 h-2 text-white" />
+        
+        {/* Small decorative badge */}
+        <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-md">
+          <Hash className="w-3 h-3 text-white" />
         </div>
+        
+        {/* Pulse effect for first item */}
+        {sequenceData.isFirst && (
+          <div className="absolute inset-0 w-16 h-16 rounded-full bg-primary/20 animate-pulse"></div>
+        )}
       </div>
-      <div className="mt-2 text-xs text-center text-muted-foreground font-medium">
-        {sequenceData.isFirst ? 'Start' : sequenceData.isLast ? 'End' : 'Queue'}
+      
+      {/* Status label with enhanced styling */}
+      <div className="mt-3 px-3 py-1 rounded-full bg-white shadow-sm border border-gray-200">
+        <span className="text-xs font-semibold text-gray-700">
+          {sequenceData.isFirst ? '🚀 Start' : sequenceData.isLast ? '🏁 End' : '⏳ Queue'}
+        </span>
       </div>
     </div>
   );
 };
 
-// Custom node component for manufacturing orders
+// Custom node component for manufacturing orders (unchanged functionality)
 const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
@@ -141,25 +153,20 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
   return (
     <>
-      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer relative" onClick={handleCardClick}>
-        <Handle type="target" position={Position.Left} />
-        
-        {/* Sequence number badge */}
-        <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg z-10">
-          {orderData.sequenceNumber}
-        </div>
+      <Card className="w-80 hover:shadow-xl transition-all duration-300 cursor-pointer relative border-2 border-gray-200 hover:border-primary/30 bg-gradient-to-br from-white to-gray-50/50" onClick={handleCardClick}>
+        <Handle type="target" position={Position.Left} className="w-3 h-3 bg-primary border-2 border-white shadow-md" />
         
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
-              <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
+              <CardTitle className="text-sm font-semibold text-gray-800">{orderData.product_name}</CardTitle>
+              <p className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded mt-1">{orderData.order_number}</p>
             </div>
             <div className="flex flex-col gap-1">
-              <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
+              <Badge className={`text-xs shadow-sm ${getPriorityColor(orderData.priority)}`}>
                 {orderData.priority}
               </Badge>
-              <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
+              <Badge className={`text-xs shadow-sm ${getStatusColor(orderData.status)}`}>
                 {orderData.status.replace('_', ' ')}
               </Badge>
             </div>
@@ -168,25 +175,25 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
         <CardContent className="space-y-3">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Package2 className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Package2 className="h-3 w-3" />
+              <span className="text-xs">Qty: <span className="font-semibold text-gray-800">{orderData.quantity_required}</span></span>
             </div>
             
             {orderData.due_date && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 text-gray-500" />
-                <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="h-3 w-3" />
+                <span className="text-xs">Due: <span className="font-semibold text-gray-800">{format(new Date(orderData.due_date), 'MMM dd')}</span></span>
               </div>
             )}
           </div>
 
           {/* Start First Step Button */}
           {shouldShowStartButton && (
-            <div className="pt-2 border-t">
+            <div className="pt-2 border-t border-gray-200">
               <Button 
                 onClick={handleStartStep}
-                className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
+                className="w-full text-xs h-7 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
               >
                 <Play className="h-3 w-3 mr-1" />
                 Start {firstStep.step_name}
@@ -194,7 +201,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
             </div>
           )}
         </CardContent>
-        <Handle type="source" position={Position.Right} />
+        <Handle type="source" position={Position.Right} className="w-3 h-3 bg-primary border-2 border-white shadow-md" />
       </Card>
 
       <StartStepDialog
@@ -207,7 +214,7 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
   );
 };
 
-// Custom node component for step progress cards
+// Custom node component for step progress cards (unchanged functionality)
 const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
   const stepData = data as unknown as { 
     orderStep: any; 
@@ -220,7 +227,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
   
   return (
     <>
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-blue-500 border-2 border-white shadow-md" />
       <ManufacturingStepProgressCard
         orderStep={stepData.orderStep}
         stepFields={stepData.stepFields}
@@ -228,7 +235,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
         onClick={() => stepData.onStepClick(stepData.orderStep)}
         onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
       />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-blue-500 border-2 border-white shadow-md" />
     </>
   );
 };
@@ -239,7 +246,7 @@ const nodeTypes = {
   sequenceIndicator: SequenceIndicatorNodeComponent,
 };
 
-// Auto-focus hook that works within ReactFlow context
+// Auto-focus hook that works within ReactFlow context (unchanged)
 const useAutoFocus = (manufacturingOrders: ManufacturingOrder[], isLoading: boolean) => {
   const hasAutoFocused = useRef(false);
 
@@ -260,7 +267,7 @@ const useAutoFocus = (manufacturingOrders: ManufacturingOrder[], isLoading: bool
   return { shouldAutoFocus, markAsAutoFocused, firstOrderId: manufacturingOrders[0]?.id };
 };
 
-// Main Flow Content Component
+// Main Flow Content Component (unchanged functionality)
 const FlowContent: React.FC<{
   manufacturingOrders: ManufacturingOrder[];
   isLoading: boolean;
@@ -318,7 +325,7 @@ const FlowContent: React.FC<{
       nodeTypes={nodeTypes}
       fitView={false}
       attributionPosition="bottom-left"
-      className="bg-background"
+      className="bg-gradient-to-br from-gray-50 to-blue-50/30"
       panOnScroll={true}
       panOnScrollSpeed={0.5}
       zoomOnScroll={true}
@@ -326,16 +333,17 @@ const FlowContent: React.FC<{
       minZoom={0.5}
       maxZoom={1.5}
     >
-      <Controls showZoom={true} showFitView={true} />
+      <Controls showZoom={true} showFitView={true} className="shadow-lg" />
       <MiniMap 
-        className="bg-background border"
+        className="bg-white border border-gray-200 shadow-lg rounded-lg"
         nodeClassName={() => 'fill-primary/20'}
       />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
     </ReactFlow>
   );
 };
 
+// Main component with enhanced node positioning and edge styling
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   manufacturingOrders,
   onViewDetails
@@ -405,7 +413,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     updateNodePosition(node.id, node.position);
   }, [updateNodePosition]);
 
-  // Convert manufacturing orders and their steps to React Flow nodes
+  // Enhanced nodes generation with better positioning
   const initialNodes: Node[] = useMemo(() => {
     if (isLoading) return [];
     
@@ -413,10 +421,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     const nodes: Node[] = [];
     
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Add sequence indicator before each order (except the first one gets a special start indicator)
+      // Enhanced sequence indicator positioning
       const sequenceNodeId = `sequence-${order.id}`;
       const sequencePosition = {
-        x: orderIndex * 500 - 100, // Position before the order card
+        x: orderIndex * 600 - 120, // More spacing between sequences
         y: 50
       };
       
@@ -433,15 +441,14 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         selectable: false,
       });
       
-      // Calculate order node position
+      // Calculate order node position with better spacing
       const orderNodeId = `order-${order.id}`;
-      const orderPosition = generateOrderRowLayout(
-        manufacturingOrders.length,
-        orderIndex,
-        hasUserPosition(orderNodeId) ? userNodePositions[orderNodeId] : undefined
-      );
+      const orderPosition = {
+        x: orderIndex * 600 + 40, // Consistent spacing from sequence indicator
+        y: 50
+      };
       
-      // Add manufacturing order node with sequence number
+      // Add manufacturing order node
       nodes.push({
         id: orderNodeId,
         type: 'manufacturingOrder',
@@ -453,7 +460,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         } as unknown as Record<string, unknown>,
       });
 
-      // Add step progress nodes for this order
+      // Add step progress nodes for this order with enhanced positioning
       const orderStepsFiltered = orderSteps.filter(step => 
         step.manufacturing_order_id === order.id && 
         step.status !== 'pending'
@@ -461,11 +468,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
 
       orderStepsFiltered.forEach((orderStep, stepIndex) => {
         const stepNodeId = `step-${orderStep.id}`;
-        const stepPosition = generateStepLayout(
-          orderPosition,
-          stepIndex,
-          hasUserPosition(stepNodeId) ? userNodePositions[stepNodeId] : undefined
-        );
+        const stepPosition = {
+          x: orderPosition.x + 50, // Slightly offset from order card
+          y: orderPosition.y + 200 + (stepIndex * 150) // Vertical stacking with more space
+        };
         
         const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
         
@@ -487,7 +493,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             onNextStepClick: handleNextStepClick,
             stepValues: stepStepValues,
             stepFields: stepStepFields,
-            manufacturingSteps: manufacturingSteps, // Pass manufacturing steps for next step detection
+            manufacturingSteps: manufacturingSteps,
           } as unknown as Record<string, unknown>,
         });
       });
@@ -496,13 +502,14 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return nodes;
   }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isLoading]);
 
+  // Enhanced edges with better styling and connection types
   const initialEdges: Edge[] = useMemo(() => {
     if (isLoading) return [];
     
     const edges: Edge[] = [];
     
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Connect sequence indicator to order
+      // Enhanced connection from sequence indicator to order with custom styling
       edges.push({
         id: `edge-sequence-${order.id}-order-${order.id}`,
         source: `sequence-${order.id}`,
@@ -511,8 +518,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         animated: false,
         style: { 
           stroke: '#3b82f6', 
-          strokeWidth: 3,
-          strokeDasharray: '8,4'
+          strokeWidth: 4,
+          strokeDasharray: '0',
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
         },
       });
       
@@ -522,7 +530,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
       if (orderStepsFiltered.length > 0) {
-        // Connect order to first step
+        // Enhanced connection from order to first step
         edges.push({
           id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
           source: `order-${order.id}`,
@@ -531,12 +539,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           animated: true,
           style: { 
             stroke: '#3b82f6', 
-            strokeWidth: 2,
-            strokeDasharray: '5,5'
+            strokeWidth: 3,
+            strokeDasharray: '8,4',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
           },
         });
 
-        // Connect steps to each other
+        // Enhanced step-to-step connections
         for (let i = 0; i < orderStepsFiltered.length - 1; i++) {
           edges.push({
             id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
@@ -546,14 +555,15 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             animated: true,
             style: { 
               stroke: '#3b82f6', 
-              strokeWidth: 2,
-              strokeDasharray: '5,5'
+              strokeWidth: 3,
+              strokeDasharray: '8,4',
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
             },
           });
         }
       }
       
-      // Connect to next order sequence indicator if it exists
+      // Enhanced connection to next order sequence indicator
       if (orderIndex < manufacturingOrders.length - 1) {
         const nextOrder = manufacturingOrders[orderIndex + 1];
         const hasCurrentSteps = orderStepsFiltered.length > 0;
@@ -569,8 +579,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             animated: false,
             style: { 
               stroke: '#10b981', 
-              strokeWidth: 2,
-              strokeDasharray: '10,5'
+              strokeWidth: 3,
+              strokeDasharray: '12,8',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
             },
           });
         } else {
@@ -583,8 +594,9 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             animated: false,
             style: { 
               stroke: '#10b981', 
-              strokeWidth: 2,
-              strokeDasharray: '10,5'
+              strokeWidth: 3,
+              strokeDasharray: '12,8',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
             },
           });
         }
