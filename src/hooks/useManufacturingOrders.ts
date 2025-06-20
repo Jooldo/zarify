@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,18 +25,83 @@ export interface ManufacturingOrder {
   created_at: string;
   updated_at: string;
   merchant_id: string;
+  product_type?: string;
   product_configs?: {
     product_code: string;
     category: string;
     subcategory: string;
     size_value: number;
     weight_range?: string;
+    product_config_materials?: Array<{
+      id: string;
+      quantity_required: number;
+      unit: string;
+      raw_material_id: string;
+      raw_materials?: {
+        id: string;
+        name: string;
+        current_stock: number;
+        unit: string;
+      };
+    }>;
   };
 }
 
 export const useManufacturingOrders = () => {
+  const [manufacturingOrders, setManufacturingOrders] = useState<ManufacturingOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+
+  const fetchManufacturingOrders = async () => {
+    try {
+      setIsLoading(true);
+      const { data: merchantId, error: merchantError } = await supabase
+        .rpc('get_user_merchant_id');
+
+      if (merchantError) throw merchantError;
+
+      const { data: orders, error } = await supabase
+        .from('manufacturing_orders')
+        .select(`
+          *,
+          product_configs(
+            product_code,
+            category,
+            subcategory,
+            size_value,
+            weight_range,
+            product_config_materials(
+              id,
+              quantity_required,
+              unit,
+              raw_material_id,
+              raw_materials(
+                id,
+                name,
+                current_stock,
+                unit
+              )
+            )
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setManufacturingOrders(orders || []);
+    } catch (error) {
+      console.error('Error fetching manufacturing orders:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch manufacturing orders',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const createOrder = async (data: CreateManufacturingOrderData) => {
     try {
@@ -52,6 +117,17 @@ export const useManufacturingOrders = () => {
       }
 
       console.log('🏪 Merchant ID:', merchantId);
+
+      // Get next order number
+      const { data: orderNumber, error: orderNumberError } = await supabase
+        .rpc('get_next_manufacturing_order_number');
+
+      if (orderNumberError) {
+        console.error('Error getting order number:', orderNumberError);
+        throw orderNumberError;
+      }
+
+      console.log('📝 Generated order number:', orderNumber);
 
       // Check raw material stock before creating order
       console.log('🔍 Checking raw material requirements...');
@@ -86,6 +162,7 @@ export const useManufacturingOrders = () => {
       const { data: order, error } = await supabase
         .from('manufacturing_orders')
         .insert({
+          order_number: orderNumber,
           product_name: data.product_name,
           product_config_id: data.product_config_id,
           quantity_required: data.quantity_required,
@@ -122,6 +199,9 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order created successfully',
       });
 
+      // Refresh the orders list
+      await fetchManufacturingOrders();
+
       return order;
     } catch (error: any) {
       console.error('Error in createOrder:', error);
@@ -136,8 +216,69 @@ export const useManufacturingOrders = () => {
     }
   };
 
+  const updateOrder = async (orderId: string, updates: Partial<ManufacturingOrder>) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_orders')
+        .update(updates)
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Manufacturing order updated successfully',
+      });
+
+      await fetchManufacturingOrders();
+    } catch (error: any) {
+      console.error('Error updating manufacturing order:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update manufacturing order',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Manufacturing order deleted successfully',
+      });
+
+      await fetchManufacturingOrders();
+    } catch (error: any) {
+      console.error('Error deleting manufacturing order:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete manufacturing order',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchManufacturingOrders();
+  }, []);
+
   return {
+    manufacturingOrders,
+    isLoading,
     createOrder,
     isCreating,
+    updateOrder,
+    deleteOrder,
+    refetch: fetchManufacturingOrders,
   };
 };
