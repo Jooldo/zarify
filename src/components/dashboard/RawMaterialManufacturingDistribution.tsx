@@ -21,72 +21,46 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
       return [];
     }
 
-    // Get active manufacturing orders (in_progress or pending)
-    const activeOrders = manufacturingOrders.filter(order => 
-      order.status === 'in_progress' || order.status === 'pending'
+    // Only consider manufacturing orders with "in_progress" status
+    const inProgressOrders = manufacturingOrders.filter(order => 
+      order.status === 'in_progress'
     );
 
-    // Create a map of current steps for each order
-    const orderCurrentSteps = new Map();
-    
-    activeOrders.forEach(order => {
-      // Find the current step for this order
-      const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
-      
-      if (currentOrderSteps.length === 0) {
-        // No steps created yet, consider it at the first step
-        const firstStep = manufacturingSteps.find(step => step.step_order === 1);
-        if (firstStep) {
-          orderCurrentSteps.set(order.id, {
-            stepId: firstStep.id,
-            stepName: firstStep.step_name,
-            stepOrder: firstStep.step_order,
-            status: 'pending'
-          });
-        }
-      } else {
-        // Find the highest step order that has been created for this order
-        const highestStep = currentOrderSteps
-          .sort((a, b) => (b.manufacturing_steps?.step_order || 0) - (a.manufacturing_steps?.step_order || 0))[0];
-        
-        if (highestStep.manufacturing_steps) {
-          orderCurrentSteps.set(order.id, {
-            stepId: highestStep.manufacturing_steps.id,
-            stepName: highestStep.manufacturing_steps.step_name,
-            stepOrder: highestStep.manufacturing_steps.step_order,
-            status: highestStep.status
-          });
-        }
-      }
-    });
-
-    // Group orders by their current step
+    // Create a map to group order steps by manufacturing step
     const stepOrderGroups = new Map();
     
-    orderCurrentSteps.forEach((stepInfo, orderId) => {
-      const order = activeOrders.find(o => o.id === orderId);
-      if (!order) return;
+    // Process all order steps for in-progress orders
+    orderSteps.forEach(orderStep => {
+      // Check if this order step belongs to an in-progress order
+      const order = inProgressOrders.find(o => o.id === orderStep.manufacturing_order_id);
+      if (!order || !orderStep.manufacturing_steps) return;
 
-      if (!stepOrderGroups.has(stepInfo.stepId)) {
-        stepOrderGroups.set(stepInfo.stepId, {
-          stepName: stepInfo.stepName,
-          stepOrder: stepInfo.stepOrder,
+      const stepId = orderStep.manufacturing_steps.id;
+      const stepInfo = orderStep.manufacturing_steps;
+
+      if (!stepOrderGroups.has(stepId)) {
+        stepOrderGroups.set(stepId, {
+          stepName: stepInfo.step_name,
+          stepOrder: stepInfo.step_order,
           orders: [],
           totalQuantity: 0,
           totalWeight: 0
         });
       }
 
-      const group = stepOrderGroups.get(stepInfo.stepId);
-      group.orders.push(order);
-      group.totalQuantity += order.quantity_required;
+      const group = stepOrderGroups.get(stepId);
       
-      // Calculate estimated weight based on raw materials needed
-      if (order.product_config_id) {
-        // This is a simplified calculation - in reality you'd need to access product_config_materials
-        // For now, we'll use a rough estimate
-        group.totalWeight += order.quantity_required * 0.1; // Rough estimate
-      }
+      // Use assigned quantity and weight if available, otherwise fall back to order quantity
+      const assignedQuantity = orderStep.assigned_quantity || order.quantity_required;
+      const assignedWeight = orderStep.assigned_weight || 0;
+
+      group.orders.push({
+        ...order,
+        assignedQuantity,
+        assignedWeight
+      });
+      group.totalQuantity += assignedQuantity;
+      group.totalWeight += assignedWeight;
     });
 
     // Convert to array and sort by step order
@@ -158,7 +132,7 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <Factory className="h-5 w-5 text-blue-600" />
-            Raw Materials in Manufacturing
+            Raw Materials in Manufacturing (In Progress)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -169,7 +143,7 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{totalWeightInManufacturing.toFixed(1)}kg</div>
-              <div className="text-sm text-gray-600">Estimated Weight</div>
+              <div className="text-sm text-gray-600">Total Weight</div>
             </div>
           </div>
         </CardContent>
@@ -204,7 +178,7 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Est. Weight:</span>
+                    <span className="text-sm text-gray-600">Weight:</span>
                     <span className="text-sm font-semibold text-gray-700">{step.totalWeight.toFixed(1)}kg</span>
                   </div>
                   
