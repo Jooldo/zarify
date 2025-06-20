@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,6 +52,7 @@ export const useManufacturingOrders = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const fetchManufacturingOrders = async () => {
     try {
@@ -102,6 +103,30 @@ export const useManufacturingOrders = () => {
       setIsLoading(false);
     }
   };
+
+  // Real-time subscription for manufacturing orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('manufacturing-orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_orders'
+        },
+        (payload) => {
+          console.log('Real-time update for manufacturing_orders:', payload);
+          // Refresh the orders when any change occurs
+          fetchManufacturingOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const createOrder = async (data: CreateManufacturingOrderData) => {
     try {

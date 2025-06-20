@@ -1,4 +1,6 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -14,9 +16,9 @@ export type ManufacturingStepWithOrderStep = ManufacturingStep & {
     order_step: ManufacturingOrderStep | null;
 };
 
-
 export const useManufacturingSteps = () => {
   const queryClient = useQueryClient();
+  
   const { data: manufacturingSteps = [], isLoading: isLoadingSteps } = useQuery<Tables<'manufacturing_steps'>[]>({
     queryKey: ['manufacturing_steps'],
     queryFn: async () => {
@@ -53,6 +55,55 @@ export const useManufacturingSteps = () => {
       return (data as ManufacturingStepField[]) || [];
     }
   });
+
+  // Real-time subscription for manufacturing order steps
+  useEffect(() => {
+    const channel = supabase
+      .channel('manufacturing-order-steps-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_order_steps'
+        },
+        (payload) => {
+          console.log('Real-time update for manufacturing_order_steps:', payload);
+          // Invalidate and refetch the order steps query
+          queryClient.invalidateQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
+          queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Real-time subscription for manufacturing step values
+  useEffect(() => {
+    const channel = supabase
+      .channel('manufacturing-step-values-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_order_step_values'
+        },
+        (payload) => {
+          console.log('Real-time update for manufacturing_order_step_values:', payload);
+          // Invalidate and refetch the step values query
+          queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const getStepFields = (stepId: string) => {
     return stepFields.filter(field => field.manufacturing_step_id === stepId);
@@ -99,7 +150,6 @@ export const useManufacturingSteps = () => {
     await queryClient.invalidateQueries({ queryKey: ['manufacturing_step_fields'] });
     await queryClient.invalidateQueries({ queryKey: ['manufacturing_steps'] });
   };
-
 
   return { manufacturingSteps, orderSteps, stepFields, isLoading, getStepFields, updateStep, saveStepFields };
 };

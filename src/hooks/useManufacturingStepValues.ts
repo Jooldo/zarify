@@ -1,47 +1,48 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
-export interface ManufacturingOrderStepValue {
-  id: string;
-  manufacturing_order_step_id: string;
-  field_id: string;
-  field_value: string;
-  created_at: string;
-  updated_at: string;
-}
+export type ManufacturingStepValue = Tables<'manufacturing_order_step_values'>;
 
 export const useManufacturingStepValues = () => {
-  const { data: stepValues = [], isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  
+  const { data: stepValues = [], isLoading } = useQuery<ManufacturingStepValue[]>({
     queryKey: ['manufacturing-order-step-values'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_step_values')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+        .select('*');
       if (error) throw error;
-      return data as ManufacturingOrderStepValue[];
+      return data || [];
     },
-    staleTime: 5000, // Consider data fresh for 5 seconds
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
-  const getStepValues = (stepId: string) => {
-    return stepValues.filter(value => value.manufacturing_order_step_id === stepId);
-  };
+  // Real-time subscription for step values
+  useEffect(() => {
+    const channel = supabase
+      .channel('step-values-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_order_step_values'
+        },
+        (payload) => {
+          console.log('Real-time update for step values:', payload);
+          // Invalidate and refetch the step values query
+          queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
+        }
+      )
+      .subscribe();
 
-  const getStepValue = (stepId: string, fieldId: string) => {
-    const value = stepValues.find(v => 
-      v.manufacturing_order_step_id === stepId && v.field_id === fieldId
-    );
-    return value?.field_value;
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
-  return {
-    stepValues,
-    isLoading,
-    getStepValues,
-    getStepValue,
-  };
+  return { stepValues, isLoading };
 };

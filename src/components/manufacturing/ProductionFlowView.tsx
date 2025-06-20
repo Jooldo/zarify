@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -32,6 +31,7 @@ import StartStepDialog from './StartStepDialog';
 import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
 import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
+import { useFlowViewport } from '@/hooks/useFlowViewport';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
@@ -246,6 +246,7 @@ const FlowContent: React.FC<{
   onNodeDragStop: OnNodeDrag;
 }> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
   const { shouldAutoFocus, markAsAutoFocused, firstOrderId } = useAutoFocus(manufacturingOrders, isLoading);
+  const { saveViewport, restoreViewport } = useFlowViewport();
 
   const onInit = useCallback((reactFlowInstance: any) => {
     if (shouldAutoFocus && firstOrderId) {
@@ -258,8 +259,21 @@ const FlowContent: React.FC<{
         });
         markAsAutoFocused();
       }, 100);
+    } else {
+      // Restore previous viewport if no auto-focus needed
+      const viewport = restoreViewport();
+      reactFlowInstance.setViewport(viewport, { duration: 300 });
     }
-  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused]);
+  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused, restoreViewport]);
+
+  const onViewportChange = useCallback((viewport: any) => {
+    // Save viewport changes with debouncing
+    const timeoutId = setTimeout(() => {
+      saveViewport(viewport);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [saveViewport]);
 
   if (isLoading) {
     return <ProductionFlowLoader />;
@@ -274,6 +288,7 @@ const FlowContent: React.FC<{
       onConnect={onConnect}
       onNodeDragStop={onNodeDragStop}
       onInit={onInit}
+      onViewportChange={onViewportChange}
       nodeTypes={nodeTypes}
       fitView={false}
       attributionPosition="bottom-left"
@@ -477,20 +492,29 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Update nodes when initialNodes change (this ensures real-time updates)
-  React.useEffect(() => {
+  // Update nodes when initialNodes change with debouncing to prevent excessive updates
+  useEffect(() => {
     if (!isLoading) {
       console.log('Updating React Flow nodes due to data changes');
-      setNodes(initialNodes);
+      // Small delay to ensure smooth updates
+      const timeoutId = setTimeout(() => {
+        setNodes(initialNodes);
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [initialNodes, isLoading]);
+  }, [initialNodes, isLoading, setNodes]);
 
   // Update edges when initialEdges change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLoading) {
-      setEdges(initialEdges);
+      const timeoutId = setTimeout(() => {
+        setEdges(initialEdges);
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [initialEdges, isLoading]);
+  }, [initialEdges, isLoading, setEdges]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),
