@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -230,35 +229,47 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Refs for stable references
-  const orderStepsRef = useRef(orderSteps);
-  const stepValuesRef = useRef(stepValues);
-  const stepFieldsRef = useRef(stepFields);
+  // Stable references to prevent unnecessary re-renders
+  const stableOrderSteps = useRef(orderSteps);
+  const stableStepValues = useRef(stepValues);
+  const stableStepFields = useRef(stepFields);
   
-  // Update refs when data changes
+  // Update stable references only when data actually changes
   useEffect(() => {
-    orderStepsRef.current = orderSteps;
+    if (orderSteps !== stableOrderSteps.current) {
+      stableOrderSteps.current = orderSteps;
+    }
   }, [orderSteps]);
   
   useEffect(() => {
-    stepValuesRef.current = stepValues;
+    if (stepValues !== stableStepValues.current) {
+      stableStepValues.current = stepValues;
+    }
   }, [stepValues]);
   
   useEffect(() => {
-    stepFieldsRef.current = stepFields;
+    if (stepFields !== stableStepFields.current) {
+      stableStepFields.current = stepFields;
+    }
   }, [stepFields]);
   
-  // Optimized loading state - only show loading on first load
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const isLoading = (isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0) && !hasInitialized;
+  // Simplified loading state
+  const isLoading = (isLoadingSteps || isLoadingValues) && !isInitialized;
 
+  // Initialize only once when data is ready
   useEffect(() => {
-    if (!isLoadingSteps && !isLoadingValues && manufacturingOrders.length > 0 && !hasInitialized) {
-      setHasInitialized(true);
+    if (!isLoadingSteps && !isLoadingValues && manufacturingOrders.length > 0 && !isInitialized) {
+      // Small delay to ensure smooth initialization
+      const timer = setTimeout(() => {
+        setIsInitialized(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [isLoadingSteps, isLoadingValues, manufacturingOrders.length, hasInitialized]);
+  }, [isLoadingSteps, isLoadingValues, manufacturingOrders.length, isInitialized]);
 
+  // Stable callback references
   const handleViewDetails = useCallback((order: ManufacturingOrder) => {
     setSelectedOrder(order);
     setDetailsDialogOpen(true);
@@ -289,9 +300,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     updateNodePosition(node.id, node.position);
   }, [updateNodePosition]);
 
-  // Memoized nodes and edges with dependency optimization
+  // Optimized nodes and edges generation
   const { initialNodes, initialEdges } = useMemo(() => {
-    if (isLoading) return { initialNodes: [], initialEdges: [] };
+    if (!isInitialized || manufacturingOrders.length === 0) {
+      return { initialNodes: [], initialEdges: [] };
+    }
     
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -314,7 +327,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         } as unknown as Record<string, unknown>,
       });
 
-      const orderStepsFiltered = orderStepsRef.current.filter(step => 
+      const orderStepsFiltered = stableOrderSteps.current.filter(step => 
         step.manufacturing_order_id === order.id && 
         step.status !== 'pending'
       ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
@@ -327,8 +340,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           hasUserPosition(stepNodeId) ? userNodePositions[stepNodeId] : undefined
         );
         
-        const stepStepValues = stepValuesRef.current.filter(v => v.manufacturing_order_step_id === orderStep.id);
-        const stepStepFields = stepFieldsRef.current.filter(field => 
+        const stepStepValues = stableStepValues.current.filter(v => v.manufacturing_order_step_id === orderStep.id);
+        const stepStepFields = stableStepFields.current.filter(field => 
           field.manufacturing_step_id === orderStep.manufacturing_step_id
         );
         
@@ -378,54 +391,53 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [manufacturingOrders, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isLoading]);
+  }, [manufacturingOrders, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isInitialized]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Update nodes only when necessary and prevent unnecessary re-renders
+  // Update nodes and edges only when necessary
   useEffect(() => {
-    if (!isLoading && initialNodes.length > 0) {
+    if (isInitialized && initialNodes.length >= 0) {
       setNodes(initialNodes);
-    }
-  }, [initialNodes, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading && initialEdges.length > 0) {
       setEdges(initialEdges);
     }
-  }, [initialEdges, isLoading]);
+  }, [initialNodes, initialEdges, isInitialized, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => [...eds]),
     [setEdges]
   );
 
-  // Optimized fit view on initialization
+  // Optimized initialization with proper view fitting
   const onInit = useCallback((reactFlowInstance: ReactFlowInstance) => {
     setReactFlowInstance(reactFlowInstance);
-    // Fit view to show from the first card
+    // Ensure proper initial view after a brief delay
     setTimeout(() => {
-      reactFlowInstance.fitView({ 
-        padding: 0.1,
-        includeHiddenNodes: false,
-        minZoom: 0.5,
-        maxZoom: 1.2
-      });
-    }, 100);
-  }, []);
+      if (reactFlowInstance && initialNodes.length > 0) {
+        reactFlowInstance.fitView({ 
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.4,
+          maxZoom: 1.0,
+          duration: 300
+        });
+      }
+    }, 150);
+  }, [initialNodes.length]);
 
   // Reset to first card view
   const resetToFirstCard = useCallback(() => {
-    if (reactFlowInstance) {
+    if (reactFlowInstance && nodes.length > 0) {
       reactFlowInstance.fitView({ 
-        padding: 0.1,
+        padding: 0.2,
         includeHiddenNodes: false,
-        minZoom: 0.5,
-        maxZoom: 1.2
+        minZoom: 0.4,
+        maxZoom: 1.0,
+        duration: 300
       });
     }
-  }, [reactFlowInstance]);
+  }, [reactFlowInstance, nodes.length]);
 
   // Get current order step data for update dialog
   const currentOrderStep = selectedOrderStep;
@@ -467,12 +479,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         panOnScrollSpeed={0.5}
         zoomOnScroll={true}
         zoomOnPinch={true}
-        minZoom={0.3}
-        maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        minZoom={0.2}
+        maxZoom={1.2}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
         nodesDraggable={true}
         nodesConnectable={false}
         elementsSelectable={true}
+        fitViewOptions={{
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.4,
+          maxZoom: 1.0
+        }}
       >
         <Controls showZoom={true} showFitView={true} />
         <MiniMap 
@@ -623,6 +641,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             case 'urgent': return 'bg-red-500 text-white';
             case 'high': return 'bg-orange-500 text-white';
             case 'medium': return 'bg-yellow-500 text-white';
+            case 'low': return 'bg-green-500 text-white';
             default: return 'bg-gray-500 text-white';
           }
         }}
