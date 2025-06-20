@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, Calendar, Calculator, Play, Workflow } from 'lucide-react';
+import { Package2, Calendar, Calculator, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useNavigation } from '@/contexts/NavigationContext';
-import { useToast } from '@/hooks/use-toast';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
@@ -22,8 +20,6 @@ interface ManufacturingOrderCardProps {
 
 const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onViewDetails }: ManufacturingOrderCardProps) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const { setActiveTab, setProductionQueueFilters } = useNavigation();
-  const { toast } = useToast();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
@@ -63,29 +59,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
     }
   };
 
-  const handleFlowViewClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    // Set filters for the specific order
-    setProductionQueueFilters({
-      status: '',
-      priority: '',
-      productName: order.product_name,
-      orderNumber: order.order_number,
-      hasInProgressSteps: false,
-      hasCompletedSteps: false,
-      urgentOnly: false,
-    });
-    
-    // Navigate to production queue tab
-    setActiveTab('manufacturing');
-    
-    toast({
-      title: "Production Flow",
-      description: `Showing flow view for order ${order.order_number}`,
-    });
-  };
-
   return (
     <>
       <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
@@ -105,16 +78,6 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
               <Badge className={`text-xs ${getStatusColor(order.status)}`}>
                 {order.status.replace('_', ' ')}
               </Badge>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleFlowViewClick}
-                className="h-6 w-full p-0 text-blue-600 hover:text-blue-700 mt-1"
-                title="View in Production Flow"
-              >
-                <Workflow className="h-3 w-3 mr-1" />
-                Flow
-              </Button>
             </div>
           </div>
         </CardHeader>

@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, ArrowUp, Workflow } from 'lucide-react';
+import { Eye, Trash2, ArrowUp } from 'lucide-react';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -12,8 +12,6 @@ import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialo
 import ManufacturingTagInDialog from './ManufacturingTagInDialog';
 import DeleteOrderDialog from './DeleteOrderDialog';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { useNavigation } from '@/contexts/NavigationContext';
 
 interface ManufacturingOrdersTableProps {
   orders: ManufacturingOrder[];
@@ -41,8 +39,6 @@ const ManufacturingOrdersTable = ({
   const { finishedGoods, loading: fgLoading, error: fgError } = useFinishedGoods();
   const { orderSteps } = useManufacturingSteps();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const { setActiveTab, setProductionQueueFilters } = useNavigation();
 
   const handleProductCodeClick = (productCode: string | undefined) => {
     if (!productCode) {
@@ -65,27 +61,6 @@ const ManufacturingOrdersTable = ({
     } else {
       toast({ title: "Not Found", description: `Details for product code ${productCode} not found.`, variant: "default" });
     }
-  };
-
-  const handleFlowViewClick = (order: ManufacturingOrder) => {
-    // Set filters for the specific order
-    setProductionQueueFilters({
-      status: '',
-      priority: '',
-      productName: order.product_name,
-      orderNumber: order.order_number,
-      hasInProgressSteps: false,
-      hasCompletedSteps: false,
-      urgentOnly: false,
-    });
-    
-    // Navigate to production queue tab
-    setActiveTab('manufacturing');
-    
-    toast({
-      title: "Production Flow",
-      description: `Showing flow view for order ${order.order_number}`,
-    });
   };
 
   const handleTagInClick = (order: ManufacturingOrder) => {
@@ -199,16 +174,6 @@ const ManufacturingOrdersTable = ({
                     <div className="flex items-center gap-1">
                       <Button variant="outline" size="sm" onClick={() => onViewOrder(order)} className="h-6 w-6 p-0">
                         <Eye className="h-3 w-3" />
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleFlowViewClick(order)}
-                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
-                        title="View in Production Flow"
-                      >
-                        <Workflow className="h-3 w-3" />
                       </Button>
                       
                       {order.status === 'pending' && (

@@ -1,12 +1,11 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Factory, Search, Kanban, Workflow } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useNavigation } from '@/contexts/NavigationContext';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionKanbanView from './ProductionKanbanView';
@@ -25,7 +24,6 @@ interface ProductionQueueFilters {
 const ProductionQueueView = () => {
   const { manufacturingOrders, isLoading } = useManufacturingOrders();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const { productionQueueFilters, clearProductionQueueFilters } = useNavigation();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,15 +37,6 @@ const ProductionQueueView = () => {
     hasCompletedSteps: false,
     urgentOnly: false,
   });
-
-  // Apply filters from navigation context when they exist
-  useEffect(() => {
-    if (productionQueueFilters) {
-      setFilters(productionQueueFilters);
-      // Clear the filters from context after applying them
-      clearProductionQueueFilters();
-    }
-  }, [productionQueueFilters, clearProductionQueueFilters]);
 
   console.log('ProductionQueueView - Manufacturing Orders:', manufacturingOrders);
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
