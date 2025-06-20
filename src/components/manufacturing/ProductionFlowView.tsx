@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -245,18 +245,15 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   
-  // Single initialization flag
-  const [isReady, setIsReady] = useState(false);
+  // Simple loading state
+  const isLoading = isLoadingSteps || isLoadingValues;
   
-  // Initialize when data is loaded
-  useEffect(() => {
-    if (!isLoadingSteps && !isLoadingValues && !isReady) {
-      console.log('Initializing ProductionFlowView');
-      setIsReady(true);
-    }
-  }, [isLoadingSteps, isLoadingValues, isReady]);
+  // Create a data fingerprint to prevent unnecessary re-renders
+  const dataKey = useMemo(() => {
+    return `${manufacturingOrders.length}-${orderSteps.length}-${stepFields.length}-${stepValues.length}`;
+  }, [manufacturingOrders.length, orderSteps.length, stepFields.length, stepValues.length]);
   
-  // Stable callback references that won't change between renders
+  // Stable callback references
   const handleViewDetails = useCallback((order: ManufacturingOrder) => {
     console.log('handleViewDetails called for order:', order.id);
     setSelectedOrder(order);
@@ -286,14 +283,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   }, [manufacturingOrders, manufacturingSteps]);
 
-  // Generate nodes and edges only when data is ready and stable
-  const { nodes: staticNodes, edges: staticEdges } = useMemo(() => {
-    if (!isReady || manufacturingOrders.length === 0) {
-      console.log('Not ready or no orders, returning empty nodes/edges');
-      return { nodes: [], edges: [] };
-    }
+  // Generate static nodes and edges - only when data actually changes
+  const { staticNodes, staticEdges } = useMemo(() => {
+    console.log('Generating static nodes and edges with key:', dataKey);
     
-    console.log('Generating nodes and edges for', manufacturingOrders.length, 'orders');
+    if (isLoading || manufacturingOrders.length === 0) {
+      return { staticNodes: [], staticEdges: [] };
+    }
     
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -302,6 +298,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
       const orderNodeId = `order-${order.id}`;
       const orderPosition = generateOrderRowLayout(manufacturingOrders.length, orderIndex);
       
+      // Create order node with stable data
       nodes.push({
         id: orderNodeId,
         type: 'manufacturingOrder',
@@ -313,11 +310,13 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         draggable: false,
       });
 
+      // Get order steps
       const orderStepsFiltered = orderSteps.filter(step => 
         step.manufacturing_order_id === order.id && 
         step.status !== 'pending'
       ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
+      // Create step nodes
       orderStepsFiltered.forEach((orderStep, stepIndex) => {
         const stepNodeId = `step-${orderStep.id}`;
         const stepPosition = generateStepLayout(orderPosition, stepIndex);
@@ -342,10 +341,12 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         });
       });
 
+      // Create edges
       if (orderStepsFiltered.length > 0) {
+        // Order to first step
         edges.push({
           id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
-          source: `order-${order.id}`,
+          source: orderNodeId,
           target: `step-${orderStepsFiltered[0].id}`,
           type: 'straight',
           style: { 
@@ -354,6 +355,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           },
         });
 
+        // Step to step connections
         for (let i = 0; i < orderStepsFiltered.length - 1; i++) {
           edges.push({
             id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
@@ -370,32 +372,29 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     });
 
     console.log('Generated', nodes.length, 'nodes and', edges.length, 'edges');
-    return { nodes, edges };
-  }, [isReady, manufacturingOrders, orderSteps, stepFields, stepValues, manufacturingSteps, handleViewDetails, handleStepClick, handleNextStepClick]);
+    return { staticNodes: nodes, staticEdges: edges };
+  }, [dataKey, isLoading, manufacturingOrders, orderSteps, stepFields, stepValues, manufacturingSteps, handleViewDetails, handleStepClick, handleNextStepClick]);
 
+  // Use static nodes and edges directly
   const [nodes, setNodes, onNodesChange] = useNodesState(staticNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(staticEdges);
 
-  // Update nodes and edges when static data changes
+  // Update nodes and edges only when static data changes
   useEffect(() => {
-    console.log('Updating nodes and edges:', staticNodes.length, staticEdges.length);
+    console.log('Updating nodes and edges from static data');
     setNodes(staticNodes);
     setEdges(staticEdges);
   }, [staticNodes, staticEdges, setNodes, setEdges]);
 
-  const onConnect = useCallback(
-    (params: any) => {
-      console.log('onConnect called but disabled');
-    },
-    []
-  );
+  const onConnect = useCallback(() => {
+    // Disabled - no connections allowed
+  }, []);
 
   const onInit = useCallback((reactFlowInstance: ReactFlowInstance) => {
     console.log('ReactFlow initialized');
     setReactFlowInstance(reactFlowInstance);
   }, []);
 
-  // Manual fit view function
   const resetToFirstCard = useCallback(() => {
     if (reactFlowInstance && nodes.length > 0) {
       console.log('Fitting view to nodes');
@@ -429,11 +428,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   }, [orderSteps, currentOrderStep]);
 
   const FlowContent = () => {
-    if (!isReady) {
+    if (isLoading) {
       return <ProductionFlowLoader />;
     }
 
-    // Show empty state if no manufacturing orders
     if (manufacturingOrders.length === 0) {
       return <EmptyProductionFlow />;
     }
@@ -449,21 +447,28 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         nodeTypes={nodeTypes}
         attributionPosition="bottom-left"
         className="bg-background"
-        panOnScroll={true}
-        panOnScrollSpeed={0.8}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
-        panOnDrag={[1]}
+        fitView
+        fitViewOptions={{
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.4,
+          maxZoom: 1.0,
+        }}
         minZoom={0.2}
         maxZoom={1.5}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={true}
-        preventScrolling={false}
+        panOnScroll={true}
+        panOnScrollSpeed={0.5}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        panOnDrag={[1, 2]}
         zoomOnDoubleClick={false}
         deleteKeyCode={null}
+        preventScrolling={false}
       >
-        <Controls showZoom={true} showFitView={false} />
+        <Controls showZoom={true} showFitView={true} />
         <MiniMap 
           className="bg-background border"
           nodeClassName={() => 'fill-primary/20'}
@@ -485,7 +490,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
               variant="outline"
               size="sm"
               className="bg-background/80 backdrop-blur-sm"
-              disabled={!isReady}
+              disabled={isLoading}
             >
               <Workflow className="h-4 w-4 mr-1" />
               Fit View
@@ -564,7 +569,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             variant="outline"
             size="sm"
             className="bg-background/80 backdrop-blur-sm"
-            disabled={!isReady}
+            disabled={isLoading}
           >
             <Maximize2 className="h-4 w-4 mr-1" />
             Full Screen
@@ -574,7 +579,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             variant="outline"
             size="sm"
             className="bg-background/80 backdrop-blur-sm"
-            disabled={!isReady || manufacturingOrders.length === 0}
+            disabled={isLoading || manufacturingOrders.length === 0}
           >
             <Workflow className="h-4 w-4 mr-1" />
             Fit View
