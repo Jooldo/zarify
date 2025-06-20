@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -291,10 +290,10 @@ const ProductionKanbanView = () => {
         </div>
       </div>
 
-      {/* Enhanced Kanban Board with increased section width */}
+      {/* Enhanced Kanban Board with increased section width from w-96 to w-[500px] */}
       <div className="flex gap-6 overflow-x-auto pb-6">
         {activeSteps.map((step) => (
-          <div key={step.id} className="flex-shrink-0 w-96">
+          <div key={step.id} className="flex-shrink-0 w-[500px]">
             <Card className={`h-full ${getStepGradient(step.step_order)} ${getStepBorderColor(step.step_order)} border-2 shadow-lg hover:shadow-xl transition-all duration-300`}>
               <CardHeader className="pb-4">
                 <CardTitle className="text-sm font-bold flex items-center gap-3">
