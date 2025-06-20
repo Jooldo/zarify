@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,9 +49,9 @@ const RawMaterialManufacturingDistribution = ({ loading }: RawMaterialManufactur
 
       const group = stepOrderGroups.get(stepId);
       
-      // Use assigned quantity and weight if available, otherwise fall back to order quantity
-      const assignedQuantity = orderStep.assigned_quantity || order.quantity_required;
-      const assignedWeight = orderStep.assigned_weight || 0;
+      // Use quantityAssigned and rawMaterialWeightAssigned if available, otherwise fall back to order quantity
+      const assignedQuantity = orderStep.quantityAssigned || order.quantity_required;
+      const assignedWeight = orderStep.rawMaterialWeightAssigned || 0;
 
       group.orders.push({
         ...order,
