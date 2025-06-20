@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow } from 'lucide-react';
+import { Package2, Calendar, Play, X, Factory, Workflow, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -293,7 +293,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     }
   }, [manufacturingOrders, manufacturingSteps]);
 
-  // Optimized nodes and edges generation with static positions
+  // Generate nodes and edges without automatic view fitting
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!isInitialized || manufacturingOrders.length === 0) {
       return { initialNodes: [], initialEdges: [] };
