@@ -18,7 +18,7 @@ export interface FinishedGoodOrderDetail {
   fulfilled_quantity: number;
   remaining_quantity: number;
   status: string;
-  created_date: string;
+  order_date: string; // Changed from created_date to order_date
 }
 
 // Export the OrderDetail type that was missing
@@ -62,7 +62,7 @@ export const useOrderedQtyDetails = () => {
         fulfilled_quantity: item.fulfilled_quantity || 0,
         remaining_quantity: item.quantity - (item.fulfilled_quantity || 0),
         status: item.status,
-        created_date: item.orders.created_date
+        order_date: item.orders.created_date // Map created_date to order_date
       })) || [];
 
       console.log('📊 Order details found:', details.length);
