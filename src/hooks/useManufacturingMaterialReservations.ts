@@ -9,7 +9,7 @@ export interface ManufacturingMaterialReservation {
   raw_material_id: string;
   quantity_reserved: number;
   quantity_consumed: number;
-  status: 'reserved' | 'in_progress' | 'consumed' | 'cancelled';
+  status: string; // Changed from union type to string to match database
   created_at: string;
   updated_at: string;
   raw_materials?: {
