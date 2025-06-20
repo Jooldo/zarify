@@ -49,7 +49,13 @@ export const useManufacturingMaterialReservations = () => {
 
       if (error) throw error;
 
-      setReservations(data || []);
+      // Type assertion to ensure proper typing
+      const typedReservations = (data || []).map(reservation => ({
+        ...reservation,
+        status: reservation.status as 'reserved' | 'in_progress' | 'consumed' | 'cancelled'
+      }));
+
+      setReservations(typedReservations);
     } catch (error) {
       console.error('Error fetching manufacturing material reservations:', error);
       toast({
