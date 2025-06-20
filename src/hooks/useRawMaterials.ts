@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ export interface RawMaterial {
   minimum_stock: number;
   required: number;
   in_procurement: number;
+  in_manufacturing: number; // New field
   shortfall: number;
   supplier_name?: string;
   supplier_id?: string;
@@ -33,7 +35,7 @@ export const useRawMaterials = () => {
 
   const fetchRawMaterials = async () => {
     try {
-      console.log('🔍 Fetching raw materials with database values...');
+      console.log('🔍 Fetching raw materials with manufacturing reservations...');
       setLoading(true);
       
       const { data: merchantId, error: merchantError } = await supabase
@@ -41,7 +43,7 @@ export const useRawMaterials = () => {
 
       if (merchantError) throw merchantError;
 
-      // Fetch raw materials with supplier info - use the required field directly from database
+      // Fetch raw materials with supplier info - now includes in_manufacturing
       const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
         .from('raw_materials')
         .select(`
@@ -53,30 +55,33 @@ export const useRawMaterials = () => {
 
       if (rawMaterialsError) throw rawMaterialsError;
 
-      // Use the database values directly (calculation service should have updated them)
+      // Use the database values directly and calculate shortfall with manufacturing considerations
       const materialsWithCalculations = rawMaterialsData?.map(material => {
-        // Calculate shortfall for this material using database values - REMOVE Math.max to allow negative values (surplus)
-        const shortfall = (material.required + material.minimum_stock) - (material.current_stock + material.in_procurement);
+        // Calculate shortfall considering in_manufacturing quantities
+        const totalAvailable = material.current_stock + material.in_procurement + (material.in_manufacturing || 0);
+        const shortfall = (material.required + material.minimum_stock) - totalAvailable;
 
         if (material.name.includes('Chain') || material.name.includes('M Chain')) {
           console.log(`🔍 DEBUG M Chain material: ${material.name}`);
           console.log(`   Required from DB: ${material.required}`);
           console.log(`   Current stock: ${material.current_stock}`);
-          console.log(`   Minimum stock: ${material.minimum_stock}`);
           console.log(`   In procurement: ${material.in_procurement}`);
+          console.log(`   In manufacturing: ${material.in_manufacturing || 0}`);
+          console.log(`   Minimum stock: ${material.minimum_stock}`);
+          console.log(`   Total available: ${totalAvailable}`);
           console.log(`   Calculated shortfall: ${shortfall}`);
-          console.log(`   Formula: (${material.required} + ${material.minimum_stock}) - (${material.current_stock} + ${material.in_procurement})`);
         }
 
         return {
           ...material,
-          required: material.required || 0, // Use database value directly
+          required: material.required || 0,
+          in_manufacturing: material.in_manufacturing || 0,
           shortfall,
           supplier_name: material.supplier?.company_name
         };
       }) || [];
 
-      console.log('✅ Raw materials fetched with database values:', materialsWithCalculations.length, 'items');
+      console.log('✅ Raw materials fetched with manufacturing reservations:', materialsWithCalculations.length, 'items');
       setRawMaterials(materialsWithCalculations);
       
     } catch (error) {
