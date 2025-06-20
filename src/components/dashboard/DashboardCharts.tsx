@@ -2,23 +2,18 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ConversationalQueryWidget from './ConversationalQueryWidget';
-import OrderDistributionChart from './OrderDistributionChart';
 import OrderFunnelChart from './OrderFunnelChart';
 import ReadyOrdersTrendChart from './ReadyOrdersTrendChart';
 import CriticalStockAlerts from './CriticalStockAlerts';
 import DailyInsights from './DailyInsights';
 import TodaysActivities from './TodaysActivities';
 import ProcurementStatusOverview from './ProcurementStatusOverview';
-import OrderTrendsByCategory from './OrderTrendsByCategory';
 
 const DashboardCharts = () => {
   return (
     <div className="space-y-6">
       {/* Conversational Query Widget */}
       <ConversationalQueryWidget />
-
-      {/* Order Trends by Product Category */}
-      <OrderTrendsByCategory />
 
       {/* Chart Tabs */}
       <Tabs defaultValue="overview" className="w-full">
@@ -30,8 +25,7 @@ const DashboardCharts = () => {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <OrderDistributionChart />
+          <div className="grid grid-cols-1 gap-6">
             <OrderFunnelChart />
           </div>
         </TabsContent>

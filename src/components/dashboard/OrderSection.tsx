@@ -1,12 +1,9 @@
 
 import React, { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import OrderDistributionChart from './OrderDistributionChart';
-import OrderTrendsByCategory from './OrderTrendsByCategory';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { Card, CardContent } from '@/components/ui/card';
+import OrdersReceivedTrendChart from './OrdersReceivedTrendChart';
 import { format, subDays, isAfter, isBefore, addDays } from 'date-fns';
-import { Calendar, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 
 interface OrderSectionProps {
   orders: any[];
@@ -21,8 +18,7 @@ const OrderSection = ({ orders, loading }: OrderSectionProps) => {
       delayedOrders: 0,
       deliveriesToday: 0,
       deliveriesThisWeek: 0,
-      deliveriesNextWeek: 0,
-      deliveredOverTime: []
+      deliveriesNextWeek: 0
     };
 
     const today = new Date();
@@ -69,34 +65,13 @@ const OrderSection = ({ orders, loading }: OrderSectionProps) => {
       isBefore(new Date(order.expected_delivery), twoWeeksFromNow)
     ).length;
 
-    // Delivered orders over time (last 30 days)
-    const deliveredOverTime = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = subDays(today, i);
-      const dateString = format(date, 'yyyy-MM-dd');
-      
-      const deliveredCount = orders.filter(order => {
-        const allDelivered = order.order_items.every(item => item.status === 'Delivered');
-        if (!allDelivered) return false;
-        
-        const latestUpdate = Math.max(...order.order_items.map((item: any) => new Date(item.updated_at || item.created_at).getTime()));
-        return format(new Date(latestUpdate), 'yyyy-MM-dd') === dateString;
-      }).length;
-
-      deliveredOverTime.push({
-        date: format(date, 'MMM dd'),
-        delivered: deliveredCount
-      });
-    }
-
     return {
       totalOrders: orders.length,
       avgTAT,
       delayedOrders,
       deliveriesToday,
       deliveriesThisWeek,
-      deliveriesNextWeek,
-      deliveredOverTime
+      deliveriesNextWeek
     };
   }, [orders]);
 
@@ -164,54 +139,14 @@ const OrderSection = ({ orders, loading }: OrderSectionProps) => {
                 <p className="text-sm font-medium text-purple-700">This Week</p>
                 <p className="text-2xl font-bold text-purple-900">{orderMetrics.deliveriesThisWeek}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <Calendar className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-1">
-          <OrderDistributionChart />
-        </div>
-        
-        <div className="xl:col-span-2">
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-gray-800">Delivered Orders Trend</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={orderMetrics.deliveredOverTime}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
-                  <XAxis dataKey="date" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }} 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="delivered" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: 'white' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Order Trends by Category */}
-      <OrderTrendsByCategory />
+      {/* Orders Received & Quantity Trend Chart */}
+      <OrdersReceivedTrendChart orders={orders} loading={loading} />
     </div>
   );
 };
