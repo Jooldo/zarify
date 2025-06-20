@@ -491,20 +491,17 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         attributionPosition="bottom-left"
         className="bg-background"
         panOnScroll={true}
-        panOnScrollSpeed={0.5}
+        panOnScrollSpeed={1.0}
         zoomOnScroll={true}
         zoomOnPinch={true}
-        minZoom={0.2}
-        maxZoom={1.2}
-        nodesDraggable={false} // Disable node dragging completely
+        panOnDrag={true}
+        minZoom={0.1}
+        maxZoom={2.0}
+        nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={true}
-        fitViewOptions={{
-          padding: 0.2,
-          includeHiddenNodes: false,
-          minZoom: 0.4,
-          maxZoom: 1.0
-        }}
+        preventScrolling={false}
+        zoomOnDoubleClick={false}
       >
         <Controls showZoom={true} showFitView={false} />
         <MiniMap 
