@@ -36,7 +36,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     console.log('❌ S-OD000005-01 NOT found in any order items!');
   }
   
-  // Get all order items from live orders (Created + In Progress status)
+  // Get all order items from live orders (Created + In Progress + Partially Fulfilled status)
   const { data: liveOrderItems, error: orderItemsError } = await supabase
     .from('order_items')
     .select(`
@@ -47,7 +47,7 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
       suborder_id
     `)
     .eq('merchant_id', merchantId)
-    .in('status', ['Created', 'In Progress']);
+    .in('status', ['Created', 'In Progress', 'Partially Fulfilled']);
 
   if (orderItemsError) {
     console.error('Error fetching live order items:', orderItemsError);
@@ -90,8 +90,8 @@ const updateFinishedGoodsRequiredQuantities = async (merchantId: string) => {
     
     // Check if S-OD000005-01 exists but with different status
     if (specificSuborderInAll && !specificSuborder) {
-      console.log(`🔍 S-OD000005-01 exists but has status: ${specificSuborderInAll.status} (not in Created/In Progress)`);
-      console.log(`🔍 Expected statuses: Created, In Progress`);
+      console.log(`🔍 S-OD000005-01 exists but has status: ${specificSuborderInAll.status} (not in Created/In Progress/Partially Fulfilled)`);
+      console.log(`🔍 Expected statuses: Created, In Progress, Partially Fulfilled`);
       console.log(`🔍 Should we include other statuses? The item has quantity ${specificSuborderInAll.quantity} and fulfilled ${specificSuborderInAll.fulfilled_quantity || 0}`);
     }
   }
