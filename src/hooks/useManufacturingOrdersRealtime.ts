@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useManufacturingOrdersRealtime = (onDataChange: () => void) => {
   useEffect(() => {
     const channel = supabase
-      .channel('manufacturing-orders-changes')
+      .channel('manufacturing-orders-realtime-updates')
       .on(
         'postgres_changes',
         {

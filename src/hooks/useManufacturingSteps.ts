@@ -59,7 +59,7 @@ export const useManufacturingSteps = () => {
   // Real-time subscription for manufacturing order steps
   useEffect(() => {
     const channel = supabase
-      .channel('manufacturing-order-steps-changes')
+      .channel('manufacturing-steps-realtime-updates')
       .on(
         'postgres_changes',
         {
@@ -69,33 +69,8 @@ export const useManufacturingSteps = () => {
         },
         (payload) => {
           console.log('Real-time update for manufacturing_order_steps:', payload);
-          // Invalidate and refetch the order steps query
           queryClient.invalidateQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
           queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
-  // Real-time subscription for manufacturing step values
-  useEffect(() => {
-    const channel = supabase
-      .channel('manufacturing-step-values-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'manufacturing_order_step_values'
-        },
-        (payload) => {
-          console.log('Real-time update for manufacturing_order_step_values:', payload);
-          // Invalidate and refetch the step values query
-          queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
         }
       )
       .subscribe();

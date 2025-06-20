@@ -35,7 +35,7 @@ export const useManufacturingStepValues = () => {
   // Real-time subscription for step values
   useEffect(() => {
     const channel = supabase
-      .channel('step-values-changes')
+      .channel('step-values-realtime-updates')
       .on(
         'postgres_changes',
         {
@@ -45,7 +45,6 @@ export const useManufacturingStepValues = () => {
         },
         (payload) => {
           console.log('Real-time update for step values:', payload);
-          // Invalidate and refetch the step values query
           queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
         }
       )
