@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -106,6 +107,9 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
     product.threshold
   );
 
+  // Use shortfall quantity for raw material calculations - only if shortfall is positive (actual shortage)
+  const quantityForMaterialCalculation = Math.max(0, shortfall);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -157,7 +161,13 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
 
           {/* Raw Materials Requirements */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm">Raw Materials Required:</h4>
+            <h4 className="font-medium text-sm">
+              Raw Materials Required 
+              {quantityForMaterialCalculation > 0 
+                ? ` (Based on Shortfall: ${quantityForMaterialCalculation} units):`
+                : ' (No Production Required - Stock Sufficient):'
+              }
+            </h4>
             {loading ? (
               <div className="text-center py-4">Loading raw materials...</div>
             ) : rawMaterials.length > 0 ? (
@@ -176,9 +186,8 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      // Calculate total required based on shortfall quantity (if positive) or required quantity
-                      const quantityToUse = shortfall > 0 ? shortfall : product.required_quantity;
-                      const totalRequired = material.quantity_required * quantityToUse;
+                      // Calculate total required based on shortfall quantity
+                      const totalRequired = material.quantity_required * quantityForMaterialCalculation;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
                         totalRequired
@@ -217,6 +226,12 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             ) : (
               <div className="text-center py-4 text-gray-500 text-sm">
                 No raw material requirements found for this product.
+              </div>
+            )}
+            
+            {quantityForMaterialCalculation === 0 && (
+              <div className="text-center py-4 text-green-600 font-medium">
+                ✅ No production required - current stock and manufacturing capacity is sufficient to meet demand.
               </div>
             )}
           </div>
