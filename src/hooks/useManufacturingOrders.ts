@@ -1,6 +1,5 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ManufacturingOrder, CreateManufacturingOrderData } from '@/types/manufacturingOrders';
 import { 
@@ -33,12 +32,15 @@ export const useManufacturingOrders = () => {
         throw error;
       }
     },
+    refetchOnWindowFocus: false,
+    staleTime: 0, // Always consider data stale for immediate updates
   });
 
-  // Set up real-time subscriptions with proper invalidation
+  // Set up real-time subscriptions with immediate invalidation
   useManufacturingOrdersRealtime(() => {
-    console.log('Real-time update received, invalidating manufacturing orders cache');
+    console.log('Real-time update received, invalidating and refetching manufacturing orders cache');
     queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+    queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] });
   });
 
   const createOrder = async (data: CreateManufacturingOrderData) => {
@@ -50,8 +52,9 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order created successfully',
       });
 
-      // Invalidate and refetch the orders
+      // Force immediate refetch
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      await queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error in createOrder:', error);
       toast({
@@ -72,8 +75,9 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order updated successfully',
       });
 
-      // Invalidate and refetch the orders
+      // Force immediate refetch
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      await queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error updating manufacturing order:', error);
       toast({
@@ -94,8 +98,9 @@ export const useManufacturingOrders = () => {
         description: 'Manufacturing order deleted successfully',
       });
 
-      // Invalidate and refetch the orders
+      // Force immediate refetch
       await queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      await queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] });
     } catch (error: any) {
       console.error('Error deleting manufacturing order:', error);
       toast({
@@ -111,7 +116,7 @@ export const useManufacturingOrders = () => {
     manufacturingOrders,
     isLoading,
     createOrder,
-    isCreating: false, // We can add a separate mutation state if needed
+    isCreating: false,
     updateOrder,
     deleteOrder,
     refetch,

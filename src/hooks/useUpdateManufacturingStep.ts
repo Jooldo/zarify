@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +30,7 @@ interface UpdateStepParams {
   stepName?: string;
   orderNumber?: string;
   workerName?: string;
-  onUpdateStart?: () => void; // New callback for loading state
+  onUpdateStart?: () => void;
 }
 
 export const useUpdateManufacturingStep = () => {
@@ -76,33 +77,14 @@ export const useUpdateManufacturingStep = () => {
       return data;
     },
     onSuccess: (data) => {
-      // More targeted invalidation to reduce flickering
-      const orderId = data.manufacturing_order_id;
+      // Immediate cache invalidation for all related queries
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
       
-      // Invalidate specific queries instead of broad patterns
-      queryClient.invalidateQueries({ 
-        queryKey: ['manufacturing-orders'], 
-        exact: false 
-      });
-      
-      queryClient.invalidateQueries({ 
-        queryKey: ['manufacturing-order-steps-with-steps'], 
-        exact: false 
-      });
-      
-      queryClient.invalidateQueries({ 
-        queryKey: ['manufacturing-order-step-values'], 
-        exact: false 
-      });
-
-      // Update specific data in cache to avoid refetch
-      queryClient.setQueryData(['manufacturing-order-step-values'], (oldData: any) => {
-        if (!oldData) return oldData;
-        // Update the specific step data in cache
-        return oldData.map((item: any) => 
-          item.manufacturing_order_step_id === data.id ? { ...item, ...data } : item
-        );
-      });
+      // Force immediate refetch to ensure UI updates
+      queryClient.refetchQueries({ queryKey: ['manufacturing-orders'] });
+      queryClient.refetchQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
       
       toast({
         title: 'Success',
@@ -198,15 +180,9 @@ export const useUpdateManufacturingStep = () => {
           } else {
             console.log('Field values saved successfully:', insertedValues);
             
-            // Update cache immediately to prevent flickering
-            queryClient.setQueryData(['manufacturing-order-step-values'], (oldData: any) => {
-              if (!oldData) return insertedValues;
-              // Remove old values for this step and add new ones
-              const filteredData = oldData.filter((item: any) => 
-                item.manufacturing_order_step_id !== params.stepId
-              );
-              return [...filteredData, ...insertedValues];
-            });
+            // Immediate cache invalidation for step values
+            queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
+            queryClient.refetchQueries({ queryKey: ['manufacturing-order-step-values'] });
           }
         }
       } catch (error) {

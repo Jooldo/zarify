@@ -18,7 +18,10 @@ export const useManufacturingOrdersRealtime = (onDataChange: () => void) => {
         },
         (payload) => {
           console.log('Real-time update for manufacturing_orders:', payload);
-          onDataChange();
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            onDataChange();
+          }, 100);
         }
       )
       .on(
@@ -30,7 +33,25 @@ export const useManufacturingOrdersRealtime = (onDataChange: () => void) => {
         },
         (payload) => {
           console.log('Real-time update for manufacturing_order_steps:', payload);
-          onDataChange();
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            onDataChange();
+          }, 100);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_order_step_values'
+        },
+        (payload) => {
+          console.log('Real-time update for manufacturing_order_step_values:', payload);
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            onDataChange();
+          }, 100);
         }
       )
       .subscribe((status) => {
