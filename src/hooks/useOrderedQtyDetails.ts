@@ -1,18 +1,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-
-export interface OrderDetail {
-  order_number: string;
-  customer_name: string;
-  order_date: string;
-  quantity: number;
-  fulfilled_quantity: number;
-  remaining_quantity: number;
-  status: string;
-  suborder_id: string;
-}
 
 export interface RawMaterialProductDetail {
   product_code: string;
@@ -22,207 +10,178 @@ export interface RawMaterialProductDetail {
   remaining_quantity: number;
 }
 
+export interface FinishedGoodOrderDetail {
+  suborder_id: string;
+  order_number: string;
+  customer_name: string;
+  quantity: number;
+  fulfilled_quantity: number;
+  remaining_quantity: number;
+  status: string;
+  created_date: string;
+}
+
 export const useOrderedQtyDetails = () => {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
-  const fetchFinishedGoodOrderDetails = async (productCode: string): Promise<OrderDetail[]> => {
+  const fetchFinishedGoodOrderDetails = async (productCode: string): Promise<FinishedGoodOrderDetail[]> => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching order details for product:', productCode);
+      console.log('🔍 Fetching order details for finished good:', productCode);
       
-      // Get the merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
-
-      if (merchantError) {
-        console.error('Error getting merchant ID:', merchantError);
-        throw merchantError;
-      }
-
-      // First, get the product config ID for this product code
-      const { data: finishedGood, error: fgError } = await supabase
-        .from('finished_goods')
-        .select('product_config_id')
-        .eq('merchant_id', merchantId)
-        .eq('product_code', productCode)
-        .single();
-
-      if (fgError) {
-        console.error('Error fetching finished good:', fgError);
-        throw fgError;
-      }
-
-      console.log('🔍 Product config ID for', productCode, ':', finishedGood.product_config_id);
-
-      // Fetch ALL order items for this product config (not filtered by status)
-      const { data: orderItems, error: orderItemsError } = await supabase
+      const { data, error } = await supabase
         .from('order_items')
         .select(`
           suborder_id,
           quantity,
           fulfilled_quantity,
           status,
-          order_id,
           orders!inner(
             order_number,
             created_date,
             customers!inner(name)
-          )
+          ),
+          product_configs!inner(product_code)
         `)
-        .eq('merchant_id', merchantId)
-        .eq('product_config_id', finishedGood.product_config_id);
+        .eq('product_configs.product_code', productCode)
+        .in('status', ['Created', 'In Progress', 'Partially Fulfilled']);
 
-      if (orderItemsError) {
-        console.error('Error fetching order items:', orderItemsError);
-        throw orderItemsError;
+      if (error) {
+        console.error('Error fetching order details:', error);
+        throw error;
       }
 
-      console.log('📊 All order items found for', productCode, ':', orderItems?.length || 0);
+      const details = data?.map(item => ({
+        suborder_id: item.suborder_id,
+        order_number: item.orders.order_number,
+        customer_name: item.orders.customers.name,
+        quantity: item.quantity,
+        fulfilled_quantity: item.fulfilled_quantity || 0,
+        remaining_quantity: item.quantity - (item.fulfilled_quantity || 0),
+        status: item.status,
+        created_date: item.orders.created_date
+      })) || [];
 
-      // Filter and transform the data to show only items with remaining quantities
-      const orderDetails: OrderDetail[] = orderItems
-        ?.map(item => {
-          const remainingQuantity = item.quantity - (item.fulfilled_quantity || 0);
-          return {
-            order_number: item.orders.order_number,
-            customer_name: item.orders.customers.name,
-            order_date: item.orders.created_date,
-            quantity: item.quantity,
-            fulfilled_quantity: item.fulfilled_quantity || 0,
-            remaining_quantity: remainingQuantity,
-            status: item.status,
-            suborder_id: item.suborder_id
-          };
-        })
-        .filter(detail => detail.remaining_quantity > 0) // Only show items with remaining quantities
-        .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()) || [];
-
-      console.log('📊 Order details with remaining quantities:', orderDetails);
-      console.log('🔍 Total remaining quantity:', orderDetails.reduce((sum, detail) => sum + detail.remaining_quantity, 0));
-
-      return orderDetails;
+      console.log('📊 Order details found:', details.length);
+      return details;
     } catch (error) {
-      console.error('Error fetching order details:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch order details',
-        variant: 'destructive',
-      });
+      console.error('Error in fetchFinishedGoodOrderDetails:', error);
       return [];
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRawMaterialProductDetails = async (materialId: string): Promise<RawMaterialProductDetail[]> => {
+  const fetchRawMaterialProductDetails = async (rawMaterialId: string): Promise<RawMaterialProductDetail[]> => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching product details for raw material based on finished goods shortfall:', materialId);
+      console.log('🔍 Fetching product details for raw material based on finished goods shortfall:', rawMaterialId);
       
       // Get the merchant ID
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
+      const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
+      if (merchantError) throw merchantError;
 
-      if (merchantError) {
-        console.error('Error getting merchant ID:', merchantError);
-        throw merchantError;
+      // CRITICAL FIX: Get manufacturing orders to calculate in_manufacturing quantities
+      const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
+        .from('manufacturing_orders')
+        .select(`
+          quantity_required,
+          product_configs!inner(product_code)
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['pending', 'in_progress', 'completed']);
+
+      if (manufacturingOrdersError) {
+        console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
       }
 
-      // Get all product configs that use this raw material
-      const { data: productConfigMaterials, error: pcmError } = await supabase
+      // Calculate in_manufacturing quantities by product code
+      const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
+        const productCode = order.product_configs?.product_code;
+        if (productCode) {
+          acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Get finished goods that use this raw material
+      const { data: finishedGoodsUsingMaterial, error: finishedGoodsError } = await supabase
         .from('product_config_materials')
         .select(`
-          product_config_id,
           quantity_required,
           product_configs!inner(
             product_code,
             category,
-            subcategory,
-            size_value,
-            weight_range
+            subcategory
+          ),
+          finished_goods!inner(
+            current_stock,
+            threshold,
+            required_quantity
           )
         `)
-        .eq('merchant_id', merchantId)
-        .eq('raw_material_id', materialId);
+        .eq('raw_material_id', rawMaterialId)
+        .eq('merchant_id', merchantId);
 
-      if (pcmError) {
-        console.error('Error fetching product config materials:', pcmError);
-        throw pcmError;
+      if (finishedGoodsError) {
+        console.error('Error fetching finished goods:', finishedGoodsError);
+        throw finishedGoodsError;
       }
 
-      // Get finished goods with their stock information for these product configs
-      const productConfigIds = productConfigMaterials?.map(pcm => pcm.product_config_id) || [];
-      
-      if (productConfigIds.length === 0) {
-        return [];
-      }
+      const productDetails: RawMaterialProductDetail[] = [];
 
-      const { data: finishedGoods, error: fgError } = await supabase
-        .from('finished_goods')
-        .select('product_config_id, required_quantity, current_stock, in_manufacturing, threshold, product_code')
-        .eq('merchant_id', merchantId)
-        .in('product_config_id', productConfigIds);
-
-      if (fgError) {
-        console.error('Error fetching finished goods:', fgError);
-        throw fgError;
-      }
-
-      // Calculate material requirements based on finished goods shortfall
-      const productDetails: RawMaterialProductDetail[] = productConfigMaterials?.map(pcm => {
-        const finishedGood = finishedGoods?.find(fg => fg.product_config_id === pcm.product_config_id);
+      finishedGoodsUsingMaterial?.forEach(item => {
+        const productCode = item.product_configs.product_code;
+        const finishedGood = item.finished_goods;
         
-        if (!finishedGood) {
-          return null;
-        }
-
-        // Calculate shortfall for this finished good
+        // FIXED CALCULATION: Use proper shortfall calculation including manufacturing
         const liveOrderDemand = finishedGood.required_quantity || 0;
+        const inManufacturing = inManufacturingByProduct[productCode] || 0;
+        
+        console.log(`🔍 Finished good ${productCode}:`);
+        console.log(`   Live order demand: ${liveOrderDemand}`);
+        console.log(`   Current stock: ${finishedGood.current_stock}`);
+        console.log(`   In manufacturing: ${inManufacturing}`);
+        console.log(`   Threshold: ${finishedGood.threshold}`);
+        
         const totalDemand = liveOrderDemand + finishedGood.threshold;
-        const available = finishedGood.current_stock + finishedGood.in_manufacturing;
+        const available = finishedGood.current_stock + inManufacturing;
         const shortfall = Math.max(0, totalDemand - available);
 
-        console.log(`🔍 Finished good ${finishedGood.product_code}:`);
-        console.log(`   Live order demand: ${liveOrderDemand}`);
-        console.log(`   Threshold: ${finishedGood.threshold}`);
         console.log(`   Total demand: ${totalDemand}`);
         console.log(`   Available (stock + manufacturing): ${available}`);
         console.log(`   Shortfall: ${shortfall}`);
 
-        if (shortfall <= 0) {
-          return null; // No material needed if no shortfall
+        // Only include products that have a shortfall
+        if (shortfall > 0) {
+          const materialRequired = shortfall * item.quantity_required;
+          console.log(`   Material required: ${materialRequired} (shortfall ${shortfall} × ${item.quantity_required})`);
+          
+          productDetails.push({
+            product_code: productCode,
+            product_name: `${item.product_configs.category} ${item.product_configs.subcategory}-${productCode.split('-').pop()}`,
+            quantity_required: item.quantity_required,
+            total_material_required: materialRequired,
+            remaining_quantity: shortfall
+          });
+        } else {
+          console.log(`   No shortfall - material not required for ${productCode}`);
         }
-
-        const materialRequired = shortfall * pcm.quantity_required;
-        const productName = `${pcm.product_configs.category}-${pcm.product_configs.subcategory}-${pcm.product_configs.size_value}${pcm.product_configs.weight_range ? `-${pcm.product_configs.weight_range}` : ''}`;
-        
-        console.log(`   Material required: ${materialRequired} (shortfall ${shortfall} × ${pcm.quantity_required})`);
-
-        return {
-          product_code: pcm.product_configs.product_code,
-          product_name: productName,
-          quantity_required: pcm.quantity_required,
-          total_material_required: materialRequired,
-          remaining_quantity: shortfall
-        };
-      }).filter(detail => detail !== null) || [];
+      });
 
       console.log('📊 Raw material product details based on shortfall:', productDetails);
-      
       return productDetails;
     } catch (error) {
-      console.error('Error fetching raw material product details:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch product details',
-        variant: 'destructive',
-      });
+      console.error('Error in fetchRawMaterialProductDetails:', error);
       return [];
     } finally {
       setLoading(false);
     }
   };
 
-  return { loading, fetchFinishedGoodOrderDetails, fetchRawMaterialProductDetails };
+  return {
+    loading,
+    fetchFinishedGoodOrderDetails,
+    fetchRawMaterialProductDetails
+  };
 };
