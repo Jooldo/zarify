@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -13,7 +14,7 @@ import {
   Position,
   BackgroundVariant,
   OnNodeDrag,
-  useReactFlow,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,35 +37,6 @@ interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails: (order: ManufacturingOrder) => void;
 }
-
-// Custom hook for auto-focusing the first card
-const useAutoFocusFirstCard = (manufacturingOrders: ManufacturingOrder[], isLoading: boolean) => {
-  const { fitView } = useReactFlow();
-  const hasAutoFocused = useRef(false);
-
-  useEffect(() => {
-    if (!isLoading && manufacturingOrders.length > 0 && !hasAutoFocused.current) {
-      // Small delay to ensure nodes are rendered
-      const timer = setTimeout(() => {
-        fitView({ 
-          nodes: [{ id: `order-${manufacturingOrders[0].id}` }],
-          padding: 0.2,
-          duration: 800
-        });
-        hasAutoFocused.current = true;
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, manufacturingOrders, fitView]);
-
-  // Reset the flag when manufacturing orders change significantly
-  useEffect(() => {
-    if (manufacturingOrders.length === 0) {
-      hasAutoFocused.current = false;
-    }
-  }, [manufacturingOrders.length]);
-};
 
 // Loading component for React Flow
 const ProductionFlowLoader = () => (
@@ -241,7 +213,28 @@ const nodeTypes = {
   stepProgress: StepProgressNodeComponent,
 };
 
-// Main Flow Content Component with auto-focus hook
+// Auto-focus hook that works within ReactFlow context
+const useAutoFocus = (manufacturingOrders: ManufacturingOrder[], isLoading: boolean) => {
+  const hasAutoFocused = useRef(false);
+
+  // Return the fitView function to be called from within ReactFlow
+  const shouldAutoFocus = !isLoading && manufacturingOrders.length > 0 && !hasAutoFocused.current;
+  
+  // Reset the flag when manufacturing orders change significantly
+  useEffect(() => {
+    if (manufacturingOrders.length === 0) {
+      hasAutoFocused.current = false;
+    }
+  }, [manufacturingOrders.length]);
+
+  const markAsAutoFocused = useCallback(() => {
+    hasAutoFocused.current = true;
+  }, []);
+
+  return { shouldAutoFocus, markAsAutoFocused, firstOrderId: manufacturingOrders[0]?.id };
+};
+
+// Main Flow Content Component
 const FlowContent: React.FC<{
   manufacturingOrders: ManufacturingOrder[];
   isLoading: boolean;
@@ -252,8 +245,21 @@ const FlowContent: React.FC<{
   onConnect: any;
   onNodeDragStop: OnNodeDrag;
 }> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
-  // Use the auto-focus hook
-  useAutoFocusFirstCard(manufacturingOrders, isLoading);
+  const { shouldAutoFocus, markAsAutoFocused, firstOrderId } = useAutoFocus(manufacturingOrders, isLoading);
+
+  const onInit = useCallback((reactFlowInstance: any) => {
+    if (shouldAutoFocus && firstOrderId) {
+      // Small delay to ensure nodes are rendered
+      setTimeout(() => {
+        reactFlowInstance.fitView({ 
+          nodes: [{ id: `order-${firstOrderId}` }],
+          padding: 0.2,
+          duration: 800
+        });
+        markAsAutoFocused();
+      }, 100);
+    }
+  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused]);
 
   if (isLoading) {
     return <ProductionFlowLoader />;
@@ -267,8 +273,9 @@ const FlowContent: React.FC<{
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeDragStop={onNodeDragStop}
+      onInit={onInit}
       nodeTypes={nodeTypes}
-      fitView={false} // Disable default fitView since we handle it manually
+      fitView={false}
       attributionPosition="bottom-left"
       className="bg-background"
       panOnScroll={true}
@@ -537,16 +544,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
               Exit Full Screen
             </Button>
           </div>
-          <FlowContent
-            manufacturingOrders={manufacturingOrders}
-            isLoading={isLoading}
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDragStop={onNodeDragStop}
-          />
+          <ReactFlowProvider>
+            <FlowContent
+              manufacturingOrders={manufacturingOrders}
+              isLoading={isLoading}
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeDragStop={onNodeDragStop}
+            />
+          </ReactFlowProvider>
         </div>
 
         {/* Dialogs remain accessible in full screen */}
@@ -628,16 +637,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           </Button>
         </div>
 
-        <FlowContent
-          manufacturingOrders={manufacturingOrders}
-          isLoading={isLoading}
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDragStop={onNodeDragStop}
-        />
+        <ReactFlowProvider>
+          <FlowContent
+            manufacturingOrders={manufacturingOrders}
+            isLoading={isLoading}
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeDragStop={onNodeDragStop}
+          />
+        </ReactFlowProvider>
       </div>
 
       {/* Dialogs */}
@@ -658,7 +669,10 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             case 'pending': return 'bg-gray-100 text-gray-800';
             case 'in_progress':return 'bg-blue-100 text-blue-800';
             case 'completed': return 'bg-green-100 text-green-800';
-            default: return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 t
+
+
+-gray-800';
           }
         }}
       />
