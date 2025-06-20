@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -172,7 +173,7 @@ const ManufacturingOrdersTable = ({
                     </div>
                   </TableCell>
                   <TableCell className="py-1 text-xs">
-                    {order.due_date ? format(new Date(order.due_date), 'MMM dd')}
+                    {order.due_date ? format(new Date(order.due_date), 'MMM dd') : 'N/A'}
                   </TableCell>
                   <TableCell className="py-1 text-xs">
                     {format(new Date(order.created_at), 'MMM dd')}
