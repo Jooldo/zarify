@@ -7,10 +7,12 @@ import { Calendar, User, Package, Play, CheckCircle2, Weight, Hash, Type } from 
 import { format } from 'date-fns';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 interface ManufacturingStepProgressCardProps {
   orderStep: any;
   stepFields: any[];
+  manufacturingSteps?: any[];
   onClick?: () => void;
   onNextStepClick?: () => void;
 }
@@ -18,11 +20,13 @@ interface ManufacturingStepProgressCardProps {
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({
   orderStep,
   stepFields = [],
+  manufacturingSteps = [],
   onClick,
   onNextStepClick
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
+  const { orderSteps } = useManufacturingSteps();
 
   console.log('ManufacturingStepProgressCard - orderStep:', orderStep);
   console.log('ManufacturingStepProgressCard - stepFields:', stepFields);
@@ -138,6 +142,59 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
     return null;
   };
 
+  // Enhanced logic to determine if "Start Next Step" button should show
+  const shouldShowNextStepButton = () => {
+    // Only show if current step is completed
+    if (orderStep.status !== 'completed') {
+      return false;
+    }
+
+    const currentStepOrder = orderStep.manufacturing_steps?.step_order;
+    if (!currentStepOrder) {
+      return false;
+    }
+
+    // Check if this is the final step by comparing with merchant's configured steps
+    const maxStepOrder = Math.max(...manufacturingSteps.filter(s => s.is_active).map(s => s.step_order));
+    if (currentStepOrder >= maxStepOrder) {
+      console.log('This is the final step, no next step button');
+      return false;
+    }
+
+    // Find the next step from merchant's configuration
+    const nextStep = manufacturingSteps
+      .filter(step => step.is_active && step.step_order > currentStepOrder)
+      .sort((a, b) => a.step_order - b.step_order)[0];
+
+    if (!nextStep) {
+      console.log('No next step found in merchant configuration');
+      return false;
+    }
+
+    // Check if the next step has already been started for this order
+    const nextStepExists = orderSteps.some(step => 
+      step.manufacturing_order_id === orderStep.manufacturing_order_id &&
+      step.manufacturing_step_id === nextStep.id
+    );
+
+    console.log(`Next step (${nextStep.step_name}) already exists:`, nextStepExists);
+    
+    // Show button only if next step hasn't been started yet
+    return !nextStepExists;
+  };
+
+  // Get the next step name for button text
+  const getNextStepName = () => {
+    const currentStepOrder = orderStep.manufacturing_steps?.step_order;
+    if (!currentStepOrder) return 'Next Step';
+
+    const nextStep = manufacturingSteps
+      .filter(step => step.is_active && step.step_order > currentStepOrder)
+      .sort((a, b) => a.step_order - b.step_order)[0];
+
+    return nextStep ? nextStep.step_name : 'Next Step';
+  };
+
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
 
@@ -217,15 +274,15 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
           )}
         </div>
 
-        {/* Next Step Button for completed steps */}
-        {orderStep.status === 'completed' && (
+        {/* Start Next Step Button */}
+        {shouldShowNextStepButton() && (
           <div className="pt-2 border-t">
             <Button 
               onClick={handleNextStepClick}
               className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
             >
               <Play className="h-3 w-3 mr-1" />
-              Start Next Step
+              Start {getNextStepName()}
             </Button>
           </div>
         )}

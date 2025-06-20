@@ -87,24 +87,17 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
     }
   };
 
-  const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === orderData.id);
-    
-    if (currentOrderSteps.length === 0) {
-      return manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)[0];
-    }
-    
-    const nextPendingStep = currentOrderSteps
-      .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
-    
-    return nextPendingStep?.manufacturing_steps;
+  const getFirstStep = () => {
+    return manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order)[0];
   };
 
-  const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === orderData.id && step.status !== 'pending');
+  // Check if any order steps exist for this order
+  const hasAnyOrderSteps = orderSteps.some(step => step.manufacturing_order_id === orderData.id);
+  
+  const firstStep = getFirstStep();
+  const shouldShowStartButton = !hasAnyOrderSteps && firstStep;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -116,8 +109,8 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
 
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (nextStep) {
-      setSelectedStep(nextStep);
+    if (firstStep) {
+      setSelectedStep(firstStep);
       setStartStepDialogOpen(true);
     }
   };
@@ -158,15 +151,15 @@ const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
             )}
           </div>
 
-          {/* Single CTA Button */}
-          {nextStep && !hasStarted && (
+          {/* Start First Step Button */}
+          {shouldShowStartButton && (
             <div className="pt-2 border-t">
               <Button 
                 onClick={handleStartStep}
                 className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
               >
                 <Play className="h-3 w-3 mr-1" />
-                Start {nextStep.step_name}
+                Start {firstStep.step_name}
               </Button>
             </div>
           )}
@@ -192,6 +185,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     onNextStepClick: (orderStep: any) => void;
     stepValues: any[];
     stepFields: any[];
+    manufacturingSteps: any[];
   };
   
   return (
@@ -200,6 +194,7 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
       <ManufacturingStepProgressCard
         orderStep={stepData.orderStep}
         stepFields={stepData.stepFields}
+        manufacturingSteps={stepData.manufacturingSteps}
         onClick={() => stepData.onStepClick(stepData.orderStep)}
         onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
       />
@@ -352,19 +347,25 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
   }, []);
 
   const handleNextStepClick = useCallback((orderStep: any) => {
-    // Find the next step after this completed step
+    // Find the current order
     const currentOrder = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
     if (!currentOrder) return;
 
     const currentStepOrder = orderStep.manufacturing_steps?.step_order;
+    
+    // Find the next step from merchant's configuration
     const nextStep = manufacturingSteps
       .filter(step => step.is_active && step.step_order > currentStepOrder)
       .sort((a, b) => a.step_order - b.step_order)[0];
+
+    console.log('Next step found:', nextStep);
 
     if (nextStep) {
       setSelectedOrder(currentOrder);
       setSelectedStepForStart(nextStep);
       setStartStepDialogOpen(true);
+    } else {
+      console.log('No next step found - this is the final step');
     }
   }, [manufacturingOrders, manufacturingSteps]);
 
@@ -433,7 +434,8 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             onStepClick: handleStepClick,
             onNextStepClick: handleNextStepClick,
             stepValues: stepStepValues,
-            stepFields: stepStepFields, // Pass step fields to the node
+            stepFields: stepStepFields,
+            manufacturingSteps: manufacturingSteps, // Pass manufacturing steps for next step detection
           } as unknown as Record<string, unknown>,
         });
       });
@@ -710,7 +712,7 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
           status: currentOrderStep.status,
           progress: currentOrderStep.progress_percentage || 0,
-          stepFields: currentStepFields, // Pass stepFields to UpdateStepDialog
+          stepFields: currentStepFields,
         } : null}
         currentOrderStep={currentOrderStep}
         stepFields={currentStepFields}

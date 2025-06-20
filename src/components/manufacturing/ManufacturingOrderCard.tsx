@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,38 +24,18 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
 
-  // Get the next step that should be started
-  const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
-    
-    if (currentOrderSteps.length === 0) {
-      // No steps exist, get the first manufacturing step
-      const firstStep = manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)[0];
-      
-      return firstStep;
-    }
-    
-    // Find the next pending step and get the corresponding manufacturing step
-    const nextPendingOrderStep = currentOrderSteps
-      .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
-    
-    if (nextPendingOrderStep) {
-      // Find the full manufacturing step object using the manufacturing_step_id
-      const fullManufacturingStep = manufacturingSteps.find(step => 
-        step.id === nextPendingOrderStep.manufacturing_step_id
-      );
-      
-      return fullManufacturingStep;
-    }
-    
-    return null;
+  // Get the first step from merchant's configuration
+  const getFirstStep = () => {
+    return manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order)[0];
   };
 
-  const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+  // Check if any order steps exist for this order
+  const hasAnyOrderSteps = orderSteps.some(step => step.manufacturing_order_id === order.id);
+  
+  const firstStep = getFirstStep();
+  const shouldShowStartButton = !hasAnyOrderSteps && firstStep;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent card click when button is clicked
@@ -66,11 +47,11 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
 
   const handleStartStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (nextStep && nextStep.id) {
+    if (firstStep) {
       // Ensure we have a clean step object with proper ID
       const stepToPass = {
-        ...nextStep,
-        id: String(nextStep.id) // Ensure ID is always a string
+        ...firstStep,
+        id: String(firstStep.id) // Ensure ID is always a string
       };
       
       setSelectedStep(stepToPass);
@@ -176,15 +157,15 @@ const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onVie
             </div>
           )}
 
-          {/* Single CTA Button */}
-          {nextStep && !hasStarted && (
+          {/* Start First Step Button */}
+          {shouldShowStartButton && (
             <div className="pt-2 border-t">
               <Button 
                 onClick={handleStartStep}
                 className="w-full text-sm bg-primary hover:bg-primary/90"
               >
                 <Play className="h-4 w-4 mr-2" />
-                Start {nextStep.step_name}
+                Start {firstStep.step_name}
               </Button>
             </div>
           )}

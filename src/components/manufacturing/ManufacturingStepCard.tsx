@@ -88,7 +88,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       .find(step => step.step_order === currentStepOrder + 1);
     
     if (nextStep) {
-      return `Move to ${nextStep.step_name}`;
+      return `Start ${nextStep.step_name}`;
     }
     
     return `Start ${data.stepName}`;
@@ -108,7 +108,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     String(step.manufacturing_order_id) === String(data.orderId)
   );
 
-  // ENHANCED CTA LOGIC WITH BETTER DEBUGGING
+  // ENHANCED CTA LOGIC FOR MERCHANT-SPECIFIC STEPS
   const shouldShowCTA = (() => {
     console.log(`\n=== CTA DEBUG START ===`);
     console.log(`Card: ${data.stepName} (stepOrder: ${data.stepOrder}) for order ${data.orderNumber}`);
@@ -133,7 +133,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return !hasAnySteps;
     }
 
-    // Rule 2: Step cards - show ONLY if this step is completed AND the immediate NEXT step doesn't exist
+    // Rule 2: Step cards - show ONLY if this step is completed AND the immediate NEXT step doesn't exist AND next step is valid
     if (data.stepOrder > 0) {
       // Get this step's actual status from database
       const actualStepStatus = currentOrderStep?.status || 'pending';
@@ -164,12 +164,20 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         return isImmediateNext;
       });
 
-      console.log(`  - Immediate next step exists: ${immediateNextStepExists}`);
-      console.log(`  - Final result: ${isThisStepCompleted && !immediateNextStepExists}`);
-      console.log(`=== CTA DEBUG END: ${isThisStepCompleted && !immediateNextStepExists} ===\n`);
+      // Check if next step exists in merchant's configuration
+      const nextStepExistsInConfig = manufacturingSteps.some(step => 
+        step.is_active && step.step_order === nextStepOrder
+      );
+
+      console.log(`  - Immediate next step exists in DB: ${immediateNextStepExists}`);
+      console.log(`  - Next step exists in merchant config: ${nextStepExistsInConfig}`);
       
-      // Only show if this step is completed AND the immediate next step doesn't exist
-      return isThisStepCompleted && !immediateNextStepExists;
+      // Only show if this step is completed AND the immediate next step doesn't exist in DB AND next step exists in config
+      const shouldShow = isThisStepCompleted && !immediateNextStepExists && nextStepExistsInConfig;
+      console.log(`  - Final result: ${shouldShow}`);
+      console.log(`=== CTA DEBUG END: ${shouldShow} ===\n`);
+      
+      return shouldShow;
     }
 
     console.log(`=== CTA DEBUG END: false (default) ===\n`);
