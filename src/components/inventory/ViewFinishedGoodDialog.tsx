@@ -94,22 +94,29 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
 
   if (!product) return null;
 
-  // Fixed shortfall calculation to properly include in_manufacturing
-  const totalAvailable = product.current_stock + product.in_manufacturing;
-  const totalNeeded = product.required_quantity + product.threshold;
+  // Calculate shortfall correctly - include in_manufacturing in available quantity
+  const currentStock = product.current_stock || 0;
+  const inManufacturing = product.in_manufacturing || 0;
+  const requiredQuantity = product.required_quantity || 0;
+  const threshold = product.threshold || 0;
+  
+  const totalAvailable = currentStock + inManufacturing;
+  const totalNeeded = requiredQuantity + threshold;
   const shortfall = Math.max(0, totalNeeded - totalAvailable);
 
-  console.log('🔍 Fixed shortfall calculation for:', product.product_code);
-  console.log(`   Current stock: ${product.current_stock}`);
-  console.log(`   In manufacturing: ${product.in_manufacturing}`);
+  console.log('🔍 CORRECTED shortfall calculation for:', product.product_code);
+  console.log(`   Current stock: ${currentStock}`);
+  console.log(`   In manufacturing: ${inManufacturing}`);
   console.log(`   Total available: ${totalAvailable}`);
-  console.log(`   Required quantity: ${product.required_quantity}`);
-  console.log(`   Threshold: ${product.threshold}`);
+  console.log(`   Required quantity: ${requiredQuantity}`);
+  console.log(`   Threshold: ${threshold}`);
   console.log(`   Total needed: ${totalNeeded}`);
-  console.log(`   Calculated shortfall: ${shortfall}`);
+  console.log(`   FINAL shortfall: ${shortfall}`);
 
-  // Use the corrected shortfall for raw material calculations
+  // Use the CORRECT shortfall for raw material calculations
   const quantityForMaterialCalculation = shortfall;
+
+  console.log(`🔍 Raw material calculation will use quantity: ${quantityForMaterialCalculation}`);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -135,15 +142,15 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             </div>
             <div>
               <Label className="text-sm font-medium">Current Stock:</Label>
-              <div className="text-sm font-bold text-blue-600">{product.current_stock} units</div>
+              <div className="text-sm font-bold text-blue-600">{currentStock} units</div>
             </div>
             <div>
               <Label className="text-sm font-medium">In Manufacturing:</Label>
-              <div className="text-sm font-bold text-orange-600">{product.in_manufacturing} units</div>
+              <div className="text-sm font-bold text-orange-600">{inManufacturing} units</div>
             </div>
             <div>
               <Label className="text-sm font-medium">Required Quantity Based On Live Orders:</Label>
-              <div className="text-sm">{product.required_quantity} units</div>
+              <div className="text-sm">{requiredQuantity} units</div>
             </div>
           </div>
 
@@ -227,17 +234,17 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      // Use the corrected shortfall quantity for calculation
+                      // CRITICAL FIX: Use the corrected shortfall quantity directly
                       const totalRequired = material.quantity_required * quantityForMaterialCalculation;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
                         totalRequired
                       );
                       
-                      console.log(`🔍 Raw material calculation for ${material.raw_material.name}:`);
+                      console.log(`🔍 Raw material ${material.raw_material.name}:`);
                       console.log(`   Required per unit: ${material.quantity_required}`);
-                      console.log(`   Corrected shortfall quantity: ${quantityForMaterialCalculation}`);
-                      console.log(`   Total required: ${totalRequired}`);
+                      console.log(`   Shortfall quantity used: ${quantityForMaterialCalculation}`);
+                      console.log(`   Total required calculated: ${totalRequired}`);
                       
                       return (
                         <TableRow key={material.id} className="h-8">
