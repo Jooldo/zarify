@@ -21,6 +21,9 @@ export interface FinishedGoodOrderDetail {
   created_date: string;
 }
 
+// Export the OrderDetail type that was missing
+export type OrderDetail = FinishedGoodOrderDetail;
+
 export const useOrderedQtyDetails = () => {
   const [loading, setLoading] = useState(false);
 
@@ -104,7 +107,7 @@ export const useOrderedQtyDetails = () => {
         return acc;
       }, {} as Record<string, number>) || {};
 
-      // Get finished goods that use this raw material
+      // FIXED QUERY: Get finished goods that use this raw material with correct relationship
       const { data: finishedGoodsUsingMaterial, error: finishedGoodsError } = await supabase
         .from('product_config_materials')
         .select(`
@@ -112,12 +115,12 @@ export const useOrderedQtyDetails = () => {
           product_configs!inner(
             product_code,
             category,
-            subcategory
-          ),
-          finished_goods!inner(
-            current_stock,
-            threshold,
-            required_quantity
+            subcategory,
+            finished_goods!inner(
+              current_stock,
+              threshold,
+              required_quantity
+            )
           )
         `)
         .eq('raw_material_id', rawMaterialId)
@@ -132,7 +135,7 @@ export const useOrderedQtyDetails = () => {
 
       finishedGoodsUsingMaterial?.forEach(item => {
         const productCode = item.product_configs.product_code;
-        const finishedGood = item.finished_goods;
+        const finishedGood = item.product_configs.finished_goods;
         
         // FIXED CALCULATION: Use proper shortfall calculation including manufacturing
         const liveOrderDemand = finishedGood.required_quantity || 0;
