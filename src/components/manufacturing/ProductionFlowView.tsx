@@ -661,18 +661,16 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             case 'urgent': return 'bg-red-500 text-white';
             case 'high': return 'bg-orange-500 text-white';
             case 'medium': return 'bg-yellow-500 text-white';
+            case 'low': return 'bg-green-500 text-white';
             default: return 'bg-gray-500 text-white';
           }
         }}
         getStatusColor={(status: string) => {
           switch (status.toLowerCase()) {
             case 'pending': return 'bg-gray-100 text-gray-800';
-            case 'in_progress':return 'bg-blue-100 text-blue-800';
+            case 'in_progress': return 'bg-blue-100 text-blue-800';
             case 'completed': return 'bg-green-100 text-green-800';
-            default: return 'bg-gray-100 t
-
-
--gray-800';
+            default: return 'bg-gray-100 text-gray-800';
           }
         }}
       />
