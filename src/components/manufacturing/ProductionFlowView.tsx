@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -240,16 +241,16 @@ const FlowContent: React.FC<{
   onConnect: any;
   onNodeDragStop: OnNodeDrag;
 }> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
-  const { shouldAutoFocus, markAsAutoFocused, firstOrderId } = useAutoFocus(manufacturingOrders, isLoading);
+  const { shouldAutoFocus, markAsAutoFocused } = useAutoFocus(manufacturingOrders, isLoading);
   const { saveViewport, restoreViewport } = useFlowViewport();
 
   const onInit = useCallback((reactFlowInstance: any) => {
-    if (shouldAutoFocus && firstOrderId) {
-      // Small delay to ensure nodes are rendered
+    if (shouldAutoFocus) {
+      // Always fit view to show all nodes when landing on production queue
       setTimeout(() => {
         reactFlowInstance.fitView({ 
-          nodes: [{ id: `order-${firstOrderId}` }],
-          padding: 0.2,
+          padding: 0.1,
+          maxZoom: 0.8,
           duration: 800
         });
         markAsAutoFocused();
@@ -259,7 +260,7 @@ const FlowContent: React.FC<{
       const viewport = restoreViewport();
       reactFlowInstance.setViewport(viewport, { duration: 300 });
     }
-  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused, restoreViewport]);
+  }, [shouldAutoFocus, markAsAutoFocused, restoreViewport]);
 
   const onViewportChange = useCallback((viewport: any) => {
     // Save viewport changes with debouncing
@@ -292,7 +293,7 @@ const FlowContent: React.FC<{
       panOnScrollSpeed={0.5}
       zoomOnScroll={true}
       zoomOnPinch={true}
-      minZoom={0.5}
+      minZoom={0.3}
       maxZoom={1.5}
     >
       <Controls showZoom={true} showFitView={true} />
