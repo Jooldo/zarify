@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -240,33 +241,18 @@ const FlowContent: React.FC<{
   onConnect: any;
   onNodeDragStop: OnNodeDrag;
 }> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
-  const { shouldAutoFocus, markAsAutoFocused, firstOrderId } = useAutoFocus(manufacturingOrders, isLoading);
+  const { shouldAutoFocus, markAsAutoFocused } = useAutoFocus(manufacturingOrders, isLoading);
   const { saveViewport, restoreViewport } = useFlowViewport();
 
   const onInit = useCallback((reactFlowInstance: any) => {
-    if (shouldAutoFocus && firstOrderId) {
-      // Position viewport to show first order and its flow in upper area
+    if (shouldAutoFocus) {
+      // Always fit view to show all nodes when landing on production queue
       setTimeout(() => {
-        // First fit all nodes
         reactFlowInstance.fitView({ 
           padding: 0.1,
           maxZoom: 0.8,
-          duration: 0
+          duration: 800
         });
-        
-        // Then adjust to focus on first order in upper-left area
-        const firstOrderNode = nodes.find(node => node.id === `order-${firstOrderId}`);
-        if (firstOrderNode) {
-          const viewport = reactFlowInstance.getViewport();
-          const newViewport = {
-            x: viewport.x + 100, // Shift right to give some padding from left edge
-            y: viewport.y + 150, // Shift down to position first card in upper area
-            zoom: Math.min(viewport.zoom, 0.7) // Ensure good zoom level
-          };
-          
-          reactFlowInstance.setViewport(newViewport, { duration: 800 });
-        }
-        
         markAsAutoFocused();
       }, 100);
     } else {
@@ -274,7 +260,7 @@ const FlowContent: React.FC<{
       const viewport = restoreViewport();
       reactFlowInstance.setViewport(viewport, { duration: 300 });
     }
-  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused, restoreViewport, nodes]);
+  }, [shouldAutoFocus, markAsAutoFocused, restoreViewport]);
 
   const onViewportChange = useCallback((viewport: any) => {
     // Save viewport changes with debouncing
