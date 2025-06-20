@@ -58,8 +58,9 @@ export const useManufacturingSteps = () => {
 
   // Real-time subscription for manufacturing order steps
   useEffect(() => {
+    const channelName = `manufacturing-steps-realtime-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel('manufacturing-steps-realtime-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

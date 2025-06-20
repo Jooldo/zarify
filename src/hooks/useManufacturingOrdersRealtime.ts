@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useManufacturingOrdersRealtime = (onDataChange: () => void) => {
   useEffect(() => {
+    const channelName = `manufacturing-orders-realtime-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel('manufacturing-orders-realtime-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

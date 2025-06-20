@@ -34,8 +34,9 @@ export const useManufacturingStepValues = () => {
 
   // Real-time subscription for step values
   useEffect(() => {
+    const channelName = `step-values-realtime-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel('step-values-realtime-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
