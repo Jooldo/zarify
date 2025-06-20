@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -34,33 +33,39 @@ const OrderedQtyDetailsDialog = ({
     return num.toLocaleString('en-IN');
   };
 
-  const getStatusVariant = (status: string) => {
+  // Status styling that matches the Orders table
+  const getStatusBadgeProps = (status: string) => {
     switch (status.toLowerCase()) {
       case 'created':
-        return 'default' as const;
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+        };
       case 'in progress':
-        return 'secondary' as const;
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-yellow-50 text-yellow-700 border-yellow-200 font-medium'
+        };
       case 'partially fulfilled':
-        return 'secondary' as const;
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-orange-50 text-orange-700 border-orange-200 font-medium'
+        };
       case 'completed':
-        return 'default' as const;
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-green-50 text-green-700 border-green-200 font-medium'
+        };
+      case 'cancelled':
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-red-50 text-red-700 border-red-200 font-medium'
+        };
       default:
-        return 'outline' as const;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'created':
-        return 'text-blue-600';
-      case 'in progress':
-        return 'text-yellow-600';
-      case 'partially fulfilled':
-        return 'text-orange-600';
-      case 'completed':
-        return 'text-green-600';
-      default:
-        return 'text-gray-600';
+        return { 
+          variant: 'outline' as const,
+          className: 'bg-gray-50 text-gray-700 border-gray-200 font-medium'
+        };
     }
   };
 
@@ -175,41 +180,44 @@ const OrderedQtyDetailsDialog = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orderDetails.map((detail, index) => (
-                      <TableRow key={index} className="h-10">
-                        <TableCell className="py-2 text-xs font-mono">
-                          {detail.order_number}
-                        </TableCell>
-                        <TableCell className="py-2 text-xs">
-                          {detail.customer_name}
-                        </TableCell>
-                        <TableCell className="py-2 text-xs">
-                          {new Date(detail.order_date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="py-2 text-xs text-center font-medium">
-                          {formatIndianNumber(detail.quantity)}
-                        </TableCell>
-                        <TableCell className="py-2 text-xs text-center">
-                          {formatIndianNumber(detail.fulfilled_quantity)}
-                        </TableCell>
-                        <TableCell className="py-2 text-xs text-center">
-                          <span className="font-bold text-blue-600">
-                            {formatIndianNumber(detail.remaining_quantity)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-2 text-xs">
-                          <Badge 
-                            variant={getStatusVariant(detail.status)}
-                            className={`text-xs ${getStatusColor(detail.status)}`}
-                          >
-                            {detail.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-2 text-xs font-mono text-gray-500">
-                          {detail.suborder_id}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {orderDetails.map((detail, index) => {
+                      const statusProps = getStatusBadgeProps(detail.status);
+                      return (
+                        <TableRow key={index} className="h-10">
+                          <TableCell className="py-2 text-xs font-mono">
+                            {detail.order_number}
+                          </TableCell>
+                          <TableCell className="py-2 text-xs">
+                            {detail.customer_name}
+                          </TableCell>
+                          <TableCell className="py-2 text-xs">
+                            {new Date(detail.order_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="py-2 text-xs text-center font-medium">
+                            {formatIndianNumber(detail.quantity)}
+                          </TableCell>
+                          <TableCell className="py-2 text-xs text-center">
+                            {formatIndianNumber(detail.fulfilled_quantity)}
+                          </TableCell>
+                          <TableCell className="py-2 text-xs text-center">
+                            <span className="font-bold text-blue-600">
+                              {formatIndianNumber(detail.remaining_quantity)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-2 text-xs">
+                            <Badge 
+                              variant={statusProps.variant}
+                              className={`text-xs ${statusProps.className}`}
+                            >
+                              {detail.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-2 text-xs font-mono text-gray-500">
+                            {detail.suborder_id}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

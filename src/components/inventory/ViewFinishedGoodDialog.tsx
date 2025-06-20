@@ -146,18 +146,82 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             </div>
             <div>
               <Label className="text-sm font-medium">Shortfall Quantity:</Label>
-              <div className="flex items-center gap-1">
-                <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatIndianNumber(Math.abs(shortfall))} units
-                </span>
-                {shortfall > 0 ? (
-                  <ArrowDown className="h-4 w-4 text-red-600" />
-                ) : (
-                  <ArrowUp className="h-4 w-4 text-green-600" />
-                )}
+              <div className="flex items-center gap-2 mt-1">
+                <div className={`px-4 py-2 rounded-lg border-2 ${
+                  shortfall > 0 
+                    ? 'bg-red-50 border-red-200' 
+                    : 'bg-green-50 border-green-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-lg font-bold ${
+                      shortfall > 0 ? 'text-red-700' : 'text-green-700'
+                    }`}>
+                      {formatIndianNumber(Math.abs(shortfall))} units
+                    </span>
+                    {shortfall > 0 ? (
+                      <ArrowDown className="h-5 w-5 text-red-600" />
+                    ) : (
+                      <ArrowUp className="h-5 w-5 text-green-600" />
+                    )}
+                  </div>
+                  <div className={`text-xs mt-1 ${
+                    shortfall > 0 ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {shortfall > 0 ? 'Production Required' : 'Stock Sufficient'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Prominent Shortfall Summary Card */}
+          {shortfall > 0 && (
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-red-500 text-white rounded-full p-2">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-800">Production Required</h3>
+                    <p className="text-sm text-red-700">
+                      Current supply cannot meet demand + safety stock requirements
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-red-700">
+                    {formatIndianNumber(shortfall)} units
+                  </div>
+                  <div className="text-xs text-red-600">shortage</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {shortfall <= 0 && (
+            <div className="bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-green-500 text-white rounded-full p-2">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-green-800">Stock Sufficient</h3>
+                    <p className="text-sm text-green-700">
+                      Current supply meets demand + safety stock requirements
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-700">
+                    +{formatIndianNumber(Math.abs(shortfall))} units
+                  </div>
+                  <div className="text-xs text-green-600">surplus</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Raw Materials Requirements */}
           <div className="space-y-3">
