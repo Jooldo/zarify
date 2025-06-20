@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -109,6 +110,17 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
   // Use shortfall quantity for raw material calculations - only if shortfall is positive (actual shortage)
   const quantityForMaterialCalculation = Math.max(0, shortfall);
 
+  console.log('🔍 Product shortfall calculation debug:');
+  console.log(`   Product: ${product.product_code}`);
+  console.log(`   Current stock: ${product.current_stock}`);
+  console.log(`   In manufacturing: ${product.in_manufacturing}`);
+  console.log(`   Required quantity: ${product.required_quantity}`);
+  console.log(`   Threshold: ${product.threshold}`);
+  console.log(`   Total available: ${product.current_stock + product.in_manufacturing}`);
+  console.log(`   Total needed: ${product.required_quantity + product.threshold}`);
+  console.log(`   Calculated shortfall: ${shortfall}`);
+  console.log(`   Quantity for material calculation: ${quantityForMaterialCalculation}`);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -174,49 +186,47 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
           </div>
 
           {/* Prominent Shortfall Summary Card */}
-          {shortfall > 0 && (
-            <div className="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-200 rounded-lg p-4">
+          {shortfall > 0 ? (
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-200 rounded-lg p-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-red-500 text-white rounded-full p-2">
-                    <AlertTriangle className="h-5 w-5" />
+                <div className="flex items-center gap-4">
+                  <div className="bg-red-500 text-white rounded-full p-3">
+                    <AlertTriangle className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-red-800">Production Required</h3>
-                    <p className="text-sm text-red-700">
+                    <h3 className="text-xl font-bold text-red-800">Production Required</h3>
+                    <p className="text-sm text-red-700 mt-1">
                       Current supply cannot meet demand + safety stock requirements
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-red-700">
+                  <div className="text-3xl font-bold text-red-700">
                     {formatIndianNumber(shortfall)} units
                   </div>
-                  <div className="text-xs text-red-600">shortage</div>
+                  <div className="text-sm text-red-600 font-medium">shortage</div>
                 </div>
               </div>
             </div>
-          )}
-
-          {shortfall <= 0 && (
-            <div className="bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-lg p-4">
+          ) : (
+            <div className="bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-lg p-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-green-500 text-white rounded-full p-2">
-                    <CheckCircle className="h-5 w-5" />
+                <div className="flex items-center gap-4">
+                  <div className="bg-green-500 text-white rounded-full p-3">
+                    <CheckCircle className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-green-800">Stock Sufficient</h3>
-                    <p className="text-sm text-green-700">
+                    <h3 className="text-xl font-bold text-green-800">Stock Sufficient</h3>
+                    <p className="text-sm text-green-700 mt-1">
                       Current supply meets demand + safety stock requirements
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-green-700">
+                  <div className="text-3xl font-bold text-green-700">
                     +{formatIndianNumber(Math.abs(shortfall))} units
                   </div>
-                  <div className="text-xs text-green-600">surplus</div>
+                  <div className="text-sm text-green-600 font-medium">surplus</div>
                 </div>
               </div>
             </div>
@@ -227,7 +237,7 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             <h4 className="font-medium text-sm">
               Raw Materials Required 
               {quantityForMaterialCalculation > 0 
-                ? ` (Based on Shortfall: ${quantityForMaterialCalculation} units):`
+                ? ` (Based on Shortfall: ${formatIndianNumber(quantityForMaterialCalculation)} units):`
                 : ' (No Production Required - Stock Sufficient):'
               }
             </h4>
@@ -249,12 +259,18 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                   </TableHeader>
                   <TableBody>
                     {rawMaterials.map((material) => {
-                      // Calculate total required based on shortfall quantity
+                      // Calculate total required based on shortfall quantity ONLY
                       const totalRequired = material.quantity_required * quantityForMaterialCalculation;
                       const status = getStockStatus(
                         material.raw_material.current_stock,
                         totalRequired
                       );
+                      
+                      console.log(`🔍 Raw material calculation for ${material.raw_material.name}:`);
+                      console.log(`   Required per unit: ${material.quantity_required}`);
+                      console.log(`   Shortfall quantity: ${quantityForMaterialCalculation}`);
+                      console.log(`   Total required: ${totalRequired}`);
+                      
                       return (
                         <TableRow key={material.id} className="h-8">
                           <TableCell className="text-xs py-1 px-2 font-medium">
@@ -267,13 +283,13 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
                             {material.quantity_required} {material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2 font-bold text-purple-600">
-                            {totalRequired} {material.raw_material.unit}
+                            {formatIndianNumber(totalRequired)} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2 font-medium">
-                            {material.raw_material.current_stock} {material.raw_material.unit}
+                            {formatIndianNumber(material.raw_material.current_stock)} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
-                            {material.raw_material.minimum_stock} {material.raw_material.unit}
+                            {formatIndianNumber(material.raw_material.minimum_stock)} {material.raw_material.unit}
                           </TableCell>
                           <TableCell className="text-xs py-1 px-2">
                             <Badge variant={status.variant} className="text-xs px-1 py-0">
@@ -293,8 +309,13 @@ const ViewFinishedGoodDialog = ({ product, isOpen, onClose }: ViewFinishedGoodDi
             )}
             
             {quantityForMaterialCalculation === 0 && (
-              <div className="text-center py-4 text-green-600 font-medium">
-                ✅ No production required - current stock and manufacturing capacity is sufficient to meet demand.
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div className="text-green-700 font-medium text-sm">
+                  ✅ No production required - current stock and manufacturing capacity is sufficient to meet demand.
+                </div>
+                <div className="text-green-600 text-xs mt-1">
+                  All raw material requirements are 0 because there is no shortfall.
+                </div>
               </div>
             )}
           </div>
