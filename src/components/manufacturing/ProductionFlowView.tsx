@@ -1,731 +1,367 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
-  MiniMap,
-  Controls,
   Background,
+  Controls,
+  MiniMap,
   useNodesState,
   useEdgesState,
   Node,
   Edge,
-  NodeProps,
-  Handle,
-  Position,
-  BackgroundVariant,
-  OnNodeDrag,
   ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow } from 'lucide-react';
+import { Package, User, Calendar, Hash, Play, Clock, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useWorkers } from '@/hooks/useWorkers';
 import { useNodePositions } from '@/hooks/useNodePositions';
-import { generateOrderRowLayout, generateStepLayout } from '@/utils/nodeLayoutUtils';
-import StartStepDialog from './StartStepDialog';
-import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
-import UpdateStepDialog from './UpdateStepDialog';
-import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { useFlowViewport } from '@/hooks/useFlowViewport';
-import { ManufacturingOrder } from '@/types/manufacturingOrders';
+import { generateOrderRowLayout, generateStepLayout } from '@/utils/nodeLayoutUtils';
+import ManufacturingStepProgressCard from './ManufacturingStepProgressCard';
+import StartStepDialog from './StartStepDialog';
 
-interface ProductionFlowViewProps {
-  manufacturingOrders: ManufacturingOrder[];
-  onViewDetails: (order: ManufacturingOrder) => void;
+interface ManufacturingOrderNodeData {
+  id: string;
+  order_number: string;
+  product_name: string;
+  priority: string;
+  status: string;
+  quantity_required: number;
+  createdAt: Date;
+  dueDate?: Date;
+  productConfigs?: any;
 }
 
-// Loading component for React Flow
-const ProductionFlowLoader = () => (
-  <div className="w-full h-full flex items-center justify-center bg-background/50 backdrop-blur-sm">
-    <div className="text-center space-y-4">
-      <div className="relative">
-        <Factory className="h-12 w-12 mx-auto text-primary animate-pulse" />
-        <div className="absolute inset-0 h-12 w-12 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Loading Production Flow</h3>
-        <p className="text-sm text-muted-foreground">Organizing manufacturing orders and steps...</p>
-      </div>
-      <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-        {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-lg" />
-        ))}
-      </div>
-    </div>
-  </div>
-);
+interface ManufacturingStepNodeData {
+  id: string;
+  step_name: string;
+  step_order: number;
+  qc_required: boolean;
+  orderStep: any;
+}
 
-// Custom node component for manufacturing orders
-const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
-  
-  // Cast data to ManufacturingOrder since we know the structure
-  const orderData = data as unknown as ManufacturingOrder & { onViewDetails: (order: ManufacturingOrder) => void };
-  
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
+interface ProductionFlowViewProps {
+  manufacturingOrders: any[];
+  onViewDetails: (order: any) => void;
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getFirstStep = () => {
-    return manufacturingSteps
-      .filter(step => step.is_active)
-      .sort((a, b) => a.step_order - b.step_order)[0];
-  };
-
-  // Check if any order steps exist for this order
-  const hasAnyOrderSteps = orderSteps.some(step => step.manufacturing_order_id === orderData.id);
-  
-  const firstStep = getFirstStep();
-  const shouldShowStartButton = !hasAnyOrderSteps && firstStep;
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when button is clicked
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    orderData.onViewDetails(orderData);
-  };
-
-  const handleStartStep = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (firstStep) {
-      setSelectedStep(firstStep);
-      setStartStepDialogOpen(true);
-    }
-  };
-
-  return (
-    <>
-      <Card className="w-80 hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
-        <Handle type="target" position={Position.Left} />
+const nodeTypes = {
+  manufacturingOrder: ({ data }: { data: ManufacturingOrderNodeData }) => {
+    return (
+      <Card className="w-72">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold">{orderData.product_name}</CardTitle>
-              <p className="text-xs text-gray-600 font-mono">{orderData.order_number}</p>
+              <CardTitle className="text-lg font-semibold">{data.product_name}</CardTitle>
+              <p className="text-sm text-gray-600 font-mono">{data.order_number}</p>
             </div>
             <div className="flex flex-col gap-1">
-              <Badge className={`text-xs ${getPriorityColor(orderData.priority)}`}>
-                {orderData.priority}
-              </Badge>
-              <Badge className={`text-xs ${getStatusColor(orderData.status)}`}>
-                {orderData.status.replace('_', ' ')}
-              </Badge>
+              <Badge className="text-xs">{data.priority}</Badge>
+              <Badge className="text-xs">{data.status}</Badge>
             </div>
           </div>
         </CardHeader>
-
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Package2 className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">Qty: <span className="font-semibold">{orderData.quantity_required}</span></span>
-            </div>
-            
-            {orderData.due_date && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 text-gray-500" />
-                <span className="text-xs">Due: {format(new Date(orderData.due_date), 'MMM dd')}</span>
-              </div>
-            )}
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-gray-500" />
+            <span className="text-sm">Quantity: <span className="font-semibold">{data.quantity_required}</span></span>
           </div>
-
-          {/* Start First Step Button */}
-          {shouldShowStartButton && (
-            <div className="pt-2 border-t">
-              <Button 
-                onClick={handleStartStep}
-                className="w-full text-xs h-7 bg-primary hover:bg-primary/90"
-              >
-                <Play className="h-3 w-3 mr-1" />
-                Start {firstStep.step_name}
-              </Button>
+          {data.dueDate && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <span className="text-sm">Due: {format(data.dueDate, 'MMM dd, yyyy')}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="text-sm">Created: {format(data.createdAt, 'MMM dd, yyyy')}</span>
+          </div>
+          {data.productConfigs && (
+            <div className="p-2 bg-blue-50 rounded border border-blue-200">
+              <p className="text-xs text-blue-600 font-mono">{data.productConfigs.product_code}</p>
+              <p className="text-xs text-blue-600">{data.productConfigs.category} - {data.productConfigs.subcategory}</p>
             </div>
           )}
         </CardContent>
-        <Handle type="source" position={Position.Right} />
       </Card>
-
-      <StartStepDialog
-        isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={orderData}
-        step={selectedStep}
-      />
-    </>
-  );
-};
-
-// Custom node component for step progress cards
-const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const stepData = data as unknown as { 
-    orderStep: any; 
-    onStepClick: (orderStep: any) => void;
-    onNextStepClick: (orderStep: any) => void;
-    stepValues: any[];
-    stepFields: any[];
-    manufacturingSteps: any[];
-  };
-  
-  return (
-    <>
-      <Handle type="target" position={Position.Left} />
+    );
+  },
+  manufacturingStep: ({ data }: { data: ManufacturingStepNodeData }) => {
+    return (
       <ManufacturingStepProgressCard
-        orderStep={stepData.orderStep}
-        stepFields={stepData.stepFields}
-        manufacturingSteps={stepData.manufacturingSteps}
-        onClick={() => stepData.onStepClick(stepData.orderStep)}
-        onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
+        orderStep={data.orderStep}
+        stepFields={data.orderStep.manufacturing_steps?.manufacturing_step_fields}
+        manufacturingSteps={data.orderStep.manufacturing_steps}
       />
-      <Handle type="source" position={Position.Right} />
-    </>
-  );
+    );
+  },
 };
 
-const nodeTypes = {
-  manufacturingOrder: ManufacturingOrderNodeComponent,
-  stepProgress: StepProgressNodeComponent,
-};
-
-// Auto-focus hook that works within ReactFlow context
-const useAutoFocus = (manufacturingOrders: ManufacturingOrder[], isLoading: boolean) => {
-  const hasAutoFocused = useRef(false);
-
-  // Return the fitView function to be called from within ReactFlow
-  const shouldAutoFocus = !isLoading && manufacturingOrders.length > 0 && !hasAutoFocused.current;
-  
-  // Reset the flag when manufacturing orders change significantly
-  useEffect(() => {
-    if (manufacturingOrders.length === 0) {
-      hasAutoFocused.current = false;
-    }
-  }, [manufacturingOrders.length]);
-
-  const markAsAutoFocused = useCallback(() => {
-    hasAutoFocused.current = true;
-  }, []);
-
-  return { shouldAutoFocus, markAsAutoFocused, firstOrderId: manufacturingOrders[0]?.id };
-};
-
-// Main Flow Content Component
-const FlowContent: React.FC<{
-  manufacturingOrders: ManufacturingOrder[];
-  isLoading: boolean;
-  nodes: Node[];
-  edges: Edge[];
-  onNodesChange: any;
-  onEdgesChange: any;
-  onConnect: any;
-  onNodeDragStop: OnNodeDrag;
-}> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
-  const { shouldAutoFocus, markAsAutoFocused, firstOrderId } = useAutoFocus(manufacturingOrders, isLoading);
-  const { saveViewport, restoreViewport } = useFlowViewport();
-
-  const onInit = useCallback((reactFlowInstance: any) => {
-    if (shouldAutoFocus && firstOrderId) {
-      // Small delay to ensure nodes are rendered
-      setTimeout(() => {
-        reactFlowInstance.fitView({ 
-          nodes: [{ id: `order-${firstOrderId}` }],
-          padding: 0.2,
-          duration: 800
-        });
-        markAsAutoFocused();
-      }, 100);
-    } else {
-      // Restore previous viewport if no auto-focus needed
-      const viewport = restoreViewport();
-      reactFlowInstance.setViewport(viewport, { duration: 300 });
-    }
-  }, [shouldAutoFocus, firstOrderId, markAsAutoFocused, restoreViewport]);
-
-  const onViewportChange = useCallback((viewport: any) => {
-    // Save viewport changes with debouncing
-    const timeoutId = setTimeout(() => {
-      saveViewport(viewport);
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [saveViewport]);
-
-  if (isLoading) {
-    return <ProductionFlowLoader />;
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending': return 'bg-gray-100 text-gray-800';
+    case 'in_progress': return 'bg-blue-100 text-blue-800';
+    case 'completed': return 'bg-green-100 text-green-800';
+    default: return 'bg-gray-100 text-gray-800';
   }
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeDragStop={onNodeDragStop}
-      onInit={onInit}
-      onViewportChange={onViewportChange}
-      nodeTypes={nodeTypes}
-      fitView={false}
-      attributionPosition="bottom-left"
-      className="bg-background"
-      panOnScroll={true}
-      panOnScrollSpeed={0.5}
-      zoomOnScroll={true}
-      zoomOnPinch={true}
-      minZoom={0.5}
-      maxZoom={1.5}
-    >
-      <Controls showZoom={true} showFitView={true} />
-      <MiniMap 
-        className="bg-background border"
-        nodeClassName={() => 'fill-primary/20'}
-      />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
-    </ReactFlow>
-  );
 };
 
-const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
-  manufacturingOrders,
-  onViewDetails
-}) => {
-  const { orderSteps, manufacturingSteps, stepFields, isLoading: isLoadingSteps } = useManufacturingSteps();
-  const { stepValues, isLoading: isLoadingValues } = useManufacturingStepValues();
-  const { userNodePositions, updateNodePosition, resetPositions, hasUserPosition } = useNodePositions();
-  const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
-  const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState<any>(false);
-  const [selectedStepForStart, setSelectedStepForStart] = useState<any>(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
+const getPriorityColor = (priority: string) => {
+  switch (priority.toLowerCase()) {
+    case 'urgent': return 'bg-red-500 text-white';
+    case 'high': return 'bg-orange-500 text-white';
+    case 'medium': return 'bg-yellow-500 text-white';
+    case 'low': return 'bg-green-500 text-white';
+    default: return 'bg-gray-500 text-white';
+  }
+};
+
+const FlowContent = ({ manufacturingOrders, onViewDetails }: ProductionFlowViewProps) => {
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const { workers } = useWorkers();
+  const { nodePositions, updateNodePosition } = useNodePositions();
+  const { fitView, setViewport } = useReactFlow();
   
-  // Simplified loading state management - only show loading on initial load
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [selectedOrderStep, setSelectedOrderStep] = React.useState<{
+    order: any;
+    step: any;
+  } | null>(null);
+  const [startStepDialogOpen, setStartStepDialogOpen] = React.useState(false);
 
-  // Only show loading on the very first load
-  const isLoading = (isLoadingSteps || isLoadingValues || manufacturingOrders.length === 0) && !hasInitiallyLoaded;
+  const handleStartStep = (order: any, step: any) => {
+    setSelectedOrderStep({ order, step });
+    setStartStepDialogOpen(true);
+  };
 
-  // Mark as initially loaded once we have data
-  useEffect(() => {
-    if (!isLoadingSteps && !isLoadingValues && manufacturingOrders.length > 0 && !hasInitiallyLoaded) {
-      setHasInitiallyLoaded(true);
+  const canStartStep = (order: any, step: any) => {
+    // Can start if this is the first step and no steps exist yet
+    if (!order.currentStep && step.step_order === 1) {
+      return true;
     }
-  }, [isLoadingSteps, isLoadingValues, manufacturingOrders.length, hasInitiallyLoaded]);
-
-  console.log('ProductionFlowView render - orderSteps:', orderSteps.length, 'stepValues:', stepValues.length, 'stepFields:', stepFields.length);
-
-  const handleViewDetails = useCallback((order: ManufacturingOrder) => {
-    setSelectedOrder(order);
-    setDetailsDialogOpen(true);
-  }, []);
-
-  const handleStepClick = useCallback((orderStep: any) => {
-    console.log('Step clicked:', orderStep);
-    setSelectedOrderStep(orderStep);
-    setUpdateStepDialogOpen(true);
-  }, []);
-
-  const handleNextStepClick = useCallback((orderStep: any) => {
-    // Find the current order
-    const currentOrder = manufacturingOrders.find(o => o.id === orderStep.manufacturing_order_id);
-    if (!currentOrder) return;
-
-    const currentStepOrder = orderStep.manufacturing_steps?.step_order;
     
-    // Find the next step from merchant's configuration
-    const nextStep = manufacturingSteps
-      .filter(step => step.is_active && step.step_order > currentStepOrder)
-      .sort((a, b) => a.step_order - b.step_order)[0];
-
-    console.log('Next step found:', nextStep);
-
-    if (nextStep) {
-      setSelectedOrder(currentOrder);
-      setSelectedStepForStart(nextStep);
-      setStartStepDialogOpen(true);
-    } else {
-      console.log('No next step found - this is the final step');
+    // Can start if current step status is pending
+    if (order.currentStep && order.stepStatus === 'pending') {
+      return true;
     }
-  }, [manufacturingOrders, manufacturingSteps]);
-
-  // Handle node drag to save positions
-  const onNodeDragStop: OnNodeDrag = useCallback((event, node) => {
-    updateNodePosition(node.id, node.position);
-  }, [updateNodePosition]);
-
-  // Convert manufacturing orders and their steps to React Flow nodes
-  const initialNodes: Node[] = useMemo(() => {
-    if (isLoading) return [];
     
-    console.log('Recalculating nodes...');
-    const nodes: Node[] = [];
-    
+    return false;
+  };
+
+  // Generate nodes and edges
+  const { nodes, edges } = useMemo(() => {
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Calculate order node position
+      // 1. Manufacturing Order Node
       const orderNodeId = `order-${order.id}`;
       const orderPosition = generateOrderRowLayout(
         manufacturingOrders.length,
         orderIndex,
-        hasUserPosition(orderNodeId) ? userNodePositions[orderNodeId] : undefined
+        nodePositions[orderNodeId]
       );
-      
-      // Add manufacturing order node
-      nodes.push({
+
+      newNodes.push({
         id: orderNodeId,
         type: 'manufacturingOrder',
         position: orderPosition,
-        data: { 
-          ...order, 
-          onViewDetails: handleViewDetails,
-        } as unknown as Record<string, unknown>,
+        data: {
+          id: order.id,
+          order_number: order.order_number,
+          product_name: order.product_name,
+          priority: order.priority,
+          status: order.status,
+          quantity_required: order.quantity_required,
+          createdAt: new Date(order.created_at),
+          dueDate: order.due_date ? new Date(order.due_date) : undefined,
+          productConfigs: order.product_configs,
+        },
       });
 
-      // Add step progress nodes for this order
-      const orderStepsFiltered = orderSteps.filter(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status !== 'pending'
-      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+      // 2. Manufacturing Step Nodes
+      const orderOrderSteps = orderSteps.filter(step => String(step.manufacturing_order_id) === String(order.id));
 
-      orderStepsFiltered.forEach((orderStep, stepIndex) => {
-        const stepNodeId = `step-${orderStep.id}`;
-        const stepPosition = generateStepLayout(
-          orderPosition,
-          stepIndex,
-          hasUserPosition(stepNodeId) ? userNodePositions[stepNodeId] : undefined
-        );
-        
-        const stepStepValues = stepValues.filter(v => v.manufacturing_order_step_id === orderStep.id);
-        
-        // Get step fields for this specific step
-        const stepStepFields = stepFields.filter(field => 
-          field.manufacturing_step_id === orderStep.manufacturing_step_id
-        );
-        
-        console.log(`Step ${orderStep.id} - stepFields:`, stepStepFields);
-        console.log(`Step ${orderStep.id} - stepValues:`, stepStepValues);
-        
-        nodes.push({
-          id: stepNodeId,
-          type: 'stepProgress',
-          position: stepPosition,
-          data: { 
-            orderStep, 
-            onStepClick: handleStepClick,
-            onNextStepClick: handleNextStepClick,
-            stepValues: stepStepValues,
-            stepFields: stepStepFields,
-            manufacturingSteps: manufacturingSteps, // Pass manufacturing steps for next step detection
-          } as unknown as Record<string, unknown>,
-        });
-      });
-    });
+      if (orderOrderSteps.length === 0) {
+        // No steps created yet - this order should appear in first step as "not started"
+        const firstStep = manufacturingSteps
+          .filter(step => step.is_active)
+          .sort((a, b) => a.step_order - b.step_order)[0];
 
-    return nodes;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepValues, stepFields, userNodePositions, hasUserPosition, handleViewDetails, handleStepClick, handleNextStepClick, isLoading]);
+        if (firstStep) {
+          const stepNodeId = `step-${firstStep.id}-${order.id}`;
+          const stepIndex = 0; // First step
+          const stepPosition = generateStepLayout(
+            orderPosition,
+            stepIndex,
+            nodePositions[stepNodeId]
+          );
 
-  const initialEdges: Edge[] = useMemo(() => {
-    if (isLoading) return [];
-    
-    const edges: Edge[] = [];
-    
-    manufacturingOrders.forEach((order) => {
-      const orderStepsFiltered = orderSteps.filter(step => 
-        step.manufacturing_order_id === order.id && 
-        step.status !== 'pending'
-      ).sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+          newNodes.push({
+            id: stepNodeId,
+            type: 'manufacturingStep',
+            position: stepPosition,
+            data: {
+              id: firstStep.id,
+              step_name: firstStep.step_name,
+              step_order: firstStep.step_order,
+              qc_required: firstStep.qc_required,
+              orderStep: {
+                ...order,
+                manufacturing_steps: firstStep,
+                status: 'not_started',
+                manufacturing_order_id: order.id,
+              }
+            },
+          });
 
-      if (orderStepsFiltered.length > 0) {
-        // Connect order to first step
-        edges.push({
-          id: `edge-order-${order.id}-step-${orderStepsFiltered[0].id}`,
-          source: `order-${order.id}`,
-          target: `step-${orderStepsFiltered[0].id}`,
-          type: 'smoothstep',
-          animated: true,
-          style: { 
-            stroke: '#3b82f6', 
-            strokeWidth: 2,
-            strokeDasharray: '5,5'
-          },
-        });
-
-        // Connect steps to each other
-        for (let i = 0; i < orderStepsFiltered.length - 1; i++) {
-          edges.push({
-            id: `edge-step-${orderStepsFiltered[i].id}-step-${orderStepsFiltered[i + 1].id}`,
-            source: `step-${orderStepsFiltered[i].id}`,
-            target: `step-${orderStepsFiltered[i + 1].id}`,
+          newEdges.push({
+            id: `edge-${orderNodeId}-${stepNodeId}`,
+            source: orderNodeId,
+            target: stepNodeId,
             type: 'smoothstep',
             animated: true,
-            style: { 
-              stroke: '#3b82f6', 
+            style: {
               strokeWidth: 2,
-              strokeDasharray: '5,5'
+              stroke: '#a1a1aa',
             },
           });
         }
+      } else {
+        orderOrderSteps.forEach((orderStep, stepIndex) => {
+          const stepNodeId = `step-${orderStep.manufacturing_step_id}-${order.id}`;
+          const stepPosition = generateStepLayout(
+            orderPosition,
+            stepIndex,
+            nodePositions[stepNodeId]
+          );
+
+          newNodes.push({
+            id: stepNodeId,
+            type: 'manufacturingStep',
+            position: stepPosition,
+            data: {
+              id: orderStep.manufacturing_step_id,
+              step_name: orderStep.manufacturing_steps?.step_name || 'Step Name N/A',
+              step_order: orderStep.manufacturing_steps?.step_order || stepIndex + 1,
+              qc_required: orderStep.manufacturing_steps?.qc_required || false,
+              orderStep: {
+                ...orderStep,
+                manufacturing_steps: orderStep.manufacturing_steps,
+                manufacturing_order_id: order.id,
+              }
+            },
+          });
+
+          newEdges.push({
+            id: `edge-${orderNodeId}-${stepNodeId}`,
+            source: orderNodeId,
+            target: stepNodeId,
+            type: 'smoothstep',
+            animated: true,
+            style: {
+              strokeWidth: 2,
+              stroke: '#a1a1aa',
+            },
+          });
+        });
       }
     });
 
-    return edges;
-  }, [manufacturingOrders, orderSteps, isLoading]);
+    return {
+      nodes: newNodes,
+      edges: newEdges,
+    };
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, nodePositions, workers]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  // Update nodes when initialNodes change with debouncing to prevent excessive updates
+  // Set default viewport on component mount
   useEffect(() => {
-    if (!isLoading) {
-      console.log('Updating React Flow nodes due to data changes');
-      // Small delay to ensure smooth updates
-      const timeoutId = setTimeout(() => {
-        setNodes(initialNodes);
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
+    if (nodes.length > 0) {
+      // Set viewport to focus on the upper-left area where the first card is positioned
+      setViewport({ x: 0, y: 0, zoom: 1 });
     }
-  }, [initialNodes, isLoading, setNodes]);
+  }, [nodes.length, setViewport]);
 
-  // Update edges when initialEdges change
-  useEffect(() => {
-    if (!isLoading) {
-      const timeoutId = setTimeout(() => {
-        setEdges(initialEdges);
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [initialEdges, isLoading, setEdges]);
+  const [nodesState, setNodes, onNodesChange] = useNodesState(nodes);
+  const [edgesState, setEdges, onEdgesChange] = useEdgesState(edges);
 
-  const onConnect = useCallback(
-    (params: any) => setEdges((eds) => [...eds]),
-    [setEdges]
+  const onNodeDragStop = useCallback(
+    (event, node) => {
+      updateNodePosition(node.id, node.position);
+    },
+    [updateNodePosition]
   );
 
-  // Get current order step data for update dialog with improved debugging
-  const currentOrderStep = selectedOrderStep;
-  const currentStepFields = stepFields.filter(field => 
-    field.manufacturing_step_id === currentOrderStep?.manufacturing_step_id
+  const onNodeClick = useCallback(
+    (event, node) => {
+      if (node.type === 'manufacturingOrder') {
+        const orderId = node.id.split('-')[1];
+        const order = manufacturingOrders.find(order => order.id === orderId);
+        if (order) {
+          onViewDetails(order);
+        }
+      }
+    },
+    [manufacturingOrders, onViewDetails]
   );
-  
-  // Improved previous steps calculation with debugging
-  const previousSteps = useMemo(() => {
-    if (!currentOrderStep) return [];
-    
-    const steps = orderSteps
-      .filter(step => 
-        step.manufacturing_order_id === currentOrderStep.manufacturing_order_id &&
-        (step.manufacturing_steps?.step_order || 0) < (currentOrderStep.manufacturing_steps?.step_order || 0)
-      )
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
-    
-    console.log('Previous steps for step', currentOrderStep.id, ':', steps);
-    return steps;
-  }, [orderSteps, currentOrderStep]);
-
-  if (isFullScreen) {
-    return (
-      <>
-        <div className="fixed inset-0 z-50 bg-background">
-          {/* Full-screen controls */}
-          <div className="absolute top-4 right-4 z-10 flex gap-2">
-            <Button
-              onClick={resetPositions}
-              variant="outline"
-              size="sm"
-              className="bg-background/80 backdrop-blur-sm"
-              disabled={isLoading}
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset Layout
-            </Button>
-            <Button
-              onClick={() => setIsFullScreen(false)}
-              variant="outline"
-              size="sm"
-              className="bg-background/80 backdrop-blur-sm"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Exit Full Screen
-            </Button>
-          </div>
-          <ReactFlowProvider>
-            <FlowContent
-              manufacturingOrders={manufacturingOrders}
-              isLoading={isLoading}
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeDragStop={onNodeDragStop}
-            />
-          </ReactFlowProvider>
-        </div>
-
-        {/* Dialogs remain accessible in full screen */}
-        <ManufacturingOrderDetailsDialog
-          order={selectedOrder}
-          open={detailsDialogOpen}
-          onOpenChange={setDetailsDialogOpen}
-          getPriorityColor={(priority: string) => {
-            switch (priority.toLowerCase()) {
-              case 'urgent': return 'bg-red-500 text-white';
-              case 'high': return 'bg-orange-500 text-white';
-              case 'medium': return 'bg-yellow-500 text-white';
-              case 'low': return 'bg-green-500 text-white';
-              default: return 'bg-gray-500 text-white';
-            }
-          }}
-          getStatusColor={(status: string) => {
-            switch (status.toLowerCase()) {
-              case 'pending': return 'bg-gray-100 text-gray-800';
-              case 'in_progress': return 'bg-blue-100 text-blue-800';
-              case 'completed': return 'bg-green-100 text-green-800';
-              default: return 'bg-gray-100 text-gray-800';
-            }
-          }}
-        />
-
-        <UpdateStepDialog
-          open={updateStepDialogOpen}
-          onOpenChange={setUpdateStepDialogOpen}
-          stepData={currentOrderStep ? {
-            stepName: currentOrderStep.manufacturing_steps?.step_name || '',
-            stepOrder: currentOrderStep.manufacturing_steps?.step_order || 0,
-            orderId: currentOrderStep.manufacturing_order_id,
-            orderNumber: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.order_number || '',
-            productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
-            status: currentOrderStep.status,
-            progress: currentOrderStep.progress_percentage || 0,
-            stepFields: currentStepFields, // Pass stepFields to UpdateStepDialog
-          } : null}
-          currentOrderStep={currentOrderStep}
-          stepFields={currentStepFields}
-          previousSteps={previousSteps}
-        />
-
-        <StartStepDialog
-          isOpen={startStepDialogOpen}
-          onClose={() => setStartStepDialogOpen(false)}
-          order={selectedOrder}
-          step={selectedStepForStart}
-        />
-      </>
-    );
-  }
 
   return (
-    <>
-      <div className="w-full h-[600px] border rounded-lg bg-background relative">
-        {/* Control buttons */}
-        <div className="absolute top-2 right-2 z-10 flex gap-2">
-          <Button
-            onClick={() => setIsFullScreen(true)}
-            variant="outline"
-            size="sm"
-            className="bg-background/80 backdrop-blur-sm"
-            disabled={isLoading}
-          >
-            <Maximize2 className="h-4 w-4 mr-1" />
-            Full Screen
-          </Button>
-          <Button
-            onClick={resetPositions}
-            variant="outline"
-            size="sm"
-            className="bg-background/80 backdrop-blur-sm"
-            disabled={isLoading}
-          >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reset Layout
-          </Button>
-        </div>
+    <div className="h-[800px] w-full border rounded-lg bg-gray-50">
+      <ReactFlow
+        nodes={nodesState}
+        edges={edgesState}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
+        onNodeClick={onNodeClick}
+        nodeTypes={nodeTypes}
+        fitView={false}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        minZoom={0.5}
+        maxZoom={2}
+        snapToGrid={true}
+        snapGrid={[15, 15]}
+      >
+        <Background />
+        <Controls />
+        <MiniMap 
+          nodeStrokeColor={(n) => {
+            if (n.type === 'manufacturingOrder') return '#3b82f6';
+            if (n.type === 'manufacturingStep') return '#10b981';
+            return '#6b7280';
+          }}
+          nodeColor={(n) => {
+            if (n.type === 'manufacturingOrder') return '#dbeafe';
+            if (n.type === 'manufacturingStep') return '#d1fae5';
+            return '#f3f4f6';
+          }}
+          maskColor="rgb(240, 240, 240, 0.8)"
+        />
+      </ReactFlow>
 
-        <ReactFlowProvider>
-          <FlowContent
-            manufacturingOrders={manufacturingOrders}
-            isLoading={isLoading}
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDragStop={onNodeDragStop}
-          />
-        </ReactFlowProvider>
-      </div>
-
-      {/* Dialogs */}
-      <ManufacturingOrderDetailsDialog
-        order={selectedOrder}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        getPriorityColor={(priority: string) => {
-          switch (priority.toLowerCase()) {
-            case 'urgent': return 'bg-red-500 text-white';
-            case 'high': return 'bg-orange-500 text-white';
-            case 'medium': return 'bg-yellow-500 text-white';
-            case 'low': return 'bg-green-500 text-white';
-            default: return 'bg-gray-500 text-white';
-          }
-        }}
-        getStatusColor={(status: string) => {
-          switch (status.toLowerCase()) {
-            case 'pending': return 'bg-gray-100 text-gray-800';
-            case 'in_progress': return 'bg-blue-100 text-blue-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            default: return 'bg-gray-100 text-gray-800';
-          }
-        }}
-      />
-
-      <UpdateStepDialog
-        open={updateStepDialogOpen}
-        onOpenChange={setUpdateStepDialogOpen}
-        stepData={currentOrderStep ? {
-          stepName: currentOrderStep.manufacturing_steps?.step_name || '',
-          stepOrder: currentOrderStep.manufacturing_steps?.step_order || 0,
-          orderId: currentOrderStep.manufacturing_order_id,
-          orderNumber: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.order_number || '',
-          productName: manufacturingOrders.find(o => o.id === currentOrderStep.manufacturing_order_id)?.product_name || '',
-          status: currentOrderStep.status,
-          progress: currentOrderStep.progress_percentage || 0,
-          stepFields: currentStepFields,
-        } : null}
-        currentOrderStep={currentOrderStep}
-        stepFields={currentStepFields}
-        previousSteps={previousSteps}
-      />
-
+      {/* Start Step Dialog */}
       <StartStepDialog
         isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={selectedOrder}
-        step={selectedStepForStart}
+        onClose={() => {
+          setStartStepDialogOpen(false);
+          setSelectedOrderStep(null);
+        }}
+        order={selectedOrderStep?.order || null}
+        step={selectedOrderStep?.step || null}
       />
-    </>
+    </div>
+  );
+};
+
+const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFlowViewProps) => {
+  return (
+    <ReactFlowProvider>
+      <FlowContent manufacturingOrders={manufacturingOrders} onViewDetails={onViewDetails} />
+    </ReactFlowProvider>
   );
 };
 
