@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
@@ -20,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory, Workflow, Hash } from 'lucide-react';
+import { Package2, Calendar, Play, RotateCcw, Maximize2, X, Factory } from 'lucide-react';
 import { format } from 'date-fns';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -58,27 +59,6 @@ const ProductionFlowLoader = () => (
     </div>
   </div>
 );
-
-// Sequence indicator component
-const SequenceIndicatorNodeComponent: React.FC<NodeProps> = ({ data }) => {
-  const sequenceData = data as { sequenceNumber: number; isFirst: boolean; isLast: boolean };
-  
-  return (
-    <div className="flex flex-col items-center justify-center">
-      <div className="relative">
-        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-lg">
-          {sequenceData.sequenceNumber}
-        </div>
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-          <Hash className="w-2 h-2 text-white" />
-        </div>
-      </div>
-      <div className="mt-2 text-xs text-center text-muted-foreground font-medium">
-        {sequenceData.isFirst ? 'Start' : sequenceData.isLast ? 'End' : 'Queue'}
-      </div>
-    </div>
-  );
-};
 
 // Custom node component for manufacturing orders
 const ManufacturingOrderNodeComponent: React.FC<NodeProps> = ({ data }) => {
@@ -236,7 +216,6 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
 const nodeTypes = {
   manufacturingOrder: ManufacturingOrderNodeComponent,
   stepProgress: StepProgressNodeComponent,
-  sequenceIndicator: SequenceIndicatorNodeComponent,
 };
 
 // Auto-focus hook that works within ReactFlow context
@@ -413,26 +392,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     const nodes: Node[] = [];
     
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Add sequence indicator before each order (except the first one gets a special start indicator)
-      const sequenceNodeId = `sequence-${order.id}`;
-      const sequencePosition = {
-        x: orderIndex * 500 - 100, // Position before the order card
-        y: 50
-      };
-      
-      nodes.push({
-        id: sequenceNodeId,
-        type: 'sequenceIndicator',
-        position: sequencePosition,
-        data: {
-          sequenceNumber: orderIndex + 1,
-          isFirst: orderIndex === 0,
-          isLast: orderIndex === manufacturingOrders.length - 1
-        } as unknown as Record<string, unknown>,
-        draggable: false,
-        selectable: false,
-      });
-      
       // Calculate order node position
       const orderNodeId = `order-${order.id}`;
       const orderPosition = generateOrderRowLayout(
@@ -502,20 +461,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     const edges: Edge[] = [];
     
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Connect sequence indicator to order
-      edges.push({
-        id: `edge-sequence-${order.id}-order-${order.id}`,
-        source: `sequence-${order.id}`,
-        target: `order-${order.id}`,
-        type: 'smoothstep',
-        animated: false,
-        style: { 
-          stroke: '#3b82f6', 
-          strokeWidth: 3,
-          strokeDasharray: '8,4'
-        },
-      });
-      
       const orderStepsFiltered = orderSteps.filter(step => 
         step.manufacturing_order_id === order.id && 
         step.status !== 'pending'
@@ -553,18 +498,18 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
         }
       }
       
-      // Connect to next order sequence indicator if it exists
+      // Connect to next order if it exists
       if (orderIndex < manufacturingOrders.length - 1) {
         const nextOrder = manufacturingOrders[orderIndex + 1];
         const hasCurrentSteps = orderStepsFiltered.length > 0;
         
         if (hasCurrentSteps) {
-          // Connect from last step to next sequence indicator
+          // Connect from last step to next order
           const lastStep = orderStepsFiltered[orderStepsFiltered.length - 1];
           edges.push({
-            id: `edge-step-${lastStep.id}-sequence-${nextOrder.id}`,
+            id: `edge-step-${lastStep.id}-order-${nextOrder.id}`,
             source: `step-${lastStep.id}`,
-            target: `sequence-${nextOrder.id}`,
+            target: `order-${nextOrder.id}`,
             type: 'smoothstep',
             animated: false,
             style: { 
@@ -574,11 +519,11 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
             },
           });
         } else {
-          // Connect from order to next sequence indicator
+          // Connect from order to next order
           edges.push({
-            id: `edge-order-${order.id}-sequence-${nextOrder.id}`,
+            id: `edge-order-${order.id}-order-${nextOrder.id}`,
             source: `order-${order.id}`,
-            target: `sequence-${nextOrder.id}`,
+            target: `order-${nextOrder.id}`,
             type: 'smoothstep',
             animated: false,
             style: { 
