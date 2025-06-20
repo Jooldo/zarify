@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import OrdersReceivedTrendChart from './OrdersReceivedTrendChart';
+import ExpectedDeliveryTrendChart from './ExpectedDeliveryTrendChart';
 import { format, subDays, isAfter, isBefore, addDays } from 'date-fns';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 
@@ -147,6 +148,9 @@ const OrderSection = ({ orders, loading }: OrderSectionProps) => {
 
       {/* Orders Received & Quantity Trend Chart */}
       <OrdersReceivedTrendChart orders={orders} loading={loading} />
+
+      {/* Expected Delivery Trend Chart */}
+      <ExpectedDeliveryTrendChart orders={orders} loading={loading} />
     </div>
   );
 };
