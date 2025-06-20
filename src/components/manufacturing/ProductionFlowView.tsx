@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -13,6 +13,7 @@ import {
   Position,
   BackgroundVariant,
   OnNodeDrag,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,35 @@ interface ProductionFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails: (order: ManufacturingOrder) => void;
 }
+
+// Custom hook for auto-focusing the first card
+const useAutoFocusFirstCard = (manufacturingOrders: ManufacturingOrder[], isLoading: boolean) => {
+  const { fitView } = useReactFlow();
+  const hasAutoFocused = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && manufacturingOrders.length > 0 && !hasAutoFocused.current) {
+      // Small delay to ensure nodes are rendered
+      const timer = setTimeout(() => {
+        fitView({ 
+          nodes: [{ id: `order-${manufacturingOrders[0].id}` }],
+          padding: 0.2,
+          duration: 800
+        });
+        hasAutoFocused.current = true;
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, manufacturingOrders, fitView]);
+
+  // Reset the flag when manufacturing orders change significantly
+  useEffect(() => {
+    if (manufacturingOrders.length === 0) {
+      hasAutoFocused.current = false;
+    }
+  }, [manufacturingOrders.length]);
+};
 
 // Loading component for React Flow
 const ProductionFlowLoader = () => (
@@ -192,14 +222,12 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
     stepFields: any[];
   };
   
-  console.log('StepProgressNodeComponent - stepData:', stepData);
-  
   return (
     <>
       <Handle type="target" position={Position.Left} />
       <ManufacturingStepProgressCard
         orderStep={stepData.orderStep}
-        stepFields={stepData.stepFields} // Pass stepFields here
+        stepFields={stepData.stepFields}
         onClick={() => stepData.onStepClick(stepData.orderStep)}
         onNextStepClick={() => stepData.onNextStepClick(stepData.orderStep)}
       />
@@ -211,6 +239,53 @@ const StepProgressNodeComponent: React.FC<NodeProps> = ({ data }) => {
 const nodeTypes = {
   manufacturingOrder: ManufacturingOrderNodeComponent,
   stepProgress: StepProgressNodeComponent,
+};
+
+// Main Flow Content Component with auto-focus hook
+const FlowContent: React.FC<{
+  manufacturingOrders: ManufacturingOrder[];
+  isLoading: boolean;
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: any;
+  onEdgesChange: any;
+  onConnect: any;
+  onNodeDragStop: OnNodeDrag;
+}> = ({ manufacturingOrders, isLoading, nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDragStop }) => {
+  // Use the auto-focus hook
+  useAutoFocusFirstCard(manufacturingOrders, isLoading);
+
+  if (isLoading) {
+    return <ProductionFlowLoader />;
+  }
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onNodeDragStop={onNodeDragStop}
+      nodeTypes={nodeTypes}
+      fitView={false} // Disable default fitView since we handle it manually
+      attributionPosition="bottom-left"
+      className="bg-background"
+      panOnScroll={true}
+      panOnScrollSpeed={0.5}
+      zoomOnScroll={true}
+      zoomOnPinch={true}
+      minZoom={0.5}
+      maxZoom={1.5}
+    >
+      <Controls showZoom={true} showFitView={true} />
+      <MiniMap 
+        className="bg-background border"
+        nodeClassName={() => 'fill-primary/20'}
+      />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
+    </ReactFlow>
+  );
 };
 
 const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
@@ -436,40 +511,6 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
     return steps;
   }, [orderSteps, currentOrderStep]);
 
-  const FlowContent = () => {
-    if (isLoading) {
-      return <ProductionFlowLoader />;
-    }
-
-    return (
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        className="bg-background"
-        panOnScroll={true}
-        panOnScrollSpeed={0.5}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
-        minZoom={0.5}
-        maxZoom={1.5}
-      >
-        <Controls showZoom={true} showFitView={true} />
-        <MiniMap 
-          className="bg-background border"
-          nodeClassName={() => 'fill-primary/20'}
-        />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
-      </ReactFlow>
-    );
-  };
-
   if (isFullScreen) {
     return (
       <>
@@ -496,7 +537,16 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
               Exit Full Screen
             </Button>
           </div>
-          <FlowContent />
+          <FlowContent
+            manufacturingOrders={manufacturingOrders}
+            isLoading={isLoading}
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeDragStop={onNodeDragStop}
+          />
         </div>
 
         {/* Dialogs remain accessible in full screen */}
@@ -578,7 +628,16 @@ const ProductionFlowView: React.FC<ProductionFlowViewProps> = ({
           </Button>
         </div>
 
-        <FlowContent />
+        <FlowContent
+          manufacturingOrders={manufacturingOrders}
+          isLoading={isLoading}
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeDragStop={onNodeDragStop}
+        />
       </div>
 
       {/* Dialogs */}
