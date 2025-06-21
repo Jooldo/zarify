@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -386,7 +385,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
       </Dialog>
 
       <StartStepDialog
-        isOpen={startStepDialogOpensuccessfully.}
+        isOpen={startStepDialogOpen}
         onClose={() => setStartStepDialogOpen(false)}
         order={order}
         step={selectedStep}
