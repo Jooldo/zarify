@@ -123,55 +123,55 @@ const ProcurementRequestsTable = ({
         <Table>
           <TableHeader>
             <TableRow className="border-b border-gray-200 bg-gray-50/50">
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Request ID
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Material & Type
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Total Quantity
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Origin
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Supplier
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Status
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   ETA
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Raised By
                   <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">Actions</TableHead>
+              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -181,7 +181,7 @@ const ProcurementRequestsTable = ({
               
               return (
                 <TableRow key={request.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">{request.request_number}</span>
                       {isIncomplete && (
@@ -189,13 +189,13 @@ const ProcurementRequestsTable = ({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     {getMaterialDisplayText(request)}
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <span className="font-medium text-gray-900">{getTotalQuantity(request)} {request.unit}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <Badge 
                       variant={
                         origin === 'inventory' ? "secondary" : 
@@ -209,47 +209,47 @@ const ProcurementRequestsTable = ({
                        'Single'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <span className="text-gray-900">{extractSupplierFromNotes(request.notes)}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <Badge variant={getStatusVariant(request.status)} className="text-sm px-3 py-1">
                       {request.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <span className="text-gray-900">
                       {request.eta ? new Date(request.eta).toLocaleDateString() : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-14 px-4 py-2">
                     <span className="text-gray-900">{request.raised_by || '-'}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <div className="flex items-center gap-3">
+                  <TableCell className="h-14 px-4 py-2">
+                    <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
                         onClick={() => onViewRequest(request)}
                       >
-                        <Eye className="h-4 w-4 text-gray-600" />
+                        <Eye className="h-3 w-3 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                         onClick={() => onGenerateBOM(request)}
                       >
-                        <FileText className="h-4 w-4 text-gray-600" />
+                        <FileText className="h-3 w-3 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
+                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
                         onClick={() => onDeleteRequest(request)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>

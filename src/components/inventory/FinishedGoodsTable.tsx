@@ -115,11 +115,11 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
       <div className="bg-white rounded-lg border border-gray-200">
         <Table>
           <TableHeader>
-            <TableRow className="h-12 bg-gray-50 border-b border-gray-200">
-              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Product Code</TableHead>
-              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
+            <TableRow className="h-10 bg-gray-50 border-b border-gray-200">
+              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Product Code</TableHead>
+              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Threshold</TableHead>
               <TableHead 
-                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-2 px-3 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('ordered_qty')}
               >
                 <div className="flex flex-col items-center justify-center gap-1">
@@ -141,13 +141,13 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                 </div>
               </TableHead>
               <TableHead 
-                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-2 px-3 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('current_stock')}
               >
                 Current Stock {getSortIcon('current_stock')}
               </TableHead>
               <TableHead 
-                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-2 px-3 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('in_manufacturing')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -164,7 +164,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                 </div>
               </TableHead>
               <TableHead 
-                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-2 px-3 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('shortfall')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -180,7 +180,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">
+              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">
                 <div className="flex items-center gap-1">
                   <span>Status</span>
                   <Tooltip>
@@ -193,7 +193,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Actions</TableHead>
+              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -215,8 +215,8 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
               const StatusIcon = statusInfo.icon;
 
               return (
-                <TableRow key={product.id} className="h-16 hover:bg-gray-50 border-b border-gray-100">
-                  <TableCell className="px-4 py-3 font-mono text-sm bg-gray-50">
+                <TableRow key={product.id} className="h-12 hover:bg-gray-50 border-b border-gray-100">
+                  <TableCell className="px-3 py-2 font-mono text-sm bg-gray-50">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -225,10 +225,10 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       {product.product_code}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900">
+                  <TableCell className="px-3 py-2 text-sm font-medium text-gray-900">
                     {formatIndianNumber(product.threshold)}
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-center">
+                  <TableCell className="py-2 px-3 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -237,15 +237,15 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       {formatIndianNumber(product.required_quantity)}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm font-medium text-center text-gray-900">
+                  <TableCell className="px-3 py-2 text-sm font-medium text-center text-gray-900">
                     {formatIndianNumber(product.current_stock)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-center">
+                  <TableCell className="px-3 py-2 text-center">
                     <span className="text-sm font-medium text-orange-600">
                       {formatIndianNumber(product.in_manufacturing)}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-center">
+                  <TableCell className="px-3 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatIndianNumber(Math.abs(shortfall))}
@@ -257,7 +257,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-3 py-2">
                     <div className={`flex items-center gap-1 px-3 py-1 rounded-full ${statusInfo.bgColor}`}>
                       <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
@@ -265,15 +265,15 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-3 py-2">
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="icon"
-                        className="h-8 w-8 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-7 w-7 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => onEditProduct(product)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </Button>
                     </div>
                   </TableCell>
