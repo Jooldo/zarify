@@ -257,40 +257,40 @@ const ManufacturingDashboard = () => {
         </Card>
       </div>
 
+      {/* Unified Search and Filter Controls - Outside of tabs */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search manufacturing orders..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          <ManufacturingOrdersFilter onFiltersChange={setFilters} />
+        </div>
+      </div>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="table" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 bg-muted h-12">
+          <TabsTrigger value="table" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
             <Table className="h-4 w-4" />
             Table View
           </TabsTrigger>
-          <TabsTrigger value="kanban" className="flex items-center gap-2">
+          <TabsTrigger value="kanban" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
             <Kanban className="h-4 w-4" />
             Kanban View
           </TabsTrigger>
-          <TabsTrigger value="flow" className="flex items-center gap-2">
+          <TabsTrigger value="flow" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
             <Workflow className="h-4 w-4" />
             Flow View
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="table" className="space-y-4">
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-2 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search manufacturing orders..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-8"
-                />
-              </div>
-              <ManufacturingOrdersFilter onFiltersChange={setFilters} />
-            </div>
-          </div>
-
+        <TabsContent value="table" className="mt-4 space-y-4">
           {filteredOrders.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
