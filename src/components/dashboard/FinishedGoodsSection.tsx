@@ -135,64 +135,6 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
 
       {/* Other Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Stock Volume Distribution */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <Package className="h-5 w-5 text-orange-600" />
-              Stock Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={finishedGoodsMetrics.stockDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  dataKey="value"
-                >
-                  {finishedGoodsMetrics.stockDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-wrap gap-2 mt-4">
-              {finishedGoodsMetrics.stockDistribution.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-xs text-gray-600">{item.name}: {item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ready by Category */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <Factory className="h-5 w-5 text-blue-600" />
-              Ready by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={finishedGoodsMetrics.readyByCategory}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip />
-                <Bar dataKey="ready" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
         {/* Top Performers */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader>

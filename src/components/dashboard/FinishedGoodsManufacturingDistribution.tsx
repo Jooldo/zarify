@@ -16,6 +16,8 @@ interface StepDistribution {
   status: 'in_progress';
   hasQuantityField: boolean;
   hasWeightField: boolean;
+  quantityUnit: string | null;
+  weightUnit: string | null;
 }
 
 interface FinishedGoodsManufacturingDistributionProps {
@@ -71,6 +73,10 @@ const FinishedGoodsManufacturingDistribution = ({
       const hasQuantityField = !!quantityField;
       const hasWeightField = !!weightField;
 
+      // Get units from field options
+      const quantityUnit = quantityField?.field_options?.unit || null;
+      const weightUnit = weightField?.field_options?.unit || null;
+
       // Only calculate totals if fields exist
       if (hasQuantityField) {
         totalQuantity = 0;
@@ -99,7 +105,9 @@ const FinishedGoodsManufacturingDistribution = ({
         orderCount: orderStepsInStep.length,
         status: 'in_progress',
         hasQuantityField,
-        hasWeightField
+        hasWeightField,
+        quantityUnit,
+        weightUnit
       });
     });
 
@@ -186,7 +194,12 @@ const FinishedGoodsManufacturingDistribution = ({
                   <span className="text-sm font-medium text-emerald-700">Quantity</span>
                 </div>
                 {step.hasQuantityField ? (
-                  <span className="text-lg font-bold text-emerald-800">{step.totalQuantity}</span>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-emerald-800">{step.totalQuantity}</span>
+                    {step.quantityUnit && (
+                      <span className="text-sm text-emerald-600 ml-1">{step.quantityUnit}</span>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-sm text-gray-500 italic">Not Applicable</span>
                 )}
@@ -199,7 +212,12 @@ const FinishedGoodsManufacturingDistribution = ({
                   <span className="text-sm font-medium text-orange-700">Weight</span>
                 </div>
                 {step.hasWeightField ? (
-                  <span className="text-lg font-bold text-orange-800">{step.totalWeight?.toFixed(2)}</span>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-orange-800">{step.totalWeight?.toFixed(2)}</span>
+                    {step.weightUnit && (
+                      <span className="text-sm text-orange-600 ml-1">{step.weightUnit}</span>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-sm text-gray-500 italic">Not Applicable</span>
                 )}
