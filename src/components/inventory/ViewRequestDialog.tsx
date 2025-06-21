@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Package, User, FileText, Building2, Hash, ShoppingCart, MessageCircle, Edit2 } from 'lucide-react';
+import { CalendarDays, Package, User, FileText, Building2, Hash, ShoppingCart, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
@@ -31,6 +30,7 @@ interface MultiItemMaterial {
 }
 
 const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequestStatus, onRequestUpdated }: ViewRequestDialogProps) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [editedRequest, setEditedRequest] = useState<ProcurementRequest | null>(null);
   const [loading, setLoading] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
@@ -67,10 +67,10 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'Approved': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Received': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      case 'Approved': return 'bg-blue-100 text-blue-800';
+      case 'Received': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -132,8 +132,8 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
         description: 'Procurement request updated successfully',
       });
 
+      setIsEditing(false);
       onRequestUpdated();
-      onOpenChange(false);
     } catch (error) {
       console.error('Error updating procurement request:', error);
       toast({
@@ -178,18 +178,16 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white to-gray-50">
-          <DialogHeader className="border-b border-gray-100 pb-4">
-            <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Edit2 className="h-5 w-5 text-blue-600" />
-              </div>
-              Update Request
-              <Badge className={`${getStatusColor(displayStatus)} border font-medium`}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              Request Details
+              <Badge className={getStatusColor(displayStatus)}>
                 {displayStatus}
               </Badge>
               {isMultiItem && (
-                <Badge variant="outline" className="flex items-center gap-1 border-purple-200 text-purple-700 bg-purple-50">
+                <Badge variant="outline" className="flex items-center gap-1 text-xs">
                   <ShoppingCart className="h-3 w-3" />
                   Multi-Item
                 </Badge>
@@ -197,89 +195,80 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 pt-2">
-            {/* Header Info Card */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              <div className="grid grid-cols-4 gap-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Hash className="h-4 w-4 text-gray-600" />
-                  </div>
+          <div className="space-y-3">
+            {/* Compact Header Section */}
+            <div className="grid grid-cols-4 gap-2 p-2 bg-gray-50 rounded text-xs">
+              <div className="flex items-center gap-1">
+                <Hash className="h-3 w-3 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Request #</p>
+                  <p className="font-mono font-medium text-xs">{selectedRequest.request_number}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <CalendarDays className="h-3 w-3 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Requested</p>
+                  <p className="text-xs">{new Date(selectedRequest.date_requested).toLocaleDateString()}</p>
+                </div>
+              </div>
+              {selectedRequest.raised_by && (
+                <div className="flex items-center gap-1">
+                  <User className="h-3 w-3 text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-500 font-medium">Request ID</p>
-                    <p className="font-mono font-semibold text-gray-900">{selectedRequest.request_number}</p>
+                    <p className="text-xs text-gray-500">Raised By</p>
+                    <p className="text-xs">{selectedRequest.raised_by}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CalendarDays className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 font-medium">Requested</p>
-                    <p className="text-gray-900">{new Date(selectedRequest.date_requested).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                {selectedRequest.raised_by && (
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <User className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Raised By</p>
-                      <p className="text-gray-900">{selectedRequest.raised_by}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Package className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 font-medium">Total Quantity</p>
-                    <p className="font-semibold text-gray-900">{getTotalQuantity()} {selectedRequest.unit}</p>
-                  </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Package className="h-3 w-3 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Total Qty</p>
+                  <p className="font-medium text-xs">{getTotalQuantity()} {selectedRequest.unit}</p>
                 </div>
               </div>
             </div>
 
-            {/* Materials Section */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              <Label className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <Package className="h-5 w-5 text-gray-600" />
+            {/* Materials Section - More Compact */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Package className="h-3 w-3" />
                 {isMultiItem ? 'Materials' : 'Material'}
               </Label>
               
               {isMultiItem ? (
-                <div className="space-y-3 max-h-48 overflow-y-auto">
+                <div className="space-y-1 max-h-32 overflow-y-auto">
                   {multiItemMaterials.map((material, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div key={index} className="p-2 bg-gray-50 rounded border text-xs">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-semibold text-gray-900">{material.name} ({material.type})</p>
-                          <p className="text-gray-600 mt-1">{material.quantity} {material.unit}</p>
-                          {material.notes && <p className="text-gray-500 text-sm mt-1">{material.notes}</p>}
+                          <p className="font-medium text-xs">{material.name} ({material.type})</p>
+                          <p className="text-gray-600 text-xs">{material.quantity} {material.unit}</p>
+                          {material.notes && <p className="text-gray-500 text-xs">{material.notes}</p>}
                         </div>
-                        <Badge variant="outline" className="font-mono">{index + 1}</Badge>
+                        <Badge variant="outline" className="text-xs h-4 px-1">{index + 1}</Badge>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="font-semibold text-gray-900">{selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})</p>
+                <div className="p-2 bg-gray-50 rounded border text-xs">
+                  <p className="font-medium text-xs">{selectedRequest.raw_material?.name} ({selectedRequest.raw_material?.type})</p>
+                  <p className="text-gray-600 text-xs">{selectedRequest.quantity_requested} {selectedRequest.unit}</p>
                 </div>
               )}
             </div>
 
-            {/* Edit Form */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  {!isMultiItem && (
-                    <div>
-                      <Label htmlFor="quantity" className="text-sm font-semibold text-gray-700">Quantity</Label>
-                      <div className="flex gap-2 mt-2">
+            {/* Details Section - Compact Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Left Column */}
+              <div className="space-y-2">
+                {!isMultiItem && (
+                  <div>
+                    <Label htmlFor="quantity" className="text-xs">Quantity</Label>
+                    {isEditing ? (
+                      <div className="flex gap-1 mt-1">
                         <Input
                           id="quantity"
                           type="number"
@@ -289,54 +278,68 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                             quantity_requested: parseInt(e.target.value) || 0
                           })}
                           min="1"
-                          className="flex-1"
+                          className="h-7 text-xs"
                         />
                         <Input
                           value={selectedRequest.unit}
                           disabled
-                          className="w-20 bg-gray-50"
+                          className="w-12 h-7 bg-gray-50 text-xs"
                         />
                       </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label htmlFor="supplier" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Supplier
-                    </Label>
-                    <Select 
-                      value={editedRequest.supplier_id || ''} 
-                      onValueChange={(value) => setEditedRequest({
-                        ...editedRequest,
-                        supplier_id: value || undefined
-                      })}
-                    >
-                      <SelectTrigger className="mt-2">
-                        <SelectValue placeholder={
-                          filteredSuppliers.length === 0 
-                            ? "No suppliers available" 
-                            : "Select supplier"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredSuppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    ) : (
+                      <p className="mt-1 p-1 bg-gray-50 rounded border text-xs">
+                        {selectedRequest.quantity_requested} {selectedRequest.unit}
+                      </p>
+                    )}
                   </div>
-                </div>
+                )}
 
-                {/* Right Column */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="eta" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4" />
-                      Expected Delivery
-                    </Label>
+                <div>
+                  <Label htmlFor="supplier" className="text-xs flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Supplier
+                  </Label>
+                  {isEditing ? (
+                    <div className="mt-1">
+                      <Select 
+                        value={editedRequest.supplier_id || ''} 
+                        onValueChange={(value) => setEditedRequest({
+                          ...editedRequest,
+                          supplier_id: value || undefined
+                        })}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue placeholder={
+                            filteredSuppliers.length === 0 
+                              ? "No suppliers available" 
+                              : "Select supplier"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredSuppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.company_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <p className="mt-1 p-1 bg-gray-50 rounded border text-xs">
+                      {getSupplierName(selectedRequest.supplier_id)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="eta" className="text-xs flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    Expected Delivery
+                  </Label>
+                  {isEditing ? (
                     <Input
                       id="eta"
                       type="date"
@@ -345,31 +348,38 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                         ...editedRequest,
                         eta: e.target.value || undefined
                       })}
-                      className="mt-2"
+                      className="mt-1 h-7 text-xs"
                     />
-                  </div>
-
-                  {displayStatus !== 'Received' && (
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700">Update Status</Label>
-                      <Select value={displayStatus} onValueChange={handleStatusChange}>
-                        <SelectTrigger className="mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Pending">Pending</SelectItem>
-                          <SelectItem value="Approved">Approved</SelectItem>
-                          <SelectItem value="Received">Received</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  ) : (
+                    <p className="mt-1 p-1 bg-gray-50 rounded border text-xs">
+                      {selectedRequest.eta ? new Date(selectedRequest.eta).toLocaleDateString() : 'Not specified'}
+                    </p>
                   )}
                 </div>
-              </div>
 
-              {/* Notes Section */}
-              <div className="mt-6">
-                <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Notes</Label>
+                {/* Status Update Section - Use displayStatus */}
+                {!isEditing && displayStatus !== 'Received' && (
+                  <div>
+                    <Label className="text-xs">Update Status</Label>
+                    <Select value={displayStatus} onValueChange={handleStatusChange}>
+                      <SelectTrigger className="mt-1 h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Received">Received</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            <div>
+              <Label htmlFor="notes" className="text-xs">Notes</Label>
+              {isEditing ? (
                 <Textarea
                   id="notes"
                   value={editedRequest.notes || ''}
@@ -377,42 +387,75 @@ const ViewRequestDialog = ({ isOpen, onOpenChange, selectedRequest, onUpdateRequ
                     ...editedRequest,
                     notes: e.target.value
                   })}
-                  rows={3}
-                  className="mt-2"
+                  rows={2}
+                  className="mt-1 text-xs"
                   placeholder="Add notes about the request"
                 />
-              </div>
+              ) : (
+                <div className="mt-1 p-1 bg-gray-50 rounded border min-h-[40px] whitespace-pre-wrap text-xs">
+                  {selectedRequest.notes || 'No notes provided'}
+                </div>
+              )}
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <div className="flex gap-2 pt-2 border-t">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                size="sm"
+                className="text-xs h-7"
               >
-                Cancel
+                Close
               </Button>
               
               {/* WhatsApp Button */}
-              {selectedRequest.status === 'Approved' && selectedRequest.supplier_id && (
+              {!isEditing && selectedRequest.status === 'Approved' && selectedRequest.supplier_id && (
                 <Button 
                   variant="outline"
                   onClick={() => setIsWhatsAppDialogOpen(true)}
-                  className="flex items-center gap-2"
+                  size="sm"
+                  className="flex items-center gap-1 text-xs h-7"
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-3 w-3" />
                   WhatsApp
                 </Button>
               )}
               
-              <Button 
-                onClick={handleSaveChanges}
-                disabled={loading}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditedRequest({ ...selectedRequest });
+                    }}
+                    disabled={loading}
+                    size="sm"
+                    className="text-xs h-7"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSaveChanges}
+                    disabled={loading}
+                    size="sm"
+                    className="text-xs h-7"
+                  >
+                    {loading ? 'Saving...' : 'Save'}
+                  </Button>
+                </>
+              ) : (
+                selectedRequest.status === 'Pending' && !isMultiItem && (
+                  <Button 
+                    onClick={() => setIsEditing(true)}
+                    size="sm"
+                    className="text-xs h-7"
+                  >
+                    Edit
+                  </Button>
+                )
+              )}
             </div>
           </div>
         </DialogContent>
