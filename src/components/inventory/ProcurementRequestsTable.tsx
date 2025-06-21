@@ -2,7 +2,8 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown } from 'lucide-react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown, Edit } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -120,151 +121,158 @@ const ProcurementRequestsTable = ({
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b border-gray-200 bg-gray-50/50">
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Request ID
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Material & Type
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Total Quantity
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Origin
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Supplier
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Status
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  ETA
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
-                <div className="flex items-center gap-2">
-                  Raised By
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                </div>
-              </TableHead>
-              <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requests.map((request) => {
-              const origin = getRequestOrigin(request.notes);
-              const isIncomplete = isIncompleteRequest(request);
-              
-              return (
-                <TableRow key={request.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-14 px-4 py-2">
+        <ScrollArea className="w-full">
+          <div className="min-w-[1200px]">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-gray-200 bg-gray-50/50">
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{request.request_number}</span>
-                      {isIncomplete && (
-                        <AlertCircle className="h-4 w-4 text-amber-500" />
-                      )}
+                      Request ID
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
                     </div>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    {getMaterialDisplayText(request)}
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <span className="font-medium text-gray-900">{getTotalQuantity(request)} {request.unit}</span>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <Badge 
-                      variant={
-                        origin === 'inventory' ? "secondary" : 
-                        origin === 'multi-item' ? "default" : 
-                        "outline"
-                      } 
-                      className="text-sm px-3 py-1"
-                    >
-                      {origin === 'inventory' ? 'Alert' : 
-                       origin === 'multi-item' ? 'Multi' : 
-                       'Single'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <span className="text-gray-900">{extractSupplierFromNotes(request.notes)}</span>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <Badge variant={getStatusVariant(request.status)} className="text-sm px-3 py-1">
-                      {request.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <span className="text-gray-900">
-                      {request.eta ? new Date(request.eta).toLocaleDateString() : '-'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
-                    <span className="text-gray-900">{request.raised_by || '-'}</span>
-                  </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                        onClick={() => onViewRequest(request)}
-                      >
-                        <Eye className="h-3 w-3 text-gray-600" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
-                        onClick={() => onGenerateBOM(request)}
-                      >
-                        <FileText className="h-3 w-3 text-gray-600" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
-                        onClick={() => onDeleteRequest(request)}
-                      >
-                        <Trash2 className="h-3 w-3 text-red-600" />
-                      </Button>
+                      Material & Type
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      Total Quantity
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      Origin
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      Supplier
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      Status
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      ETA
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      Raised By
+                      <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-sm font-semibold text-gray-700">Actions</TableHead>
                 </TableRow>
-              );
-            })}
-            {requests.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="h-32 text-center text-gray-500">
-                  No procurement requests found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {requests.map((request) => {
+                  const origin = getRequestOrigin(request.notes);
+                  const isIncomplete = isIncompleteRequest(request);
+                  
+                  return (
+                    <TableRow key={request.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                      <TableCell className="h-12 px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{request.request_number}</span>
+                          {isIncomplete && (
+                            <AlertCircle className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        {getMaterialDisplayText(request)}
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <span className="font-medium text-gray-900">{getTotalQuantity(request)} {request.unit}</span>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <Badge 
+                          variant={
+                            origin === 'inventory' ? "secondary" : 
+                            origin === 'multi-item' ? "default" : 
+                            "outline"
+                          } 
+                          className="text-sm px-3 py-1"
+                        >
+                          {origin === 'inventory' ? 'Alert' : 
+                           origin === 'multi-item' ? 'Multi' : 
+                           'Single'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <span className="text-gray-900">{extractSupplierFromNotes(request.notes)}</span>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <Badge variant={getStatusVariant(request.status)} className="text-sm px-3 py-1">
+                          {request.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <span className="text-gray-900">
+                          {request.eta ? new Date(request.eta).toLocaleDateString() : '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <span className="text-gray-900">{request.raised_by || '-'}</span>
+                      </TableCell>
+                      <TableCell className="h-12 px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 w-7 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                            onClick={() => onViewRequest(request)}
+                          >
+                            <Edit className="h-3 w-3 text-gray-600" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 w-7 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                            onClick={() => onGenerateBOM(request)}
+                          >
+                            <FileText className="h-3 w-3 text-gray-600" />
+                          </Button>
+                          {request.status !== 'Received' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 w-7 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
+                              onClick={() => onDeleteRequest(request)}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-600" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {requests.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-32 text-center text-gray-500">
+                      No procurement requests found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
 
       {/* Floating Raise Procurement Request Button */}
