@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Pen, Trash, ArrowUpDown, Building } from 'lucide-react';
+import { Plus, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
@@ -134,37 +133,37 @@ const SuppliersSection = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
           <div className="relative flex-1 max-w-sm">
-            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
+            <div className="h-7 w-full bg-muted rounded-md animate-pulse" />
           </div>
-          <div className="h-10 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="h-7 w-24 bg-muted rounded-md animate-pulse" />
         </div>
         <TableSkeleton 
           rows={8} 
           columns={7}
-          columnWidths={['w-32', 'w-24', 'w-24', 'w-40', 'w-20', 'w-20', 'w-24']}
+          columnWidths={['w-20', 'w-16', 'w-16', 'w-24', 'w-12', 'w-16', 'w-16']}
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="Search suppliers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-10"
+            className="h-7 text-xs"
           />
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="h-10 px-4 flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+            <Button size="sm" className="h-7 text-xs px-2">
+              <Plus className="h-3 w-3 mr-1" />
               Add Supplier
             </Button>
           </DialogTrigger>
@@ -181,128 +180,77 @@ const SuppliersSection = () => {
       </div>
 
       {filteredSuppliers.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-center py-12">
-            <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <div className="text-lg font-medium text-gray-900 mb-2">No suppliers found</div>
-            <p className="text-gray-500">Get started by adding your first supplier</p>
-          </div>
+        <div className="text-center py-4">
+          <div className="text-xs text-gray-500">No suppliers found</div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-gray-200 bg-gray-50/50">
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Company Name
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Contact Person
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Phone
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Materials Supplied
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    WhatsApp
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Created
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">Actions</TableHead>
+              <TableRow className="h-6">
+                <TableHead className="h-6 px-1 text-xs font-medium">Company</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Contact</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Phone</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Materials</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">WhatsApp</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium">Created</TableHead>
+                <TableHead className="h-6 px-1 text-xs font-medium w-16">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="font-medium text-gray-900">{supplier.company_name}</span>
+                <TableRow key={supplier.id} className="h-6 hover:bg-gray-50">
+                  <TableCell className="px-1 py-0.5 text-xs font-medium truncate max-w-20">{supplier.company_name}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-16">{supplier.contact_person || '-'}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-16">{supplier.phone || '-'}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-xs truncate max-w-24">
+                    {getMaterialNames(supplier.materials_supplied)}
                   </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">{supplier.contact_person || '-'}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">{supplier.phone || '-'}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">{getMaterialNames(supplier.materials_supplied)}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
+                  <TableCell className="px-1 py-0.5">
                     <Badge 
                       variant={supplier.whatsapp_enabled ? "default" : "secondary"} 
-                      className="text-sm px-3 py-1"
+                      className="text-xs h-3 px-1"
                     >
-                      {supplier.whatsapp_enabled ? 'Enabled' : 'Disabled'}
+                      {supplier.whatsapp_enabled ? 'Yes' : 'No'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">
-                      {new Date(supplier.created_at).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <div className="flex items-center gap-3">
+                  <TableCell className="px-1 py-0.5 text-xs">{new Date(supplier.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</TableCell>
+                  <TableCell className="px-1 py-0.5">
+                    <div className="flex items-center gap-0.5">
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        className="h-5 w-5 p-0"
                         onClick={() => handleViewSupplier(supplier)}
                       >
-                        <Eye className="h-4 w-4 text-gray-600" />
+                        <Eye className="h-2.5 w-2.5" />
                       </Button>
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                        className="h-5 w-5 p-0"
                         onClick={() => handleEditSupplier(supplier)}
                       >
-                        <Pen className="h-4 w-4 text-gray-600" />
+                        <Pen className="h-2.5 w-2.5" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
-                          >
-                            <Trash className="h-4 w-4 text-red-600" />
+                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-600 hover:text-red-700">
+                            <Trash className="h-2.5 w-2.5" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-base">Delete Supplier</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
                               Are you sure you want to delete {supplier.company_name}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="h-7 text-xs">Cancel</AlertDialogCancel>
                             <AlertDialogAction 
                               onClick={() => deleteSupplier(supplier.id)}
+                              className="h-7 text-xs"
                             >
                               Delete
                             </AlertDialogAction>

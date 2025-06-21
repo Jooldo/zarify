@@ -5,8 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Pen, Trash, ArrowUpDown, Hammer } from 'lucide-react';
+import { Plus, Eye, Pen, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
@@ -95,43 +94,43 @@ const WorkersSection = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
           <div className="relative flex-1 max-w-sm">
-            <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
+            <div className="h-8 w-full bg-muted rounded-md animate-pulse" />
           </div>
-          <div className="h-10 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="h-8 w-24 bg-muted rounded-md animate-pulse" />
         </div>
         <TableSkeleton 
           rows={6} 
           columns={6}
-          columnWidths={['w-32', 'w-24', 'w-24', 'w-20', 'w-20', 'w-24']}
+          columnWidths={['w-24', 'w-20', 'w-20', 'w-16', 'w-16', 'w-20']}
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="Search workers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-10"
+            className="h-8 text-sm"
           />
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="h-10 px-4 flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+            <Button size="sm" className="h-8 text-xs">
+              <Plus className="h-3 w-3 mr-1" />
               Add Worker
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Worker</DialogTitle>
+              <DialogTitle className="text-base">Add New Worker</DialogTitle>
             </DialogHeader>
             <AddWorkerForm
               onSuccess={handleAddSuccess}
@@ -142,117 +141,64 @@ const WorkersSection = () => {
       </div>
 
       {filteredWorkers.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-center py-12">
-            <Hammer className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <div className="text-lg font-medium text-gray-900 mb-2">No workers found</div>
-            <p className="text-gray-500">Get started by adding your first worker</p>
-          </div>
+        <div className="text-center py-6">
+          <div className="text-sm text-gray-500">No workers found</div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-gray-200 bg-gray-50/50">
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Worker Name
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Phone
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Role
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Status
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    Joined
-                    <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </TableHead>
-                <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">Actions</TableHead>
+              <TableRow className="h-8">
+                <TableHead className="h-8 px-2 text-xs font-medium">Name</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Phone</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Role</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Status</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium">Joined</TableHead>
+                <TableHead className="h-8 px-2 text-xs font-medium w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredWorkers.map((worker) => (
-                <TableRow key={worker.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="font-medium text-gray-900">{worker.name}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">{worker.contact_number || '-'}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">{worker.role || '-'}</span>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <Badge 
-                      variant={worker.status === 'Active' ? "default" : "secondary"}
-                      className="text-sm px-3 py-1"
-                    >
+                <TableRow key={worker.id} className="h-8 hover:bg-gray-50">
+                  <TableCell className="px-2 py-1 text-xs font-medium truncate max-w-24">{worker.name}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{worker.contact_number || '-'}</TableCell>
+                  <TableCell className="px-2 py-1 text-xs truncate max-w-20">{worker.role || '-'}</TableCell>
+                  <TableCell className="px-2 py-1">
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                      worker.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
                       {worker.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <span className="text-gray-900">
-                      {worker.joined_date ? new Date(worker.joined_date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      }) : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="h-16 px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                      >
-                        <Eye className="h-4 w-4 text-gray-600" />
+                  <TableCell className="px-2 py-1 text-xs">
+                    {worker.joined_date ? new Date(worker.joined_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
+                  </TableCell>
+                  <TableCell className="px-2 py-1">
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Eye className="h-3 w-3" />
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
-                      >
-                        <Pen className="h-4 w-4 text-gray-600" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Pen className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
-                          >
-                            <Trash className="h-4 w-4 text-red-600" />
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
+                            <Trash className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-md">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Worker</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-base">Delete Worker</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
                               Are you sure you want to delete {worker.name}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="h-8 text-xs">Cancel</AlertDialogCancel>
                             <AlertDialogAction 
                               onClick={() => deleteWorker(worker.id)}
+                              className="h-8 text-xs"
                             >
                               Delete
                             </AlertDialogAction>
