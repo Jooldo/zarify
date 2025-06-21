@@ -121,7 +121,10 @@ const ProcurementRequestsTable = ({
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <ScrollArea className="w-full">
+        <div className="overflow-auto" style={{ 
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           <div className="min-w-[1200px]">
             <Table>
               <TableHeader>
@@ -271,8 +274,7 @@ const ProcurementRequestsTable = ({
               </TableBody>
             </Table>
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Floating Raise Procurement Request Button */}
