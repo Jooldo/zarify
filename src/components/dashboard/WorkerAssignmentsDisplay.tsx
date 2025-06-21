@@ -22,6 +22,7 @@ interface WorkerAssignment {
     quantityUnit: string | null;
     weightUnit: string | null;
     orderIds: string[];
+    status: string;
   }>;
 }
 
@@ -40,23 +41,31 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
       return [];
     }
 
-    // Filter for active order steps with assigned workers
-    const activeOrderSteps = orderSteps.filter(
+    // Filter for order steps with assigned workers (any status, not just in_progress)
+    const assignedOrderSteps = orderSteps.filter(
       orderStep => 
-        orderStep.status === 'in_progress' && 
         orderStep.assigned_worker_id &&
-        orderStep.manufacturing_steps
+        orderStep.manufacturing_steps &&
+        orderStep.status !== 'completed' // Exclude completed steps
     );
+
+    console.log('Assigned order steps found:', assignedOrderSteps.length);
+    assignedOrderSteps.forEach(step => {
+      console.log('Step:', step.manufacturing_steps?.step_name, 'Worker ID:', step.assigned_worker_id, 'Status:', step.status);
+    });
 
     // Group by worker
     const workerMap = new Map<string, WorkerAssignment>();
 
-    activeOrderSteps.forEach(orderStep => {
+    assignedOrderSteps.forEach(orderStep => {
       const workerId = orderStep.assigned_worker_id!;
       const worker = workers.find(w => w.id === workerId);
       const manufacturingStep = orderStep.manufacturing_steps;
       
-      if (!worker || !manufacturingStep) return;
+      if (!worker || !manufacturingStep) {
+        console.log('Missing worker or manufacturing step for:', workerId);
+        return;
+      }
 
       const stepFieldsConfig = getStepFields(orderStep.manufacturing_step_id);
       const quantityField = stepFieldsConfig.find(field => 
@@ -105,9 +114,15 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
           weight: 0,
           quantityUnit,
           weightUnit,
-          orderIds: []
+          orderIds: [],
+          status: orderStep.status
         };
         assignment.steps.push(existingStep);
+      } else {
+        // Update status to show the most advanced status
+        if (orderStep.status === 'in_progress' || existingStep.status === 'pending') {
+          existingStep.status = orderStep.status;
+        }
       }
 
       // Add to totals
@@ -127,7 +142,9 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
       assignment.steps.sort((a, b) => a.stepOrder - b.stepOrder);
     });
 
-    return Array.from(workerMap.values());
+    const assignments = Array.from(workerMap.values());
+    console.log('Final worker assignments:', assignments);
+    return assignments;
   }, [orderSteps, manufacturingSteps, stepFields, workers, getStepFields, getStepValue]);
 
   if (loading) {
@@ -159,6 +176,15 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
       </Card>
     );
   }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -218,9 +244,14 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
                 <div key={`${step.stepName}-${index}`} className="pl-6 border-l-2 border-gray-200">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-gray-800">{step.stepName}</span>
-                    <Badge variant="outline" className="text-xs">
-                      Step {step.stepOrder}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        Step {step.stepOrder}
+                      </Badge>
+                      <Badge variant="outline" className={`text-xs ${getStatusColor(step.status)}`}>
+                        {step.status}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className="flex flex-wrap gap-2 text-xs text-gray-600">
