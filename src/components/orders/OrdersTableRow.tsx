@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -148,12 +149,12 @@ const OrdersTableRow = ({
 
   return (
     <>
-      <TableRow className="h-10 hover:bg-gray-50">
-        <TableCell className="py-1 px-2 text-xs font-medium">
+      <TableRow className="h-16 hover:bg-gray-50/50 border-b border-gray-100">
+        <TableCell className="py-4 px-4 text-sm font-medium">
           {parentOrder ? (
             <Button 
               variant="link" 
-              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800"
+              className="h-auto p-0 text-sm font-medium text-blue-600 hover:text-blue-800"
               onClick={() => setIsOrderDetailsOpen(true)}
             >
               {item.orderId}
@@ -162,11 +163,11 @@ const OrdersTableRow = ({
             item.orderId
           )}
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs text-blue-600 font-medium w-24">
+        <TableCell className="py-4 px-4 text-sm text-blue-600 font-medium w-24">
           {parentOrder ? (
             <Button 
               variant="link" 
-              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800 truncate block w-full text-left"
+              className="h-auto p-0 text-sm font-medium text-blue-600 hover:text-blue-800 truncate block w-full text-left"
               onClick={() => setIsSuborderDetailsOpen(true)}
               title={item.suborder_id}
             >
@@ -176,12 +177,12 @@ const OrdersTableRow = ({
              <div className="truncate" title={item.suborder_id}>{item.suborder_id}</div>
           )}
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">{item.customer}</TableCell>
-        <TableCell className="py-1 px-2 text-xs font-mono">
+        <TableCell className="py-4 px-4 text-sm text-gray-900">{item.customer}</TableCell>
+        <TableCell className="py-4 px-4 text-sm font-mono">
           {selectedFinishedGood ? (
             <Button 
               variant="link" 
-              className="h-auto p-0 text-xs font-mono text-blue-600 hover:text-blue-800"
+              className="h-auto p-0 text-sm font-mono text-blue-600 hover:text-blue-800"
               onClick={() => setIsViewProductOpen(true)}
             >
               {item.productCode}
@@ -190,52 +191,52 @@ const OrdersTableRow = ({
             item.productCode
           )}
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">{item.quantity}</TableCell>
-        <TableCell className="py-1 px-2 text-xs">
+        <TableCell className="py-4 px-4 text-sm font-medium text-gray-900">{item.quantity}</TableCell>
+        <TableCell className="py-4 px-4 text-sm">
           <div className="flex items-center gap-2">
-            <Progress value={fulfillmentPercentage} className="h-1.5 w-16" />
-            <span className="text-muted-foreground text-[11px]">{fulfillmentPercentage.toFixed(0)}%</span>
+            <Progress value={fulfillmentPercentage} className="h-2 w-16" />
+            <span className="text-muted-foreground text-xs">{fulfillmentPercentage.toFixed(0)}%</span>
           </div>
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">
+        <TableCell className="py-4 px-4 text-sm text-gray-600">
           {item.createdDate ? new Date(item.createdDate).toLocaleDateString('en-IN') : '-'}
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">
-          <span className={isStockLow ? "text-red-600 font-medium" : "text-green-600"}>
+        <TableCell className="py-4 px-4 text-sm font-medium">
+          <span className={isStockLow ? "text-red-600" : "text-green-600"}>
             {stockAvailable}
           </span>
         </TableCell>
-        <TableCell className="py-1 px-2">
+        <TableCell className="py-4 px-4">
           <StatusBadge status={item.status} />
         </TableCell>
-        <TableCell className="py-1 px-2">
+        <TableCell className="py-4 px-4">
           <StatusBadge status={getOverallOrderStatus(item.orderId)} />
         </TableCell>
-        <TableCell className="py-1 px-2 text-xs">
+        <TableCell className="py-4 px-4 text-sm text-gray-600">
           {item.expectedDelivery ? new Date(item.expectedDelivery).toLocaleDateString('en-IN') : '-'}
         </TableCell>
-        <TableCell className="py-1 px-2">
-          <div className="flex gap-1">
+        <TableCell className="py-4 px-4">
+          <div className="flex items-center gap-3">
             {/* Original Eye button remains for full order details as an alternative or remove if OrderID click is sufficient */}
              {parentOrder && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-6 w-6 p-0"
+                className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
                 onClick={() => setIsOrderDetailsOpen(true)} // Can also be triggered by Order ID click
                 title="View Full Order"
               >
-                <Eye className="h-3 w-3" />
+                <Eye className="h-4 w-4 text-gray-600" />
               </Button>
             )}
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-6 w-6 p-0"
+              className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
               onClick={() => setIsEditDialogOpen(true)}
               title="Edit Order Item"
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-4 w-4 text-gray-600" />
             </Button>
             
             {/* Invoice Actions */}
@@ -245,21 +246,21 @@ const OrdersTableRow = ({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-6 w-6 p-0"
+                    className="h-8 w-8 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                     onClick={() => setIsViewInvoiceDialogOpen(true)}
                     title="View Invoice"
                   >
-                    <FileText className="h-3 w-3" />
+                    <FileText className="h-4 w-4 text-gray-600" />
                   </Button>
                 ) : (
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-6 w-6 p-0"
+                    className="h-8 w-8 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                     onClick={() => setIsCreateInvoiceDialogOpen(true)}
                     title="Create Invoice"
                   >
-                    <Receipt className="h-3 w-3" />
+                    <Receipt className="h-4 w-4 text-gray-600" />
                   </Button>
                 )}
               </>

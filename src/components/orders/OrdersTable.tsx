@@ -44,22 +44,22 @@ const OrdersTable = ({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="bg-white rounded-lg border border-gray-200">
       <Table>
         <TableHeader>
-          <TableRow className="h-10 bg-gray-50">
-            <TableHead className="py-1 px-2 text-xs">Order ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs w-24">Suborder ID</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Customer</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Product Code</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Qty</TableHead>
-            <TableHead className="py-1 px-2 text-xs w-32">Fulfillment</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Created</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Stock</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Item Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Order Status</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Delivery</TableHead>
-            <TableHead className="py-1 px-2 text-xs">Actions</TableHead>
+          <TableRow className="h-12 bg-gray-50/50 border-b border-gray-200">
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Order ID</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700 w-24">Suborder ID</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Customer</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Product Code</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Qty</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700 w-32">Fulfillment</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Created</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Stock</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Item Status</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Order Status</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Delivery</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
