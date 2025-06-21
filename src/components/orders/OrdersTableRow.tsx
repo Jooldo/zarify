@@ -4,13 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Edit, Eye, Clock, CheckCircle, Package, Truck, Receipt, FileText, Info } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Edit, Clock, CheckCircle, Package, Truck, Receipt, FileText } from 'lucide-react';
 import OrderDetails from '@/components/OrderDetails'; // Keep for full order view
 import EditOrderDialog from './EditOrderDialog';
 import CreateInvoiceDialog from './CreateInvoiceDialog';
 import ViewInvoiceDialog from './ViewInvoiceDialog';
-// ProductDetailsPopover is removed
 import ViewFinishedGoodDialog from '@/components/inventory/ViewFinishedGoodDialog'; // For product code click
 import SuborderDetailsDialog from './SuborderDetailsDialog'; // New dialog for suborder
 import { useInvoices } from '@/hooks/useInvoices';
@@ -69,9 +67,6 @@ const OrdersTableRow = ({
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
   
   const { getInvoiceByOrderId, refetch: refetchInvoices } = useInvoices();
-  const stockAvailable = getStockAvailable(item.productCode);
-  const isStockLow = stockAvailable < item.quantity;
-  const fulfillmentPercentage = item.quantity > 0 ? (item.fulfilled_quantity / item.quantity) * 100 : 0;
 
   // Find the correct parent order for dialogs
   const parentOrder = orders.find(o => o.order_number === item.orderId);
@@ -192,18 +187,9 @@ const OrdersTableRow = ({
           )}
         </TableCell>
         <TableCell className="py-4 px-4 text-sm font-medium text-gray-900">{item.quantity}</TableCell>
-        <TableCell className="py-4 px-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Progress value={fulfillmentPercentage} className="h-2 w-16" />
-            <span className="text-muted-foreground text-xs">{fulfillmentPercentage.toFixed(0)}%</span>
-          </div>
-        </TableCell>
-        <TableCell className="py-4 px-4 text-sm text-gray-600">
-          {item.createdDate ? new Date(item.createdDate).toLocaleDateString('en-IN') : '-'}
-        </TableCell>
-        <TableCell className="py-4 px-4 text-sm font-medium">
-          <span className={isStockLow ? "text-red-600" : "text-green-600"}>
-            {stockAvailable}
+        <TableCell className="py-4 px-4 text-sm font-medium text-center">
+          <span className="text-gray-900">
+            {item.fulfilled_quantity} / {item.quantity}
           </span>
         </TableCell>
         <TableCell className="py-4 px-4">
@@ -213,22 +199,13 @@ const OrdersTableRow = ({
           <StatusBadge status={getOverallOrderStatus(item.orderId)} />
         </TableCell>
         <TableCell className="py-4 px-4 text-sm text-gray-600">
+          {item.createdDate ? new Date(item.createdDate).toLocaleDateString('en-IN') : '-'}
+        </TableCell>
+        <TableCell className="py-4 px-4 text-sm text-gray-600">
           {item.expectedDelivery ? new Date(item.expectedDelivery).toLocaleDateString('en-IN') : '-'}
         </TableCell>
         <TableCell className="py-4 px-4">
           <div className="flex items-center gap-3">
-            {/* Original Eye button remains for full order details as an alternative or remove if OrderID click is sufficient */}
-             {parentOrder && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                onClick={() => setIsOrderDetailsOpen(true)} // Can also be triggered by Order ID click
-                title="View Full Order"
-              >
-                <Eye className="h-4 w-4 text-gray-600" />
-              </Button>
-            )}
             <Button 
               variant="outline" 
               size="sm" 

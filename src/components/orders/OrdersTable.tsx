@@ -33,11 +33,10 @@ const OrdersTable = ({
     return (
       <TableSkeleton 
         rows={10} 
-        columns={12} // Updated to 12 columns
+        columns={11} // Updated to 11 columns (removed Stock and View)
         columnWidths={[
           'w-20', 'w-24', 'w-32', 'w-24', 'w-12', 
-          'w-32', 'w-24', // widths for new columns
-          'w-16', 'w-24', 'w-24', 'w-20', 'w-20'
+          'w-32', 'w-24', 'w-24', 'w-24', 'w-24', 'w-20'
         ]}
       />
     );
@@ -54,10 +53,9 @@ const OrdersTable = ({
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Product Code</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Qty</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700 w-32">Fulfillment</TableHead>
-            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Created</TableHead>
-            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Stock</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Item Status</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Order Status</TableHead>
+            <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Created</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Delivery</TableHead>
             <TableHead className="py-3 px-4 text-sm font-semibold text-gray-700">Actions</TableHead>
           </TableRow>
