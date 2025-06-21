@@ -1,9 +1,9 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Package, TrendingUp, TrendingDown, Factory, AlertTriangle } from 'lucide-react';
+import { Package, TrendingUp, TrendingDown, Factory, AlertTriangle, Settings } from 'lucide-react';
+import FinishedGoodsManufacturingDistribution from './FinishedGoodsManufacturingDistribution';
 
 interface FinishedGoodsSectionProps {
   finishedGoods: any[];
@@ -117,183 +117,164 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-      {/* Stock Volume Distribution */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Package className="h-5 w-5 text-orange-600" />
-            Stock Distribution
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={finishedGoodsMetrics.stockDistribution}
-                cx="50%"
-                cy="50%"
-                innerRadius={40}
-                outerRadius={80}
-                dataKey="value"
-              >
-                {finishedGoodsMetrics.stockDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {finishedGoodsMetrics.stockDistribution.map((item, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                <span className="text-xs text-gray-600">{item.name}: {item.value}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {/* Manufacturing Distribution - Full Width */}
+      <div className="w-full">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <Settings className="h-5 w-5 text-indigo-600" />
+            Manufacturing Step Distribution
+          </h3>
+          <p className="text-sm text-gray-600">Real-time view of quantity and weight at each manufacturing step</p>
+        </div>
+        <FinishedGoodsManufacturingDistribution 
+          manufacturingOrders={manufacturingOrders} 
+          loading={loading} 
+        />
+      </div>
 
-      {/* Ready by Category */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Factory className="h-5 w-5 text-blue-600" />
-            Ready by Category
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={finishedGoodsMetrics.readyByCategory}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="category" className="text-xs" />
-              <YAxis className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="ready" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Other Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Stock Volume Distribution */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Package className="h-5 w-5 text-orange-600" />
+              Stock Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={finishedGoodsMetrics.stockDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={80}
+                  dataKey="value"
+                >
+                  {finishedGoodsMetrics.stockDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {finishedGoodsMetrics.stockDistribution.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-xs text-gray-600">{item.name}: {item.value}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* In-Process by Step */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-purple-600" />
-            In-Process by Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={finishedGoodsMetrics.inProcessByStep}
-                cx="50%"
-                cy="50%"
-                innerRadius={40}
-                outerRadius={80}
-                dataKey="count"
-              >
-                {finishedGoodsMetrics.inProcessByStep.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {finishedGoodsMetrics.inProcessByStep.map((item, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                <span className="text-xs text-gray-600 capitalize">{item.step}: {item.count}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Ready by Category */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Factory className="h-5 w-5 text-blue-600" />
+              Ready by Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={finishedGoodsMetrics.readyByCategory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip />
+                <Bar dataKey="ready" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* Top Performers */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-600" />
-            Top Performing SKUs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {finishedGoodsMetrics.topPerformers.map((item, index) => (
-              <div key={item.id} className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                    #{index + 1}
-                  </Badge>
-                  <span className="text-sm font-medium text-gray-800">{item.product_code}</span>
+        {/* Top Performers */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+              Top Performing SKUs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {finishedGoodsMetrics.topPerformers.map((item, index) => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                      #{index + 1}
+                    </Badge>
+                    <span className="text-sm font-medium text-gray-800">{item.product_code}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-700">{item.current_stock}</p>
+                    <p className="text-xs text-gray-500">stock</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-emerald-700">{item.current_stock}</p>
-                  <p className="text-xs text-gray-500">stock</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Bottom Performers */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <TrendingDown className="h-5 w-5 text-red-600" />
-            Low Stock SKUs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {finishedGoodsMetrics.bottomPerformers.map((item, index) => (
-              <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium text-gray-800">{item.product_code}</span>
+        {/* Bottom Performers */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-600" />
+              Low Stock SKUs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {finishedGoodsMetrics.bottomPerformers.map((item, index) => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium text-gray-800">{item.product_code}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-red-700">{item.current_stock}/{item.threshold}</p>
+                    <p className="text-xs text-gray-500">stock/threshold</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-red-700">{item.current_stock}/{item.threshold}</p>
-                  <p className="text-xs text-gray-500">stock/threshold</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* SKUs to be Manufactured */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Factory className="h-5 w-5 text-orange-600" />
-            To Be Manufactured
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {finishedGoodsMetrics.toBeManufactured.map((item, index) => (
-              <div key={item.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{item.product_code}</p>
-                  <p className="text-xs text-gray-500">{item.product_configs?.category}</p>
+        {/* SKUs to be Manufactured */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Factory className="h-5 w-5 text-orange-600" />
+              To Be Manufactured
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {finishedGoodsMetrics.toBeManufactured.map((item, index) => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{item.product_code}</p>
+                    <p className="text-xs text-gray-500">{item.product_configs?.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-orange-700">
+                      {item.required_quantity - item.current_stock}
+                    </p>
+                    <p className="text-xs text-gray-500">needed</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-orange-700">
-                    {item.required_quantity - item.current_stock}
-                  </p>
-                  <p className="text-xs text-gray-500">needed</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
