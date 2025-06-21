@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -117,29 +116,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
           <TableHeader>
             <TableRow className="h-10 bg-gray-50 border-b border-gray-200">
               <TableHead className="py-2 px-4 text-sm font-medium text-gray-700">Product Code</TableHead>
-              <TableHead className="py-2 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
-              <TableHead 
-                className="py-2 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('ordered_qty')}
-              >
-                <div className="flex flex-col items-center justify-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-blue-700 font-semibold text-sm leading-tight">Live Orders</span>
-                    {getSortIcon('ordered_qty')}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Total quantity of this product required for all pending orders (Created + In Progress status)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </TableHead>
               <TableHead 
                 className="py-2 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('current_stock')}
@@ -161,6 +137,28 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       <p className="max-w-xs">Quantity of this product currently being manufactured</p>
                     </TooltipContent>
                   </Tooltip>
+                </div>
+              </TableHead>
+              <TableHead 
+                className="py-2 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('ordered_qty')}
+              >
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-blue-700 font-semibold text-sm leading-tight">Live Orders</span>
+                    {getSortIcon('ordered_qty')}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Total quantity of this product required for all pending orders (Created + In Progress status)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </TableHead>
               <TableHead 
@@ -215,7 +213,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
               const StatusIcon = statusInfo.icon;
 
               return (
-                <TableRow key={product.id} className="h-14 hover:bg-gray-50 border-b border-gray-100">
+                <TableRow key={product.id} className="h-12 hover:bg-gray-50 border-b border-gray-100">
                   <TableCell className="px-4 py-2 font-mono text-sm bg-gray-50">
                     <Button 
                       variant="ghost" 
@@ -225,8 +223,13 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       {product.product_code}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-4 py-2 text-sm font-medium text-gray-900">
-                    {formatIndianNumber(product.threshold)}
+                  <TableCell className="px-4 py-2 text-sm font-medium text-center text-gray-900">
+                    {formatIndianNumber(product.current_stock)}
+                  </TableCell>
+                  <TableCell className="px-4 py-2 text-center">
+                    <span className="text-sm font-medium text-orange-600">
+                      {formatIndianNumber(product.in_manufacturing)}
+                    </span>
                   </TableCell>
                   <TableCell className="py-2 px-4 text-center">
                     <Button 
@@ -236,14 +239,6 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                     >
                       {formatIndianNumber(product.required_quantity)}
                     </Button>
-                  </TableCell>
-                  <TableCell className="px-4 py-2 text-sm font-medium text-center text-gray-900">
-                    {formatIndianNumber(product.current_stock)}
-                  </TableCell>
-                  <TableCell className="px-4 py-2 text-center">
-                    <span className="text-sm font-medium text-orange-600">
-                      {formatIndianNumber(product.in_manufacturing)}
-                    </span>
                   </TableCell>
                   <TableCell className="px-4 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
@@ -270,7 +265,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       <Button 
                         variant="outline" 
                         size="icon"
-                        className="h-7 w-7 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-6 w-6 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => onEditProduct(product)}
                       >
                         <Edit className="h-3 w-3" />

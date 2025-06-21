@@ -151,9 +151,9 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
     return (
       <TableSkeleton 
         rows={8} 
-        columns={9}
+        columns={8}
         columnWidths={[
-          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
         ]}
       />
     );
@@ -173,13 +173,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           <TableHeader className="bg-gray-50/50">
             <TableRow className="h-10 border-b border-gray-200">
               <TableHead className="py-2 px-4 text-sm font-medium text-gray-700">Material</TableHead>
-              <TableHead className="py-2 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
-              <TableHead className="py-2 px-4 text-sm font-medium text-gray-700 text-center">
-                <div className="flex items-center justify-center">
-                  <span>Required</span>
-                  {getSortIcon('ordered_qty')}
-                </div>
-              </TableHead>
               <TableHead className="py-2 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>Current Stock</span>
@@ -196,6 +189,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                 <div className="flex items-center justify-center">
                   <span>In Manufacturing</span>
                   {getSortIcon('in_manufacturing')}
+                </div>
+              </TableHead>
+              <TableHead className="py-2 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>Required</span>
+                  {getSortIcon('ordered_qty')}
                 </div>
               </TableHead>
               <TableHead className="py-2 px-4 text-sm font-medium text-gray-700 text-center">
@@ -225,8 +224,8 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               const shortfall = material.shortfall;
               
               return (
-                <TableRow key={material.id} className="h-14 border-b border-gray-100 hover:bg-gray-50/50">
-                  <TableCell className="py-3 px-4">
+                <TableRow key={material.id} className="h-12 border-b border-gray-100 hover:bg-gray-50/50">
+                  <TableCell className="py-2 px-4">
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-gray-900 text-sm">{material.name}</span>
                       <Badge variant="secondary" className="text-xs px-2 py-1 bg-gray-100 text-gray-600">
@@ -234,10 +233,20 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-600">
-                    {formatIndianNumber(material.minimum_stock)} {shortUnit}
+                  <TableCell className="py-2 px-4 text-sm font-semibold text-center text-gray-900">
+                    {formatIndianNumber(material.current_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-center">
+                  <TableCell className="py-2 px-4 text-center">
+                    <span className="text-sm font-semibold text-yellow-600">
+                      {formatIndianNumber(material.in_procurement)} {shortUnit}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2 px-4 text-center">
+                    <span className="text-sm font-semibold text-orange-600">
+                      {formatIndianNumber(material.in_manufacturing || 0)} {shortUnit}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2 px-4 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -246,20 +255,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm font-semibold text-center text-gray-900">
-                    {formatIndianNumber(material.current_stock)} {shortUnit}
-                  </TableCell>
-                  <TableCell className="py-3 px-4 text-center">
-                    <span className="text-sm font-semibold text-yellow-600">
-                      {formatIndianNumber(material.in_procurement)} {shortUnit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-3 px-4 text-center">
-                    <span className="text-sm font-semibold text-orange-600">
-                      {formatIndianNumber(material.in_manufacturing || 0)} {shortUnit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-center">
+                  <TableCell className="px-4 py-2 text-center">
                     {shortfall === 0 ? (
                       <span className="text-sm font-medium text-gray-600">
                         0 {shortUnit}
@@ -280,7 +276,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-4 py-2">
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
                       <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
@@ -288,12 +284,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3 px-4">
+                  <TableCell className="py-2 px-4">
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-7 w-7 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-6 w-6 p-0 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => handleUpdateStock(material)}
                         title="Update Stock"
                       >
@@ -302,7 +298,7 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-7 w-7 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-6 w-6 p-0 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => handleRaiseRequest(material)}
                         title="Raise Request"
                       >
