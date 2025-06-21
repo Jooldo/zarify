@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useWorkers } from '@/hooks/useWorkers';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingTagInDialog from './ManufacturingTagInDialog';
 
@@ -31,6 +32,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 }) => {
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
   const { stepValues } = useManufacturingStepValues();
+  const { workers } = useWorkers();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [tagInDialogOpen, setTagInDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
@@ -112,6 +114,19 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   const getFieldValue = (fieldId: string, values: any[]) => {
     const value = values.find(v => v.field_id === fieldId);
     return value?.field_value || '-';
+  };
+
+  const getWorkerName = (workerId: string) => {
+    const worker = workers.find(w => w.id === workerId);
+    return worker ? worker.name : 'Unknown Worker';
+  };
+
+  const getDisplayValue = (field: any, fieldValue: string) => {
+    // If this is a worker field, resolve the ID to a name
+    if (field.field_type === 'worker' && fieldValue && fieldValue !== '-') {
+      return getWorkerName(fieldValue);
+    }
+    return fieldValue;
   };
 
   return (
@@ -243,14 +258,19 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         <div>
                           <h5 className="font-medium mb-1 text-xs">Step Data:</h5>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {orderStep.fields.map((field) => (
-                              <div key={field.id} className="bg-muted/50 p-2 rounded text-xs">
-                                <span className="text-muted-foreground block">{field.field_label}:</span>
-                                <span className="font-medium">
-                                  {getFieldValue(field.field_id, orderStep.values)}
-                                </span>
-                              </div>
-                            ))}
+                            {orderStep.fields.map((field) => {
+                              const fieldValue = getFieldValue(field.field_id, orderStep.values);
+                              const displayValue = getDisplayValue(field, fieldValue);
+                              
+                              return (
+                                <div key={field.id} className="bg-muted/50 p-2 rounded text-xs">
+                                  <span className="text-muted-foreground block">{field.field_label}:</span>
+                                  <span className="font-medium">
+                                    {displayValue}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -366,7 +386,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
       </Dialog>
 
       <StartStepDialog
-        isOpen={startStepDialogOpen}
+        isOpen={startStepDialogOpensuccessfully.}
         onClose={() => setStartStepDialogOpen(false)}
         order={order}
         step={selectedStep}
