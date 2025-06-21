@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
-import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
 import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
 import { useOrderedQtyDetails, type RawMaterialProductDetail } from '@/hooks/useOrderedQtyDetails';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
-import SortDropdown from '@/components/ui/sort-dropdown';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -23,7 +21,6 @@ interface RawMaterialsTableProps {
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
-  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
@@ -82,11 +79,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
   const getShortfallTooltip = () => {
     return "Shortfall = (Required Qty + Minimum Stock) - (Current Stock + In Procurement). In Manufacturing shows reserved materials already deducted from Current Stock.";
-  };
-
-  const handleViewMaterial = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsViewMaterialOpen(true);
   };
 
   const handleRaiseRequest = (material: RawMaterial) => {
@@ -302,14 +294,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                         variant="outline" 
                         size="sm" 
                         className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
-                        onClick={() => handleViewMaterial(material)}
-                      >
-                        <Eye className="h-3.5 w-3.5 text-gray-600" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => handleUpdateStock(material)}
                         title="Update Stock"
                       >
@@ -332,12 +316,6 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           </TableBody>
         </Table>
       </div>
-
-      <ViewRawMaterialDialog 
-        material={selectedMaterial}
-        isOpen={isViewMaterialOpen}
-        onOpenChange={setIsViewMaterialOpen}
-      />
 
       <RaiseRequestDialog 
         isOpen={isRequestDialogOpen}

@@ -2,7 +2,8 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown } from 'lucide-react';
+import { ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown } from 'lucide-react';
+import { Update } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -119,7 +120,7 @@ const ProcurementRequestsTable = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-b border-gray-200 bg-gray-50/50">
@@ -232,25 +233,30 @@ const ProcurementRequestsTable = ({
                         size="sm" 
                         className="h-10 w-10 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
                         onClick={() => onViewRequest(request)}
+                        title="Update Request"
                       >
-                        <Eye className="h-4 w-4 text-gray-600" />
+                        <Update className="h-4 w-4 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
                         className="h-10 w-10 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                         onClick={() => onGenerateBOM(request)}
+                        title="Generate BOM"
                       >
                         <FileText className="h-4 w-4 text-gray-600" />
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
-                        onClick={() => onDeleteRequest(request)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                      {request.status !== 'Received' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
+                          onClick={() => onDeleteRequest(request)}
+                          title="Delete Request"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
