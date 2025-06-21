@@ -10,10 +10,12 @@ interface StepDistribution {
   stepId: string;
   stepName: string;
   stepOrder: number;
-  totalQuantity: number;
-  totalWeight: number;
+  totalQuantity: number | null;
+  totalWeight: number | null;
   orderCount: number;
   status: 'in_progress';
+  hasQuantityField: boolean;
+  hasWeightField: boolean;
 }
 
 interface FinishedGoodsManufacturingDistributionProps {
@@ -64,32 +66,29 @@ const FinishedGoodsManufacturingDistribution = ({
         ['rawMaterialWeightAssigned', 'weight_assigned', 'weight'].includes(field.field_name)
       );
 
-      let totalQuantity = 0;
-      let totalWeight = 0;
+      let totalQuantity: number | null = null;
+      let totalWeight: number | null = null;
+      const hasQuantityField = !!quantityField;
+      const hasWeightField = !!weightField;
 
-      orderStepsInStep.forEach(orderStep => {
-        // Get quantity value
-        if (quantityField) {
-          const quantityValue = getStepValue(orderStep.id, quantityField.field_id);
+      // Only calculate totals if fields exist
+      if (hasQuantityField) {
+        totalQuantity = 0;
+        orderStepsInStep.forEach(orderStep => {
+          const quantityValue = getStepValue(orderStep.id, quantityField!.field_id);
           const quantity = parseFloat(quantityValue) || 0;
-          totalQuantity += quantity;
-        } else {
-          // Fallback to manufacturing order quantity if no dynamic field
-          const relatedOrder = inProgressOrders.find(order => 
-            orderSteps.some(os => os.manufacturing_order_id === order.id && os.id === orderStep.id)
-          );
-          if (relatedOrder) {
-            totalQuantity += relatedOrder.quantity_required || 0;
-          }
-        }
+          totalQuantity! += quantity;
+        });
+      }
 
-        // Get weight value
-        if (weightField) {
-          const weightValue = getStepValue(orderStep.id, weightField.field_id);
+      if (hasWeightField) {
+        totalWeight = 0;
+        orderStepsInStep.forEach(orderStep => {
+          const weightValue = getStepValue(orderStep.id, weightField!.field_id);
           const weight = parseFloat(weightValue) || 0;
-          totalWeight += weight;
-        }
-      });
+          totalWeight! += weight;
+        });
+      }
 
       distribution.push({
         stepId,
@@ -98,7 +97,9 @@ const FinishedGoodsManufacturingDistribution = ({
         totalQuantity,
         totalWeight,
         orderCount: orderStepsInStep.length,
-        status: 'in_progress'
+        status: 'in_progress',
+        hasQuantityField,
+        hasWeightField
       });
     });
 
@@ -108,8 +109,8 @@ const FinishedGoodsManufacturingDistribution = ({
 
   const totalInProgress = useMemo(() => {
     return stepDistribution.reduce((totals, step) => ({
-      quantity: totals.quantity + step.totalQuantity,
-      weight: totals.weight + step.totalWeight,
+      quantity: totals.quantity + (step.totalQuantity || 0),
+      weight: totals.weight + (step.totalWeight || 0),
       orders: totals.orders + step.orderCount
     }), { quantity: 0, weight: 0, orders: 0 });
   }, [stepDistribution]);
@@ -184,19 +185,25 @@ const FinishedGoodsManufacturingDistribution = ({
                   <Package className="h-4 w-4 text-emerald-600" />
                   <span className="text-sm font-medium text-emerald-700">Quantity</span>
                 </div>
-                <span className="text-lg font-bold text-emerald-800">{step.totalQuantity}</span>
+                {step.hasQuantityField ? (
+                  <span className="text-lg font-bold text-emerald-800">{step.totalQuantity}</span>
+                ) : (
+                  <span className="text-sm text-gray-500 italic">Not Applicable</span>
+                )}
               </div>
 
               {/* Weight */}
-              {step.totalWeight > 0 && (
-                <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Weight className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-orange-700">Weight</span>
-                  </div>
-                  <span className="text-lg font-bold text-orange-800">{step.totalWeight.toFixed(2)}</span>
+              <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Weight className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-700">Weight</span>
                 </div>
-              )}
+                {step.hasWeightField ? (
+                  <span className="text-lg font-bold text-orange-800">{step.totalWeight?.toFixed(2)}</span>
+                ) : (
+                  <span className="text-sm text-gray-500 italic">Not Applicable</span>
+                )}
+              </div>
 
               {/* Order Count */}
               <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
