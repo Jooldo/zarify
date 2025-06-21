@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,6 +17,7 @@ export interface RawMaterial {
   supplier_name?: string;
   supplier_id?: string;
   last_updated?: string;
+  updated_at?: string; // Add missing property
   cost_per_unit?: number;
 }
 
@@ -27,6 +28,14 @@ export interface CreateRawMaterialData {
   minimum_stock: number;
   unit: string;
 }
+
+// Create context for raw materials
+const RawMaterialsContext = createContext<{
+  rawMaterials: RawMaterial[];
+  loading: boolean;
+  refetch: () => Promise<void>;
+  addRawMaterial: (data: CreateRawMaterialData) => Promise<void>;
+} | null>(null);
 
 export const useRawMaterials = () => {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
@@ -80,7 +89,8 @@ export const useRawMaterials = () => {
           required: material.required || 0, // Use database value directly
           in_manufacturing: material.in_manufacturing || 0, // Ensure this is always a number
           shortfall,
-          supplier_name: material.supplier?.company_name
+          supplier_name: material.supplier?.company_name,
+          updated_at: material.last_updated || material.created_at // Map updated_at properly
         };
       }) || [];
 
@@ -132,4 +142,18 @@ export const useRawMaterials = () => {
     refetch: fetchRawMaterials, 
     addRawMaterial
   };
+};
+
+// Context hook
+export const useRawMaterialsContext = () => {
+  const context = useContext(RawMaterialsContext);
+  if (!context) {
+    // Return a mock context with minimal functionality for backwards compatibility
+    return {
+      refetch: async () => {},
+      loading: false,
+      rawMaterials: []
+    };
+  }
+  return context;
 };

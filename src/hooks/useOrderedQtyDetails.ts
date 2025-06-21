@@ -75,6 +75,19 @@ export const useOrderedQtyDetails = () => {
     }
   };
 
+  const fetchRawMaterialOrderDetails = async (rawMaterialId: string): Promise<RawMaterialProductDetail[]> => {
+    setLoading(true);
+    try {
+      console.log('🔍 Fetching order details for raw material:', rawMaterialId);
+      return await fetchRawMaterialProductDetails(rawMaterialId);
+    } catch (error) {
+      console.error('Error in fetchRawMaterialOrderDetails:', error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchRawMaterialProductDetails = async (rawMaterialId: string): Promise<RawMaterialProductDetail[]> => {
     setLoading(true);
     try {
@@ -193,6 +206,7 @@ export const useOrderedQtyDetails = () => {
   return {
     loading,
     fetchFinishedGoodOrderDetails,
-    fetchRawMaterialProductDetails
+    fetchRawMaterialProductDetails,
+    fetchRawMaterialOrderDetails
   };
 };

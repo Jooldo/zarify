@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -5,15 +6,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Eye, Edit, ShoppingCart, ArrowUp, ArrowDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useRawMaterialsContext } from '@/hooks/useRawMaterials';
-import { RawMaterial } from '@/hooks/useRawMaterials';
+import { useRawMaterials, type RawMaterial } from '@/hooks/useRawMaterials';
 import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
 import { formatIndianNumber } from '@/lib/utils';
 import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
-import EditRawMaterialDialog from './EditRawMaterialDialog';
-import RaiseProcurementRequestDialog from './RaiseProcurementRequestDialog';
-import type { SortConfig } from '@/components/ui/sort-dropdown';
+
+interface SortConfig {
+  field: string;
+  direction: 'asc' | 'desc';
+}
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
@@ -26,12 +28,10 @@ interface RawMaterialsTableProps {
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const { toast } = useToast();
   const { fetchRawMaterialOrderDetails } = useOrderedQtyDetails();
-  const { refetch } = useRawMaterialsContext();
+  const { refetch } = useRawMaterials();
 
   const handleViewMaterial = (material: RawMaterial) => {
     setSelectedMaterial(material);
@@ -39,29 +39,19 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
   };
 
   const handleEditMaterial = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsEditDialogOpen(true);
+    // For now, just show a toast - edit functionality can be added later
+    toast({
+      title: "Edit Material",
+      description: "Edit functionality coming soon",
+    });
   };
 
   const handleRaiseRequest = async (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsRequestDialogOpen(true);
-  };
-
-  const handleRequestCreated = () => {
-    setIsRequestDialogOpen(false);
-    onRequestCreated();
-  };
-
-  const handleEditSuccess = async () => {
-    setIsEditDialogOpen(false);
-    setSelectedMaterial(null);
+    // For now, just show a toast - request functionality can be added later
     toast({
-      title: "Success",
-      description: "Raw material updated successfully",
+      title: "Raise Request",
+      description: "Procurement request functionality coming soon",
     });
-    refetch();
-    onUpdate();
   };
 
   const handleSort = (field: string) => {
@@ -331,25 +321,11 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
         </Table>
       )}
 
-      {/* Dialogs */}
+      {/* View Dialog */}
       <ViewRawMaterialDialog
         isOpen={isViewDialogOpen}
         onClose={() => setIsViewDialogOpen(false)}
         material={selectedMaterial}
-      />
-
-      <EditRawMaterialDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        material={selectedMaterial}
-        onSuccess={handleEditSuccess}
-      />
-
-      <RaiseProcurementRequestDialog
-        isOpen={isRequestDialogOpen}
-        onClose={() => setIsRequestDialogOpen(false)}
-        material={selectedMaterial}
-        onRequestCreated={handleRequestCreated}
       />
     </div>
   );
