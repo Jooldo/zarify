@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown } from 'lucide-react';
-import { Update } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -235,7 +235,7 @@ const ProcurementRequestsTable = ({
                         onClick={() => onViewRequest(request)}
                         title="Update Request"
                       >
-                        <Update className="h-4 w-4 text-gray-600" />
+                        <Edit className="h-4 w-4 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
