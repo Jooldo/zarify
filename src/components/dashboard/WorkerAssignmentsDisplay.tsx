@@ -41,33 +41,47 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
       return [];
     }
 
-    // Filter for order steps with assigned workers (any status, not just in_progress)
-    const assignedOrderSteps = orderSteps.filter(
+    // Filter for order steps with any status except completed
+    const activeOrderSteps = orderSteps.filter(
       orderStep => 
-        orderStep.assigned_worker_id &&
         orderStep.manufacturing_steps &&
-        orderStep.status !== 'completed' // Exclude completed steps
+        orderStep.status !== 'completed'
     );
 
-    console.log('Assigned order steps found:', assignedOrderSteps.length);
-    assignedOrderSteps.forEach(step => {
-      console.log('Step:', step.manufacturing_steps?.step_name, 'Worker ID:', step.assigned_worker_id, 'Status:', step.status);
-    });
+    console.log('Active order steps found:', activeOrderSteps.length);
 
-    // Group by worker
+    // Group by worker using field values
     const workerMap = new Map<string, WorkerAssignment>();
 
-    assignedOrderSteps.forEach(orderStep => {
-      const workerId = orderStep.assigned_worker_id!;
-      const worker = workers.find(w => w.id === workerId);
+    activeOrderSteps.forEach(orderStep => {
       const manufacturingStep = orderStep.manufacturing_steps;
+      if (!manufacturingStep) return;
+
+      const stepFieldsConfig = getStepFields(orderStep.manufacturing_step_id);
       
-      if (!worker || !manufacturingStep) {
-        console.log('Missing worker or manufacturing step for:', workerId);
+      // Find worker field configuration
+      const workerField = stepFieldsConfig.find(field => field.field_type === 'worker');
+      if (!workerField) {
+        console.log('No worker field found for step:', manufacturingStep.step_name);
         return;
       }
 
-      const stepFieldsConfig = getStepFields(orderStep.manufacturing_step_id);
+      // Get worker ID from step values
+      const assignedWorkerId = getStepValue(orderStep.id, workerField.field_id);
+      if (!assignedWorkerId) {
+        console.log('No worker assigned for step:', manufacturingStep.step_name, 'Order step ID:', orderStep.id);
+        return;
+      }
+
+      const worker = workers.find(w => w.id === assignedWorkerId);
+      if (!worker) {
+        console.log('Worker not found for ID:', assignedWorkerId);
+        return;
+      }
+
+      console.log('Found worker assignment:', worker.name, 'for step:', manufacturingStep.step_name, 'status:', orderStep.status);
+
+      // Find quantity and weight fields
       const quantityField = stepFieldsConfig.find(field => 
         ['quantityAssigned', 'quantity_assigned', 'quantity'].includes(field.field_name)
       );
@@ -90,9 +104,9 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
         stepWeight = parseFloat(weightValue) || 0;
       }
 
-      if (!workerMap.has(workerId)) {
-        workerMap.set(workerId, {
-          workerId,
+      if (!workerMap.has(assignedWorkerId)) {
+        workerMap.set(assignedWorkerId, {
+          workerId: assignedWorkerId,
           workerName: worker.name,
           totalQuantity: 0,
           totalWeight: 0,
@@ -101,7 +115,7 @@ const WorkerAssignmentsDisplay = ({ manufacturingOrders, loading }: WorkerAssign
         });
       }
 
-      const assignment = workerMap.get(workerId)!;
+      const assignment = workerMap.get(assignedWorkerId)!;
       
       // Check if step already exists for this worker
       let existingStep = assignment.steps.find(s => s.stepName === manufacturingStep.step_name);
