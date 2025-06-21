@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag, ChevronUp, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { RawMaterial } from '@/hooks/useRawMaterials';
+import ViewRawMaterialDialog from './ViewRawMaterialDialog';
 import RaiseRequestDialog from './RaiseRequestDialog';
 import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
 import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
@@ -22,6 +23,7 @@ interface RawMaterialsTableProps {
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
+  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
@@ -80,6 +82,11 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
 
   const getShortfallTooltip = () => {
     return "Shortfall = (Required Qty + Minimum Stock) - (Current Stock + In Procurement). In Manufacturing shows reserved materials already deducted from Current Stock.";
+  };
+
+  const handleViewMaterial = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsViewMaterialOpen(true);
   };
 
   const handleRaiseRequest = (material: RawMaterial) => {
@@ -172,41 +179,41 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
       <div className="bg-white rounded-lg border border-gray-200">
         <Table>
           <TableHeader className="bg-gray-50/50">
-            <TableRow className="h-10 border-b border-gray-200">
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Material</TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Threshold</TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700 text-center">
+            <TableRow className="h-12 border-b border-gray-200">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Material</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>Required</span>
                   {getSortIcon('ordered_qty')}
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700 text-center">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>Current Stock</span>
                   {getSortIcon('current_stock')}
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700 text-center">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>In Procurement</span>
                   {getSortIcon('in_procurement')}
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700 text-center">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>In Manufacturing</span>
                   {getSortIcon('in_manufacturing')}
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700 text-center">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
                 <div className="flex items-center justify-center">
                   <span>Shortfall</span>
                   {getSortIcon('shortfall')}
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Status</TableHead>
-              <TableHead className="py-2 px-3 text-sm font-medium text-gray-700">Actions</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Status</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -226,19 +233,19 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               const shortfall = material.shortfall;
               
               return (
-                <TableRow key={material.id} className="h-12 border-b border-gray-100 hover:bg-gray-50/50">
-                  <TableCell className="py-2 px-3">
+                <TableRow key={material.id} className="h-16 border-b border-gray-100 hover:bg-gray-50/50">
+                  <TableCell className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-gray-900 text-sm">{material.name}</span>
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600">
+                      <Badge variant="secondary" className="text-xs px-2 py-1 bg-gray-100 text-gray-600">
                         {material.type}
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-sm text-gray-600">
+                  <TableCell className="py-4 px-4 text-sm text-gray-600">
                     {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-center">
+                  <TableCell className="py-4 px-4 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -247,20 +254,20 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-sm font-semibold text-center text-gray-900">
+                  <TableCell className="py-4 px-4 text-sm font-semibold text-center text-gray-900">
                     {formatIndianNumber(material.current_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-center">
+                  <TableCell className="py-4 px-4 text-center">
                     <span className="text-sm font-semibold text-yellow-600">
                       {formatIndianNumber(material.in_procurement)} {shortUnit}
                     </span>
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-center">
+                  <TableCell className="py-4 px-4 text-center">
                     <span className="text-sm font-semibold text-orange-600">
                       {formatIndianNumber(material.in_manufacturing || 0)} {shortUnit}
                     </span>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
+                  <TableCell className="px-4 py-4 text-center">
                     {shortfall === 0 ? (
                       <span className="text-sm font-medium text-gray-600">
                         0 {shortUnit}
@@ -281,33 +288,41 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${statusInfo.bgColor}`}>
+                  <TableCell className="px-4 py-4">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
                       <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.status}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-2 px-3">
+                  <TableCell className="py-4 px-4">
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-7 w-7 p-0 rounded-full border-gray-300 hover:bg-gray-50"
-                        onClick={() => handleUpdateStock(material)}
-                        title="Update Stock"
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        onClick={() => handleViewMaterial(material)}
                       >
-                        <Edit className="h-3 w-3 text-gray-600" />
+                        <Eye className="h-3.5 w-3.5 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-7 w-7 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        onClick={() => handleUpdateStock(material)}
+                        title="Update Stock"
+                      >
+                        <Edit className="h-3.5 w-3.5 text-gray-600" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => handleRaiseRequest(material)}
                         title="Raise Request"
                       >
-                        <Plus className="h-3 w-3 text-gray-600" />
+                        <Plus className="h-3.5 w-3.5 text-gray-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -317,6 +332,12 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
           </TableBody>
         </Table>
       </div>
+
+      <ViewRawMaterialDialog 
+        material={selectedMaterial}
+        isOpen={isViewMaterialOpen}
+        onOpenChange={setIsViewMaterialOpen}
+      />
 
       <RaiseRequestDialog 
         isOpen={isRequestDialogOpen}
