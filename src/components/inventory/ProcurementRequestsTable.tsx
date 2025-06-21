@@ -1,8 +1,7 @@
-
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown } from 'lucide-react';
+import { Eye, ShoppingCart, Trash2, FileText, AlertCircle, Plus, ArrowUpDown, Edit } from 'lucide-react';
 import MaterialDetailsPopover from '@/components/procurement/MaterialDetailsPopover';
 import type { ProcurementRequest } from '@/hooks/useProcurementRequests';
 
@@ -181,7 +180,7 @@ const ProcurementRequestsTable = ({
               
               return (
                 <TableRow key={request.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">{request.request_number}</span>
                       {isIncomplete && (
@@ -189,13 +188,13 @@ const ProcurementRequestsTable = ({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     {getMaterialDisplayText(request)}
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <span className="font-medium text-gray-900">{getTotalQuantity(request)} {request.unit}</span>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <Badge 
                       variant={
                         origin === 'inventory' ? "secondary" : 
@@ -209,36 +208,36 @@ const ProcurementRequestsTable = ({
                        'Single'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <span className="text-gray-900">{extractSupplierFromNotes(request.notes)}</span>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <Badge variant={getStatusVariant(request.status)} className="text-sm px-3 py-1">
                       {request.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <span className="text-gray-900">
                       {request.eta ? new Date(request.eta).toLocaleDateString() : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <span className="text-gray-900">{request.raised_by || '-'}</span>
                   </TableCell>
-                  <TableCell className="h-14 px-4 py-2">
+                  <TableCell className="h-12 px-4 py-2">
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
                         onClick={() => onViewRequest(request)}
                       >
-                        <Eye className="h-3 w-3 text-gray-600" />
+                        <Edit className="h-3 w-3 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                         onClick={() => onGenerateBOM(request)}
                       >
                         <FileText className="h-3 w-3 text-gray-600" />
@@ -246,7 +245,7 @@ const ProcurementRequestsTable = ({
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 w-8 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
                         onClick={() => onDeleteRequest(request)}
                       >
                         <Trash2 className="h-3 w-3 text-red-600" />
