@@ -22,6 +22,9 @@ export interface ManufacturingOrder {
   updated_at: string;
   merchant_id: string;
   product_type?: string;
+  parent_order_id?: string; // For child orders
+  rework_from_step?: number; // Step from which rework was initiated
+  assigned_to_step?: number; // Step to which rework is assigned
   product_configs?: {
     product_code: string;
     category: string;
