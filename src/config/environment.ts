@@ -26,8 +26,8 @@ export interface EnvironmentConfig {
 // Default configuration
 const defaultConfig: EnvironmentConfig = {
   supabase: {
-    url: "https://ltmnrlabdzesusxdcsnr.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0bW5ybGFiZHplc3VzeGRjc25yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5NzQ1MDIsImV4cCI6MjA2NDU1MDUwMn0._rH002dhxh9pGrdT6Q41eW2VYveT3vGsaf7bEI5Nrcs",
+    url: "https://kedvffvamfrxyqpmwmnk.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZHZmZnZhbWZyeHlxcG13bW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNjkyODEsImV4cCI6MjA2NTg0NTI4MX0.D7UpzeOdBFKxyV_irGpDAYyc32kugMcSXunVNQqjVuQ",
   },
   app: {
     name: 'Zarify',
@@ -56,6 +56,8 @@ const environmentConfigs: Record<string, Partial<EnvironmentConfig>> = {
   },
   staging: {
     app: {
+      name: 'Zarify',
+      version: '1.0.0',
       environment: 'staging',
     },
     features: {
@@ -64,11 +66,14 @@ const environmentConfigs: Record<string, Partial<EnvironmentConfig>> = {
       enableErrorReporting: true,
     },
     limits: {
+      maxFileUploadSize: 5 * 1024 * 1024, // 5MB
       maxItemsPerPage: 25,
     },
   },
   production: {
     app: {
+      name: 'Zarify',
+      version: '1.0.0',
       environment: 'production',
     },
     features: {
