@@ -26,8 +26,9 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
   const [isCreating, setIsCreating] = useState(false);
 
   // Get available steps (only steps with order less than current step)
+  // Add null check for currentStep
   const availableSteps = manufacturingSteps.filter(step => 
-    step.step_order < currentStep.step_order && step.is_active
+    currentStep && step.step_order < currentStep.step_order && step.is_active
   );
 
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
@@ -55,7 +56,7 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
       return;
     }
 
-    if (quantity > parentOrder.quantity_required) {
+    if (!parentOrder || quantity > parentOrder.quantity_required) {
       toast({
         title: 'Error',
         description: 'Child order quantity cannot exceed parent order quantity',
@@ -97,10 +98,10 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
           priority: 'high', // Rework orders get high priority
           status: 'pending',
           due_date: parentOrder.due_date,
-          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name}`,
+          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep?.step_name || 'Unknown'}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_from_step: currentStep.step_order,
+          rework_from_step: currentStep?.step_order,
           assigned_to_step: selectedStep?.step_order
         })
         .select()
@@ -162,6 +163,11 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
     setFieldValues({});
     onClose();
   };
+
+  // Don't render if currentStep is null
+  if (!currentStep) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
