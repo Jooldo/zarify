@@ -83,11 +83,11 @@ const ProcurementRequestsTable = ({
         const additionalCount = materials.length - 1;
         
         return (
-          <div className="flex flex-col space-y-1">
-            <span className="font-medium text-gray-900">{primaryMaterial.name}</span>
-            <span className="text-sm text-gray-500">({primaryMaterial.type})</span>
+          <div className="flex flex-col space-y-0.5">
+            <span className="font-medium text-gray-900 text-sm">{primaryMaterial.name}</span>
+            <span className="text-xs text-gray-500">({primaryMaterial.type})</span>
             <MaterialDetailsPopover materials={materials}>
-              <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline text-left">
+              <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline text-left">
                 +{additionalCount} more
               </button>
             </MaterialDetailsPopover>
@@ -97,9 +97,9 @@ const ProcurementRequestsTable = ({
     }
 
     return (
-      <div className="flex flex-col space-y-1">
-        <span className="font-medium text-gray-900">{request.raw_material?.name || 'Unknown'}</span>
-        <span className="text-sm text-gray-500">({request.raw_material?.type || 'Unknown'})</span>
+      <div className="flex flex-col space-y-0.5">
+        <span className="font-medium text-gray-900 text-sm">{request.raw_material?.name || 'Unknown'}</span>
+        <span className="text-xs text-gray-500">({request.raw_material?.type || 'Unknown'})</span>
       </div>
     );
   };
@@ -118,60 +118,60 @@ const ProcurementRequestsTable = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="border-b border-gray-200 bg-gray-50/50">
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Request ID
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Material & Type
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Total Quantity
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Origin
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Supplier
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Status
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   ETA
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
                   Raised By
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-sm font-semibold text-gray-700">Actions</TableHead>
+              <TableHead className="h-10 px-4 py-2 text-xs font-semibold text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -181,75 +181,75 @@ const ProcurementRequestsTable = ({
               
               return (
                 <TableRow key={request.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-12 px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{request.request_number}</span>
+                      <span className="font-medium text-gray-900 text-sm">{request.request_number}</span>
                       {isIncomplete && (
-                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                        <AlertCircle className="h-3 w-3 text-amber-500" />
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-12 px-4 py-2">
                     {getMaterialDisplayText(request)}
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <span className="font-medium text-gray-900">{getTotalQuantity(request)} {request.unit}</span>
+                  <TableCell className="h-12 px-4 py-2">
+                    <span className="font-medium text-gray-900 text-sm">{getTotalQuantity(request)} {request.unit}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
+                  <TableCell className="h-12 px-4 py-2">
                     <Badge 
                       variant={
                         origin === 'inventory' ? "secondary" : 
                         origin === 'multi-item' ? "default" : 
                         "outline"
                       } 
-                      className="text-sm px-3 py-1"
+                      className="text-xs px-2 py-0.5"
                     >
                       {origin === 'inventory' ? 'Alert' : 
                        origin === 'multi-item' ? 'Multi' : 
                        'Single'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <span className="text-gray-900">{extractSupplierFromNotes(request.notes)}</span>
+                  <TableCell className="h-12 px-4 py-2">
+                    <span className="text-gray-900 text-sm">{extractSupplierFromNotes(request.notes)}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <Badge variant={getStatusVariant(request.status)} className="text-sm px-3 py-1">
+                  <TableCell className="h-12 px-4 py-2">
+                    <Badge variant={getStatusVariant(request.status)} className="text-xs px-2 py-0.5">
                       {request.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <span className="text-gray-900">
+                  <TableCell className="h-12 px-4 py-2">
+                    <span className="text-gray-900 text-sm">
                       {request.eta ? new Date(request.eta).toLocaleDateString() : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <span className="text-gray-900">{request.raised_by || '-'}</span>
+                  <TableCell className="h-12 px-4 py-2">
+                    <span className="text-gray-900 text-sm">{request.raised_by || '-'}</span>
                   </TableCell>
-                  <TableCell className="h-20 px-6 py-4">
-                    <div className="flex items-center gap-3">
+                  <TableCell className="h-12 px-4 py-2">
+                    <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
                         onClick={() => onViewRequest(request)}
                       >
-                        <Eye className="h-4 w-4 text-gray-600" />
+                        <Eye className="h-3 w-3 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
                         onClick={() => onGenerateBOM(request)}
                       >
-                        <FileText className="h-4 w-4 text-gray-600" />
+                        <FileText className="h-3 w-3 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-10 w-10 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
+                        className="h-7 w-7 p-0 rounded-full border-2 hover:bg-red-50 hover:border-red-200 transition-colors"
                         onClick={() => onDeleteRequest(request)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -258,7 +258,7 @@ const ProcurementRequestsTable = ({
             })}
             {requests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="h-32 text-center text-gray-500">
+                <TableCell colSpan={9} className="h-24 text-center text-gray-500 text-sm">
                   No procurement requests found
                 </TableCell>
               </TableRow>
@@ -272,9 +272,9 @@ const ProcurementRequestsTable = ({
         <div className="fixed bottom-6 right-6 z-50">
           <Button 
             onClick={onRaiseMultiItemRequest} 
-            className="rounded-full h-16 px-6 shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2"
+            className="rounded-full h-14 px-5 shadow-lg hover:shadow-xl transition-shadow flex items-center gap-2"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
             <span className="font-medium">Raise Request</span>
           </Button>
         </div>
