@@ -1,219 +1,223 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Edit, ShoppingCart, ArrowUp, ArrowDown, AlertTriangle, CheckCircle } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import { useRawMaterials, type RawMaterial } from '@/hooks/useRawMaterials';
-import { useOrderedQtyDetails } from '@/hooks/useOrderedQtyDetails';
-import { formatIndianNumber } from '@/lib/utils';
-import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
+import { Eye, Plus, AlertTriangle, CheckCircle, AlertCircle, Edit, Info, ArrowUp, ArrowDown, Tag, ChevronUp, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { RawMaterial } from '@/hooks/useRawMaterials';
 import ViewRawMaterialDialog from './ViewRawMaterialDialog';
-
-interface SortConfig {
-  field: string;
-  direction: 'asc' | 'desc';
-}
+import RaiseRequestDialog from './RaiseRequestDialog';
+import RawMaterialStockUpdateDialog from './RawMaterialStockUpdateDialog';
+import OrderedQtyDetailsDialog from './OrderedQtyDetailsDialog';
+import { useOrderedQtyDetails, type RawMaterialProductDetail } from '@/hooks/useOrderedQtyDetails';
+import TableSkeleton from '@/components/ui/skeletons/TableSkeleton';
+import SortDropdown from '@/components/ui/sort-dropdown';
 
 interface RawMaterialsTableProps {
   materials: RawMaterial[];
   loading: boolean;
   onUpdate: () => void;
-  onRequestCreated: () => void;
-  sortConfig: SortConfig | null;
-  onSortChange: (field: string, direction: 'asc' | 'desc') => void;
+  onRequestCreated?: () => void;
+  sortConfig?: { field: string; direction: 'asc' | 'desc' } | null;
+  onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
 const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sortConfig, onSortChange }: RawMaterialsTableProps) => {
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewMaterialOpen, setIsViewMaterialOpen] = useState(false);
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
-  const { toast } = useToast();
-  const { fetchRawMaterialOrderDetails } = useOrderedQtyDetails();
-  const { refetch } = useRawMaterials();
+  const [productDetails, setProductDetails] = useState<RawMaterialProductDetail[]>([]);
+  const [calculatedTotalRequired, setCalculatedTotalRequired] = useState<number>(0);
+  const { loading: orderDetailsLoading, fetchRawMaterialProductDetails } = useOrderedQtyDetails();
 
-  const handleViewMaterial = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsViewDialogOpen(true);
+  const formatIndianNumber = (num: number) => {
+    return num.toLocaleString('en-IN');
   };
 
-  const handleEditMaterial = (material: RawMaterial) => {
-    // For now, just show a toast - edit functionality can be added later
-    toast({
-      title: "Edit Material",
-      description: "Edit functionality coming soon",
-    });
+  const getShortUnit = (unit: string) => {
+    const unitMap: { [key: string]: string } = {
+      'grams': 'g',
+      'gram': 'g',
+      'kilograms': 'kg',
+      'kilogram': 'kg',
+      'liters': 'l',
+      'liter': 'l',
+      'milliliters': 'ml',
+      'milliliter': 'ml',
+      'pieces': 'pcs',
+      'piece': 'pc',
+      'meters': 'm',
+      'meter': 'm',
+      'centimeters': 'cm',
+      'centimeter': 'cm',
+      'pounds': 'lbs',
+      'pound': 'lb',
+      'ounces': 'oz',
+      'ounce': 'oz'
+    };
+    return unitMap[unit.toLowerCase()] || unit;
   };
 
-  const handleRaiseRequest = async (material: RawMaterial) => {
-    // For now, just show a toast - request functionality can be added later
-    toast({
-      title: "Raise Request",
-      description: "Procurement request functionality coming soon",
-    });
-  };
-
-  const handleSort = (field: string) => {
-    if (!onSortChange) return;
-    
-    const direction = sortConfig?.field === field && sortConfig?.direction === 'asc' ? 'desc' : 'asc';
-    onSortChange(field, direction);
-  };
-
-  const getSortIcon = (field: string) => {
-    if (sortConfig?.field !== field) return null;
-    return sortConfig.direction === 'asc' ? 
-      <ArrowUp className="h-3 w-3 inline ml-1" /> : 
-      <ArrowDown className="h-3 w-3 inline ml-1" />;
-  };
-
-  const getStockStatusVariant = (stock: number, threshold: number) => {
-    if (stock <= threshold * 0.5) return "destructive" as const;
-    if (stock <= threshold) return "secondary" as const;
+  const getStockStatusVariant = (currentStock: number, minimumStock: number) => {
+    if (currentStock <= minimumStock) return "destructive" as const;
+    if (currentStock <= minimumStock * 1.5) return "secondary" as const;
     return "default" as const;
   };
 
-  const calculateShortfall = (currentStock: number, inProcurement: number, inManufacturing: number, required: number, minimumStock: number) => {
-    const totalAvailable = currentStock + inProcurement + inManufacturing;
-    const totalNeeded = required + minimumStock;
-    return totalNeeded - totalAvailable;
-  };
-
   const getInventoryStatus = (currentStock: number, inProcurement: number, inManufacturing: number, required: number, minimumStock: number) => {
-    const shortfall = calculateShortfall(currentStock, inProcurement, inManufacturing, required, minimumStock);
+    // Use the actual available stock for status calculation
+    const actualAvailableStock = currentStock + inProcurement;
+    const shortfall = Math.max(0, (required + minimumStock) - actualAvailableStock);
     
     if (shortfall > 0) {
       return { status: 'Critical', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' };
     } else if (currentStock <= minimumStock) {
-      return { status: 'Low', icon: CheckCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+      return { status: 'Low', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
     } else {
       return { status: 'Good', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
     }
   };
 
+  const getShortfallTooltip = () => {
+    return "Shortfall = (Required Qty + Minimum Stock) - (Current Stock + In Procurement). In Manufacturing shows reserved materials already deducted from Current Stock.";
+  };
+
+  const handleViewMaterial = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsViewMaterialOpen(true);
+  };
+
+  const handleRaiseRequest = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsRequestDialogOpen(true);
+  };
+
+  const handleUpdateStock = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setIsStockUpdateOpen(true);
+  };
+
   const handleOrderedQtyClick = async (material: RawMaterial) => {
-    try {
-      const details = await fetchRawMaterialOrderDetails(material.id);
-      console.log('Order Details:', details);
-    } catch (error) {
-      console.error('Error fetching order details:', error);
+    setSelectedMaterial(material);
+    setIsOrderDetailsOpen(true);
+    const details = await fetchRawMaterialProductDetails(material.id);
+    setProductDetails(details);
+    
+    // Calculate the total material required from the product details
+    const totalRequired = details.reduce((sum, product) => {
+      return sum + (product.total_material_required || 0);
+    }, 0);
+    setCalculatedTotalRequired(totalRequired);
+  };
+
+  const handleRequestCreated = () => {
+    onUpdate();
+    if (onRequestCreated) {
+      onRequestCreated();
     }
   };
 
+  // Sort materials based on sortConfig
   const sortedMaterials = [...materials].sort((a, b) => {
     if (!sortConfig) return 0;
 
     const { field, direction } = sortConfig;
-    let aValue: any = a[field as keyof RawMaterial];
-    let bValue: any = b[field as keyof RawMaterial];
+    let aValue: number;
+    let bValue: number;
 
-    if (field === 'shortfall') {
-      aValue = calculateShortfall(a.current_stock, a.in_procurement, a.in_manufacturing || 0, a.required, a.minimum_stock);
-      bValue = calculateShortfall(b.current_stock, b.in_procurement, b.in_manufacturing || 0, b.required, b.minimum_stock);
+    switch (field) {
+      case 'ordered_qty':
+        aValue = a.required || 0;
+        bValue = b.required || 0;
+        break;
+      case 'current_stock':
+        aValue = a.current_stock;
+        bValue = b.current_stock;
+        break;
+      case 'in_procurement':
+        aValue = a.in_procurement;
+        bValue = b.in_procurement;
+        break;
+      case 'in_manufacturing':
+        aValue = a.in_manufacturing || 0;
+        bValue = b.in_manufacturing || 0;
+        break;
+      case 'shortfall':
+        aValue = a.shortfall;
+        bValue = b.shortfall;
+        break;
+      default:
+        return 0;
     }
 
-    if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-    if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
-    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-    return 0;
+    return direction === 'asc' ? aValue - bValue : bValue - aValue;
   });
 
+  if (loading) {
+    return (
+      <TableSkeleton 
+        rows={8} 
+        columns={9}
+        columnWidths={[
+          'w-40', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-20', 'w-16', 'w-24'
+        ]}
+      />
+    );
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortConfig?.field !== field) return null;
+    return sortConfig.direction === 'asc' ? 
+      <ChevronUp className="h-3 w-3 ml-1" /> : 
+      <ChevronDown className="h-3 w-3 ml-1" />;
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      {loading ? (
-        <TableSkeleton 
-          rows={8} 
-          columns={12}
-          columnWidths={['w-32', 'w-20', 'w-16', 'w-16', 'w-16', 'w-20', 'w-20', 'w-16', 'w-16', 'w-20', 'w-16', 'w-20']}
-        />
-      ) : (
+    <TooltipProvider>
+      <div className="bg-white rounded-lg border border-gray-200">
         <Table>
-          <TableHeader>
-            <TableRow className="h-10 bg-gray-50 border-b border-gray-200">
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('name')}
-              >
-                <div className="flex items-center gap-1">
-                  Material & Type
-                  {getSortIcon('name')}
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('minimum_stock')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  Min Stock
-                  {getSortIcon('minimum_stock')}
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('current_stock')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  Current
-                  {getSortIcon('current_stock')}
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('ordered_qty')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1"></div>
-                  <span className="text-blue-700 font-semibold text-xs leading-tight">Live Orders</span>
+          <TableHeader className="bg-gray-50/50">
+            <TableRow className="h-12 border-b border-gray-200">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Material</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>Required</span>
                   {getSortIcon('ordered_qty')}
                 </div>
               </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('in_procurement')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  In Procurement
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>Current Stock</span>
+                  {getSortIcon('current_stock')}
+                </div>
+              </TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>In Procurement</span>
                   {getSortIcon('in_procurement')}
                 </div>
               </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('in_manufacturing')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  In Manuf.
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>In Manufacturing</span>
                   {getSortIcon('in_manufacturing')}
                 </div>
               </TableHead>
-              <TableHead 
-                className="px-3 py-2 text-xs font-semibold text-gray-700 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('shortfall')}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  Shortfall
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700 text-center">
+                <div className="flex items-center justify-center">
+                  <span>Shortfall</span>
                   {getSortIcon('shortfall')}
                 </div>
               </TableHead>
-              <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Status</TableHead>
-              <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Last Updated</TableHead>
-              <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Supplier</TableHead>
-              <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 text-center">Unit</TableHead>
-              <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700">Actions</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Status</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedMaterials.map((material) => {
-              const shortfall = calculateShortfall(
-                material.current_stock,
-                material.in_procurement,
-                material.in_manufacturing || 0,
-                material.required,
-                material.minimum_stock
-              );
-
               const statusInfo = getInventoryStatus(
                 material.current_stock,
                 material.in_procurement,
@@ -223,95 +227,103 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
               );
 
               const StatusIcon = statusInfo.icon;
-
+              const shortUnit = getShortUnit(material.unit);
+              
+              // Use the shortfall calculated in the hook (which uses the correct formula)
+              const shortfall = material.shortfall;
+              
               return (
-                <TableRow key={material.id} className="h-12 hover:bg-gray-50 border-b border-gray-100">
-                  <TableCell className="px-3 py-2">
-                    <div className="flex flex-col space-y-0.5">
+                <TableRow key={material.id} className="h-16 border-b border-gray-100 hover:bg-gray-50/50">
+                  <TableCell className="py-4 px-4">
+                    <div className="flex items-center gap-3">
                       <span className="font-medium text-gray-900 text-sm">{material.name}</span>
-                      <span className="text-xs text-gray-500">({material.type})</span>
+                      <Badge variant="secondary" className="text-xs px-2 py-1 bg-gray-100 text-gray-600">
+                        {material.type}
+                      </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-sm font-medium text-gray-900">
-                    {formatIndianNumber(material.minimum_stock)}
+                  <TableCell className="py-4 px-4 text-sm text-gray-600">
+                    {formatIndianNumber(material.minimum_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
-                    <Badge variant={getStockStatusVariant(material.current_stock, material.minimum_stock)} className="text-xs px-2 py-0.5 font-bold">
-                      {formatIndianNumber(material.current_stock)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
+                  <TableCell className="py-4 px-4 text-center">
                     <Button 
                       variant="ghost" 
-                      className="h-auto p-0 text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      className="h-auto p-0 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                       onClick={() => handleOrderedQtyClick(material)}
                     >
-                      {formatIndianNumber(material.required)}
+                      {formatIndianNumber(material.required || 0)} {shortUnit}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-sm font-medium text-purple-600">
-                    {formatIndianNumber(material.in_procurement)}
+                  <TableCell className="py-4 px-4 text-sm font-semibold text-center text-gray-900">
+                    {formatIndianNumber(material.current_stock)} {shortUnit}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-sm font-medium text-orange-600">
-                    {formatIndianNumber(material.in_manufacturing || 0)}
+                  <TableCell className="py-4 px-4 text-center">
+                    <span className="text-sm font-semibold text-yellow-600">
+                      {formatIndianNumber(material.in_procurement)} {shortUnit}
+                    </span>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatIndianNumber(Math.abs(shortfall))}
+                  <TableCell className="py-4 px-4 text-center">
+                    <span className="text-sm font-semibold text-orange-600">
+                      {formatIndianNumber(material.in_manufacturing || 0)} {shortUnit}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-4 text-center">
+                    {shortfall === 0 ? (
+                      <span className="text-sm font-medium text-gray-600">
+                        0 {shortUnit}
                       </span>
-                      {shortfall > 0 ? (
-                        <ArrowDown className="h-3 w-3 text-red-600" />
-                      ) : (
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                      )}
-                    </div>
+                    ) : (
+                      <div 
+                        className="cursor-help flex items-center justify-center gap-1"
+                        title={getShortfallTooltip()}
+                      >
+                        <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatIndianNumber(Math.abs(shortfall))} {shortUnit}
+                        </span>
+                        {shortfall > 0 ? (
+                          <ArrowDown className="h-4 w-4 text-red-600" />
+                        ) : (
+                          <ArrowUp className="h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
-                    <div className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full ${statusInfo.bgColor}`}>
+                  <TableCell className="px-4 py-4">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor}`}>
                       <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.status}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-xs text-gray-600">
-                    {material.updated_at ? formatDistanceToNow(new Date(material.updated_at), { addSuffix: true }) : '-'}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-xs text-gray-900">
-                    {material.supplier_name || '-'}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-center text-xs font-medium text-gray-700">
-                    {material.unit}
-                  </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <div className="flex gap-1.5">
+                  <TableCell className="py-4 px-4">
+                    <div className="flex gap-2">
                       <Button 
                         variant="outline" 
-                        size="sm"
-                        className="h-7 w-7 rounded-full p-0 border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        size="sm" 
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => handleViewMaterial(material)}
                       >
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-3.5 w-3.5 text-gray-600" />
                       </Button>
                       <Button 
                         variant="outline" 
-                        size="sm"
-                        className="h-7 w-7 rounded-full p-0 border-2 hover:bg-green-50 hover:border-green-200 transition-colors"
-                        onClick={() => handleEditMaterial(material)}
+                        size="sm" 
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        onClick={() => handleUpdateStock(material)}
+                        title="Update Stock"
                       >
-                        <Edit className="h-3 w-3" />
+                        <Edit className="h-3.5 w-3.5 text-gray-600" />
                       </Button>
-                      {shortfall > 0 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-7 w-7 rounded-full p-0 border-2 hover:bg-orange-50 hover:border-orange-200 transition-colors"
-                          onClick={() => handleRaiseRequest(material)}
-                        >
-                          <ShoppingCart className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 rounded-full border-gray-300 hover:bg-gray-50"
+                        onClick={() => handleRaiseRequest(material)}
+                        title="Raise Request"
+                      >
+                        <Plus className="h-3.5 w-3.5 text-gray-600" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -319,15 +331,40 @@ const RawMaterialsTable = ({ materials, loading, onUpdate, onRequestCreated, sor
             })}
           </TableBody>
         </Table>
-      )}
+      </div>
 
-      {/* View Dialog */}
-      <ViewRawMaterialDialog
-        isOpen={isViewDialogOpen}
-        onClose={() => setIsViewDialogOpen(false)}
+      <ViewRawMaterialDialog 
         material={selectedMaterial}
+        isOpen={isViewMaterialOpen}
+        onOpenChange={setIsViewMaterialOpen}
       />
-    </div>
+
+      <RaiseRequestDialog 
+        isOpen={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
+        material={selectedMaterial}
+        onRequestCreated={handleRequestCreated}
+        mode="inventory"
+      />
+
+      <RawMaterialStockUpdateDialog
+        isOpen={isStockUpdateOpen}
+        onOpenChange={setIsStockUpdateOpen}
+        material={selectedMaterial}
+        onStockUpdated={onUpdate}
+      />
+
+      <OrderedQtyDetailsDialog
+        isOpen={isOrderDetailsOpen}
+        onClose={() => setIsOrderDetailsOpen(false)}
+        productDetails={productDetails}
+        totalQuantity={calculatedTotalRequired}
+        loading={orderDetailsLoading}
+        isRawMaterial={true}
+        materialName={selectedMaterial?.name}
+        materialUnit={selectedMaterial?.unit}
+      />
+    </TooltipProvider>
   );
 };
 

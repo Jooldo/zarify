@@ -115,23 +115,23 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
       <div className="bg-white rounded-lg border border-gray-200">
         <Table>
           <TableHeader>
-            <TableRow className="h-10 bg-gray-50 border-b border-gray-200">
-              <TableHead className="py-2 px-3 text-xs font-medium text-gray-700">Product Code</TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium text-gray-700">Threshold</TableHead>
+            <TableRow className="h-12 bg-gray-50 border-b border-gray-200">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Product Code</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Threshold</TableHead>
               <TableHead 
-                className="py-2 px-3 text-xs font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('ordered_qty')}
               >
-                <div className="flex flex-col items-center justify-center gap-0.5">
+                <div className="flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-blue-700 font-semibold text-xs leading-tight">Live Orders</span>
+                    <span className="text-blue-700 font-semibold text-sm leading-tight">Live Orders</span>
                     {getSortIcon('ordered_qty')}
                   </div>
                   <div className="flex items-center gap-1">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-2.5 w-2.5 text-blue-500 cursor-help" />
+                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs">Total quantity of this product required for all pending orders (Created + In Progress status)</p>
@@ -141,13 +141,13 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                 </div>
               </TableHead>
               <TableHead 
-                className="py-2 px-3 text-xs font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('current_stock')}
               >
                 Current Stock {getSortIcon('current_stock')}
               </TableHead>
               <TableHead 
-                className="py-2 px-3 text-xs font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('in_manufacturing')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -155,7 +155,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   {getSortIcon('in_manufacturing')}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-2.5 w-2.5 text-gray-400 cursor-help" />
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">Quantity of this product currently being manufactured</p>
@@ -164,7 +164,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                 </div>
               </TableHead>
               <TableHead 
-                className="py-2 px-3 text-xs font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
+                className="py-3 px-4 text-sm font-medium text-gray-700 text-center cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('shortfall')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -172,7 +172,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   {getSortIcon('shortfall')}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-2.5 w-2.5 text-gray-400 cursor-help" />
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">Shortage calculation: (Live Orders + Threshold) - (Current Stock + In Manufacturing). Positive values indicate shortage, negative indicate surplus.</p>
@@ -180,12 +180,12 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium text-gray-700">
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">
                 <div className="flex items-center gap-1">
                   <span>Status</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-2.5 w-2.5 text-gray-400 cursor-help" />
+                      <Info className="h-3 w-3 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">Critical: Shortage exists; Low: Current stock below threshold; Good: Adequate stock levels</p>
@@ -193,7 +193,7 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                   </Tooltip>
                 </div>
               </TableHead>
-              <TableHead className="py-2 px-3 text-xs font-medium text-gray-700">Actions</TableHead>
+              <TableHead className="py-3 px-4 text-sm font-medium text-gray-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -215,8 +215,8 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
               const StatusIcon = statusInfo.icon;
 
               return (
-                <TableRow key={product.id} className="h-12 hover:bg-gray-50 border-b border-gray-100">
-                  <TableCell className="px-3 py-2 font-mono text-sm bg-gray-50">
+                <TableRow key={product.id} className="h-16 hover:bg-gray-50 border-b border-gray-100">
+                  <TableCell className="px-4 py-3 font-mono text-sm bg-gray-50">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-mono text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -225,10 +225,10 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       {product.product_code}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-gray-900">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900">
                     {formatIndianNumber(product.threshold)}
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-center">
+                  <TableCell className="py-3 px-4 text-center">
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 text-sm font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50"
@@ -237,43 +237,43 @@ const FinishedGoodsTable = ({ products, onViewProduct, onEditProduct, sortConfig
                       {formatIndianNumber(product.required_quantity)}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-sm font-medium text-center text-gray-900">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-center text-gray-900">
                     {formatIndianNumber(product.current_stock)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
+                  <TableCell className="px-4 py-3 text-center">
                     <span className="text-sm font-medium text-orange-600">
                       {formatIndianNumber(product.in_manufacturing)}
                     </span>
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-center">
+                  <TableCell className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <span className={`text-sm font-medium ${shortfall > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatIndianNumber(Math.abs(shortfall))}
                       </span>
                       {shortfall > 0 ? (
-                        <ArrowDown className="h-3 w-3 text-red-600" />
+                        <ArrowDown className="h-4 w-4 text-red-600" />
                       ) : (
-                        <ArrowUp className="h-3 w-3 text-green-600" />
+                        <ArrowUp className="h-4 w-4 text-green-600" />
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${statusInfo.bgColor}`}>
+                  <TableCell className="px-4 py-3">
+                    <div className={`flex items-center gap-1 px-3 py-1 rounded-full ${statusInfo.bgColor}`}>
                       <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.status}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <div className="flex gap-1">
+                  <TableCell className="px-4 py-3">
+                    <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="icon"
-                        className="h-7 w-7 rounded-full border-gray-300 hover:bg-gray-50"
+                        className="h-8 w-8 rounded-full border-gray-300 hover:bg-gray-50"
                         onClick={() => onEditProduct(product)}
                       >
-                        <Edit className="h-3 w-3" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
