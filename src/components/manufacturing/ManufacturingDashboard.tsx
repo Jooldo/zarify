@@ -1,14 +1,16 @@
+
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Package2, Clock, CheckCircle, Workflow, Search } from 'lucide-react';
+import { Plus, Package2, Clock, CheckCircle, Workflow, Search, Table, Kanban } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
 import ManufacturingOrdersTable from './ManufacturingOrdersTable';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionQueueView from './ProductionQueueView';
+import ProductionKanbanView from './ProductionKanbanView';
 import ManufacturingOrdersFilter from './ManufacturingOrdersFilter';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 
@@ -25,7 +27,7 @@ interface ManufacturingFilters {
 
 const ManufacturingDashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('table');
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -162,7 +164,7 @@ const ManufacturingDashboard = () => {
 
   const handleViewFlow = (order: ManufacturingOrder) => {
     setSelectedOrderForFlow(order);
-    setActiveTab('queue');
+    setActiveTab('flow');
   };
 
   const handleClearOrderFilter = () => {
@@ -180,7 +182,6 @@ const ManufacturingDashboard = () => {
   const handleDetailsDialogClose = (open: boolean) => {
     setShowDetailsDialog(open);
     if (!open) {
-      // Clear selected order to ensure fresh data on next open
       setSelectedOrder(null);
     }
   };
@@ -258,12 +259,22 @@ const ManufacturingDashboard = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="orders">Manufacturing Orders</TabsTrigger>
-          <TabsTrigger value="queue">Production Queue</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="table" className="flex items-center gap-2">
+            <Table className="h-4 w-4" />
+            Table View
+          </TabsTrigger>
+          <TabsTrigger value="kanban" className="flex items-center gap-2">
+            <Kanban className="h-4 w-4" />
+            Kanban View
+          </TabsTrigger>
+          <TabsTrigger value="flow" className="flex items-center gap-2">
+            <Workflow className="h-4 w-4" />
+            Flow View
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="orders" className="space-y-4">
+        <TabsContent value="table" className="space-y-4">
           {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-2 flex-1">
@@ -312,7 +323,11 @@ const ManufacturingDashboard = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="queue" className="mt-4">
+        <TabsContent value="kanban" className="mt-4">
+          <ProductionKanbanView />
+        </TabsContent>
+
+        <TabsContent value="flow" className="mt-4">
           <ProductionQueueView 
             selectedOrderForFlow={selectedOrderForFlow} 
             onClearOrderFilter={handleClearOrderFilter}

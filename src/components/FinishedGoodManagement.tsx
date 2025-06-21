@@ -1,5 +1,5 @@
 
-import { Package, Factory } from 'lucide-react';
+import { Package, Factory, Table, Kanban, Workflow } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
