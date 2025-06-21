@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Package, TrendingUp, TrendingDown, Factory, AlertTriangle, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, Factory, AlertTriangle, Settings, Users } from 'lucide-react';
 import FinishedGoodsManufacturingDistribution from './FinishedGoodsManufacturingDistribution';
+import WorkerAssignmentsDisplay from './WorkerAssignmentsDisplay';
 
 interface FinishedGoodsSectionProps {
   finishedGoods: any[];
@@ -128,6 +128,21 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
           <p className="text-sm text-gray-600">Real-time view of quantity and weight at each manufacturing step</p>
         </div>
         <FinishedGoodsManufacturingDistribution 
+          manufacturingOrders={manufacturingOrders} 
+          loading={loading} 
+        />
+      </div>
+
+      {/* Worker Assignments - Full Width */}
+      <div className="w-full">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <Users className="h-5 w-5 text-blue-600" />
+            Current Worker Assignments
+          </h3>
+          <p className="text-sm text-gray-600">Workers currently handling materials and orders at each manufacturing step</p>
+        </div>
+        <WorkerAssignmentsDisplay 
           manufacturingOrders={manufacturingOrders} 
           loading={loading} 
         />
