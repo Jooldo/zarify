@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
@@ -552,7 +551,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     console.log('📍 Optimized positions:', optimizedPositions);
 
-    // Store step card IDs for rework connections with improved tracking
+    // Store step card IDs for rework connections - Fixed mapping logic
     const stepCardMap = new Map<string, string>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
@@ -608,13 +607,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // Enhanced step mapping - store multiple keys for better lookup
-        const stepOrderKey = `${parentOrder.id}-${step.manufacturing_steps?.step_order || step.step_order}`;
-        const stepIdKey = `${parentOrder.id}-stepid-${step.manufacturing_step_id}`;
-        stepCardMap.set(stepOrderKey, stepCardNodeId);
-        stepCardMap.set(stepIdKey, stepCardNodeId);
-        
-        console.log(`🗺️ Storing step mappings: ${stepOrderKey} -> ${stepCardNodeId}, ${stepIdKey} -> ${stepCardNodeId}`);
+        // FIXED: Store the actual manufacturing_order_step ID for proper rework connection
+        stepCardMap.set(step.id, stepCardNodeId);
+        console.log(`🗺️ Storing step mapping: ${step.id} -> ${stepCardNodeId}`);
         
         const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
         const stepPosition = {
@@ -727,31 +722,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Enhanced rework connection logic
+        // FIXED: Enhanced rework connection logic using the correct step ID
         let originatingStepCardId = null;
         
-        // First try: Use rework_source_step_id if available
-        if (childOrder.rework_source_step_id) {
-          console.log(`🔗 Looking for originating step card using rework_source_step_id: ${childOrder.rework_source_step_id}`);
-          
-          // Find the step card by step ID
-          const stepIdKey = `${parentOrder.id}-stepid-${childOrder.rework_source_step_id}`;
-          originatingStepCardId = stepCardMap.get(stepIdKey);
-          
-          console.log(`Step ID key: ${stepIdKey}, found step card ID: ${originatingStepCardId}`);
-        }
-        
-        // Second try: Use assigned_to_step as fallback
-        if (!originatingStepCardId && childOrder.assigned_to_step) {
-          console.log(`🔗 Fallback: Looking for originating step card using assigned_to_step: ${childOrder.assigned_to_step}`);
-          
-          const stepOrderKey = `${parentOrder.id}-${childOrder.assigned_to_step}`;
-          originatingStepCardId = stepCardMap.get(stepOrderKey);
-          
-          console.log(`Step order key: ${stepOrderKey}, found step card ID: ${originatingStepCardId}`);
-        }
-        
+        console.log(`🔗 Looking for originating step card using rework_source_step_id: ${childOrder.rework_source_step_id}`);
         console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+        
+        // Use the manufacturing_order_step ID directly to find the step card
+        if (childOrder.rework_source_step_id) {
+          originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
+          console.log(`Direct lookup result: ${childOrder.rework_source_step_id} -> ${originatingStepCardId}`);
+        }
         
         if (originatingStepCardId) {
           const reworkConnectionEdge = {
@@ -792,7 +773,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           edges.push(reworkConnectionEdge);
         } else {
           console.log(`❌ Could not find originating step card for rework order ${childOrder.order_number}`);
-          console.log(`Attempted keys: rework_source_step_id(${childOrder.rework_source_step_id}), assigned_to_step(${childOrder.assigned_to_step})`);
+          console.log(`Attempted to find step card for rework_source_step_id: ${childOrder.rework_source_step_id}`);
         }
 
         const childStepsToShow = childOrderSteps.filter(step => 
