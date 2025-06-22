@@ -692,17 +692,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_manufacturing_order_steps_order_id"
-            columns: ["manufacturing_order_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturing_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "manufacturing_order_steps_assigned_worker_id_fkey"
             columns: ["assigned_worker_id"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_manufacturing_order_id_fkey"
+            columns: ["manufacturing_order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
             referencedColumns: ["id"]
           },
           {

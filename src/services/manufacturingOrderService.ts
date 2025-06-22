@@ -12,7 +12,7 @@ export const fetchManufacturingOrders = async (): Promise<ManufacturingOrder[]> 
     .from('manufacturing_orders')
     .select(`
       *,
-      product_configs(
+      product_configs!manufacturing_orders_product_config_id_fkey(
         product_code,
         category,
         subcategory,
