@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const [reworkReason, setReworkReason] = useState('');
   const [assignedToStep, setAssignedToStep] = useState<number>(1);
   const [selectedStepFields, setSelectedStepFields] = useState<any[]>([]);
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   const activeSteps = manufacturingSteps
     .filter(step => step.is_active)
@@ -46,37 +45,55 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
 
   // Update selected step fields when assignedToStep changes
   useEffect(() => {
+    console.log('Effect triggered - assignedToStep:', assignedToStep);
     const selectedStep = activeSteps.find(step => step.step_order === assignedToStep);
+    console.log('Selected step:', selectedStep);
+    
     if (selectedStep) {
       const fields = stepFields.filter(field => field.manufacturing_step_id === selectedStep.id);
+      console.log('Filtered fields for step:', fields);
       setSelectedStepFields(fields);
       
-      // Reset field values for new step
-      const initialValues: Record<string, any> = {};
-      fields.forEach(field => {
-        initialValues[field.field_id] = '';
+      // Only reset field values if we're switching to a different step
+      // Preserve existing values that might already be entered
+      setFieldValues(prevValues => {
+        const newValues: Record<string, string> = {};
+        fields.forEach(field => {
+          // Keep existing value if it exists, otherwise set to empty string
+          newValues[field.field_id] = prevValues[field.field_id] || '';
+        });
+        console.log('Updated field values:', newValues);
+        return newValues;
       });
-      setFieldValues(initialValues);
     } else {
       setSelectedStepFields([]);
       setFieldValues({});
     }
   }, [assignedToStep, activeSteps, stepFields]);
 
+  const handleFieldValueChange = (fieldId: string, value: string) => {
+    console.log('Field value change:', fieldId, '=', value);
+    setFieldValues(prev => {
+      const updated = {
+        ...prev,
+        [fieldId]: value
+      };
+      console.log('Updated fieldValues state:', updated);
+      return updated;
+    });
+  };
+
   const renderField = (field: any) => {
     const currentValue = fieldValues[field.field_id] || '';
-
-    const handleChange = (value: any) => {
-      setFieldValues(prev => ({
-        ...prev,
-        [field.field_id]: value
-      }));
-    };
+    console.log('Rendering field:', field.field_id, 'with value:', currentValue);
 
     switch (field.field_type) {
       case 'worker':
         return (
-          <Select value={currentValue} onValueChange={handleChange}>
+          <Select 
+            value={currentValue} 
+            onValueChange={(value) => handleFieldValueChange(field.field_id, value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
@@ -94,7 +111,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           <Input
             type="number"
             value={currentValue}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
@@ -103,7 +120,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           <Input
             type="text"
             value={currentValue}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
@@ -112,7 +129,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           <Input
             type="date"
             value={currentValue}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
           />
         );
       default:
@@ -120,7 +137,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           <Input
             type="text"
             value={currentValue}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
@@ -352,6 +369,9 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
                       {renderField(field)}
+                      <div className="text-xs text-gray-500">
+                        Current value: {fieldValues[field.field_id] || '(empty)'}
+                      </div>
                     </div>
                   ))}
                 </div>
