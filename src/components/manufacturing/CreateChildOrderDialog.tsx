@@ -6,6 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -47,15 +52,6 @@ const CreateChildOrderDialog = ({
 
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
   const stepFields = selectedStepId ? getStepFields(selectedStepId) : [];
-
-  // Get current step fields and their values for display
-  const currentStepFields = currentStep ? getStepFields(currentStep.id) : [];
-  const getCurrentStepFieldValue = (fieldId: string) => {
-    if (parentOrderStep) {
-      return getStepValue(parentOrderStep.id, fieldId);
-    }
-    return null;
-  };
 
   // Get worker name from worker ID
   const getWorkerName = (workerId: string) => {
@@ -187,6 +183,50 @@ const CreateChildOrderDialog = ({
     const value = fieldValues[field.field_id] || '';
 
     switch (field.field_type) {
+      case 'worker':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleFieldChange(field.field_id, val)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select worker" />
+            </SelectTrigger>
+            <SelectContent>
+              {workers.map(worker => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case 'date':
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !value && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => handleFieldChange(field.field_id, date ? date.toISOString().split('T')[0] : '')}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        );
       case 'number':
         return (
           <Input
@@ -256,51 +296,6 @@ const CreateChildOrderDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Current Step Information */}
-          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 space-y-3">
-            <h4 className="font-semibold text-amber-900">Current Step Information</h4>
-            <div className="space-y-2">
-              <div>
-                <span className="text-amber-700 font-medium">Step Name:</span>
-                <div className="text-amber-900 font-semibold">{currentStep?.step_name || 'Unknown Step'}</div>
-              </div>
-              <div>
-                <span className="text-amber-700 font-medium">Step Order:</span>
-                <div className="text-amber-900">{currentStep?.step_order || 'N/A'}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Current Step Field Values */}
-          {currentStepFields.length > 0 && (
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
-              <h4 className="font-semibold text-blue-900">Current Step Field Values</h4>
-              <div className="space-y-2">
-                {currentStepFields.map(field => {
-                  const fieldValue = getCurrentStepFieldValue(field.field_id);
-                  let displayValue = fieldValue || 'Not set';
-                  
-                  // If it's a worker field, show worker name instead of ID
-                  if (field.field_type === 'worker' && fieldValue) {
-                    displayValue = getWorkerName(fieldValue);
-                  }
-                  
-                  return (
-                    <div key={field.field_id} className="flex justify-between items-center text-sm">
-                      <span className="text-blue-700 font-medium">
-                        {field.field_label}
-                        {field.field_options?.unit && ` (${field.field_options.unit})`}:
-                      </span>
-                      <span className="text-blue-900 font-semibold">
-                        {displayValue}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div>
             <Label htmlFor="step-select">Reassign to Step</Label>
             <Select value={selectedStepId} onValueChange={handleStepSelection}>

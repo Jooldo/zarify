@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -101,16 +102,27 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!currentOrderStep) return;
 
     console.log('Submitting form data:', formData);
 
     // Check if partially completed status is selected to show rework option
     if (formData.status === 'partially_completed') {
+      // First update the step with the current field values
+      await updateStepData();
+      // Then show the rework dialog
       setShowReworkDialog(true);
       return;
     }
+
+    // For other statuses, just update normally
+    await updateStepData();
+    onOpenChange(false);
+  };
+
+  const updateStepData = async () => {
+    if (!currentOrderStep) return;
 
     // Calculate progress value based on status
     const getProgressValue = (status: StepStatus): number => {
@@ -129,25 +141,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
     const progressValue = getProgressValue(formData.status);
 
-    updateStep({
+    await updateStep({
       stepId: currentOrderStep.id,
       fieldValues: formData.fieldValues,
       status: formData.status,
       progress: progressValue
     });
-
-    onOpenChange(false);
   };
 
   const handleReworkSuccess = () => {
-    // Update the step as partially completed after creating rework order
-    updateStep({
-      stepId: currentOrderStep!.id,
-      fieldValues: formData.fieldValues,
-      status: 'partially_completed',
-      progress: 75
-    });
-
     setShowReworkDialog(false);
     onOpenChange(false);
   };
@@ -263,7 +265,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Update {stepData.stepName} - {manufacturingOrder?.order_number || 'Loading...'}
+              Update {stepData.stepName} - {manufacturingOrder?.order_number || stepData.orderNumber}
             </DialogTitle>
           </DialogHeader>
 
