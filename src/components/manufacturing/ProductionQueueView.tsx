@@ -3,13 +3,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Factory, Search, Kanban, GitBranch, X, Table } from 'lucide-react';
+import { Factory, Search, X } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
-import ReactFlowView from './ReactFlowView';
-import ProductionKanbanView from './ProductionKanbanView';
-import ManufacturingOrdersTable from './ManufacturingOrdersTable';
+import ProductionFlowView from './ProductionFlowView';
 import ProductionQueueFilter from './ProductionQueueFilter';
 import { Badge } from '@/components/ui/badge';
 
@@ -34,7 +32,6 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeView, setActiveView] = useState('table');
   const [filters, setFilters] = useState<ProductionQueueFilters>({
     status: '',
     priority: '',
@@ -130,19 +127,11 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
     setDetailsDialogOpen(true);
   };
 
-  const handleViewFlow = (order: ManufacturingOrder) => {
-    setActiveView('reactflow');
-    setFilters(prev => ({
-      ...prev,
-      orderNumber: order.order_number,
-    }));
-  };
-
   const isOrderFiltered = Boolean(filters.orderNumber);
 
   return (
     <div className="space-y-6">
-      {/* Header with View Toggle */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Production Queue</h2>
@@ -161,39 +150,10 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
               </Badge>
             </div>
           )}
-          <div className="flex items-center border rounded-lg p-1">
-            <Button
-              variant={activeView === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveView('table')}
-              className="h-8 px-3"
-            >
-              <Table className="h-4 w-4 mr-1" />
-              Table View
-            </Button>
-            <Button
-              variant={activeView === 'reactflow' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveView('reactflow')}
-              className="h-8 px-3"
-            >
-              <GitBranch className="h-4 w-4 mr-1" />
-              React Flow View
-            </Button>
-            <Button
-              variant={activeView === 'kanban' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveView('kanban')}
-              className="h-8 px-3"
-            >
-              <Kanban className="h-4 w-4 mr-1" />
-              Kanban View
-            </Button>
-          </div>
         </div>
 
-        {/* Search and Filter Controls - Only show for table view and reactflow view when not filtered by order */}
-        {(activeView === 'table' || activeView === 'reactflow') && !isOrderFiltered && (
+        {/* Search and Filter Controls - Only show when not filtered by order */}
+        {!isOrderFiltered && (
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -204,7 +164,7 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
                 className="pl-10 h-8"
               />
             </div>
-            {activeView === 'table' && <ProductionQueueFilter onFiltersChange={setFilters} />}
+            <ProductionQueueFilter onFiltersChange={setFilters} />
           </div>
         )}
       </div>
@@ -217,24 +177,10 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
           </div>
         </div>
       ) : (
-        <div>
-          {activeView === 'table' ? (
-            <ManufacturingOrdersTable
-              orders={filteredOrders}
-              getPriorityColor={getPriorityColor}
-              getStatusColor={getStatusColor}
-              onViewOrder={handleViewDetails}
-              onViewFlow={handleViewFlow}
-            />
-          ) : activeView === 'reactflow' ? (
-            <ReactFlowView
-              manufacturingOrders={filteredOrders}
-              onViewDetails={handleViewDetails}
-            />
-          ) : (
-            <ProductionKanbanView />
-          )}
-        </div>
+        <ProductionFlowView
+          manufacturingOrders={filteredOrders}
+          onViewDetails={handleViewDetails}
+        />
       )}
 
       {/* Manufacturing Order Details Dialog */}
