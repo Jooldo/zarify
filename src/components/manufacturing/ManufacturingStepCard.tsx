@@ -297,7 +297,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       console.log('🚨 MANUFACTURING STEP - STOPPING PROPAGATION');
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
       
       console.log('🚨 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
