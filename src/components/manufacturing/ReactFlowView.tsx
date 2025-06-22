@@ -87,10 +87,10 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
       />
       
-      {/* Add target handle for rework connections */}
+      {/* Updated target handle for rework connections - now on the left */}
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         id="order-rework-input"
         style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
       />
@@ -551,8 +551,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     console.log('📍 Optimized positions:', optimizedPositions);
 
-    // Store step card IDs for rework connections - Fixed mapping logic
+    // Store step card IDs and positions for rework connections
     const stepCardMap = new Map<string, string>();
+    const stepCardPositions = new Map<string, { x: number; y: number }>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
       console.log(`Processing parent order: ${parentOrder.order_number}`);
@@ -607,7 +608,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // FIXED: Store the actual manufacturing_order_step ID for proper rework connection
+        // Store the actual manufacturing_order_step ID for proper rework connection
         stepCardMap.set(step.id, stepCardNodeId);
         console.log(`🗺️ Storing step mapping: ${step.id} -> ${stepCardNodeId}`);
         
@@ -616,6 +617,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           x: parentPosition.x + 450 + (stepIndex * 450), // Increased spacing
           y: parentPosition.y
         };
+        
+        // Store step card position for rework positioning
+        stepCardPositions.set(stepCardNodeId, stepPosition);
         
         const stepDetailsNode = {
           id: stepCardNodeId,
@@ -697,10 +701,26 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
 
         const childNodeId = `child-${childOrder.id}`;
-        const childPosition = {
+        
+        // Position rework card to the side of originating step card
+        let childPosition = {
           x: parentPosition.x + 100,
-          y: parentPosition.y + ((childIndex + 1) * 400) // Increased spacing
+          y: parentPosition.y + ((childIndex + 1) * 400)
         };
+        
+        // If we can find the originating step card, position the rework card to its side
+        if (childOrder.rework_source_step_id) {
+          const originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
+          if (originatingStepCardId) {
+            const originatingStepPosition = stepCardPositions.get(originatingStepCardId);
+            if (originatingStepPosition) {
+              childPosition = {
+                x: originatingStepPosition.x + 100, // Position to the right side
+                y: originatingStepPosition.y + 150 + (childIndex * 200) // Offset vertically
+              };
+            }
+          }
+        }
 
         nodes.push({
           id: childNodeId,
@@ -722,7 +742,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // FIXED: Enhanced rework connection logic using the correct step ID
+        // Enhanced rework connection logic using the correct step ID
         let originatingStepCardId = null;
         
         console.log(`🔗 Looking for originating step card using rework_source_step_id: ${childOrder.rework_source_step_id}`);
@@ -740,7 +760,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             source: originatingStepCardId,
             target: childNodeId,
             sourceHandle: 'step-details-output',
-            targetHandle: 'order-rework-input',
+            targetHandle: 'order-rework-input', // Updated to use left handle
             type: 'smoothstep',
             animated: true,
             style: { 
