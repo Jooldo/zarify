@@ -75,13 +75,13 @@ const ReworkOrderDetailsDialog: React.FC<ReworkOrderDetailsDialogProps> = ({
     onOpenChange(false);
   };
 
-  // Get all order steps for this order with their field data
-  const getOrderStepsWithFieldData = () => {
-    const currentOrderSteps = orderSteps
+  // Get only the rework order's own steps (not parent order steps)
+  const getReworkOrderStepsWithFieldData = () => {
+    const reworkOrderSteps = orderSteps
       .filter(step => step.manufacturing_order_id === order.id)
       .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
 
-    return currentOrderSteps.map(orderStep => {
+    return reworkOrderSteps.map(orderStep => {
       const stepStepFields = stepFields.filter(field => 
         field.manufacturing_step_id === orderStep.manufacturing_step_id
       );
@@ -98,7 +98,7 @@ const ReworkOrderDetailsDialog: React.FC<ReworkOrderDetailsDialogProps> = ({
     });
   };
 
-  const orderStepsWithData = getOrderStepsWithFieldData();
+  const reworkOrderStepsWithData = getReworkOrderStepsWithFieldData();
 
   const getStepStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -230,17 +230,17 @@ const ReworkOrderDetailsDialog: React.FC<ReworkOrderDetailsDialogProps> = ({
               </CardContent>
             </Card>
 
-            {/* Manufacturing Steps Progress */}
-            {orderStepsWithData.length > 0 && (
+            {/* Rework Order Manufacturing Steps Progress (only this rework order's steps) */}
+            {reworkOrderStepsWithData.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Workflow className="h-4 w-4" />
-                    Manufacturing Steps Progress
+                    Rework Manufacturing Steps Progress
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
-                  {orderStepsWithData.map((orderStep, index) => (
+                  {reworkOrderStepsWithData.map((orderStep, index) => (
                     <div key={orderStep.id} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">

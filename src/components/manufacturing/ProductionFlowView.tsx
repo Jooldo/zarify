@@ -157,10 +157,18 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
   };
 
   const handleViewDetails = (order: any) => {
-    if (order.isChildOrder) {
+    console.log('handleViewDetails called with:', { 
+      orderNumber: order.order_number, 
+      isChild: order.isChildOrder,
+      parentId: order.parent_order_id 
+    });
+    
+    if (order.isChildOrder || order.parent_order_id) {
+      console.log('Opening rework dialog for:', order.order_number);
       setSelectedReworkOrder(order);
       setReworkOrderDialogOpen(true);
     } else {
+      console.log('Opening regular dialog for:', order.order_number);
       onViewDetails(order);
     }
   };
@@ -330,7 +338,13 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
       <ReworkOrderDetailsDialog
         order={selectedReworkOrder}
         open={reworkOrderDialogOpen}
-        onOpenChange={setReworkOrderDialogOpen}
+        onOpenChange={(open) => {
+          console.log('Rework dialog state change:', open);
+          setReworkOrderDialogOpen(open);
+          if (!open) {
+            setSelectedReworkOrder(null);
+          }
+        }}
         getPriorityColor={getPriorityColor}
         getStatusColor={getStatusColor}
       />
