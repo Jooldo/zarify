@@ -1,5 +1,4 @@
-
-import React, { useCallback, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -27,7 +26,6 @@ import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsCard from './StepDetailsCard';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
 import StartStepDialog from './StartStepDialog';
-import StepDetailsDialog from './StepDetailsDialog';
 import { 
   optimizeLayoutPositions, 
   calculateStepCardPosition, 
@@ -63,6 +61,8 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         return 'bg-blue-50 text-blue-600 border-blue-200';
       case 'completed':
         return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+      case 'partially_completed':
+        return 'bg-orange-50 text-orange-600 border-orange-200';
       default:
         return 'bg-slate-50 text-slate-600 border-slate-200';
     }
@@ -87,6 +87,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
       />
       
+      {/* Updated target handle for rework connections - now on the left */}
       <Handle
         type="target"
         position={Position.Left}
@@ -131,6 +132,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
                 <Badge className={`${getStatusColor(step.status)} border text-xs`}>
                   {step.status === 'not_started' ? 'Not Started' : 
                    step.status === 'in_progress' ? 'In Progress' : 
+                   step.status === 'partially_completed' ? 'Partially Completed' :
                    step.status?.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
@@ -185,10 +187,9 @@ const InProgressStepCard: React.FC<{
     order: any;
     manufacturingOrders: any[];
     onViewDetails: (order: any) => void;
-    onViewStepDetails: (step: any) => void;
   }
 }> = ({ data }) => {
-  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails, onViewStepDetails } = data;
+  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails } = data;
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const { manufacturingSteps } = useManufacturingSteps();
@@ -306,7 +307,7 @@ const InProgressStepCard: React.FC<{
   };
 
   const handleCardClick = () => {
-    onViewStepDetails(orderStep);
+    onViewDetails(order);
   };
 
   const nextStep = getNextStepInfo();
@@ -356,6 +357,7 @@ const InProgressStepCard: React.FC<{
 
         <CardContent className="space-y-3">
           
+          {/* Progress */}
           {orderStep.progress_percentage > 0 && (
             <div>
               <div className="flex justify-between text-xs mb-2">
@@ -371,6 +373,7 @@ const InProgressStepCard: React.FC<{
             </div>
           )}
 
+          {/* Worker Assignment */}
           {assignedWorkerName && (
             <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-blue-50 border border-blue-100">
               <User className="h-3 w-3 text-blue-500" />
@@ -379,6 +382,7 @@ const InProgressStepCard: React.FC<{
             </div>
           )}
 
+          {/* Configured Field Values */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-slate-600">Field Values:</div>
@@ -396,6 +400,7 @@ const InProgressStepCard: React.FC<{
             </div>
           )}
 
+          {/* Action Buttons */}
           <div className="space-y-2 pt-2 border-t border-blue-100">
             {!hasReworkOrder && (
               <Button
@@ -433,6 +438,7 @@ const InProgressStepCard: React.FC<{
             )}
           </div>
 
+          {/* Timestamps */}
           <div className="space-y-1 text-xs border-t pt-2 text-slate-500 border-blue-100">
             {orderStep.started_at && (
               <div className="flex items-center gap-2">
@@ -450,6 +456,7 @@ const InProgressStepCard: React.FC<{
         </CardContent>
       </Card>
 
+      {/* Rework Dialog */}
       {showReworkDialog && orderStep.manufacturing_steps && (
         <CreateChildOrderDialog
           isOpen={showReworkDialog}
@@ -461,6 +468,7 @@ const InProgressStepCard: React.FC<{
         />
       )}
 
+      {/* Start Next Step Dialog */}
       {showStartNextDialog && nextStep && (
         <StartStepDialog
           isOpen={showStartNextDialog}
@@ -479,7 +487,7 @@ const nodeTypes = {
     <StepDetailsCard
       orderStep={data.orderStep}
       stepFields={data.stepFields}
-      onViewDetails={() => data.onViewStepDetails(data.orderStep)}
+      onViewDetails={data.onViewDetails}
     />
   ),
   inProgressStepNode: InProgressStepCard,
@@ -489,32 +497,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [stepDetailsDialogOpen, setStepDetailsDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
-
-  // Stable callback using useRef to prevent re-renders
-  const handleViewStepDetailsRef = useRef((step: any) => {
-    setSelectedStep(step);
-    setStepDetailsDialogOpen(true);
-  });
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
   );
 
-  // Create stable data fingerprint for comparison
-  const dataFingerprint = useMemo(() => {
-    const orderIds = manufacturingOrders?.map(o => o.id).sort().join(',') || '';
-    const stepIds = orderSteps?.map(s => s.id).sort().join(',') || '';
-    const manufacturingStepsCount = manufacturingSteps?.length || 0;
-    
-    return `${orderIds}-${stepIds}-${manufacturingStepsCount}`;
-  }, [manufacturingOrders, orderSteps, manufacturingSteps]);
-
-  // Generate nodes and edges only when data actually changes
   const { generatedNodes, generatedEdges } = useMemo(() => {
-    console.log('🔄 Generating nodes and edges with fingerprint:', dataFingerprint);
+    console.log('🔄 Generating optimized nodes and edges...');
+    console.log('Manufacturing Orders:', manufacturingOrders);
+    console.log('Order Steps:', orderSteps);
     
     if (!manufacturingOrders?.length || !orderSteps?.length) {
       console.log('⚠️ Missing data, returning empty arrays');
@@ -527,6 +519,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     const parentOrders = manufacturingOrders.filter(order => !order.parent_order_id);
     const childOrders = manufacturingOrders.filter(order => order.parent_order_id);
     
+    // Create maps for efficient lookups
     const childOrdersMap = new Map<string, any[]>();
     const stepCountsMap = new Map<string, number>();
     
@@ -543,18 +536,22 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
     });
     
+    // Optimize layout positions with better spacing
     const optimizedPositions = optimizeLayoutPositions(
       parentOrders, 
       childOrdersMap, 
       stepCountsMap, 
       {
         ...DEFAULT_LAYOUT_CONFIG,
-        nodeSpacing: 600,
-        stepCardSpacing: 450,
-        childOrderOffset: 400,
+        nodeSpacing: 600, // Increased from 500
+        stepCardSpacing: 450, // Increased from 420
+        childOrderOffset: 400, // Increased from 350
       }
     );
+    
+    console.log('📍 Optimized positions:', optimizedPositions);
 
+    // Store step card IDs and positions for rework connections
     const stepCardMap = new Map<string, string>();
     const stepCardPositions = new Map<string, { x: number; y: number }>();
 
@@ -564,6 +561,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       const parentOrderSteps = orderSteps.filter(step => 
         String(step.manufacturing_order_id) === String(parentOrder.id)
       );
+      console.log(`All parent order steps for ${parentOrder.order_number}:`, parentOrderSteps);
       
       const currentParentStep = parentOrderSteps.length > 0 
         ? parentOrderSteps
@@ -571,6 +569,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             .find(step => step.status === 'in_progress') || 
           parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
         : null;
+      
+      console.log(`Current parent step for ${parentOrder.order_number}:`, currentParentStep);
 
       const parentNodeId = `parent-${parentOrder.id}`;
       const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 600) };
@@ -597,6 +597,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       const stepsToShow = parentOrderSteps.filter(step => 
         step.status === 'in_progress' || step.status === 'completed'
       ).sort((a, b) => a.step_order - b.step_order);
+      
+      console.log(`Steps to show for ${parentOrder.order_number}:`, stepsToShow);
 
       let previousNodeId = parentNodeId;
 
@@ -606,14 +608,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
+        // Store the actual manufacturing_order_step ID for proper rework connection
         stepCardMap.set(step.id, stepCardNodeId);
+        console.log(`🗺️ Storing step mapping: ${step.id} -> ${stepCardNodeId}`);
         
         const nodeType = step.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
         const stepPosition = {
-          x: parentPosition.x + 450 + (stepIndex * 450),
+          x: parentPosition.x + 450 + (stepIndex * 450), // Increased spacing
           y: parentPosition.y
         };
         
+        // Store step card position for rework positioning
         stepCardPositions.set(stepCardNodeId, stepPosition);
         
         const stepDetailsNode = {
@@ -625,16 +630,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             stepFields: stepFields,
             order: parentOrder,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: () => onViewDetails(parentOrder),
-            onViewStepDetails: handleViewStepDetailsRef.current
+            onViewDetails: () => onViewDetails(parentOrder)
           } : {
             orderStep: step,
             stepFields: stepFields,
-            onViewDetails: () => handleViewStepDetailsRef.current(step),
-            onViewStepDetails: handleViewStepDetailsRef.current
+            onViewDetails: () => onViewDetails(parentOrder)
           },
         };
         
+        console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
         const edgeColor = step.status === 'completed' ? '#10b981' : '#3b82f6';
@@ -665,6 +669,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           },
         };
         
+        console.log(`Adding step edge from ${previousNodeId} to ${stepCardNodeId}:`, stepEdge);
         edges.push(stepEdge);
 
         previousNodeId = stepCardNodeId;
@@ -674,6 +679,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
         console.log(`🔄 Processing child order: ${childOrder.order_number}`);
+        console.log(`Child order details:`, {
+          rework_source_step_id: childOrder.rework_source_step_id,
+          assigned_to_step: childOrder.assigned_to_step,
+          rework_reason: childOrder.rework_reason
+        });
         
         const childOrderSteps = orderSteps.filter(step => 
           String(step.manufacturing_order_id) === String(childOrder.id)
@@ -685,21 +695,25 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             childOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
           : null;
 
+        console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
+
         const childNodeId = `child-${childOrder.id}`;
         
+        // Position rework card to the side of originating step card
         let childPosition = {
           x: parentPosition.x + 100,
           y: parentPosition.y + ((childIndex + 1) * 400)
         };
         
+        // If we can find the originating step card, position the rework card to its side
         if (childOrder.rework_source_step_id) {
           const originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
           if (originatingStepCardId) {
             const originatingStepPosition = stepCardPositions.get(originatingStepCardId);
             if (originatingStepPosition) {
               childPosition = {
-                x: originatingStepPosition.x + 100,
-                y: originatingStepPosition.y + 150 + (childIndex * 200)
+                x: originatingStepPosition.x + 100, // Position to the right side
+                y: originatingStepPosition.y + 150 + (childIndex * 200) // Offset vertically
               };
             }
           }
@@ -725,10 +739,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
+        // Enhanced rework connection logic using the correct step ID
         let originatingStepCardId = null;
         
+        console.log(`🔗 Looking for originating step card using rework_source_step_id: ${childOrder.rework_source_step_id}`);
+        console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+        
+        // Use the manufacturing_order_step ID directly to find the step card
         if (childOrder.rework_source_step_id) {
           originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
+          console.log(`Direct lookup result: ${childOrder.rework_source_step_id} -> ${originatingStepCardId}`);
         }
         
         if (originatingStepCardId) {
@@ -737,7 +757,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             source: originatingStepCardId,
             target: childNodeId,
             sourceHandle: 'step-details-output',
-            targetHandle: 'order-rework-input',
+            targetHandle: 'order-rework-input', // Updated to use left handle
             type: 'smoothstep',
             animated: true,
             style: { 
@@ -766,7 +786,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             }
           };
           
+          console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}`);
           edges.push(reworkConnectionEdge);
+        } else {
+          console.log(`❌ Could not find originating step card for rework order ${childOrder.order_number}`);
+          console.log(`Attempted to find step card for rework_source_step_id: ${childOrder.rework_source_step_id}`);
         }
 
         const childStepsToShow = childOrderSteps.filter(step => 
@@ -776,12 +800,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         let previousChildNodeId = childNodeId;
 
         childStepsToShow.forEach((childStep, childStepIndex) => {
+          console.log(`🎯 Creating step details card for child order ${childOrder.order_number}, step ${childStep.step_order}`);
+          
           const stepFields = getStepFields(childStep.manufacturing_step_id);
           const childStepCardNodeId = `step-details-${childStep.id}`;
           
           const nodeType = childStep.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
           const childStepPosition = {
-            x: childPosition.x + 450 + (childStepIndex * 450),
+            x: childPosition.x + 450 + (childStepIndex * 450), // Increased spacing
             y: childPosition.y
           };
           
@@ -794,16 +820,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               stepFields: stepFields,
               order: childOrder,
               manufacturingOrders: manufacturingOrders,
-              onViewDetails: () => onViewDetails(childOrder),
-              onViewStepDetails: handleViewStepDetailsRef.current
+              onViewDetails: () => onViewDetails(childOrder)
             } : {
               orderStep: childStep,
               stepFields: stepFields,
-              onViewDetails: () => handleViewStepDetailsRef.current(childStep),
-              onViewStepDetails: handleViewStepDetailsRef.current
+              onViewDetails: () => onViewDetails(childOrder)
             },
           };
           
+          console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
           const edgeColor = childStep.status === 'completed' ? '#10b981' : '#3b82f6';
@@ -834,6 +859,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             },
           };
           
+          console.log(`Adding child step edge from ${previousChildNodeId} to ${childStepCardNodeId}:`, childStepEdge);
           edges.push(childStepEdge);
 
           previousChildNodeId = childStepCardNodeId;
@@ -841,52 +867,51 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       });
     });
 
-    console.log('🔥 Final nodes:', nodes.length);
-    console.log('🔥 Final edges:', edges.length);
+    console.log('🔥 Final optimized nodes:', nodes);
+    console.log('🔥 Final optimized edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
-  }, [dataFingerprint, onViewDetails, getStepFields]);
+  }, [
+    JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status, parent_order_id: o.parent_order_id, rework_source_step_id: o.rework_source_step_id, assigned_to_step: o.assigned_to_step }))),
+    JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status, step_order: s.step_order }))),
+    manufacturingSteps.length,
+    onViewDetails
+  ]);
 
-  // Update nodes and edges only when they actually change
   React.useEffect(() => {
-    console.log('📊 Setting nodes and edges');
+    console.log('📊 Setting optimized nodes and edges');
+    console.log('Setting nodes:', generatedNodes.length);
+    console.log('Setting edges:', generatedEdges.length);
+    
     setNodes(generatedNodes);
     setEdges(generatedEdges);
   }, [generatedNodes, generatedEdges, setNodes, setEdges]);
 
   return (
-    <>
-      <div className="h-[800px] w-full border rounded-lg overflow-hidden">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="top-right"
-          style={{ backgroundColor: "#F7F9FB" }}
-        >
-          <Controls />
-          <MiniMap 
-            zoomable 
-            pannable 
-            style={{ 
-              backgroundColor: "#F7F9FB",
-              border: "1px solid #e2e8f0"
-            }}
-          />
-          <Background color="#aaa" gap={16} />
-        </ReactFlow>
-      </div>
-
-      <StepDetailsDialog
-        open={stepDetailsDialogOpen}
-        onOpenChange={setStepDetailsDialogOpen}
-        step={selectedStep}
-      />
-    </>
+    <div className="h-[800px] w-full border rounded-lg overflow-hidden">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        fitView
+        attributionPosition="top-right"
+        style={{ backgroundColor: "#F7F9FB" }}
+      >
+        <Controls />
+        <MiniMap 
+          zoomable 
+          pannable 
+          style={{ 
+            backgroundColor: "#F7F9FB",
+            border: "1px solid #e2e8f0"
+          }}
+        />
+        <Background color="#aaa" gap={16} />
+      </ReactFlow>
+    </div>
   );
 };
 
