@@ -99,6 +99,15 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     step.manufacturing_steps?.step_order === data.stepOrder
   );
 
+  console.log('=== STEP CARD DEBUG ===');
+  console.log('Step Name:', data.stepName);
+  console.log('Step Order:', data.stepOrder);
+  console.log('Order ID:', data.orderId);
+  console.log('Current Order Step Found:', !!currentOrderStep);
+  console.log('Current Order Step ID:', currentOrderStep?.id);
+  console.log('Is Manufacturing Order Card:', data.stepName === 'Manufacturing Order');
+  console.log('=======================');
+
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
@@ -279,13 +288,24 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const handleCardClick = () => {
-    // Only open details dialog if this is an actual manufacturing step (not Manufacturing Order card)
+    console.log('=== CARD CLICK DEBUG ===');
+    console.log('Step clicked:', data.stepName);
+    console.log('Step order:', data.stepOrder);
+    console.log('Is Manufacturing Order card:', data.stepName === 'Manufacturing Order');
+    console.log('Current order step exists:', !!currentOrderStep);
+    console.log('Current order step data:', currentOrderStep);
+    
+    // Only open details dialog if this is an actual manufacturing step (not Manufacturing Order card) AND we have a valid order step
     if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('Opening step details dialog for step:', currentOrderStep);
+      console.log('✅ Opening step details dialog for step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
-    } else {
-      console.log('Cannot open details - no order step found or is Manufacturing Order card');
+    } else if (data.stepOrder === 0) {
+      console.log('❌ Cannot open details - this is Manufacturing Order card (step_order = 0)');
+    } else if (!currentOrderStep) {
+      console.log('❌ Cannot open details - no order step found in database');
+      console.log('Available order steps for this order:', orderSteps.filter(s => s.manufacturing_order_id === data.orderId));
     }
+    console.log('========================');
   };
 
   const assignedWorkerName = getAssignedWorkerName();
@@ -333,6 +353,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
               <Badge className={getStatusColor(currentOrderStep?.status || data.status)}>
                 {(currentOrderStep?.status || data.status).replace('_', ' ').toUpperCase()}
               </Badge>
+            </div>
+          )}
+
+          {/* Debug info for troubleshooting */}
+          {data.stepOrder > 0 && (
+            <div className="text-xs text-gray-500 bg-gray-100 p-1 rounded">
+              OrderStep: {currentOrderStep ? '✅ Found' : '❌ Missing'} | StepOrder: {data.stepOrder} | OrderID: {data.orderId.slice(-6)}
             </div>
           )}
 
@@ -409,17 +436,15 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <Handle type="source" position={Position.Right} className="!bg-gray-400" />
       </Card>
 
-      {/* Only render dialog if we have a valid order step */}
-      {currentOrderStep && (
-        <StepDetailsDialog
-          open={detailsDialogOpen}
-          onOpenChange={(open) => {
-            console.log('Dialog open change:', open);
-            setDetailsDialogOpen(open);
-          }}
-          step={currentOrderStep}
-        />
-      )}
+      {/* ALWAYS render dialog, but only pass step if valid */}
+      <StepDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={(open) => {
+          console.log('Dialog open change:', open, 'for step:', currentOrderStep?.id);
+          setDetailsDialogOpen(open);
+        }}
+        step={currentOrderStep || null}
+      />
     </>
   );
 };
