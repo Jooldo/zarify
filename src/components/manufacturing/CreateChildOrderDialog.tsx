@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,16 +22,15 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
   const { toast } = useToast();
   const { manufacturingSteps, getStepFields } = useManufacturingSteps();
   const [selectedStepId, setSelectedStepId] = useState<string>('');
-  const [quantity, setQuantity] = useState<number>(0);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
 
-  // Add null check for currentStep and ensure step_order exists
+  // Include current step and previous steps for reassignment
   const availableSteps = manufacturingSteps.filter(step => {
     if (!currentStep || !step.step_order || !currentStep.step_order) {
       return false;
     }
-    return step.step_order < currentStep.step_order && step.is_active;
+    return step.step_order <= currentStep.step_order && step.is_active;
   });
 
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
@@ -49,19 +49,10 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
   };
 
   const handleCreateChildOrder = async () => {
-    if (!selectedStepId || quantity <= 0) {
+    if (!selectedStepId) {
       toast({
         title: 'Error',
-        description: 'Please select a step and enter a valid quantity',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (quantity > parentOrder.quantity_required) {
-      toast({
-        title: 'Error',
-        description: 'Child order quantity cannot exceed parent order quantity',
+        description: 'Please select a step for reassignment',
         variant: 'destructive',
       });
       return;
@@ -89,14 +80,14 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
 
       if (orderNumberError) throw orderNumberError;
 
-      // Create child manufacturing order
+      // Create child manufacturing order - use parent's quantity by default
       const { data: childOrder, error: childOrderError } = await supabase
         .from('manufacturing_orders')
         .insert({
           order_number: `${childOrderNumber}-R`, // R for Rework
           product_name: parentOrder.product_name,
           product_config_id: parentOrder.product_config_id,
-          quantity_required: quantity,
+          quantity_required: parentOrder.quantity_required,
           priority: 'high', // Rework orders get high priority
           status: 'pending',
           due_date: parentOrder.due_date,
@@ -161,9 +152,68 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
 
   const handleClose = () => {
     setSelectedStepId('');
-    setQuantity(0);
     setFieldValues({});
     onClose();
+  };
+
+  const renderField = (field: any) => {
+    const value = fieldValues[field.field_id] || '';
+
+    switch (field.field_type) {
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      case 'text':
+        return (
+          <Input
+            type="text"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      case 'select':
+        if (field.field_options?.options) {
+          return (
+            <Select 
+              value={value} 
+              onValueChange={(val) => handleFieldChange(field.field_id, val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Select ${field.field_label}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {field.field_options.options.map((option: string) => (
+                  <SelectItem key={option} value={option}>{option}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        }
+        return (
+          <Input
+            type="text"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      default:
+        return (
+          <Input
+            type="text"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+    }
   };
 
   // Don't render if currentStep is null or invalid
@@ -173,22 +223,41 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Rework Child Order</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <strong>Parent Order:</strong> {parentOrder?.order_number}
-            </p>
-            <p className="text-sm text-blue-700">
-              <strong>Current Step:</strong> {currentStep?.step_name || 'Unknown Step'}
-            </p>
-            <p className="text-sm text-blue-700">
-              <strong>Available Quantity:</strong> {parentOrder?.quantity_required}
-            </p>
+          {/* Parent Order Details */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-2">
+            <h4 className="font-semibold text-blue-900">Parent Order Details</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-blue-700 font-medium">Order Number:</span>
+                <div className="text-blue-900">{parentOrder?.order_number}</div>
+              </div>
+              <div>
+                <span className="text-blue-700 font-medium">Product:</span>
+                <div className="text-blue-900">{parentOrder?.product_name}</div>
+              </div>
+              <div>
+                <span className="text-blue-700 font-medium">Quantity:</span>
+                <div className="text-blue-900">{parentOrder?.quantity_required}</div>
+              </div>
+              <div>
+                <span className="text-blue-700 font-medium">Priority:</span>
+                <div className="text-blue-900">
+                  <Badge variant="outline" className="text-xs">
+                    {parentOrder?.priority?.toUpperCase() || 'MEDIUM'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+            <div>
+              <span className="text-blue-700 font-medium">Failed at Step:</span>
+              <div className="text-blue-900 font-medium">{currentStep?.step_name || 'Unknown Step'}</div>
+            </div>
           </div>
 
           <div>
@@ -200,83 +269,52 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
               <SelectContent>
                 {availableSteps.map(step => (
                   <SelectItem key={step.id} value={step.id}>
-                    Step {step.step_order}: {step.step_name}
+                    <div className="flex items-center justify-between w-full">
+                      <span>Step {step.step_order}: {step.step_name}</span>
+                      {step.id === currentStep.id && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Current</Badge>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {availableSteps.length === 0 && (
               <p className="text-sm text-amber-600 mt-1">
-                No previous steps available for rework assignment
+                No steps available for rework assignment
               </p>
             )}
           </div>
 
-          <div>
-            <Label htmlFor="quantity">Quantity for Rework</Label>
-            <Input
-              id="quantity"
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              max={parentOrder?.quantity_required}
-              min={1}
-              placeholder="Enter quantity"
-            />
-          </div>
-
-          {stepFields.length > 0 && (
-            <div className="space-y-3">
+          {/* Step Configuration Fields - Only show when step is selected */}
+          {selectedStepId && stepFields.length > 0 && (
+            <div className="space-y-3 border-t pt-4">
               <Label className="text-base font-semibold">Step Configuration Fields</Label>
-              {stepFields.map(field => (
-                <div key={field.field_id}>
-                  <Label htmlFor={field.field_id}>
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  
-                  {field.field_type === 'select' && field.field_options?.options ? (
-                    <Select 
-                      value={fieldValues[field.field_id] || ''} 
-                      onValueChange={(value) => handleFieldChange(field.field_id, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={`Select ${field.field_label}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {field.field_options.options.map(option => (
-                          <SelectItem key={option} value={option}>{option}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      id={field.field_id}
-                      type={field.field_type === 'number' ? 'number' : 'text'}
-                      value={fieldValues[field.field_id] || ''}
-                      onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-                      placeholder={`Enter ${field.field_label.toLowerCase()}`}
-                    />
-                  )}
-                  
-                  {field.field_options?.unit && (
-                    <p className="text-xs text-gray-500 mt-1">Unit: {field.field_options.unit}</p>
-                  )}
-                </div>
-              ))}
+              <div className="space-y-3">
+                {stepFields.map(field => (
+                  <div key={field.field_id} className="space-y-2">
+                    <Label htmlFor={field.field_id}>
+                      {field.field_label}
+                      {field.field_options?.unit && ` (${field.field_options.unit})`}
+                      {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-4 border-t">
             <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button 
               onClick={handleCreateChildOrder} 
-              disabled={isCreating || !selectedStepId || quantity <= 0}
+              disabled={isCreating || !selectedStepId}
               className="flex-1"
             >
-              {isCreating ? 'Creating...' : 'Create Child Order'}
+              {isCreating ? 'Creating...' : 'Create Rework Order'}
             </Button>
           </div>
         </div>
