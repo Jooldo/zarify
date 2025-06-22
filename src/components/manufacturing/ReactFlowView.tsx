@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -506,22 +505,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     handleViewDetailsRef.current = onViewDetails;
   }, [onViewDetails]);
 
-  // Create stable data fingerprint for dependencies
+  // Create stable data fingerprint for dependencies - FIXED VERSION
   const dataFingerprint = useMemo(() => {
+    // Process all data inside useMemo, not in dependencies
     const ordersKey = manufacturingOrders?.map(o => `${o.id}-${o.status}-${o.parent_order_id || 'none'}-${o.rework_source_step_id || 'none'}`).sort().join('|') || '';
     const stepsKey = orderSteps?.map(s => `${s.id}-${s.manufacturing_order_id}-${s.status}-${s.step_order}`).sort().join('|') || '';
     const manufacturingStepsKey = `${manufacturingSteps.length}`;
     
     return `${ordersKey}::${stepsKey}::${manufacturingStepsKey}`;
   }, [
-    manufacturingOrders?.map(o => o.id).join(','),
-    manufacturingOrders?.map(o => o.status).join(','),
-    manufacturingOrders?.map(o => o.parent_order_id).join(','),
-    manufacturingOrders?.map(o => o.rework_source_step_id).join(','),
-    orderSteps?.map(s => s.id).join(','),
-    orderSteps?.map(s => s.status).join(','),
-    orderSteps?.map(s => s.step_order).join(','),
-    manufacturingSteps.length
+    // Only pass the raw arrays, not processed data
+    manufacturingOrders,
+    orderSteps,
+    manufacturingSteps
   ]);
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
