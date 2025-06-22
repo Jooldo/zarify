@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { createNextManufacturingStep } from '@/services/manufacturingStepService';
 import UpdateStepDialog from './UpdateStepDialog';
+import StartStepDialog from './StartStepDialog';
 
 interface StepDetailsCardProps {
   orderStep: any;
@@ -29,7 +28,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   const { manufacturingSteps } = useManufacturingSteps();
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [isCreatingNextStep, setIsCreatingNextStep] = useState(false);
+  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -136,35 +135,9 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     return nextStep;
   };
 
-  // Handle starting the next step
-  const handleStartNextStep = async () => {
-    const nextStep = getNextStepInfo();
-    if (!nextStep) return;
-
-    setIsCreatingNextStep(true);
-
-    try {
-      await createNextManufacturingStep(
-        orderStep.manufacturing_order_id,
-        orderStep.manufacturing_steps.step_order
-      );
-
-      toast({
-        title: 'Success',
-        description: `Next step "${nextStep.step_name}" has been created and is ready to start.`,
-      });
-
-      console.log('Next step created successfully');
-    } catch (error) {
-      console.error('Error creating next step:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create next step. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCreatingNextStep(false);
-    }
+  // Handle starting the next step - now opens dialog instead of direct creation
+  const handleStartNextStep = () => {
+    setStartStepDialogOpen(true);
   };
 
   const configuredFieldValues = getConfiguredFieldValues();
@@ -305,10 +278,9 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
                   e.stopPropagation();
                   handleStartNextStep();
                 }}
-                disabled={isCreatingNextStep}
               >
                 <Play className="h-3 w-3 mr-1" />
-                {isCreatingNextStep ? 'Starting...' : `Start ${nextStep.step_name}`}
+                Start {nextStep.step_name}
               </Button>
             </div>
           )}
@@ -344,6 +316,16 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         stepFields={stepFields}
         previousSteps={[]} // You may need to pass previous steps if required
       />
+
+      {/* Start Step Dialog for Next Step */}
+      {nextStep && (
+        <StartStepDialog
+          isOpen={startStepDialogOpen}
+          onClose={() => setStartStepDialogOpen(false)}
+          order={orderStep.manufacturing_orders}
+          step={nextStep}
+        />
+      )}
     </>
   );
 };
