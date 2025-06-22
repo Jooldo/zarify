@@ -25,10 +25,13 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
 
-  // Get available steps (only steps with order less than current step)
-  const availableSteps = manufacturingSteps.filter(step => 
-    step.step_order < currentStep.step_order && step.is_active
-  );
+  // Add null check for currentStep and ensure step_order exists
+  const availableSteps = manufacturingSteps.filter(step => {
+    if (!currentStep || !step.step_order || !currentStep.step_order) {
+      return false;
+    }
+    return step.step_order < currentStep.step_order && step.is_active;
+  });
 
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
   const stepFields = selectedStepId ? getStepFields(selectedStepId) : [];
@@ -97,10 +100,10 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
           priority: 'high', // Rework orders get high priority
           status: 'pending',
           due_date: parentOrder.due_date,
-          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name}`,
+          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep?.step_name || 'Unknown'}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_from_step: currentStep.step_order,
+          rework_from_step: currentStep?.step_order || 0,
           assigned_to_step: selectedStep?.step_order
         })
         .select()
@@ -163,6 +166,11 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
     onClose();
   };
 
+  // Don't render if currentStep is null or invalid
+  if (!currentStep) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
@@ -176,7 +184,7 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
               <strong>Parent Order:</strong> {parentOrder?.order_number}
             </p>
             <p className="text-sm text-blue-700">
-              <strong>Current Step:</strong> {currentStep?.step_name}
+              <strong>Current Step:</strong> {currentStep?.step_name || 'Unknown Step'}
             </p>
             <p className="text-sm text-blue-700">
               <strong>Available Quantity:</strong> {parentOrder?.quantity_required}
@@ -197,6 +205,11 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
                 ))}
               </SelectContent>
             </Select>
+            {availableSteps.length === 0 && (
+              <p className="text-sm text-amber-600 mt-1">
+                No previous steps available for rework assignment
+              </p>
+            )}
           </div>
 
           <div>
