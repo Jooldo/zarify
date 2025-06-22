@@ -25,6 +25,13 @@ import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsCard from './StepDetailsCard';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
 import StartStepDialog from './StartStepDialog';
+import { 
+  optimizeLayoutPositions, 
+  calculateStepCardPosition, 
+  calculateChildOrderPosition,
+  DEFAULT_LAYOUT_CONFIG,
+  LayoutPosition 
+} from '@/utils/reactFlowLayoutUtils';
 
 interface ReactFlowViewProps {
   manufacturingOrders: any[];
@@ -466,7 +473,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   );
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
-    console.log('🔄 Generating nodes and edges...');
+    console.log('🔄 Generating optimized nodes and edges...');
     console.log('Manufacturing Orders:', manufacturingOrders);
     console.log('Order Steps:', orderSteps);
     
@@ -481,13 +488,32 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     const parentOrders = manufacturingOrders.filter(order => !order.parent_order_id);
     const childOrders = manufacturingOrders.filter(order => order.parent_order_id);
     
-    console.log('Parent Orders:', parentOrders);
-    console.log('Child Orders:', childOrders);
+    // Create maps for efficient lookups
+    const childOrdersMap = new Map<string, any[]>();
+    const stepCountsMap = new Map<string, number>();
     
-    let yOffset = 0;
-    const nodeSpacing = 400;
-    const childOffset = 300;
-    const stepCardOffset = 450;
+    parentOrders.forEach(parentOrder => {
+      const relatedChildOrders = childOrders.filter(child => 
+        String(child.parent_order_id) === String(parentOrder.id)
+      );
+      childOrdersMap.set(parentOrder.id, relatedChildOrders);
+      
+      const parentOrderSteps = orderSteps.filter(step => 
+        String(step.manufacturing_order_id) === String(parentOrder.id) &&
+        (step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed')
+      );
+      stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
+    });
+    
+    // Optimize layout positions
+    const optimizedPositions = optimizeLayoutPositions(
+      parentOrders, 
+      childOrdersMap, 
+      stepCountsMap, 
+      DEFAULT_LAYOUT_CONFIG
+    );
+    
+    console.log('📍 Optimized positions:', optimizedPositions);
 
     parentOrders.forEach((parentOrder, parentIndex) => {
       console.log(`Processing parent order: ${parentOrder.order_number}`);
@@ -507,10 +533,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       console.log(`Current parent step for ${parentOrder.order_number}:`, currentParentStep);
 
       const parentNodeId = `parent-${parentOrder.id}`;
+      const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 500) };
+      
       nodes.push({
         id: parentNodeId,
         type: 'orderNode',
-        position: { x: 0, y: yOffset },
+        position: parentPosition,
         data: {
           order: parentOrder,
           step: currentParentStep?.manufacturing_steps ? {
@@ -543,11 +571,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Step fields for ${parentOrder.order_number} step ${step.step_order}:`, stepFields);
         
         const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+        const stepPosition = calculateStepCardPosition(parentPosition, stepIndex, DEFAULT_LAYOUT_CONFIG);
         
         const stepDetailsNode = {
           id: stepCardNodeId,
           type: nodeType,
-          position: { x: stepCardOffset + (stepIndex * 400), y: yOffset },
+          position: stepPosition,
           data: step.status === 'partially_completed' ? {
             orderStep: step,
             stepFields: stepFields,
@@ -601,9 +630,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         previousNodeId = stepCardNodeId;
       });
 
-      const relatedChildOrders = childOrders.filter(child => 
-        String(child.parent_order_id) === String(parentOrder.id)
-      );
+      const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
         console.log(`Processing child order: ${childOrder.order_number}`);
@@ -621,12 +648,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
 
         const childNodeId = `child-${childOrder.id}`;
-        const childYOffset = yOffset + ((childIndex + 1) * childOffset);
+        const childPosition = calculateChildOrderPosition(parentPosition, childIndex, DEFAULT_LAYOUT_CONFIG);
 
         nodes.push({
           id: childNodeId,
           type: 'orderNode',
-          position: { x: 500, y: childYOffset },
+          position: childPosition,
           data: {
             order: childOrder,
             step: currentChildStep?.manufacturing_steps ? {
@@ -655,14 +682,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           const stepFields = getStepFields(childStep.manufacturing_step_id);
           const childStepCardNodeId = `step-details-${childStep.id}`;
           
-          console.log(`Step fields for child ${childOrder.order_number} step ${childStep.step_order}:`, stepFields);
+          console.log(`Step fields for child ${childOrder.order_number} step ${childStep.step_order}:`,  stepFields);
           
           const nodeType = childStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+          const childStepPosition = calculateStepCardPosition(childPosition, childStepIndex, DEFAULT_LAYOUT_CONFIG);
           
           const childStepDetailsNode = {
             id: childStepCardNodeId,
             type: nodeType,
-            position: { x: 500 + stepCardOffset + (childStepIndex * 400), y: childYOffset },
+            position: childStepPosition,
             data: childStep.status === 'partially_completed' ? {
               orderStep: childStep,
               stepFields: stepFields,
@@ -735,20 +763,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           },
         });
       });
-
-      const totalStepCards = stepsToShow.length + relatedChildOrders.reduce((acc, child) => {
-        const childSteps = orderSteps.filter(step => 
-          String(step.manufacturing_order_id) === String(child.id) &&
-          (step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed')
-        );
-        return acc + childSteps.length;
-      }, 0);
-      
-      yOffset += Math.max(nodeSpacing, (relatedChildOrders.length + 1) * childOffset);
     });
 
-    console.log('🔥 Final generated nodes:', nodes);
-    console.log('🔥 Final generated edges:', edges);
+    console.log('🔥 Final optimized nodes:', nodes);
+    console.log('🔥 Final optimized edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
@@ -759,7 +777,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   ]);
 
   React.useEffect(() => {
-    console.log('📊 Setting nodes and edges');
+    console.log('📊 Setting optimized nodes and edges');
     console.log('Setting nodes:', generatedNodes.length);
     console.log('Setting edges:', generatedEdges.length);
     
