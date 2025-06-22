@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
-import { ArrowRight, GitBranch } from 'lucide-react';
+import { ArrowRight, GitBranch, Settings } from 'lucide-react';
 
 interface CreateChildOrderDialogProps {
   isOpen: boolean;
@@ -35,7 +35,6 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const { manufacturingSteps, stepFields } = useManufacturingSteps();
   const { workers } = useWorkers();
   const [isCreating, setIsCreating] = useState(false);
-  const [reworkQuantity, setReworkQuantity] = useState<number>(1);
   const [reworkReason, setReworkReason] = useState('');
   const [assignedToStep, setAssignedToStep] = useState<number>(1);
   const [selectedStepFields, setSelectedStepFields] = useState<any[]>([]);
@@ -65,10 +64,15 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   }, [assignedToStep, activeSteps, stepFields]);
 
   const handleFieldValueChange = (fieldId: string, value: any) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
+    console.log('Field value change:', fieldId, value);
+    setFieldValues(prev => {
+      const updated = {
+        ...prev,
+        [fieldId]: value
+      };
+      console.log('Updated field values:', updated);
+      return updated;
+    });
   };
 
   const renderField = (field: any) => {
@@ -143,18 +147,9 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       return;
     }
 
-    if (reworkQuantity <= 0 || reworkQuantity > parentOrder.quantity_required) {
-      toast({
-        title: 'Error',
-        description: `Rework quantity must be between 1 and ${parentOrder.quantity_required}`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
     // Validate required fields
     const requiredFields = selectedStepFields.filter(field => field.is_required);
-    const missingFields = requiredFields.filter(field => !fieldValues[field.field_id] || fieldValues[field.field_id].trim() === '');
+    const missingFields = requiredFields.filter(field => !fieldValues[field.field_id] || fieldValues[field.field_id].toString().trim() === '');
     
     if (missingFields.length > 0) {
       toast({
@@ -175,14 +170,14 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           order_number: `${parentOrder.order_number}-R`,
           product_name: parentOrder.product_name,
           product_config_id: parentOrder.product_config_id,
-          quantity_required: reworkQuantity,
+          quantity_required: parentOrder.quantity_required,
           priority: parentOrder.priority,
           status: 'pending',
           special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
           rework_source_step_id: parentOrderStep?.id,
-          rework_quantity: reworkQuantity,
+          rework_quantity: parentOrder.quantity_required,
           rework_reason: reworkReason,
           assigned_to_step: assignedToStep
         })
@@ -197,7 +192,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       // Create manufacturing order step for the assigned step
       const assignedStep = activeSteps.find(step => step.step_order === assignedToStep);
       if (assignedStep) {
-        const { error: stepError } = await supabase
+        const { data: createdStepData, error: stepError } = await supabase
           .from('manufacturing_order_steps')
           .insert({
             manufacturing_order_id: childOrder.id,
@@ -205,7 +200,9 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
             step_order: assignedStep.step_order,
             status: 'pending',
             merchant_id: parentOrder.merchant_id
-          });
+          })
+          .select()
+          .single();
 
         if (stepError) throw stepError;
 
@@ -214,35 +211,20 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           const stepValueInserts = Object.entries(fieldValues)
             .filter(([_, value]) => value && value.toString().trim() !== '')
             .map(([fieldId, value]) => ({
-              manufacturing_order_step_id: childOrder.id, // This will be updated after step creation
+              manufacturing_order_step_id: createdStepData.id,
               field_id: fieldId,
               field_value: value.toString(),
               merchant_id: parentOrder.merchant_id
             }));
 
           if (stepValueInserts.length > 0) {
-            // Get the created step ID first
-            const { data: createdStep } = await supabase
-              .from('manufacturing_order_steps')
-              .select('id')
-              .eq('manufacturing_order_id', childOrder.id)
-              .eq('manufacturing_step_id', assignedStep.id)
-              .single();
+            const { error: valuesError } = await supabase
+              .from('manufacturing_order_step_values')
+              .insert(stepValueInserts);
 
-            if (createdStep) {
-              const updatedInserts = stepValueInserts.map(insert => ({
-                ...insert,
-                manufacturing_order_step_id: createdStep.id
-              }));
-
-              const { error: valuesError } = await supabase
-                .from('manufacturing_order_step_values')
-                .insert(updatedInserts);
-
-              if (valuesError) {
-                console.error('Error saving field values:', valuesError);
-                // Don't throw here as the order was created successfully
-              }
+            if (valuesError) {
+              console.error('Error saving field values:', valuesError);
+              // Don't throw here as the order was created successfully
             }
           }
         }
@@ -257,7 +239,6 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       onClose();
       
       // Reset form
-      setReworkQuantity(1);
       setReworkReason('');
       setAssignedToStep(1);
       setFieldValues({});
@@ -290,7 +271,10 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           {/* Current Step Details */}
           <Card className="border-blue-200 bg-blue-50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-blue-800">Current Step Details</CardTitle>
+              <CardTitle className="text-base text-blue-800 flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Current Step Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
@@ -307,6 +291,10 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
                 <Label className="text-sm font-medium text-blue-700">Product</Label>
                 <div className="font-semibold text-blue-900">{parentOrder.product_name}</div>
               </div>
+              <div>
+                <Label className="text-sm font-medium text-blue-700">Quantity</Label>
+                <div className="font-semibold text-blue-900">{parentOrder.quantity_required} units</div>
+              </div>
             </CardContent>
           </Card>
 
@@ -317,22 +305,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
               <h3 className="text-lg font-semibold">Rework Configuration</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="rework-quantity">
-                  Rework Quantity (Max: {parentOrder.quantity_required})
-                </Label>
-                <Input
-                  id="rework-quantity"
-                  type="number"
-                  min={1}
-                  max={parentOrder.quantity_required}
-                  value={reworkQuantity}
-                  onChange={(e) => setReworkQuantity(parseInt(e.target.value) || 1)}
-                  required
-                />
-              </div>
-
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="assigned-step">Assign to Step</Label>
                 <Select 
@@ -351,17 +324,17 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="rework-reason">Rework Reason</Label>
-              <Textarea
-                id="rework-reason"
-                value={reworkReason}
-                onChange={(e) => setReworkReason(e.target.value)}
-                placeholder="Describe the reason for rework..."
-                required
-              />
+              
+              <div className="space-y-2">
+                <Label htmlFor="rework-reason">Rework Reason</Label>
+                <Textarea
+                  id="rework-reason"
+                  value={reworkReason}
+                  onChange={(e) => setReworkReason(e.target.value)}
+                  placeholder="Describe the reason for rework..."
+                  required
+                />
+              </div>
             </div>
           </div>
 
