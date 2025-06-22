@@ -1,11 +1,16 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type, Play } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { createNextManufacturingStep } from '@/services/manufacturingStepService';
 import UpdateStepDialog from './UpdateStepDialog';
 
 interface StepDetailsCardProps {
@@ -21,7 +26,10 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
+  const { manufacturingSteps } = useManufacturingSteps();
+  const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [isCreatingNextStep, setIsCreatingNextStep] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -114,8 +122,55 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     return null;
   };
 
+  // Check if there's a next step available
+  const getNextStepInfo = () => {
+    if (!orderStep.manufacturing_steps) return null;
+    
+    const currentStepOrder = orderStep.manufacturing_steps.step_order;
+    const nextStep = manufacturingSteps.find(step => 
+      step.step_order === currentStepOrder + 1 && 
+      step.is_active && 
+      step.merchant_id === orderStep.merchant_id
+    );
+    
+    return nextStep;
+  };
+
+  // Handle starting the next step
+  const handleStartNextStep = async () => {
+    const nextStep = getNextStepInfo();
+    if (!nextStep) return;
+
+    setIsCreatingNextStep(true);
+
+    try {
+      await createNextManufacturingStep(
+        orderStep.manufacturing_order_id,
+        orderStep.manufacturing_steps.step_order
+      );
+
+      toast({
+        title: 'Success',
+        description: `Next step "${nextStep.step_name}" has been created and is ready to start.`,
+      });
+
+      console.log('Next step created successfully');
+    } catch (error) {
+      console.error('Error creating next step:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create next step. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingNextStep(false);
+    }
+  };
+
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
+  const nextStep = getNextStepInfo();
+  const isCompleted = orderStep.status === 'completed';
 
   const handleCardClick = () => {
     setUpdateDialogOpen(true);
@@ -139,17 +194,23 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         type="target"
         position={Position.Left}
         id="step-details-input"
-        style={{ background: '#3b82f6' }}
+        style={{ background: isCompleted ? '#10b981' : '#3b82f6' }}
       />
       <Card 
-        className="w-80 border-l-4 border-l-blue-500 bg-blue-50/30 hover:shadow-lg transition-shadow cursor-pointer" 
+        className={`w-80 border-l-4 ${
+          isCompleted 
+            ? 'border-l-green-500 bg-green-50/30' 
+            : 'border-l-blue-500 bg-blue-50/30'
+        } hover:shadow-lg transition-shadow cursor-pointer`} 
         onClick={handleCardClick}
       >
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold text-blue-800">
-                Step Details: {orderStep.manufacturing_steps?.step_name}
+              <CardTitle className={`text-sm font-semibold ${
+                isCompleted ? 'text-green-800' : 'text-blue-800'
+              }`}>
+                {isCompleted ? 'Completed: ' : 'Step Details: '}{orderStep.manufacturing_steps?.step_name}
                 {orderStep.manufacturing_steps?.qc_required && (
                   <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -157,7 +218,9 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
                   </Badge>
                 )}
               </CardTitle>
-              <p className="text-xs text-blue-600">Step {orderStep.manufacturing_steps?.step_order}</p>
+              <p className={`text-xs ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
+                Step {orderStep.manufacturing_steps?.step_order}
+              </p>
             </div>
             <Badge className={`text-xs ${getStatusColor(orderStep.status)}`}>
               {orderStep.status.replace('_', ' ').toUpperCase()}
@@ -170,12 +233,18 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
           {orderStep.progress_percentage > 0 && (
             <div className="mb-2">
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-blue-700 font-medium">Progress</span>
-                <span className="text-blue-800 font-semibold">{orderStep.progress_percentage}%</span>
+                <span className={`font-medium ${isCompleted ? 'text-green-700' : 'text-blue-700'}`}>
+                  Progress
+                </span>
+                <span className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-blue-800'}`}>
+                  {orderStep.progress_percentage}%
+                </span>
               </div>
-              <div className="w-full bg-blue-100 rounded-full h-2">
+              <div className={`w-full rounded-full h-2 ${isCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
                 <div 
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    isCompleted ? 'bg-green-500' : 'bg-blue-500'
+                  }`}
                   style={{ width: `${orderStep.progress_percentage}%` }}
                 ></div>
               </div>
@@ -184,22 +253,38 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
           {/* Worker Assignment */}
           {assignedWorkerName && (
-            <div className="flex items-center gap-2 text-xs bg-blue-100 p-2 rounded">
-              <User className="h-3 w-3 text-blue-600" />
-              <span className="text-blue-600">Assigned to:</span>
-              <span className="font-medium text-blue-800">{assignedWorkerName}</span>
+            <div className={`flex items-center gap-2 text-xs p-2 rounded ${
+              isCompleted ? 'bg-green-100' : 'bg-blue-100'
+            }`}>
+              <User className={`h-3 w-3 ${isCompleted ? 'text-green-600' : 'text-blue-600'}`} />
+              <span className={isCompleted ? 'text-green-600' : 'text-blue-600'}>Assigned to:</span>
+              <span className={`font-medium ${isCompleted ? 'text-green-800' : 'text-blue-800'}`}>
+                {assignedWorkerName}
+              </span>
             </div>
           )}
 
           {/* Configured Field Values */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-1">
-              <div className="text-xs font-medium text-blue-700 mb-1">Field Values:</div>
+              <div className={`text-xs font-medium mb-1 ${
+                isCompleted ? 'text-green-700' : 'text-blue-700'
+              }`}>
+                Field Values:
+              </div>
               {configuredFieldValues.map((field, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded border border-blue-200">
+                <div key={index} className={`flex items-center gap-2 text-xs bg-white p-2 rounded border ${
+                  isCompleted ? 'border-green-200' : 'border-blue-200'
+                }`}>
                   {getFieldIcon(field.fieldName, field.type)}
-                  <span className="text-blue-600 font-medium">{field.label}:</span>
-                  <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-gray-400 italic' : 'text-blue-800'}`}>
+                  <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
+                    {field.label}:
+                  </span>
+                  <span className={`font-semibold flex-1 ${
+                    field.isEmpty 
+                      ? 'text-gray-400 italic' 
+                      : isCompleted ? 'text-green-800' : 'text-blue-800'
+                  }`}>
                     {field.value}
                   </span>
                 </div>
@@ -207,8 +292,33 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
             </div>
           )}
 
+          {/* Next Step Action for Completed Steps */}
+          {isCompleted && nextStep && (
+            <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
+              <div className="text-xs text-green-700 mb-2">
+                Next Step Available: <span className="font-medium">{nextStep.step_name}</span>
+              </div>
+              <Button
+                size="sm"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartNextStep();
+                }}
+                disabled={isCreatingNextStep}
+              >
+                <Play className="h-3 w-3 mr-1" />
+                {isCreatingNextStep ? 'Starting...' : `Start ${nextStep.step_name}`}
+              </Button>
+            </div>
+          )}
+
           {/* Timestamps */}
-          <div className="space-y-1 text-xs text-blue-600 border-t border-blue-200 pt-2">
+          <div className={`space-y-1 text-xs border-t pt-2 ${
+            isCompleted 
+              ? 'text-green-600 border-green-200' 
+              : 'text-blue-600 border-blue-200'
+          }`}>
             {orderStep.started_at && (
               <div className="flex items-center gap-2">
                 <Clock className="h-3 w-3" />

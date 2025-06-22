@@ -246,8 +246,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         } as FlowNodeData,
       });
 
-      // Add step details card if parent step is in progress
-      if (currentParentStep && currentParentStep.status === 'in_progress') {
+      // Add step details card if parent step is in progress OR completed
+      if (currentParentStep && (currentParentStep.status === 'in_progress' || currentParentStep.status === 'completed')) {
         console.log(`🎯 Creating step details card for parent order ${parentOrder.order_number}`);
         
         const stepFields = getStepFields(currentParentStep.manufacturing_step_id);
@@ -277,15 +277,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           sourceHandle: 'order-output',
           targetHandle: 'step-details-input',
           type: 'smoothstep',
-          animated: true,
-          style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+          animated: currentParentStep.status === 'in_progress',
+          style: { 
+            stroke: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+            strokeWidth: 2, 
+            strokeDasharray: currentParentStep.status === 'in_progress' ? '5,5' : 'none'
+          },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: '#3b82f6',
+            color: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6',
           },
-          label: 'In Progress',
+          label: currentParentStep.status === 'completed' ? 'Completed' : 'In Progress',
           labelStyle: { 
-            fill: '#3b82f6', 
+            fill: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6', 
             fontWeight: 600,
             fontSize: '12px'
           },
@@ -335,8 +339,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Add step details card if child step is in progress
-        if (currentChildStep && currentChildStep.status === 'in_progress') {
+        // Add step details card if child step is in progress OR completed
+        if (currentChildStep && (currentChildStep.status === 'in_progress' || currentChildStep.status === 'completed')) {
           console.log(`🎯 Creating step details card for child order ${childOrder.order_number}`);
           
           const stepFields = getStepFields(currentChildStep.manufacturing_step_id);
@@ -366,15 +370,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             sourceHandle: 'order-output',
             targetHandle: 'step-details-input',
             type: 'smoothstep',
-            animated: true,
-            style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+            animated: currentChildStep.status === 'in_progress',
+            style: { 
+              stroke: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+              strokeWidth: 2, 
+              strokeDasharray: currentChildStep.status === 'in_progress' ? '5,5' : 'none'
+            },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: '#3b82f6',
+              color: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6',
             },
-            label: 'In Progress',
+            label: currentChildStep.status === 'completed' ? 'Completed' : 'In Progress',
             labelStyle: { 
-              fill: '#3b82f6', 
+              fill: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6', 
               fontWeight: 600,
               fontSize: '12px'
             },
@@ -414,14 +422,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
-    // Use stable string representations to prevent constant re-rendering
     JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status }))),
     JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status }))),
-    manufacturingSteps.length, // Just the length for stability
-    onViewDetails.toString() // This should be stable
+    manufacturingSteps.length,
+    onViewDetails
   ]);
 
-  // Set nodes and edges directly without useEffect to prevent render loops
+  // Set nodes and edges when they change
   React.useEffect(() => {
     console.log('📊 Setting nodes and edges');
     console.log('Setting nodes:', generatedNodes.length);
