@@ -723,6 +723,7 @@ export type Database = {
       }
       manufacturing_orders: {
         Row: {
+          assigned_to_step: number | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -746,6 +747,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to_step?: number | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -769,6 +771,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to_step?: number | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
