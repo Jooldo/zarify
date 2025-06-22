@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, User, Package, Hash, Eye, GitBranch } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
+import ReworkOrderDetailsDialog from './ReworkOrderDetailsDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: any[];
@@ -16,6 +17,8 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
   const [selectedOrderForChild, setSelectedOrderForChild] = useState<any>(null);
   const [selectedStepForChild, setSelectedStepForChild] = useState<any>(null);
   const [childOrderDialogOpen, setChildOrderDialogOpen] = useState(false);
+  const [reworkOrderDialogOpen, setReworkOrderDialogOpen] = useState(false);
+  const [selectedReworkOrder, setSelectedReworkOrder] = useState<any>(null);
 
   const activeSteps = useMemo(() => {
     return manufacturingSteps
@@ -149,9 +152,17 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
   };
 
   const handleChildOrderSuccess = () => {
-    // Refresh the data by invalidating queries (handled by parent component)
     setSelectedOrderForChild(null);
     setSelectedStepForChild(null);
+  };
+
+  const handleViewDetails = (order: any) => {
+    if (order.isChildOrder) {
+      setSelectedReworkOrder(order);
+      setReworkOrderDialogOpen(true);
+    } else {
+      onViewDetails(order);
+    }
   };
 
   return (
@@ -263,7 +274,7 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
                               size="sm"
                               variant="outline"
                               className="flex-1"
-                              onClick={() => onViewDetails(order)}
+                              onClick={() => handleViewDetails(order)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               Details
@@ -313,6 +324,15 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
         parentOrder={selectedOrderForChild}
         currentStep={selectedStepForChild}
         onSuccess={handleChildOrderSuccess}
+      />
+
+      {/* Rework Order Details Dialog */}
+      <ReworkOrderDetailsDialog
+        order={selectedReworkOrder}
+        open={reworkOrderDialogOpen}
+        onOpenChange={setReworkOrderDialogOpen}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
       />
     </div>
   );
