@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -171,9 +170,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
     await createStep({
       manufacturingOrderId: order.id,
-      manufacturing_step_id: nextStep.id,
-      stepOrder: nextStep.step_order,
-      status: 'pending'
+      stepId: nextStep.id,
+      fieldValues: {}
     });
   };
 
