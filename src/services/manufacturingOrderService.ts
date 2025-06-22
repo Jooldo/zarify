@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CreateManufacturingOrderData, ManufacturingOrder } from '@/types/manufacturingOrders';
 
@@ -69,6 +68,8 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
       throw parentError;
     }
     
+    console.log('🔄 Parent order number:', parentOrder.order_number);
+    
     // Generate rework order number using the new function
     const { data: reworkOrderNumber, error: reworkOrderNumberError } = await supabase
       .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
@@ -91,7 +92,7 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
     }
     
     orderNumber = regularOrderNumber;
-    console.log('📝 Generated order number:', orderNumber);
+    console.log('📝 Generated regular order number:', orderNumber);
   }
 
   // Check raw material stock before creating order (only for non-rework orders)
@@ -125,6 +126,8 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
       });
     }
   }
+
+  console.log('🚀 About to create order with number:', orderNumber);
 
   const { data: order, error } = await supabase
     .from('manufacturing_orders')
