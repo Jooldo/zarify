@@ -42,7 +42,7 @@ export const useManufacturingMaterialReservations = () => {
         .select(`
           *,
           raw_materials(name, unit),
-          manufacturing_orders!manufacturing_material_reservations_manufacturing_order_id_fkey(order_number, product_name)
+          manufacturing_orders(order_number, product_name)
         `)
         .eq('merchant_id', merchantId)
         .order('created_at', { ascending: false });
