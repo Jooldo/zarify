@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import UpdateStepDialog from './UpdateStepDialog';
 import StartStepDialog from './StartStepDialog';
 
@@ -26,6 +27,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const { manufacturingOrders } = useManufacturingOrders();
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
@@ -142,17 +144,37 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     return nextStep;
   };
 
+  // Get the manufacturing order data
+  const getManufacturingOrder = () => {
+    if (orderStep.manufacturing_orders) {
+      return orderStep.manufacturing_orders;
+    }
+    
+    // If not available in orderStep, find it from manufacturingOrders
+    const order = manufacturingOrders.find(order => 
+      order.id === orderStep.manufacturing_order_id
+    );
+    
+    console.log('Found manufacturing order:', order);
+    console.log('Order step manufacturing_order_id:', orderStep.manufacturing_order_id);
+    console.log('Available manufacturing orders:', manufacturingOrders);
+    
+    return order || null;
+  };
+
   // Handle starting the next step - now opens dialog instead of direct creation
   const handleStartNextStep = () => {
     const nextStep = getNextStepInfo();
+    const order = getManufacturingOrder();
     console.log('Starting next step:', nextStep);
-    console.log('Order step manufacturing_orders:', orderStep.manufacturing_orders);
+    console.log('Manufacturing order for dialog:', order);
     setStartStepDialogOpen(true);
   };
 
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
   const nextStep = getNextStepInfo();
+  const manufacturingOrder = getManufacturingOrder();
   const isCompleted = orderStep.status === 'completed';
 
   const handleCardClick = () => {
@@ -331,7 +353,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
       <StartStepDialog
         isOpen={startStepDialogOpen}
         onClose={() => setStartStepDialogOpen(false)}
-        order={orderStep.manufacturing_orders}
+        order={manufacturingOrder}
         step={nextStep}
       />
     </>
