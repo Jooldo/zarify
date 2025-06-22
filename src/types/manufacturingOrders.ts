@@ -1,4 +1,3 @@
-
 export interface CreateManufacturingOrderData {
   product_name: string;
   product_config_id: string;
@@ -6,6 +5,11 @@ export interface CreateManufacturingOrderData {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date?: string;
   special_instructions?: string;
+  parent_order_id?: string; // For rework orders
+  rework_source_step_id?: string; // Step from which rework was initiated
+  rework_quantity?: number; // Quantity for rework
+  assigned_to_step?: number; // Step to which rework is assigned
+  rework_reason?: string; // Reason for rework
 }
 
 export interface ManufacturingOrder {
