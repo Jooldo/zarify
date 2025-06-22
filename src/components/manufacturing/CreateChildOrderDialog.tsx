@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreateChildOrderDialogProps {
@@ -16,11 +16,20 @@ interface CreateChildOrderDialogProps {
   parentOrder: any;
   currentStep: any;
   onSuccess: () => void;
+  parentOrderStep?: any; // Add this to get the parent order step with field values
 }
 
-const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onSuccess }: CreateChildOrderDialogProps) => {
+const CreateChildOrderDialog = ({ 
+  isOpen, 
+  onClose, 
+  parentOrder, 
+  currentStep, 
+  onSuccess,
+  parentOrderStep 
+}: CreateChildOrderDialogProps) => {
   const { toast } = useToast();
   const { manufacturingSteps, getStepFields } = useManufacturingSteps();
+  const { getStepValue } = useManufacturingStepValues();
   const [selectedStepId, setSelectedStepId] = useState<string>('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -35,6 +44,15 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
 
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
   const stepFields = selectedStepId ? getStepFields(selectedStepId) : [];
+
+  // Get current step fields and their values for display
+  const currentStepFields = currentStep ? getStepFields(currentStep.id) : [];
+  const getCurrentStepFieldValue = (fieldId: string) => {
+    if (parentOrderStep) {
+      return getStepValue(parentOrderStep.id, fieldId);
+    }
+    return null;
+  };
 
   const handleStepSelection = (stepId: string) => {
     setSelectedStepId(stepId);
@@ -230,20 +248,20 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
 
         <div className="space-y-4">
           {/* Parent Order Details */}
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-2">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
             <h4 className="font-semibold text-blue-900">Parent Order Details</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-blue-700 font-medium">Order Number:</span>
-                <div className="text-blue-900">{parentOrder?.order_number}</div>
+                <div className="text-blue-900 font-semibold">{parentOrder?.order_number || 'Unknown Order'}</div>
               </div>
               <div>
                 <span className="text-blue-700 font-medium">Product:</span>
-                <div className="text-blue-900">{parentOrder?.product_name}</div>
+                <div className="text-blue-900">{parentOrder?.product_name || 'Unknown Product'}</div>
               </div>
               <div>
                 <span className="text-blue-700 font-medium">Quantity:</span>
-                <div className="text-blue-900">{parentOrder?.quantity_required}</div>
+                <div className="text-blue-900">{parentOrder?.quantity_required || 'N/A'}</div>
               </div>
               <div>
                 <span className="text-blue-700 font-medium">Priority:</span>
@@ -259,6 +277,29 @@ const CreateChildOrderDialog = ({ isOpen, onClose, parentOrder, currentStep, onS
               <div className="text-blue-900 font-medium">{currentStep?.step_name || 'Unknown Step'}</div>
             </div>
           </div>
+
+          {/* Current Step Field Values */}
+          {currentStepFields.length > 0 && (
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 space-y-3">
+              <h4 className="font-semibold text-amber-900">Current Step Field Values</h4>
+              <div className="space-y-2">
+                {currentStepFields.map(field => {
+                  const fieldValue = getCurrentStepFieldValue(field.field_id);
+                  return (
+                    <div key={field.field_id} className="flex justify-between items-center text-sm">
+                      <span className="text-amber-700 font-medium">
+                        {field.field_label}
+                        {field.field_options?.unit && ` (${field.field_options.unit})`}:
+                      </span>
+                      <span className="text-amber-900 font-semibold">
+                        {fieldValue || 'Not set'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="step-select">Reassign to Step</Label>

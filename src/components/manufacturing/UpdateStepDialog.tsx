@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -408,13 +409,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Rework Dialog */}
+      {/* Rework Dialog - Pass the current order step as parentOrderStep */}
       {showReworkDialog && stepData && currentOrderStep && (
         <CreateChildOrderDialog
           isOpen={showReworkDialog}
           onClose={() => setShowReworkDialog(false)}
           parentOrder={stepData}
           currentStep={currentOrderStep.manufacturing_steps}
+          parentOrderStep={currentOrderStep}
           onSuccess={handleReworkSuccess}
         />
       )}
