@@ -6,10 +6,6 @@ export interface CreateManufacturingOrderData {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date?: string;
   special_instructions?: string;
-  parent_order_id?: string;
-  rework_reason?: string;
-  rework_source_step_id?: string;
-  rework_quantity?: number;
 }
 
 export interface ManufacturingOrder {
@@ -26,10 +22,9 @@ export interface ManufacturingOrder {
   updated_at: string;
   merchant_id: string;
   product_type?: string;
-  parent_order_id?: string;
-  rework_reason?: string;
-  rework_source_step_id?: string;
-  rework_quantity?: number;
+  parent_order_id?: string; // For child orders
+  rework_from_step?: number; // Step from which rework was initiated
+  assigned_to_step?: number; // Step to which rework is assigned
   product_configs?: {
     product_code: string;
     category: string;
@@ -49,7 +44,4 @@ export interface ManufacturingOrder {
       };
     }>;
   };
-  // Computed fields for rework relationships
-  child_rework_orders?: ManufacturingOrder[];
-  parent_order?: ManufacturingOrder;
 }

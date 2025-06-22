@@ -731,15 +731,11 @@ export type Database = {
           manufacturing_quantity: number | null
           merchant_id: string
           order_number: string
-          parent_order_id: string | null
           priority: string
           product_config_id: string | null
           product_name: string
           product_type: string | null
           quantity_required: number
-          rework_quantity: number | null
-          rework_reason: string | null
-          rework_source_step_id: string | null
           special_instructions: string | null
           started_at: string | null
           status: string
@@ -754,15 +750,11 @@ export type Database = {
           manufacturing_quantity?: number | null
           merchant_id: string
           order_number: string
-          parent_order_id?: string | null
           priority: string
           product_config_id?: string | null
           product_name: string
           product_type?: string | null
           quantity_required: number
-          rework_quantity?: number | null
-          rework_reason?: string | null
-          rework_source_step_id?: string | null
           special_instructions?: string | null
           started_at?: string | null
           status?: string
@@ -777,15 +769,11 @@ export type Database = {
           manufacturing_quantity?: number | null
           merchant_id?: string
           order_number?: string
-          parent_order_id?: string | null
           priority?: string
           product_config_id?: string | null
           product_name?: string
           product_type?: string | null
           quantity_required?: number
-          rework_quantity?: number | null
-          rework_reason?: string | null
-          rework_source_step_id?: string | null
           special_instructions?: string | null
           started_at?: string | null
           status?: string
@@ -800,24 +788,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "manufacturing_orders_parent_order_id_fkey"
-            columns: ["parent_order_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturing_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "manufacturing_orders_product_config_id_fkey"
             columns: ["product_config_id"]
             isOneToOne: false
             referencedRelation: "product_configs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manufacturing_orders_rework_source_step_id_fkey"
-            columns: ["rework_source_step_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturing_order_steps"
             referencedColumns: ["id"]
           },
         ]
@@ -1752,10 +1726,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_order_completion_status: {
-        Args: { p_order_id: string }
-        Returns: string
-      }
       check_user_has_admin_role: {
         Args: Record<PropertyKey, never>
         Returns: boolean

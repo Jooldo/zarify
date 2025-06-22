@@ -1,22 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Package, 
-  Clock, 
-  User, 
-  Play, 
-  CheckCircle, 
-  AlertCircle, 
-  Target,
-  Calendar,
-  RotateCcw,
-  AlertTriangle
-} from 'lucide-react';
+import { Clock, User, Package, Hash, Eye, GitBranch } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import CreateReworkOrderDialog from './CreateReworkOrderDialog';
+import CreateChildOrderDialog from './CreateChildOrderDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: any[];
@@ -25,63 +14,65 @@ interface ProductionFlowViewProps {
 
 const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFlowViewProps) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [reworkDialogOpen, setReworkDialogOpen] = useState(false);
-  const [selectedOrderForRework, setSelectedOrderForRework] = useState<any>(null);
+  const [selectedOrderForChild, setSelectedOrderForChild] = useState<any>(null);
+  const [selectedStepForChild, setSelectedStepForChild] = useState<any>(null);
+  const [childOrderDialogOpen, setChildOrderDialogOpen] = useState(false);
 
-  const getOrderStepsForOrder = (orderId: string) => {
-    return orderSteps.filter(step => String(step.manufacturing_order_id) === String(orderId));
-  };
-
-  const getStepProgress = (orderId: string) => {
-    const steps = getOrderStepsForOrder(orderId);
-    if (steps.length === 0) return { completed: 0, total: 0, inProgress: 0 };
-    
-    const completed = steps.filter(step => step.status === 'completed').length;
-    const inProgress = steps.filter(step => step.status === 'in_progress').length;
-    const total = steps.length;
-    
-    return { completed, total, inProgress };
-  };
-
-  const getCurrentStep = (orderId: string) => {
-    const steps = getOrderStepsForOrder(orderId)
+  const activeSteps = useMemo(() => {
+    return manufacturingSteps
+      .filter(step => step.is_active)
       .sort((a, b) => a.step_order - b.step_order);
-    
-    // Find first non-completed step or return last step if all completed
-    const currentStep = steps.find(step => step.status !== 'completed') || steps[steps.length - 1];
-    
-    if (currentStep) {
-      const manufacturingStep = manufacturingSteps.find(ms => ms.id === currentStep.manufacturing_step_id);
-      return {
-        ...currentStep,
-        step_name: manufacturingStep?.step_name || 'Unknown Step'
-      };
-    }
-    
-    return null;
-  };
+  }, [manufacturingSteps]);
 
-  const getOrderStatus = (order: any) => {
-    const progress = getStepProgress(order.id);
+  const ordersByStep = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
     
-    if (order.status === 'pending_rework') {
-      return { status: 'pending_rework', label: 'Pending Rework', color: 'bg-orange-100 text-orange-800' };
-    }
-    
-    if (progress.total === 0) {
-      return { status: 'not_started', label: 'Not Started', color: 'bg-gray-100 text-gray-800' };
-    }
-    
-    if (progress.completed === progress.total) {
-      return { status: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' };
-    }
-    
-    if (progress.inProgress > 0) {
-      return { status: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' };
-    }
-    
-    return { status: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
-  };
+    activeSteps.forEach(step => {
+      grouped[step.id] = [];
+    });
+
+    manufacturingOrders.forEach(order => {
+      const orderOrderSteps = orderSteps.filter(step => 
+        String(step.manufacturing_order_id) === String(order.id)
+      );
+
+      if (orderOrderSteps.length === 0) {
+        if (activeSteps[0]) {
+          grouped[activeSteps[0].id].push({
+            ...order,
+            currentStep: null,
+            stepStatus: 'not_started',
+            isChildOrder: Boolean(order.parent_order_id),
+            parentOrderNumber: order.parent_order_id ? order.special_instructions?.split(' - ')[0]?.replace('Rework from ', '') : null,
+            reworkFromStep: order.rework_from_step
+          });
+        }
+      } else {
+        const sortedSteps = orderOrderSteps.sort((a, b) => b.step_order - a.step_order);
+        const latestOrderStep = sortedSteps[0];
+
+        if (latestOrderStep && latestOrderStep.manufacturing_step_id) {
+          const stepId = latestOrderStep.manufacturing_step_id;
+          
+          if (!grouped[stepId]) {
+            grouped[stepId] = [];
+          }
+          
+          grouped[stepId].push({
+            ...order,
+            currentStep: latestOrderStep,
+            stepStatus: latestOrderStep.status,
+            assignedWorker: latestOrderStep.workers?.name,
+            isChildOrder: Boolean(order.parent_order_id),
+            parentOrderNumber: order.parent_order_id ? order.special_instructions?.split(' - ')[0]?.replace('Rework from ', '') : null,
+            reworkFromStep: order.rework_from_step
+          });
+        }
+      }
+    });
+
+    return grouped;
+  }, [manufacturingOrders, orderSteps, activeSteps]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -93,184 +84,190 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
     }
   };
 
-  const handleCreateRework = (order: any) => {
-    setSelectedOrderForRework(order);
-    setReworkDialogOpen(true);
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+      case 'not_started':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
-  const isReworkOrder = (order: any) => {
-    return order.parent_order_id !== null && order.parent_order_id !== undefined;
+  const handleCreateChildOrder = (order: any, step: any) => {
+    setSelectedOrderForChild(order);
+    setSelectedStepForChild(step);
+    setChildOrderDialogOpen(true);
   };
 
-  if (manufacturingOrders.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Package className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Manufacturing Orders</h3>
-        <p className="text-gray-500">No orders match your current filters.</p>
-      </div>
-    );
-  }
+  const handleChildOrderSuccess = () => {
+    // Refresh the data by invalidating queries (handled by parent component)
+    setSelectedOrderForChild(null);
+    setSelectedStepForChild(null);
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        {manufacturingOrders.map((order) => {
-          const progress = getStepProgress(order.id);
-          const currentStep = getCurrentStep(order.id);
-          const orderStatus = getOrderStatus(order);
-          
-          return (
-            <Card key={order.id} className="hover:shadow-lg transition-shadow duration-200">
+    <div className="space-y-6">
+      <div className="flex gap-6 overflow-x-auto pb-6">
+        {activeSteps.map((step) => (
+          <div key={step.id} className="flex-shrink-0 w-80">
+            <Card className="h-full bg-gradient-to-br from-slate-50 to-gray-100 border-2 border-gray-200">
               <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {isReworkOrder(order) && (
-                      <RotateCcw className="h-5 w-5 text-orange-600" />
-                    )}
-                    <div>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Target className="h-5 w-5 text-blue-600" />
-                        {order.order_number}
-                        {isReworkOrder(order) && (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">
-                            Rework
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">{order.product_name}</p>
-                    </div>
+                <CardTitle className="text-sm font-bold flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-black">
+                    {step.step_order}
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge className={getPriorityColor(order.priority)}>
-                      {order.priority.toUpperCase()}
-                    </Badge>
-                    <Badge className={orderStatus.color}>
-                      {orderStatus.label}
-                    </Badge>
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-800">{step.step_name}</div>
+                    <div className="text-xs text-gray-600 font-normal">Production Step</div>
                   </div>
-                </div>
-
-                {/* Rework information */}
-                {isReworkOrder(order) && order.rework_reason && (
-                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-orange-700 mb-1">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="font-medium text-sm">Rework Reason</span>
-                    </div>
-                    <p className="text-sm text-orange-600">{order.rework_reason}</p>
-                  </div>
-                )}
+                  <Badge variant="secondary" className="bg-white text-gray-700 font-semibold">
+                    {ordersByStep[step.id]?.length || 0}
+                  </Badge>
+                </CardTitle>
               </CardHeader>
-              
               <CardContent className="pt-0">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Quantity:</span>
-                    <span className="font-semibold">{order.quantity_required}</span>
-                  </div>
-                  
-                  {order.due_date && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-600">Due:</span>
-                      <span className="font-semibold">
-                        {new Date(order.due_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Created:</span>
-                    <span className="font-semibold">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Progress</span>
-                    <span className="text-sm text-gray-600">
-                      {progress.completed}/{progress.total} steps completed
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Current Step */}
-                {currentStep && (
-                  <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {currentStep.status === 'completed' ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : currentStep.status === 'in_progress' ? (
-                          <Play className="h-4 w-4 text-blue-600" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                        )}
-                        <span className="font-medium text-sm">
-                          Current Step: {currentStep.step_name}
-                        </span>
-                      </div>
-                      
-                      {currentStep.workers?.name && (
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <User className="h-3 w-3" />
-                          {currentStep.workers.name}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onViewDetails(order)}
-                  >
-                    View Details
-                  </Button>
-                  
-                  {/* Rework Button - show for completed orders that aren't already rework orders */}
-                  {orderStatus.status === 'completed' && !isReworkOrder(order) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                      onClick={() => handleCreateRework(order)}
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                  {ordersByStep[step.id]?.map((order) => (
+                    <Card 
+                      key={order.id} 
+                      className={`bg-white shadow-sm hover:shadow-md transition-all duration-200 border ${
+                        order.isChildOrder ? 'border-l-4 border-l-orange-400 bg-orange-50/30' : 'border-gray-200'
+                      }`}
                     >
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      Create Rework
-                    </Button>
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          {/* Header with child order indicator */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {order.isChildOrder && (
+                                <GitBranch className="h-4 w-4 text-orange-600" />
+                              )}
+                              <span className={`font-bold text-sm ${
+                                order.isChildOrder ? 'text-orange-700' : 'text-blue-700'
+                              }`}>
+                                {order.order_number}
+                              </span>
+                              {order.isChildOrder && (
+                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                                  Rework
+                                </Badge>
+                              )}
+                            </div>
+                            <Badge className={`${getPriorityColor(order.priority)} shadow-sm`}>
+                              {order.priority.toUpperCase()}
+                            </Badge>
+                          </div>
+
+                          {/* Child order source info */}
+                          {order.isChildOrder && order.parentOrderNumber && (
+                            <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
+                              <p className="text-xs text-orange-700">
+                                <strong>From:</strong> {order.parentOrderNumber}
+                                {order.reworkFromStep && ` (Step ${order.reworkFromStep})`}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Product Info */}
+                          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Package className="h-4 w-4 text-emerald-600" />
+                              <span className="font-semibold text-gray-800">{order.product_name}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Hash className="h-4 w-4" />
+                              <span>Quantity: </span>
+                              <span className="font-semibold text-gray-800">{order.quantity_required}</span>
+                            </div>
+                          </div>
+
+                          {/* Worker Assignment */}
+                          {order.assignedWorker && (
+                            <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-lg p-2">
+                              <User className="h-4 w-4 text-blue-600" />
+                              <span className="text-gray-600">Assigned to:</span>
+                              <span className="font-semibold text-blue-700">{order.assignedWorker}</span>
+                            </div>
+                          )}
+
+                          {/* Status & Timeline */}
+                          <div className="flex items-center justify-between">
+                            <Badge className={`${getStatusColor(order.stepStatus)} border shadow-sm`}>
+                              {order.stepStatus === 'not_started' ? 'Not Started' : 
+                               order.stepStatus === 'in_progress' ? 'In Progress' : 
+                               order.stepStatus.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                            
+                            {order.currentStep?.started_at && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 rounded px-2 py-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(order.currentStep.started_at).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => onViewDetails(order)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Details
+                            </Button>
+                            
+                            {!order.isChildOrder && order.stepStatus === 'in_progress' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 text-orange-600 border-orange-300 hover:bg-orange-50"
+                                onClick={() => handleCreateChildOrder(order, step)}
+                              >
+                                <GitBranch className="h-4 w-4 mr-1" />
+                                Rework
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {ordersByStep[step.id]?.length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                        <Package className="h-8 w-8 opacity-40" />
+                      </div>
+                      <p className="text-sm font-medium">No orders in this step</p>
+                      <p className="text-xs text-gray-400 mt-1">Orders will appear here when assigned</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
-      {/* Rework Dialog */}
-      <CreateReworkOrderDialog
-        isOpen={reworkDialogOpen}
+      {/* Create Child Order Dialog */}
+      <CreateChildOrderDialog
+        isOpen={childOrderDialogOpen}
         onClose={() => {
-          setReworkDialogOpen(false);
-          setSelectedOrderForRework(null);
+          setChildOrderDialogOpen(false);
+          setSelectedOrderForChild(null);
+          setSelectedStepForChild(null);
         }}
-        originalOrder={selectedOrderForRework}
+        parentOrder={selectedOrderForChild}
+        currentStep={selectedStepForChild}
+        onSuccess={handleChildOrderSuccess}
       />
     </div>
   );
