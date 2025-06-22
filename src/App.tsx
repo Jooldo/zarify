@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NavigationProvider } from "@/contexts/NavigationContext";
 import { ErrorDialogProvider } from "@/components/ErrorDialogProvider";
@@ -25,19 +25,17 @@ const App = () => (
       <ErrorDialogProvider />
       <AuthProvider>
         <NavigationProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/app" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/catalogue/:slug" element={<PublicCatalogue />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/app" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/catalogue/:slug" element={<PublicCatalogue />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </NavigationProvider>
       </AuthProvider>
     </TooltipProvider>
