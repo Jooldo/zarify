@@ -19,9 +19,10 @@ import '@xyflow/react/dist/style.css';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, User, Clock, GitBranch, Eye } from 'lucide-react';
+import { Package, User, Clock, GitBranch, Eye, AlertTriangle, Wrench } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import StepDetailsCard from './StepDetailsCard';
+import CreateChildOrderDialog from './CreateChildOrderDialog';
 
 interface ReactFlowViewProps {
   manufacturingOrders: any[];
@@ -51,7 +52,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
       case 'completed':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'partially_completed':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -163,6 +164,138 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   );
 };
 
+// New component for partially completed step cards
+const PartiallyCompletedStepCard: React.FC<{ 
+  data: {
+    orderStep: any;
+    stepFields: any[];
+    order: any;
+    manufacturingOrders: any[];
+    onViewDetails: (order: any) => void;
+  }
+}> = ({ data }) => {
+  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails } = data;
+  const [showReworkDialog, setShowReworkDialog] = useState(false);
+
+  // Check if rework order already exists for this order
+  const hasReworkOrder = manufacturingOrders?.some(mo => mo.parent_order_id === order.id);
+
+  const handleSetupRework = () => {
+    setShowReworkDialog(true);
+  };
+
+  const handleReworkSuccess = () => {
+    setShowReworkDialog(false);
+  };
+
+  return (
+    <>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="step-details-input"
+        style={{ background: '#ef4444' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="step-details-output"
+        style={{ background: '#ef4444' }}
+      />
+      
+      <Card className="w-80 bg-red-50 border-red-200 border-2 shadow-md">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Header with Alert */}
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="flex-1">
+                <div className="font-semibold text-red-800 text-sm">
+                  Step {orderStep.manufacturing_steps?.step_order}: {orderStep.manufacturing_steps?.step_name}
+                </div>
+                <Badge className="bg-red-100 text-red-800 border-red-200 text-xs mt-1">
+                  QC Failed - Needs Rework
+                </Badge>
+              </div>
+            </div>
+
+            {/* Order Info */}
+            <div className="bg-red-100 rounded-lg p-2">
+              <div className="text-sm font-medium text-red-800">
+                Order: {order.order_number}
+              </div>
+              <div className="text-xs text-red-600">
+                Product: {order.product_name} | Qty: {order.quantity_required}
+              </div>
+            </div>
+
+            {/* Worker Info */}
+            {orderStep.workers?.name && (
+              <div className="flex items-center gap-2 text-sm bg-red-100 rounded-lg p-2">
+                <User className="h-4 w-4 text-red-600" />
+                <span className="text-red-600">Worker:</span>
+                <span className="font-semibold text-red-800">{orderStep.workers.name}</span>
+              </div>
+            )}
+
+            {/* Step Fields Summary */}
+            {stepFields?.length > 0 && (
+              <div className="bg-red-100 rounded-lg p-2">
+                <div className="text-xs font-medium text-red-800 mb-1">Step Configuration:</div>
+                <div className="text-xs text-red-600">
+                  {stepFields.length} field{stepFields.length !== 1 ? 's' : ''} configured
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-red-300 text-red-700 hover:bg-red-100"
+                onClick={() => onViewDetails(order)}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View Details
+              </Button>
+              
+              {!hasReworkOrder && (
+                <Button
+                  size="sm"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleSetupRework}
+                >
+                  <Wrench className="h-4 w-4 mr-1" />
+                  Setup Rework Order
+                </Button>
+              )}
+              
+              {hasReworkOrder && (
+                <div className="text-xs text-red-600 text-center p-2 bg-red-100 rounded">
+                  Rework order already created
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rework Dialog */}
+      {showReworkDialog && orderStep.manufacturing_steps && (
+        <CreateChildOrderDialog
+          isOpen={showReworkDialog}
+          onClose={() => setShowReworkDialog(false)}
+          parentOrder={order}
+          currentStep={orderStep.manufacturing_steps}
+          parentOrderStep={orderStep}
+          onSuccess={handleReworkSuccess}
+        />
+      )}
+    </>
+  );
+};
+
 const nodeTypes = {
   orderNode: OrderNode,
   stepDetailsNode: ({ data }: { data: any }) => (
@@ -172,6 +305,7 @@ const nodeTypes = {
       onViewDetails={data.onViewDetails}
     />
   ),
+  partiallyCompletedStepNode: PartiallyCompletedStepCard,
 };
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
@@ -250,9 +384,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         } as FlowNodeData,
       });
 
-      // Add step details cards for ALL steps that have been started (in_progress or completed)
+      // Add step details cards for ALL steps that have been started (in_progress, completed, or partially_completed)
       const stepsToShow = parentOrderSteps.filter(step => 
-        step.status === 'in_progress' || step.status === 'completed'
+        step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
       ).sort((a, b) => a.step_order - b.step_order);
       
       console.log(`Steps to show for ${parentOrder.order_number}:`, stepsToShow);
@@ -268,11 +402,20 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         
         console.log(`Step fields for ${parentOrder.order_number} step ${step.step_order}:`, stepFields);
         
+        // Use special node type for partially completed steps
+        const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+        
         const stepDetailsNode = {
           id: stepCardNodeId,
-          type: 'stepDetailsNode',
+          type: nodeType,
           position: { x: stepCardOffset + (stepIndex * 400), y: yOffset },
-          data: {
+          data: step.status === 'partially_completed' ? {
+            orderStep: step,
+            stepFields: stepFields,
+            order: parentOrder,
+            manufacturingOrders: manufacturingOrders,
+            onViewDetails: () => onViewDetails(parentOrder)
+          } : {
             orderStep: step,
             stepFields: stepFields,
             onViewDetails: () => onViewDetails(parentOrder)
@@ -283,6 +426,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         nodes.push(stepDetailsNode);
 
         // Create edge from previous node (order or previous step) to current step
+        const edgeColor = step.status === 'partially_completed' ? '#ef4444' : 
+                         step.status === 'completed' ? '#10b981' : '#3b82f6';
+        const edgeLabel = step.status === 'partially_completed' ? 'QC Failed' :
+                         step.status === 'completed' ? 'Completed' : 'In Progress';
+        
         const stepEdge = {
           id: `edge-${previousNodeId}-${stepCardNodeId}`,
           source: previousNodeId,
@@ -290,19 +438,20 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           sourceHandle: stepIndex === 0 ? 'order-output' : 'step-details-output',
           targetHandle: 'step-details-input',
           type: 'smoothstep',
-          animated: step.status === 'in_progress',
+          animated: step.status === 'in_progress' || step.status === 'partially_completed',
           style: { 
-            stroke: step.status === 'completed' ? '#10b981' : '#3b82f6', 
+            stroke: edgeColor, 
             strokeWidth: 2, 
-            strokeDasharray: step.status === 'in_progress' ? '5,5' : 'none'
+            strokeDasharray: step.status === 'in_progress' ? '5,5' : 
+                           step.status === 'partially_completed' ? '8,4,2,4' : 'none'
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: step.status === 'completed' ? '#10b981' : '#3b82f6',
+            color: edgeColor,
           },
-          label: step.status === 'completed' ? 'Completed' : 'In Progress',
+          label: edgeLabel,
           labelStyle: { 
-            fill: step.status === 'completed' ? '#10b981' : '#3b82f6', 
+            fill: edgeColor, 
             fontWeight: 600,
             fontSize: '12px'
           },
@@ -360,7 +509,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
 
         // Add step details cards for child steps that have been started
         const childStepsToShow = childOrderSteps.filter(step => 
-          step.status === 'in_progress' || step.status === 'completed'
+          step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
         ).sort((a, b) => a.step_order - b.step_order);
 
         // Create sequential connections for child steps: Child Order → Child Step 1 → Child Step 2...
@@ -374,11 +523,20 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           
           console.log(`Step fields for child ${childOrder.order_number} step ${childStep.step_order}:`, stepFields);
           
+          // Use special node type for partially completed steps
+          const nodeType = childStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+          
           const childStepDetailsNode = {
             id: childStepCardNodeId,
-            type: 'stepDetailsNode',
+            type: nodeType,
             position: { x: 500 + stepCardOffset + (childStepIndex * 400), y: childYOffset },
-            data: {
+            data: childStep.status === 'partially_completed' ? {
+              orderStep: childStep,
+              stepFields: stepFields,
+              order: childOrder,
+              manufacturingOrders: manufacturingOrders,
+              onViewDetails: () => onViewDetails(childOrder)
+            } : {
               orderStep: childStep,
               stepFields: stepFields,
               onViewDetails: () => onViewDetails(childOrder)
@@ -389,6 +547,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           nodes.push(childStepDetailsNode);
 
           // Create edge from previous node (child order or previous child step) to current child step
+          const edgeColor = childStep.status === 'partially_completed' ? '#ef4444' : 
+                           childStep.status === 'completed' ? '#10b981' : '#3b82f6';
+          const edgeLabel = childStep.status === 'partially_completed' ? 'QC Failed' :
+                           childStep.status === 'completed' ? 'Completed' : 'In Progress';
+          
           const childStepEdge = {
             id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
             source: previousChildNodeId,
@@ -396,19 +559,20 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
             targetHandle: 'step-details-input',
             type: 'smoothstep',
-            animated: childStep.status === 'in_progress',
+            animated: childStep.status === 'in_progress' || childStep.status === 'partially_completed',
             style: { 
-              stroke: childStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+              stroke: edgeColor, 
               strokeWidth: 2, 
-              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 'none'
+              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 
+                             childStep.status === 'partially_completed' ? '8,4,2,4' : 'none'
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: childStep.status === 'completed' ? '#10b981' : '#3b82f6',
+              color: edgeColor,
             },
-            label: childStep.status === 'completed' ? 'Completed' : 'In Progress',
+            label: edgeLabel,
             labelStyle: { 
-              fill: childStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+              fill: edgeColor, 
               fontWeight: 600,
               fontSize: '12px'
             },
@@ -446,7 +610,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       const totalStepCards = stepsToShow.length + relatedChildOrders.reduce((acc, child) => {
         const childSteps = orderSteps.filter(step => 
           String(step.manufacturing_order_id) === String(child.id) &&
-          (step.status === 'in_progress' || step.status === 'completed')
+          (step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed')
         );
         return acc + childSteps.length;
       }, 0);
