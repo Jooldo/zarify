@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -485,18 +485,28 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     [setEdges],
   );
 
-  // Stable reference for onViewDetails
-  const onViewDetailsRef = useRef(onViewDetails);
-  onViewDetailsRef.current = onViewDetails;
-
-  // Create a stable wrapper for onViewDetails
+  // Create a stable reference for onViewDetails that doesn't change
   const stableOnViewDetails = useCallback((order: any) => {
-    onViewDetailsRef.current(order);
-  }, []);
+    onViewDetails(order);
+  }, [onViewDetails]);
 
-  // Generate nodes and edges with proper memoization
+  // Create stable data keys to prevent unnecessary re-renders
+  const dataKeys = useMemo(() => {
+    const ordersKey = manufacturingOrders?.map(o => `${o.id}-${o.updated_at || o.created_at}`).join(',') || '';
+    const stepsKey = orderSteps?.map(s => `${s.id}-${s.status}-${s.updated_at || s.created_at}`).join(',') || '';
+    const manufacturingStepsKey = manufacturingSteps?.map(ms => `${ms.id}-${ms.updated_at || ms.created_at}`).join(',') || '';
+    
+    return {
+      ordersKey,
+      stepsKey,
+      manufacturingStepsKey,
+      combinedKey: `${ordersKey}|${stepsKey}|${manufacturingStepsKey}`
+    };
+  }, [manufacturingOrders, orderSteps, manufacturingSteps]);
+
+  // Generate nodes and edges only when the actual data changes
   const { flowNodes, flowEdges } = useMemo(() => {
-    console.log('🔄 Generating flow nodes and edges...');
+    console.log('🔄 Generating flow nodes and edges with key:', dataKeys.combinedKey);
     
     if (!manufacturingOrders?.length || !orderSteps?.length) {
       console.log('⚠️ Missing data, returning empty arrays');
@@ -575,7 +585,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           isChild: false,
           childLevel: 0,
           onViewDetails: stableOnViewDetails
-        } as FlowNodeData,
+        },
       });
 
       // Add step cards for parent order
@@ -706,7 +716,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             parentOrderId: parentOrder.id,
             childLevel: 1,
             onViewDetails: stableOnViewDetails
-          } as FlowNodeData,
+          },
         });
 
         // Add rework connection edge if applicable
@@ -826,11 +836,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     console.log('✅ Generated', nodes.length, 'nodes and', edges.length, 'edges');
     return { flowNodes: nodes, flowEdges: edges };
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, getStepFields, stableOnViewDetails]);
+  }, [dataKeys.combinedKey, stableOnViewDetails, getStepFields]);
 
-  // Update ReactFlow state when data changes
-  React.useEffect(() => {
-    console.log('📊 Updating ReactFlow with new data');
+  // Update ReactFlow state when the generated data changes
+  useEffect(() => {
+    console.log('📊 Updating ReactFlow nodes and edges');
     setNodes(flowNodes);
     setEdges(flowEdges);
   }, [flowNodes, flowEdges, setNodes, setEdges]);
