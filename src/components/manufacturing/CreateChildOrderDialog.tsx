@@ -15,6 +15,7 @@ interface CreateChildOrderDialogProps {
   onClose: () => void;
   parentOrder: any;
   currentStep: any;
+  parentOrderStep?: any; // Add this optional prop
   onSuccess: () => void;
 }
 
@@ -100,10 +101,10 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       onSuccess();
       onClose();
       
-      // Reset form
+      // Reset form - Fix the typo here
       setReworkQuantity(1);
       setReworkReason('');
-      setAssigngedToStep(1);
+      setAssignedToStep(1);
 
     } catch (error: any) {
       console.error('Error creating rework order:', error);
