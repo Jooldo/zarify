@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -51,6 +50,15 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     fieldValues: {} as Record<string, any>
   });
 
+  // Debug logging
+  console.log('StepDetailsDialog rendered with:', {
+    open,
+    stepId: step?.id,
+    isEditMode,
+    hasStep: !!step,
+    hasOrder: !!order
+  });
+
   // Get current step fields for this step
   const currentStepFields = step ? stepFields.filter(field => 
     field.manufacturing_step_id === step.manufacturing_step_id
@@ -59,6 +67,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   // Initialize edit form data when dialog opens or step changes
   useEffect(() => {
     if (open && step) {
+      console.log('Initializing edit form data for step:', step.id);
       const initialFieldValues: Record<string, any> = {};
       if (currentStepFields.length > 0) {
         currentStepFields.forEach(field => {
@@ -71,15 +80,30 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         status: step.status as StepStatus,
         fieldValues: initialFieldValues
       });
+      console.log('Edit form data initialized:', {
+        status: step.status,
+        fieldValues: initialFieldValues
+      });
     }
   }, [open, step?.id, currentStepFields, getStepValue]);
 
   // Reset edit mode when dialog closes
   useEffect(() => {
     if (!open) {
+      console.log('Dialog closed, resetting edit mode');
       setIsEditMode(false);
     }
   }, [open]);
+
+  const handleEditClick = () => {
+    console.log('Edit button clicked - setting edit mode to true');
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    console.log('Cancel edit clicked - setting edit mode to false');
+    setIsEditMode(false);
+  };
 
   const handleFieldValueChange = (fieldId: string, value: any) => {
     setEditFormData(prev => ({
@@ -190,15 +214,19 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Always show Action Buttons - they handle their own visibility logic */}
-          <StepActionButtons
-            isEditMode={isEditMode}
-            onEditClick={() => {
-              console.log('Edit button clicked, setting edit mode to true');
-              setIsEditMode(true);
-            }}
-            onStartNextStep={handleStartNextStep}
-          />
+          {/* Debug Info */}
+          <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+            Debug: Edit Mode = {isEditMode ? 'TRUE' : 'FALSE'} | Step ID = {step.id}
+          </div>
+
+          {/* Action Buttons - Always visible when NOT in edit mode */}
+          {!isEditMode && (
+            <StepActionButtons
+              isEditMode={isEditMode}
+              onEditClick={handleEditClick}
+              onStartNextStep={handleStartNextStep}
+            />
+          )}
 
           {/* Current Step Configuration - Toggle between edit and display */}
           {isEditMode ? (
@@ -209,10 +237,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
               onFieldValueChange={handleFieldValueChange}
               onStatusChange={handleStatusChange}
               onSave={handleSaveChanges}
-              onCancel={() => {
-                console.log('Cancel button clicked, setting edit mode to false');
-                setIsEditMode(false);
-              }}
+              onCancel={handleCancelEdit}
             />
           ) : (
             <StepDisplayCard

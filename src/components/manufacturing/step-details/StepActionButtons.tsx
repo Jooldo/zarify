@@ -16,12 +16,6 @@ export const StepActionButtons: React.FC<StepActionButtonsProps> = ({
 }) => {
   console.log('StepActionButtons rendered with isEditMode:', isEditMode);
 
-  // Only hide the buttons when in edit mode
-  if (isEditMode) {
-    console.log('Edit mode is active, hiding action buttons');
-    return null;
-  }
-
   return (
     <div className="flex gap-3 p-4 bg-gray-50 rounded-lg border">
       <Button
