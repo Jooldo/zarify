@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -25,7 +24,7 @@ interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   step: Tables<'manufacturing_order_steps'> | null;
-  openInEditMode?: boolean; // New prop to control initial mode
+  openInEditMode?: boolean;
 }
 
 type StepStatus = 'pending' | 'in_progress' | 'completed' | 'partially_completed';
@@ -34,7 +33,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   open, 
   onOpenChange, 
   step, 
-  openInEditMode = true // Default to edit mode
+  openInEditMode = true
 }) => {
   const {
     order,
@@ -49,8 +48,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
   const { createStep } = useCreateManufacturingStep();
 
-  // Edit mode states - now defaults to edit mode if openInEditMode is true
-  const [isEditMode, setIsEditMode] = useState(openInEditMode);
+  // CRITICAL FIX: Force edit mode to true when dialog opens from card click
+  const [isEditMode, setIsEditMode] = useState(true);
   const [editFormData, setEditFormData] = useState({
     status: 'pending' as StepStatus,
     fieldValues: {} as Record<string, any>
@@ -59,7 +58,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   // Enhanced debug logging
   console.log('=== STEP DETAILS DIALOG DEBUG ===');
   console.log('Dialog open:', open);
-  console.log('Open in edit mode:', openInEditMode);
+  console.log('Open in edit mode prop:', openInEditMode);
+  console.log('Current isEditMode state:', isEditMode);
   console.log('Step passed:', !!step);
   console.log('Step ID:', step?.id);
   console.log('Step status:', step?.status);
@@ -67,7 +67,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
   console.log('Order number:', order?.order_number);
   console.log('Current step definition:', !!currentStepDefinition);
   console.log('Step name:', currentStepDefinition?.step_name);
-  console.log('IsEditMode:', isEditMode);
   console.log('Step fields count:', stepFields.filter(field => field.manufacturing_step_id === step?.manufacturing_step_id).length);
   console.log('==================================');
 
@@ -76,10 +75,12 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
     field.manufacturing_step_id === step.manufacturing_step_id
   ) : [];
 
-  // Initialize edit form data when dialog opens or step changes
+  // CRITICAL FIX: Always initialize in edit mode when dialog opens
   useEffect(() => {
     if (open && step) {
+      console.log('🔄 Dialog opened - FORCING EDIT MODE');
       console.log('🔄 Initializing edit form data for step:', step.id);
+      
       const initialFieldValues: Record<string, any> = {};
       if (currentStepFields.length > 0) {
         currentStepFields.forEach(field => {
@@ -94,19 +95,18 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         fieldValues: initialFieldValues
       });
       
-      // Set edit mode based on openInEditMode prop
-      setIsEditMode(openInEditMode);
-      console.log('✅ Edit form data initialized, edit mode set to:', openInEditMode);
+      // ALWAYS set to edit mode when dialog opens from card
+      setIsEditMode(true);
+      console.log('✅ FORCED EDIT MODE ENABLED');
     }
-  }, [open, step?.id, currentStepFields, getStepValue, openInEditMode]);
+  }, [open, step?.id, currentStepFields, getStepValue]);
 
-  // Reset edit mode when dialog closes
+  // Reset when dialog closes
   useEffect(() => {
     if (!open) {
-      console.log('🔄 Dialog closed, resetting edit mode');
-      setIsEditMode(openInEditMode); // Reset to default
+      console.log('🔄 Dialog closed, will reset to edit mode on next open');
     }
-  }, [open, openInEditMode]);
+  }, [open]);
 
   const handleToggleEditMode = () => {
     console.log('🔄 Toggling edit mode from:', isEditMode, 'to:', !isEditMode);
@@ -211,7 +211,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl">
-                {isEditMode ? 'Edit Step' : 'Step Details'}: {currentStepDefinition?.step_name || 'Unknown Step'}
+                {isEditMode ? '✏️ EDITING STEP' : 'Step Details'}: {currentStepDefinition?.step_name || 'Unknown Step'}
               </DialogTitle>
               <DialogDescription className="text-sm">
                 Order #{order.order_number} - {order.product_name}
@@ -234,24 +234,21 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Enhanced Debug Info */}
-          <div className="text-xs text-gray-500 bg-gray-100 p-3 rounded border">
-            <div className="font-bold text-gray-700 mb-1">🐛 Debug Information:</div>
-            <div><strong>Edit Mode:</strong> {isEditMode ? '✅ ENABLED' : '❌ DISABLED'}</div>
-            <div><strong>Open in Edit Mode:</strong> {openInEditMode ? '✅ YES' : '❌ NO'}</div>
+          {/* SUPER CLEAR DEBUG INFO */}
+          <div className="text-xs text-gray-500 bg-green-100 p-3 rounded border-2 border-green-300">
+            <div className="font-bold text-green-800 mb-1">🟢 EDIT MODE STATUS:</div>
+            <div className="text-lg font-bold text-green-800">
+              {isEditMode ? '✅ EDIT MODE ACTIVE' : '❌ EDIT MODE DISABLED'}
+            </div>
             <div><strong>Step ID:</strong> {step.id}</div>
             <div><strong>Step Name:</strong> {currentStepDefinition?.step_name}</div>
             <div><strong>Fields Count:</strong> {currentStepFields.length}</div>
-            <div><strong>Order:</strong> {order.order_number}</div>
           </div>
 
-          {/* STEP CONTENT - Toggle between edit and display */}
+          {/* CONTENT BASED ON MODE */}
           {isEditMode ? (
-            <div className="bg-green-50 border-2 border-green-200 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <span className="text-green-800 font-medium">✏️ EDIT MODE ACTIVE</span>
-                <span className="ml-2 text-xs bg-green-200 px-2 py-1 rounded">Form should be here</span>
-              </div>
+            <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
+              <div className="text-lg font-bold text-blue-800 mb-4">🎯 EDIT MODE - FORM SHOULD BE VISIBLE</div>
               <StepEditForm
                 editFormData={editFormData}
                 currentStepFields={currentStepFields}
@@ -264,10 +261,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({
             </div>
           ) : (
             <div className="bg-gray-50 border-2 border-gray-200 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <span className="text-gray-800 font-medium">👁️ DISPLAY MODE ACTIVE</span>
-                <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">Read-only view</span>
-              </div>
+              <div className="text-lg font-bold text-gray-800 mb-4">👁️ DISPLAY MODE - READ ONLY VIEW</div>
               <StepDisplayCard
                 step={step}
                 currentStepValues={currentStepValues}
