@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -498,8 +499,30 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   );
 
   // Create stable reference for the view details handler
-  const handleViewStepDetailsRef = useRef(onViewDetails);
-  handleViewStepDetailsRef.current = onViewDetails;
+  const handleViewDetailsRef = useRef(onViewDetails);
+  
+  // Update the ref only when onViewDetails actually changes
+  React.useEffect(() => {
+    handleViewDetailsRef.current = onViewDetails;
+  }, [onViewDetails]);
+
+  // Create stable data fingerprint for dependencies
+  const dataFingerprint = useMemo(() => {
+    const ordersKey = manufacturingOrders?.map(o => `${o.id}-${o.status}-${o.parent_order_id || 'none'}-${o.rework_source_step_id || 'none'}`).sort().join('|') || '';
+    const stepsKey = orderSteps?.map(s => `${s.id}-${s.manufacturing_order_id}-${s.status}-${s.step_order}`).sort().join('|') || '';
+    const manufacturingStepsKey = `${manufacturingSteps.length}`;
+    
+    return `${ordersKey}::${stepsKey}::${manufacturingStepsKey}`;
+  }, [
+    manufacturingOrders?.map(o => o.id).join(','),
+    manufacturingOrders?.map(o => o.status).join(','),
+    manufacturingOrders?.map(o => o.parent_order_id).join(','),
+    manufacturingOrders?.map(o => o.rework_source_step_id).join(','),
+    orderSteps?.map(s => s.id).join(','),
+    orderSteps?.map(s => s.status).join(','),
+    orderSteps?.map(s => s.step_order).join(','),
+    manufacturingSteps.length
+  ]);
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
     console.log('🔄 Generating optimized nodes and edges...');
@@ -588,7 +611,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           isParent: true,
           isChild: false,
           childLevel: 0,
-          onViewDetails: handleViewStepDetailsRef.current
+          onViewDetails: (order: any) => handleViewDetailsRef.current(order)
         } as FlowNodeData,
       });
 
@@ -628,11 +651,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             stepFields: stepFields,
             order: parentOrder,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: () => handleViewStepDetailsRef.current(parentOrder)
+            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
           } : {
             orderStep: step,
             stepFields: stepFields,
-            onViewDetails: () => handleViewStepDetailsRef.current(parentOrder)
+            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
           },
         };
         
@@ -735,7 +758,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             isChild: true,
             parentOrderId: parentOrder.id,
             childLevel: 1,
-            onViewDetails: handleViewStepDetailsRef.current
+            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
           } as FlowNodeData,
         });
 
@@ -820,11 +843,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               stepFields: stepFields,
               order: childOrder,
               manufacturingOrders: manufacturingOrders,
-              onViewDetails: () => handleViewStepDetailsRef.current(childOrder)
+              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
             } : {
               orderStep: childStep,
               stepFields: stepFields,
-              onViewDetails: () => handleViewStepDetailsRef.current(childOrder)
+              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
             },
           };
           
@@ -873,13 +896,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     console.log('🔥 Final optimized edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
-  }, [
-    // Create a stable fingerprint for the data to avoid unnecessary re-renders
-    manufacturingOrders?.map(o => `${o.id}-${o.status}-${o.parent_order_id}-${o.rework_source_step_id}`).join(','),
-    orderSteps?.map(s => `${s.id}-${s.manufacturing_order_id}-${s.status}-${s.step_order}`).join(','),
-    manufacturingSteps.length,
-    getStepFields
-  ]);
+  }, [dataFingerprint, getStepFields]);
 
   React.useEffect(() => {
     console.log('📊 Setting optimized nodes and edges');
