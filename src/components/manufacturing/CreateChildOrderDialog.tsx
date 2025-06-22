@@ -1,20 +1,14 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import { useWorkers } from '@/hooks/useWorkers';
 import { supabase } from '@/integrations/supabase/client';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 interface CreateChildOrderDialogProps {
   isOpen: boolean;
@@ -22,161 +16,100 @@ interface CreateChildOrderDialogProps {
   parentOrder: any;
   currentStep: any;
   onSuccess: () => void;
-  parentOrderStep?: any;
 }
 
-const CreateChildOrderDialog = ({ 
-  isOpen, 
-  onClose, 
-  parentOrder, 
-  currentStep, 
-  onSuccess,
-  parentOrderStep 
-}: CreateChildOrderDialogProps) => {
+const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
+  isOpen,
+  onClose,
+  parentOrder,
+  currentStep,
+  onSuccess
+}) => {
   const { toast } = useToast();
-  const { manufacturingSteps, getStepFields } = useManufacturingSteps();
-  const { getStepValue } = useManufacturingStepValues();
-  const { workers } = useWorkers();
-  const [selectedStepId, setSelectedStepId] = useState<string>('');
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [isCreating, setIsCreating] = useState(false);
+  const [reworkQuantity, setReworkQuantity] = useState<number>(1);
+  const [reworkReason, setReworkReason] = useState('');
+  const [assignedToStep, setAssignedToStep] = useState<number>(1);
 
-  // Include current step and previous steps for reassignment
-  const availableSteps = manufacturingSteps.filter(step => {
-    if (!currentStep || !step.step_order || !currentStep.step_order) {
-      return false;
-    }
-    return step.step_order <= currentStep.step_order && step.is_active;
-  });
-
-  const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
-  const stepFields = selectedStepId ? getStepFields(selectedStepId) : [];
-
-  // Get current step fields and their values for display
-  const currentStepFields = currentStep ? getStepFields(currentStep.id) : [];
-  const getCurrentStepFieldValue = (fieldId: string) => {
-    if (parentOrderStep) {
-      return getStepValue(parentOrderStep.id, fieldId);
-    }
-    return null;
-  };
-
-  // Get worker name from worker ID
-  const getWorkerName = (workerId: string) => {
-    const worker = workers.find(w => w.id === workerId);
-    return worker ? worker.name : 'Unknown Worker';
-  };
-
-  const handleStepSelection = (stepId: string) => {
-    setSelectedStepId(stepId);
-    setFieldValues({});
-  };
-
-  const handleFieldChange = (fieldId: string, value: string) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
-  };
-
-  const handleCreateChildOrder = async () => {
-    if (!selectedStepId) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!parentOrder || !currentStep) {
       toast({
         title: 'Error',
-        description: 'Please select a step for reassignment',
+        description: 'Missing parent order or current step information',
         variant: 'destructive',
       });
       return;
     }
 
-    // Validate required fields
-    const requiredFields = stepFields.filter(field => field.is_required);
-    for (const field of requiredFields) {
-      if (!fieldValues[field.field_id] || fieldValues[field.field_id].trim() === '') {
-        toast({
-          title: 'Error',
-          description: `${field.field_label} is required`,
-          variant: 'destructive',
-        });
-        return;
-      }
+    if (reworkQuantity <= 0 || reworkQuantity > parentOrder.quantity_required) {
+      toast({
+        title: 'Error',
+        description: `Rework quantity must be between 1 and ${parentOrder.quantity_required}`,
+        variant: 'destructive',
+      });
+      return;
     }
 
     setIsCreating(true);
 
     try {
-      // Get next child order number (base number)
-      const { data: baseOrderNumber, error: orderNumberError } = await supabase
-        .rpc('get_next_manufacturing_order_number');
+      // Get the current order step ID for this parent order and current step
+      const currentOrderStep = orderSteps.find(step => 
+        step.manufacturing_order_id === parentOrder.id && 
+        step.manufacturing_step_id === currentStep.id
+      );
 
-      if (orderNumberError) throw orderNumberError;
+      if (!currentOrderStep) {
+        throw new Error('Could not find current order step');
+      }
 
-      // Create child manufacturing order with -R suffix for rework
-      const childOrderNumber = `${baseOrderNumber}-R`;
-
-      const { data: childOrder, error: childOrderError } = await supabase
+      // Create rework order with proper rework_source_step_id
+      const { data: childOrder, error } = await supabase
         .from('manufacturing_orders')
         .insert({
-          order_number: childOrderNumber,
+          order_number: `${parentOrder.order_number}-R`,
           product_name: parentOrder.product_name,
           product_config_id: parentOrder.product_config_id,
-          quantity_required: parentOrder.quantity_required,
-          priority: 'high', // Rework orders get high priority
+          quantity_required: reworkQuantity,
+          priority: parentOrder.priority,
           status: 'pending',
-          due_date: parentOrder.due_date,
-          special_instructions: `Rework from ${parentOrder.order_number || 'Unknown Order'} - Step ${currentStep?.step_name || 'Unknown'}`,
+          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          assigned_to_step: selectedStep?.step_order
+          rework_source_step_id: currentOrderStep.id, // This is the key field we were missing!
+          rework_quantity: reworkQuantity,
+          rework_reason: reworkReason,
+          assigned_to_step: assignedToStep
         })
         .select()
         .single();
 
-      if (childOrderError) throw childOrderError;
-
-      // Create the manufacturing order step for the selected step
-      const { data: createdStep, error: stepError } = await supabase
-        .from('manufacturing_order_steps')
-        .insert({
-          manufacturing_order_id: childOrder.id,
-          manufacturing_step_id: selectedStepId,
-          step_order: selectedStep?.step_order || 1,
-          status: 'pending',
-          merchant_id: parentOrder.merchant_id
-        })
-        .select()
-        .single();
-
-      if (stepError) throw stepError;
-
-      // Save field values if any - use the created step's ID
-      if (Object.keys(fieldValues).length > 0) {
-        const stepValueInserts = Object.entries(fieldValues).map(([fieldId, value]) => ({
-          manufacturing_order_step_id: createdStep.id, // Use the created step ID, not the order ID
-          field_id: fieldId,
-          field_value: value,
-          merchant_id: parentOrder.merchant_id
-        }));
-
-        const { error: valuesError } = await supabase
-          .from('manufacturing_order_step_values')
-          .insert(stepValueInserts);
-
-        if (valuesError) throw valuesError;
+      if (error) {
+        console.error('Error creating rework order:', error);
+        throw error;
       }
 
       toast({
         title: 'Success',
-        description: `Child order ${childOrder.order_number} created successfully`,
+        description: `Rework order ${childOrder.order_number} created successfully`,
       });
 
       onSuccess();
       onClose();
+      
+      // Reset form
+      setReworkQuantity(1);
+      setReworkReason('');
+      setAssigngedToStep(1);
+
     } catch (error: any) {
-      console.error('Error creating child order:', error);
+      console.error('Error creating rework order:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create child order',
+        description: error.message || 'Failed to create rework order',
         variant: 'destructive',
       });
     } finally {
@@ -184,230 +117,84 @@ const CreateChildOrderDialog = ({
     }
   };
 
-  const handleClose = () => {
-    setSelectedStepId('');
-    setFieldValues({});
-    onClose();
-  };
+  const activeSteps = manufacturingSteps
+    .filter(step => step.is_active)
+    .sort((a, b) => a.step_order - b.step_order);
 
-  const renderField = (field: any) => {
-    const value = fieldValues[field.field_id] || '';
-
-    switch (field.field_type) {
-      case 'worker':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleFieldChange(field.field_id, val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select worker" />
-            </SelectTrigger>
-            <SelectContent>
-              {workers.map(worker => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case 'date':
-        return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => handleFieldChange(field.field_id, date ? date.toISOString().split('T')[0] : '')}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        );
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-      case 'text':
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-      case 'select':
-        if (field.field_options?.options) {
-          return (
-            <Select 
-              value={value} 
-              onValueChange={(val) => handleFieldChange(field.field_id, val)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={`Select ${field.field_label}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.field_options.options.map((option: string) => (
-                  <SelectItem key={option} value={option}>{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          );
-        }
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-      default:
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-    }
-  };
-
-  // Don't render if currentStep is null or invalid
-  if (!currentStep) {
-    return null;
-  }
+  if (!parentOrder || !currentStep) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Rework Child Order</DialogTitle>
+          <DialogTitle>Create Rework Order</DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Current Step Information */}
-          <div className="space-y-3 border rounded-lg p-4 bg-amber-50 border-amber-200">
-            <h4 className="font-semibold text-amber-800">Current Step Information</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-700">Step:</span>
-                <span className="text-sm text-amber-900">{currentStep.step_name}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-700">Order:</span>
-                <span className="text-sm text-amber-900">#{currentStep.step_order}</span>
-              </div>
-              
-              {/* Current Step Field Values */}
-              {currentStepFields.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-amber-200">
-                  <span className="text-sm font-medium text-amber-700">Configured Fields:</span>
-                  {currentStepFields.map(field => {
-                    const fieldValue = getCurrentStepFieldValue(field.field_id);
-                    let displayValue = fieldValue || 'Not set';
-                    
-                    // Format worker field value
-                    if (field.field_type === 'worker' && fieldValue) {
-                      displayValue = getWorkerName(fieldValue);
-                    }
-                    
-                    return (
-                      <div key={field.field_id} className="flex items-center justify-between text-xs">
-                        <span className="text-amber-600">
-                          {field.field_label}
-                          {field.field_options?.unit && ` (${field.field_options.unit})`}:
-                        </span>
-                        <span className={`font-medium ${fieldValue ? 'text-amber-900' : 'text-amber-500 italic'}`}>
-                          {displayValue}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Parent Order</Label>
+            <Input value={parentOrder.order_number} disabled />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Current Step</Label>
+            <Input value={currentStep.step_name} disabled />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="rework-quantity">
+              Rework Quantity (Max: {parentOrder.quantity_required})
+            </Label>
+            <Input
+              id="rework-quantity"
+              type="number"
+              min={1}
+              max={parentOrder.quantity_required}
+              value={reworkQuantity}
+              onChange={(e) => setReworkQuantity(parseInt(e.target.value) || 1)}
+              required
+            />
           </div>
 
-          <div>
-            <Label htmlFor="step-select">Reassign to Step</Label>
-            <Select value={selectedStepId} onValueChange={handleStepSelection}>
+          <div className="space-y-2">
+            <Label htmlFor="assigned-step">Assign to Step</Label>
+            <Select 
+              value={assignedToStep.toString()} 
+              onValueChange={(value) => setAssignedToStep(parseInt(value))}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select step for rework" />
+                <SelectValue placeholder="Select step" />
               </SelectTrigger>
               <SelectContent>
-                {availableSteps.map(step => (
-                  <SelectItem key={step.id} value={step.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span>Step {step.step_order}: {step.step_name}</span>
-                      {step.id === currentStep.id && (
-                        <Badge variant="secondary" className="ml-2 text-xs">Current</Badge>
-                      )}
-                    </div>
+                {activeSteps.map((step) => (
+                  <SelectItem key={step.id} value={step.step_order.toString()}>
+                    {step.step_order}. {step.step_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {availableSteps.length === 0 && (
-              <p className="text-sm text-amber-600 mt-1">
-                No steps available for rework assignment
-              </p>
-            )}
           </div>
-
-          {/* Step Configuration Fields */}
-          {selectedStepId && stepFields.length > 0 && (
-            <div className="space-y-3 border-t pt-4">
-              <Label className="text-base font-semibold">Step Configuration Fields</Label>
-              <div className="space-y-3">
-                {stepFields.map(field => (
-                  <div key={field.field_id} className="space-y-2">
-                    <Label htmlFor={field.field_id}>
-                      {field.field_label}
-                      {field.field_options?.unit && ` (${field.field_options.unit})`}
-                      {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    {renderField(field)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
+          
+          <div className="space-y-2">
+            <Label htmlFor="rework-reason">Rework Reason</Label>
+            <Textarea
+              id="rework-reason"
+              value={reworkReason}
+              onChange={(e) => setReworkReason(e.target.value)}
+              placeholder="Describe the reason for rework..."
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleCreateChildOrder} 
-              disabled={isCreating || !selectedStepId}
-              className="flex-1"
-            >
+            <Button type="submit" disabled={isCreating}>
               {isCreating ? 'Creating...' : 'Create Rework Order'}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
