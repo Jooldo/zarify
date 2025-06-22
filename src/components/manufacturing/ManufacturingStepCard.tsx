@@ -283,7 +283,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
-  // Fixed handleCardClick function - only open StepDetailsDialog for actual manufacturing steps
+  // Fixed handleCardClick - ONLY handle manufacturing steps locally, don't call parent onStepClick
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open dialog if clicking on the Add Step button
     if ((e.target as HTMLElement).closest('button')) {
@@ -298,11 +298,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     if (data.stepOrder > 0 && currentOrderStep) {
       console.log('🔧 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
+      // DON'T call onStepClick for manufacturing steps - handle locally
+    } else if (data.stepName === 'Manufacturing Order') {
+      console.log('🔧 Manufacturing Order card clicked - calling parent onStepClick');
+      // Only call parent onStepClick for Manufacturing Order cards
       onStepClick?.(data);
     } else {
-      console.log('⚠️ Not opening dialog - either Manufacturing Order card or step does not exist in database');
-      // For Manufacturing Order cards (stepOrder === 0), we don't open any dialog from this component
-      // The parent component should handle Manufacturing Order dialog opening
+      console.log('⚠️ Not opening any dialog - step does not exist in database');
     }
   };
 
