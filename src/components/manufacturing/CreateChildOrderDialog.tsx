@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -112,7 +111,7 @@ const CreateChildOrderDialog = ({
 
       if (orderNumberError) throw orderNumberError;
 
-      // Create child manufacturing order - use parent's quantity by default
+      // Create child manufacturing order - use correct column names that exist in database
       const { data: childOrder, error: childOrderError } = await supabase
         .from('manufacturing_orders')
         .insert({
@@ -126,7 +125,6 @@ const CreateChildOrderDialog = ({
           special_instructions: `Rework from ${parentOrder.order_number || 'Unknown Order'} - Step ${currentStep?.step_name || 'Unknown'}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_from_step: currentStep?.step_order || 0,
           assigned_to_step: selectedStep?.step_order
         })
         .select()
