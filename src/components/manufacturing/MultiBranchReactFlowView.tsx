@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
@@ -50,10 +49,11 @@ interface FlowNodeData extends Record<string, unknown> {
   childLevel: number;
   branches?: BranchInfo[];
   onViewDetails: (order: any) => void;
+  onCreateRework?: (order: any, stepId: string, stepName: string) => void;
 }
 
 const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
-  const { order, step, isParent, isChild, onViewDetails } = data;
+  const { order, step, isParent, isChild, onViewDetails, onCreateRework } = data;
   
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -190,11 +190,21 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
   const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedStep, setSelectedStep] = useState<any>(null);
+  const [isCreateChildDialogOpen, setIsCreateChildDialogOpen] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
   );
+
+  const handleCreateRework = (order: any, stepId: string, stepName: string) => {
+    console.log('Creating rework for order:', order.order_number, 'from step:', stepName, 'stepId:', stepId);
+    setSelectedOrder(order);
+    setSelectedStep({ id: stepId, name: stepName });
+    setIsCreateChildDialogOpen(true);
+  };
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
     console.log('🔄 Generating enhanced multi-branch nodes and edges...');
@@ -275,7 +285,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           isParent: true,
           isChild: false,
           childLevel: 0,
-          onViewDetails
+          onViewDetails,
+          onCreateRework: handleCreateRework
         } as FlowNodeData,
       });
 
@@ -315,7 +326,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
             order: parentOrder,
             branches: stepBranches,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: () => onViewDetails(parentOrder)
+            onViewDetails: () => onViewDetails(parentOrder),
+            onCreateRework: handleCreateRework
           },
         };
         
@@ -456,7 +468,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
             isChild: true,
             parentOrderId: parentOrder.id,
             childLevel: 1,
-            onViewDetails
+            onViewDetails,
+            onCreateRework: handleCreateRework
           } as FlowNodeData,
         });
 
@@ -487,7 +500,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
               order: childOrder,
               branches: childStepBranches,
               manufacturingOrders: manufacturingOrders,
-              onViewDetails: () => onViewDetails(childOrder)
+              onViewDetails: () => onViewDetails(childOrder),
+              onCreateRework: handleCreateRework
             },
           };
           
@@ -594,30 +608,45 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
   }, [generatedNodes, generatedEdges, setNodes, setEdges]);
 
   return (
-    <div className="h-[800px] w-full border rounded-lg overflow-hidden">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="top-right"
-        style={{ backgroundColor: "#F7F9FB" }}
-      >
-        <Controls />
-        <MiniMap 
-          zoomable 
-          pannable 
-          style={{ 
-            backgroundColor: "#F7F9FB",
-            border: "1px solid #e2e8f0"
-          }}
-        />
-        <Background color="#aaa" gap={16} />
-      </ReactFlow>
-    </div>
+    <>
+      <div className="h-[800px] w-full border rounded-lg overflow-hidden">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="top-right"
+          style={{ backgroundColor: "#F7F9FB" }}
+        >
+          <Controls />
+          <MiniMap 
+            zoomable 
+            pannable 
+            style={{ 
+              backgroundColor: "#F7F9FB",
+              border: "1px solid #e2e8f0"
+            }}
+          />
+          <Background color="#aaa" gap={16} />
+        </ReactFlow>
+      </div>
+
+      {/* Create Child Order Dialog */}
+      <CreateChildOrderDialog
+        isOpen={isCreateChildDialogOpen}
+        onClose={() => {
+          setIsCreateChildDialogOpen(false);
+          setSelectedOrder(null);
+          setSelectedStep(null);
+        }}
+        parentOrder={selectedOrder}
+        sourceStepId={selectedStep?.id}
+        sourceStepName={selectedStep?.name}
+      />
+    </>
   );
 };
 
