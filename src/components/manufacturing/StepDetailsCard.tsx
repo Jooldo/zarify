@@ -35,11 +35,11 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'in_progress': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'completed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'blocked': return 'bg-red-50 text-red-700 border-red-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
@@ -81,18 +81,18 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   // Get icon for field type
   const getFieldIcon = (fieldName: string, fieldType: string) => {
     if (fieldName.toLowerCase().includes('weight')) {
-      return <Weight className="h-3 w-3 text-muted-foreground" />;
+      return <Weight className="h-3 w-3 text-slate-400" />;
     }
     if (fieldName.toLowerCase().includes('quantity')) {
-      return <Hash className="h-3 w-3 text-muted-foreground" />;
+      return <Hash className="h-3 w-3 text-slate-400" />;
     }
     if (fieldType === 'date') {
-      return <Calendar className="h-3 w-3 text-muted-foreground" />;
+      return <Calendar className="h-3 w-3 text-slate-400" />;
     }
     if (fieldType === 'number') {
-      return <Hash className="h-3 w-3 text-muted-foreground" />;
+      return <Hash className="h-3 w-3 text-slate-400" />;
     }
-    return <Type className="h-3 w-3 text-muted-foreground" />;
+    return <Type className="h-3 w-3 text-slate-400" />;
   };
 
   // Get assigned worker name
@@ -200,64 +200,59 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         type="target"
         position={Position.Left}
         id="step-details-input"
-        style={{ background: isCompleted ? '#10b981' : '#3b82f6' }}
+        style={{ background: isCompleted ? '#10b981' : '#3b82f6', border: 'none', width: 8, height: 8 }}
       />
-      {/* Add output handle for connecting to next step */}
       <Handle
         type="source"
         position={Position.Right}
         id="step-details-output"
-        style={{ background: isCompleted ? '#10b981' : '#3b82f6' }}
+        style={{ background: isCompleted ? '#10b981' : '#3b82f6', border: 'none', width: 8, height: 8 }}
       />
       <Card 
-        className={`w-80 border-l-4 ${
+        className={`w-80 border-l-2 ${
           isCompleted 
-            ? 'border-l-green-500 bg-green-50/30' 
-            : 'border-l-blue-500 bg-blue-50/30'
-        } hover:shadow-lg transition-shadow cursor-pointer`} 
+            ? 'border-l-emerald-400 bg-gradient-to-r from-emerald-50/30 to-white border-emerald-100' 
+            : 'border-l-blue-400 bg-gradient-to-r from-blue-50/30 to-white border-blue-100'
+        } hover:shadow-md transition-shadow cursor-pointer shadow-sm`} 
         onClick={handleCardClick}
       >
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className={`text-sm font-semibold ${
-                isCompleted ? 'text-green-800' : 'text-blue-800'
-              }`}>
-                {isCompleted ? 'Completed: ' : 'Step Details: '}{orderStep.manufacturing_steps?.step_name}
+              <CardTitle className={`text-sm font-medium text-slate-700 flex items-center gap-2`}>
+                {orderStep.manufacturing_steps?.step_name}
                 {orderStep.manufacturing_steps?.qc_required && (
-                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                  <Badge variant="secondary" className="bg-yellow-50 text-yellow-600 border-yellow-200 text-xs">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     QC
                   </Badge>
                 )}
               </CardTitle>
-              <p className={`text-xs ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
+              <p className="text-xs text-slate-500 mt-1">
                 Step {orderStep.manufacturing_steps?.step_order}
               </p>
             </div>
-            <Badge className={`text-xs ${getStatusColor(orderStep.status)}`}>
+            <Badge className={`text-xs border ${getStatusColor(orderStep.status)}`}>
               {orderStep.status.replace('_', ' ').toUpperCase()}
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           
           {/* Progress */}
           {orderStep.progress_percentage > 0 && (
-            <div className="mb-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span className={`font-medium ${isCompleted ? 'text-green-700' : 'text-blue-700'}`}>
-                  Progress
-                </span>
-                <span className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-blue-800'}`}>
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="font-medium text-slate-600">Progress</span>
+                <span className={`font-semibold ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
                   {orderStep.progress_percentage}%
                 </span>
               </div>
-              <div className={`w-full rounded-full h-2 ${isCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
+              <div className={`w-full rounded-full h-2 ${isCompleted ? 'bg-emerald-100' : 'bg-blue-100'}`}>
                 <div 
                   className={`h-2 rounded-full transition-all duration-300 ${
-                    isCompleted ? 'bg-green-500' : 'bg-blue-500'
+                    isCompleted ? 'bg-emerald-400' : 'bg-blue-400'
                   }`}
                   style={{ width: `${orderStep.progress_percentage}%` }}
                 ></div>
@@ -267,12 +262,12 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
           {/* Worker Assignment */}
           {assignedWorkerName && (
-            <div className={`flex items-center gap-2 text-xs p-2 rounded ${
-              isCompleted ? 'bg-green-100' : 'bg-blue-100'
+            <div className={`flex items-center gap-2 text-xs p-2 rounded-md border ${
+              isCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'
             }`}>
-              <User className={`h-3 w-3 ${isCompleted ? 'text-green-600' : 'text-blue-600'}`} />
-              <span className={isCompleted ? 'text-green-600' : 'text-blue-600'}>Assigned to:</span>
-              <span className={`font-medium ${isCompleted ? 'text-green-800' : 'text-blue-800'}`}>
+              <User className={`h-3 w-3 ${isCompleted ? 'text-emerald-500' : 'text-blue-500'}`} />
+              <span className="text-slate-600">Assigned to:</span>
+              <span className={`font-medium ${isCompleted ? 'text-emerald-700' : 'text-blue-700'}`}>
                 {assignedWorkerName}
               </span>
             </div>
@@ -280,24 +275,16 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
           {/* Configured Field Values */}
           {configuredFieldValues.length > 0 && (
-            <div className="space-y-1">
-              <div className={`text-xs font-medium mb-1 ${
-                isCompleted ? 'text-green-700' : 'text-blue-700'
-              }`}>
-                Field Values:
-              </div>
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-slate-600">Field Values:</div>
               {configuredFieldValues.map((field, index) => (
-                <div key={index} className={`flex items-center gap-2 text-xs bg-white p-2 rounded border ${
-                  isCompleted ? 'border-green-200' : 'border-blue-200'
+                <div key={index} className={`flex items-center gap-2 text-xs bg-white p-2 rounded-md border ${
+                  isCompleted ? 'border-emerald-100' : 'border-blue-100'
                 }`}>
                   {getFieldIcon(field.fieldName, field.type)}
-                  <span className={`font-medium ${isCompleted ? 'text-green-600' : 'text-blue-600'}`}>
-                    {field.label}:
-                  </span>
-                  <span className={`font-semibold flex-1 ${
-                    field.isEmpty 
-                      ? 'text-gray-400 italic' 
-                      : isCompleted ? 'text-green-800' : 'text-blue-800'
+                  <span className="font-medium text-slate-600">{field.label}:</span>
+                  <span className={`font-medium flex-1 ${
+                    field.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
                   }`}>
                     {field.value}
                   </span>
@@ -308,13 +295,13 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
           {/* Next Step Action for Completed Steps */}
           {isCompleted && nextStep && (
-            <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
-              <div className="text-xs text-green-700 mb-2">
-                Next Step Available: <span className="font-medium">{nextStep.step_name}</span>
+            <div className="p-3 bg-emerald-50 rounded-md border border-emerald-100">
+              <div className="text-xs text-slate-600 mb-2">
+                Next Step Available: <span className="font-medium text-emerald-700">{nextStep.step_name}</span>
               </div>
               <Button
                 size="sm"
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStartNextStep();
@@ -327,10 +314,8 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
           )}
 
           {/* Timestamps */}
-          <div className={`space-y-1 text-xs border-t pt-2 ${
-            isCompleted 
-              ? 'text-green-600 border-green-200' 
-              : 'text-blue-600 border-blue-200'
+          <div className={`space-y-1 text-xs border-t pt-2 text-slate-500 ${
+            isCompleted ? 'border-emerald-100' : 'border-blue-100'
           }`}>
             {orderStep.started_at && (
               <div className="flex items-center gap-2">

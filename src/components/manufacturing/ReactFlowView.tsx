@@ -56,25 +56,25 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
     switch (status?.toLowerCase()) {
       case 'pending':
       case 'not_started':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'completed':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'partially_completed':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
+      case 'urgent': return 'bg-red-100 text-red-700 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -84,40 +84,40 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         type="source"
         position={Position.Right}
         id="order-output"
-        style={{ background: '#3b82f6' }}
+        style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
       />
       
-      <Card className={`w-80 ${isChild ? 'border-l-4 border-l-orange-400 bg-orange-50/30' : 'bg-white'} shadow-sm hover:shadow-md transition-all duration-200`}>
+      <Card className={`w-80 shadow-sm border ${isChild ? 'border-l-2 border-l-orange-300 bg-gradient-to-r from-orange-50/50 to-white' : 'bg-white'} hover:shadow-md transition-all duration-200`}>
         <CardContent className="p-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isChild && <GitBranch className="h-4 w-4 text-orange-600" />}
-                <span className={`font-bold text-sm ${isChild ? 'text-orange-700' : 'text-blue-700'}`}>
+                {isChild && <GitBranch className="h-4 w-4 text-orange-500" />}
+                <span className={`font-semibold text-sm ${isChild ? 'text-orange-700' : 'text-slate-700'}`}>
                   {order.order_number}
                 </span>
                 {isChild && (
-                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-600 border-orange-200">
                     Rework
                   </Badge>
                 )}
                 {isParent && (
-                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200">
                     Parent
                   </Badge>
                 )}
               </div>
-              <Badge className={`${getPriorityColor(order.priority)} shadow-sm text-xs`}>
+              <Badge className={`${getPriorityColor(order.priority)} text-xs border`}>
                 {order.priority?.toUpperCase() || 'MEDIUM'}
               </Badge>
             </div>
 
             {step && (
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-sm font-medium text-gray-800">
+              <div className="bg-slate-50 rounded-md p-3 border border-slate-100">
+                <div className="text-sm font-medium text-slate-700 mb-1">
                   Step {step.step_order}: {step.step_name}
                 </div>
-                <Badge className={`${getStatusColor(step.status)} border text-xs mt-1`}>
+                <Badge className={`${getStatusColor(step.status)} border text-xs`}>
                   {step.status === 'not_started' ? 'Not Started' : 
                    step.status === 'in_progress' ? 'In Progress' : 
                    step.status === 'partially_completed' ? 'Partially Completed' :
@@ -126,26 +126,26 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
               </div>
             )}
 
-            <div className="bg-gray-50 rounded-lg p-2 space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <Package className="h-4 w-4 text-emerald-600" />
-                <span className="font-semibold text-gray-800">{order.product_name}</span>
+            <div className="bg-slate-50 rounded-md p-3 border border-slate-100">
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <Package className="h-4 w-4 text-slate-500" />
+                <span className="font-medium text-slate-700">{order.product_name}</span>
               </div>
-              <div className="text-xs text-gray-600">
-                Quantity: {order.quantity_required}
+              <div className="text-xs text-slate-500">
+                Qty: {order.quantity_required}
               </div>
             </div>
 
             {step?.workers?.name && (
-              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-lg p-2">
-                <User className="h-4 w-4 text-blue-600" />
-                <span className="text-gray-600">Worker:</span>
-                <span className="font-semibold text-blue-700">{step.workers.name}</span>
+              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-md p-2 border border-blue-100">
+                <User className="h-4 w-4 text-blue-500" />
+                <span className="text-slate-600">Worker:</span>
+                <span className="font-medium text-blue-600">{step.workers.name}</span>
               </div>
             )}
 
             {step?.started_at && (
-              <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 rounded px-2 py-1">
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded px-2 py-1">
                 <Clock className="h-3 w-3" />
                 Started: {new Date(step.started_at).toLocaleDateString()}
               </div>
@@ -154,7 +154,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
             <Button
               size="sm"
               variant="outline"
-              className="w-full"
+              className="w-full border-slate-200 text-slate-600 hover:bg-slate-50"
               onClick={() => onViewDetails(order)}
             >
               <Eye className="h-4 w-4 mr-1" />
@@ -167,7 +167,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   );
 };
 
-// Updated PartiallyCompletedStepCard with StepDetailsCard layout but orange colors
+// Updated PartiallyCompletedStepCard with refined styling
 const PartiallyCompletedStepCard: React.FC<{ 
   data: {
     orderStep: any;
@@ -239,18 +239,18 @@ const PartiallyCompletedStepCard: React.FC<{
   // Get icon for field type
   const getFieldIcon = (fieldName: string, fieldType: string) => {
     if (fieldName.toLowerCase().includes('weight')) {
-      return <Weight className="h-3 w-3 text-muted-foreground" />;
+      return <Weight className="h-3 w-3 text-slate-400" />;
     }
     if (fieldName.toLowerCase().includes('quantity')) {
-      return <Hash className="h-3 w-3 text-muted-foreground" />;
+      return <Hash className="h-3 w-3 text-slate-400" />;
     }
     if (fieldType === 'date') {
-      return <Calendar className="h-3 w-3 text-muted-foreground" />;
+      return <Calendar className="h-3 w-3 text-slate-400" />;
     }
     if (fieldType === 'number') {
-      return <Hash className="h-3 w-3 text-muted-foreground" />;
+      return <Hash className="h-3 w-3 text-slate-400" />;
     }
-    return <Type className="h-3 w-3 text-muted-foreground" />;
+    return <Type className="h-3 w-3 text-slate-400" />;
   };
 
   // Get assigned worker name
@@ -308,53 +308,53 @@ const PartiallyCompletedStepCard: React.FC<{
         type="target"
         position={Position.Left}
         id="step-details-input"
-        style={{ background: '#f97316' }}
+        style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="step-details-output"
-        style={{ background: '#f97316' }}
+        style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
       />
       
       <Card 
-        className="w-80 border-l-4 border-l-orange-500 bg-orange-50/30 hover:shadow-lg transition-shadow cursor-pointer"
+        className="w-80 border-l-2 border-l-orange-400 bg-gradient-to-r from-orange-50/30 to-white hover:shadow-md transition-shadow cursor-pointer shadow-sm border-orange-100"
         onClick={handleCardClick}
       >
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold text-orange-800">
-                Partially Completed: {orderStep.manufacturing_steps?.step_name}
+              <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                {orderStep.manufacturing_steps?.step_name}
                 {orderStep.manufacturing_steps?.qc_required && (
-                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                  <Badge variant="secondary" className="bg-yellow-50 text-yellow-600 border-yellow-200 text-xs">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     QC
                   </Badge>
                 )}
               </CardTitle>
-              <p className="text-xs text-orange-600">
+              <p className="text-xs text-slate-500 mt-1">
                 Step {orderStep.manufacturing_steps?.step_order}
               </p>
             </div>
-            <Badge className="text-xs bg-orange-100 text-orange-800">
+            <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-200">
               PARTIALLY COMPLETED
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           
           {/* Progress */}
           {orderStep.progress_percentage > 0 && (
-            <div className="mb-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-medium text-orange-700">Progress</span>
-                <span className="font-semibold text-orange-800">{orderStep.progress_percentage}%</span>
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="font-medium text-slate-600">Progress</span>
+                <span className="font-semibold text-orange-600">{orderStep.progress_percentage}%</span>
               </div>
               <div className="w-full rounded-full h-2 bg-orange-100">
                 <div 
-                  className="h-2 rounded-full transition-all duration-300 bg-orange-500"
+                  className="h-2 rounded-full transition-all duration-300 bg-orange-400"
                   style={{ width: `${orderStep.progress_percentage}%` }}
                 ></div>
               </div>
@@ -363,23 +363,23 @@ const PartiallyCompletedStepCard: React.FC<{
 
           {/* Worker Assignment */}
           {assignedWorkerName && (
-            <div className="flex items-center gap-2 text-xs p-2 rounded bg-orange-100">
-              <User className="h-3 w-3 text-orange-600" />
-              <span className="text-orange-600">Assigned to:</span>
-              <span className="font-medium text-orange-800">{assignedWorkerName}</span>
+            <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-orange-50 border border-orange-100">
+              <User className="h-3 w-3 text-orange-500" />
+              <span className="text-slate-600">Assigned to:</span>
+              <span className="font-medium text-orange-700">{assignedWorkerName}</span>
             </div>
           )}
 
           {/* Configured Field Values */}
           {configuredFieldValues.length > 0 && (
-            <div className="space-y-1">
-              <div className="text-xs font-medium mb-1 text-orange-700">Field Values:</div>
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-slate-600">Field Values:</div>
               {configuredFieldValues.map((field, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded border border-orange-200">
+                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded-md border border-orange-100">
                   {getFieldIcon(field.fieldName, field.type)}
-                  <span className="font-medium text-orange-600">{field.label}:</span>
-                  <span className={`font-semibold flex-1 ${
-                    field.isEmpty ? 'text-gray-400 italic' : 'text-orange-800'
+                  <span className="font-medium text-slate-600">{field.label}:</span>
+                  <span className={`font-medium flex-1 ${
+                    field.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
                   }`}>
                     {field.value}
                   </span>
@@ -389,18 +389,18 @@ const PartiallyCompletedStepCard: React.FC<{
           )}
 
           {/* Action Buttons */}
-          <div className="space-y-2 pt-2 border-t border-orange-200">
+          <div className="space-y-2 pt-2 border-t border-orange-100">
             {!hasReworkOrder && (
               <Button
                 size="sm"
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSetupRework();
                 }}
               >
                 <Wrench className="h-3 w-3 mr-1" />
-                Rework
+                Setup Rework
               </Button>
             )}
             
@@ -408,26 +408,26 @@ const PartiallyCompletedStepCard: React.FC<{
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStartNextStep();
                 }}
               >
                 <Play className="h-3 w-3 mr-1" />
-                Start Next Step ({nextStep.step_name})
+                Start {nextStep.step_name}
               </Button>
             )}
             
             {hasReworkOrder && (
-              <div className="text-xs text-orange-600 text-center p-2 bg-orange-100/30 rounded">
+              <div className="text-xs text-slate-500 text-center p-2 bg-orange-50/50 rounded-md">
                 Rework order already created
               </div>
             )}
           </div>
 
           {/* Timestamps */}
-          <div className="space-y-1 text-xs border-t pt-2 text-orange-600 border-orange-200">
+          <div className="space-y-1 text-xs border-t pt-2 text-slate-500 border-orange-100">
             {orderStep.started_at && (
               <div className="flex items-center gap-2">
                 <Clock className="h-3 w-3" />
@@ -612,7 +612,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        const edgeColor = step.status === 'partially_completed' ? '#f97316' : 
+        const edgeColor = step.status === 'partially_completed' ? '#fb923c' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
                          step.status === 'completed' ? 'Completed' : 'In Progress';
@@ -638,8 +638,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           label: edgeLabel,
           labelStyle: { 
             fill: edgeColor, 
-            fontWeight: 600,
-            fontSize: '12px'
+            fontWeight: 500,
+            fontSize: '11px'
           },
         };
         
@@ -726,7 +726,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
-          const edgeColor = childStep.status === 'partially_completed' ? '#f97316' : 
+          const edgeColor = childStep.status === 'partially_completed' ? '#fb923c' : 
                            childStep.status === 'completed' ? '#10b981' : '#3b82f6';
           const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
                            childStep.status === 'completed' ? 'Completed' : 'In Progress';
@@ -752,8 +752,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             label: edgeLabel,
             labelStyle: { 
               fill: edgeColor, 
-              fontWeight: 600,
-              fontSize: '12px'
+              fontWeight: 500,
+              fontSize: '11px'
             },
           };
           
@@ -784,19 +784,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               type: 'smoothstep',
               animated: true,
               style: { 
-                stroke: '#f97316', 
-                strokeWidth: 3, 
+                stroke: '#fb923c', 
+                strokeWidth: 2, 
                 strokeDasharray: '10,5'
               },
               markerEnd: {
                 type: MarkerType.ArrowClosed,
-                color: '#f97316',
+                color: '#fb923c',
               },
               label: 'Rework Origin',
               labelStyle: { 
-                fill: '#f97316', 
-                fontWeight: 700,
-                fontSize: '11px'
+                fill: '#fb923c', 
+                fontWeight: 500,
+                fontSize: '10px'
               },
             };
             
@@ -812,16 +812,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           target: childNodeId,
           type: 'smoothstep',
           animated: true,
-          style: { stroke: '#f97316', strokeWidth: 2 },
+          style: { stroke: '#fb923c', strokeWidth: 2 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: '#f97316',
+            color: '#fb923c',
           },
           label: 'Rework',
           labelStyle: { 
-            fill: '#f97316', 
-            fontWeight: 600,
-            fontSize: '12px'
+            fill: '#fb923c', 
+            fontWeight: 500,
+            fontSize: '11px'
           },
         });
       });
