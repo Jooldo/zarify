@@ -282,6 +282,23 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
+    // Add the missing handleCardClick function
+    const handleCardClick = (e: React.MouseEvent) => {
+      // Don't open dialog if clicking on the Add Step button
+      if ((e.target as HTMLElement).closest('button')) {
+        return;
+      }
+      
+      // Only open dialog for actual steps (not Manufacturing Order cards)
+      if (data.stepOrder > 0 && currentOrderStep) {
+        console.log('🔧 Card clicked, opening dialog for step:', currentOrderStep.id);
+        setDetailsDialogOpen(true);
+        onStepClick?.(data);
+      } else {
+        console.log('⚠️ Card clicked but no valid step to show details for');
+      }
+    };
+
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAddStep?.(data);
