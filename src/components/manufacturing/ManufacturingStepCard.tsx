@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -282,29 +283,33 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
-    // Add the missing handleCardClick function
-    const handleCardClick = (e: React.MouseEvent) => {
-      // Don't open dialog if clicking on the Add Step button
-      if ((e.target as HTMLElement).closest('button')) {
-        return;
-      }
-      
-      // Only open dialog for actual steps (not Manufacturing Order cards)
-      if (data.stepOrder > 0 && currentOrderStep) {
-        console.log('🔧 Card clicked, opening dialog for step:', currentOrderStep.id);
-        setDetailsDialogOpen(true);
-        onStepClick?.(data);
-      } else {
-        console.log('⚠️ Card clicked but no valid step to show details for');
-      }
-    };
+  // Fixed handleCardClick function - only open StepDetailsDialog for actual manufacturing steps
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't open dialog if clicking on the Add Step button
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    console.log('🔧 Card clicked for:', data.stepName, 'stepOrder:', data.stepOrder);
+    console.log('🔧 Current order step exists:', !!currentOrderStep);
+    console.log('🔧 Is Manufacturing Order card:', data.stepName === 'Manufacturing Order');
+    
+    // ONLY open StepDetailsDialog for actual manufacturing steps (stepOrder > 0) that exist in database
+    if (data.stepOrder > 0 && currentOrderStep) {
+      console.log('🔧 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
+      setDetailsDialogOpen(true);
+      onStepClick?.(data);
+    } else {
+      console.log('⚠️ Not opening dialog - either Manufacturing Order card or step does not exist in database');
+      // For Manufacturing Order cards (stepOrder === 0), we don't open any dialog from this component
+      // The parent component should handle Manufacturing Order dialog opening
+    }
+  };
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAddStep?.(data);
   };
-
-  
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
@@ -434,16 +439,18 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <Handle type="source" position={Position.Right} className="!bg-gray-400" />
       </Card>
 
-      {/* ALWAYS render dialog, but only pass step if valid - NOW OPENS IN EDIT MODE */}
-      <StepDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={(open) => {
-          console.log('Dialog open change:', open, 'for step:', currentOrderStep?.id);
-          setDetailsDialogOpen(open);
-        }}
-        step={currentOrderStep || null}
-        openInEditMode={true} // Always open in edit mode when clicked from card
-      />
+      {/* StepDetailsDialog - Only render for manufacturing steps that exist in database */}
+      {data.stepOrder > 0 && currentOrderStep && (
+        <StepDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={(open) => {
+            console.log('StepDetailsDialog open change:', open, 'for step:', currentOrderStep?.id);
+            setDetailsDialogOpen(open);
+          }}
+          step={currentOrderStep}
+          openInEditMode={true} // Always open in edit mode when clicked from card
+        />    
+      )}
     </>
   );
 };
