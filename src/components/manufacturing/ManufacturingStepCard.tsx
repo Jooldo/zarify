@@ -278,36 +278,40 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
-  const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
-
-  // Fixed handleCardClick - prevent parent onStepClick for manufacturing steps
+  // CRITICAL FIX: Enhanced handleCardClick with event stopping
   const handleCardClick = (e: React.MouseEvent) => {
+    console.log('🚨 CARD CLICK EVENT TRIGGERED');
+    console.log('🚨 Target element:', (e.target as HTMLElement).tagName);
+    console.log('🚨 Step Name:', data.stepName);
+    console.log('🚨 Step Order:', data.stepOrder);
+    console.log('🚨 Current Order Step Exists:', !!currentOrderStep);
+    
     // Don't open dialog if clicking on the Add Step button
     if ((e.target as HTMLElement).closest('button')) {
+      console.log('🚨 Button clicked - preventing card action');
       return;
     }
     
-    console.log('🔧 Card clicked for:', data.stepName, 'stepOrder:', data.stepOrder);
-    console.log('🔧 Current order step exists:', !!currentOrderStep);
-    console.log('🔧 Is Manufacturing Order card:', data.stepName === 'Manufacturing Order');
-    
-    // Handle manufacturing steps (stepOrder > 0) - open StepDetailsDialog locally
+    // FOR MANUFACTURING STEPS: Stop all propagation and handle locally
     if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('🔧 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
+      console.log('🚨 MANUFACTURING STEP - STOPPING PROPAGATION');
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      console.log('🚨 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
-      return; // IMPORTANT: Return early to prevent calling parent onStepClick
+      return;
     }
     
-    // Handle Manufacturing Order cards - call parent onStepClick
+    // FOR MANUFACTURING ORDER CARDS: Allow parent handling
     if (data.stepName === 'Manufacturing Order') {
-      console.log('🔧 Manufacturing Order card clicked - calling parent onStepClick');
+      console.log('🚨 MANUFACTURING ORDER CARD - CALLING PARENT');
       onStepClick?.(data);
       return;
     }
     
-    console.log('⚠️ Not opening any dialog - step does not exist in database');
+    console.log('🚨 NO ACTION TAKEN - step does not exist in database');
   };
 
   const handleAddStep = (e: React.MouseEvent) => {
@@ -317,6 +321,10 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
+
+  const cardClassName = data.isJhalaiStep 
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
   return (
     <>
@@ -363,10 +371,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
             </div>
           )}
 
-          {/* Debug info for troubleshooting */}
+          {/* Enhanced Debug info for troubleshooting */}
           {data.stepOrder > 0 && (
             <div className="text-xs text-gray-500 bg-gray-100 p-1 rounded">
-              OrderStep: {currentOrderStep ? '✅ Found' : '❌ Missing'} | StepOrder: {data.stepOrder} | OrderID: {data.orderId.slice(-6)}
+              <div>OrderStep: {currentOrderStep ? '✅ Found' : '❌ Missing'}</div>
+              <div>StepOrder: {data.stepOrder} | OrderID: {data.orderId.slice(-6)}</div>
+              <div>Will Open: {currentOrderStep ? 'StepDetailsDialog' : 'Nothing'}</div>
             </div>
           )}
 
@@ -448,7 +458,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <StepDetailsDialog
           open={detailsDialogOpen}
           onOpenChange={(open) => {
-            console.log('StepDetailsDialog open change:', open, 'for step:', currentOrderStep?.id);
+            console.log('🚨 StepDetailsDialog open change:', open, 'for step:', currentOrderStep?.id);
             setDetailsDialogOpen(open);
           }}
           step={currentOrderStep}
