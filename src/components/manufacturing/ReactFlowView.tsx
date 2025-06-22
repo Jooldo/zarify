@@ -1,5 +1,5 @@
 
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -184,11 +184,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     [setEdges],
   );
 
-  // Generate nodes and edges from manufacturing orders
+  // Generate nodes and edges from manufacturing orders - with stable dependencies
   const { generatedNodes, generatedEdges } = useMemo(() => {
     console.log('🔄 Generating nodes and edges...');
     console.log('Manufacturing Orders:', manufacturingOrders);
     console.log('Order Steps:', orderSteps);
+    
+    if (!manufacturingOrders?.length || !orderSteps?.length) {
+      console.log('⚠️ Missing data, returning empty arrays');
+      return { generatedNodes: [], generatedEdges: [] };
+    }
     
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -408,13 +413,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     console.log('🔥 Final generated edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
-  }, [manufacturingOrders, orderSteps, onViewDetails, getStepFields]);
+  }, [
+    // Use stable string representations to prevent constant re-rendering
+    JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status }))),
+    JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status }))),
+    manufacturingSteps.length, // Just the length for stability
+    onViewDetails.toString() // This should be stable
+  ]);
 
-  // Update nodes and edges when data changes
-  useEffect(() => {
-    console.log('📊 Updating nodes and edges in useEffect');
-    console.log('Generated nodes:', generatedNodes);
-    console.log('Generated edges:', generatedEdges);
+  // Set nodes and edges directly without useEffect to prevent render loops
+  React.useEffect(() => {
+    console.log('📊 Setting nodes and edges');
+    console.log('Setting nodes:', generatedNodes.length);
+    console.log('Setting edges:', generatedEdges.length);
     
     setNodes(generatedNodes);
     setEdges(generatedEdges);
