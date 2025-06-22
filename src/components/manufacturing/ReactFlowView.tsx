@@ -166,7 +166,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   );
 };
 
-// Updated PartiallyCompletedStepCard with yellow theme and enhanced functionality
+// Updated PartiallyCompletedStepCard with more subtle styling
 const PartiallyCompletedStepCard: React.FC<{ 
   data: {
     orderStep: any;
@@ -203,18 +203,18 @@ const PartiallyCompletedStepCard: React.FC<{
   // Get field icon based on type and name
   const getFieldIcon = (fieldName: string, fieldType: string) => {
     if (fieldName.toLowerCase().includes('weight')) {
-      return <Weight className="h-3 w-3 text-yellow-600" />;
+      return <Weight className="h-3 w-3 text-amber-600" />;
     }
     if (fieldName.toLowerCase().includes('quantity')) {
-      return <Hash className="h-3 w-3 text-yellow-600" />;
+      return <Hash className="h-3 w-3 text-amber-600" />;
     }
     if (fieldType === 'date') {
-      return <Calendar className="h-3 w-3 text-yellow-600" />;
+      return <Calendar className="h-3 w-3 text-amber-600" />;
     }
     if (fieldType === 'number') {
-      return <Hash className="h-3 w-3 text-yellow-600" />;
+      return <Hash className="h-3 w-3 text-amber-600" />;
     }
-    return <Type className="h-3 w-3 text-yellow-600" />;
+    return <Type className="h-3 w-3 text-amber-600" />;
   };
 
   // Get worker name from worker ID
@@ -319,63 +319,54 @@ const PartiallyCompletedStepCard: React.FC<{
         type="target"
         position={Position.Left}
         id="step-details-input"
-        style={{ background: '#eab308' }}
+        style={{ background: '#f59e0b' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="step-details-output"
-        style={{ background: '#eab308' }}
+        style={{ background: '#f59e0b' }}
       />
       
+      {/* More subtle styling - changed from yellow to amber tones */}
       <Card 
-        className="w-80 bg-yellow-50 border-yellow-200 border-2 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+        className="w-80 bg-amber-50/50 border-amber-200 border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
         onClick={handleCardClick}
       >
         <CardContent className="p-4">
           <div className="space-y-3">
-            {/* Header */}
+            {/* Header - more subtle alert icon */}
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
               <div className="flex-1">
-                <div className="font-semibold text-yellow-800 text-sm">
+                <div className="font-semibold text-amber-800 text-sm">
                   Step {orderStep.manufacturing_steps?.step_order}: {orderStep.manufacturing_steps?.step_name}
                 </div>
-                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs mt-1">
+                <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs mt-1">
                   Partially Completed
                 </Badge>
               </div>
             </div>
 
-            {/* Order Info */}
-            <div className="bg-yellow-100 rounded-lg p-2">
-              <div className="text-sm font-medium text-yellow-800">
-                Order: {order.order_number}
-              </div>
-              <div className="text-xs text-yellow-600">
-                Product: {order.product_name} | Qty: {order.quantity_required}
-              </div>
-            </div>
-
             {/* Worker Info */}
             {assignedWorkerName && (
-              <div className="flex items-center gap-2 text-sm bg-yellow-100 rounded-lg p-2">
-                <User className="h-4 w-4 text-yellow-600" />
-                <span className="text-yellow-600">Worker:</span>
-                <span className="font-semibold text-yellow-800">{assignedWorkerName}</span>
+              <div className="flex items-center gap-2 text-sm bg-amber-100/50 rounded-lg p-2">
+                <User className="h-4 w-4 text-amber-600" />
+                <span className="text-amber-700">Worker:</span>
+                <span className="font-semibold text-amber-800">{assignedWorkerName}</span>
               </div>
             )}
 
             {/* Merchant-Configured Fields */}
             {configuredFieldValues.length > 0 && (
               <div className="space-y-2">
-                <div className="text-sm font-medium text-yellow-800">Step Fields:</div>
+                <div className="text-sm font-medium text-amber-800">Step Fields:</div>
                 {configuredFieldValues.map((field, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm bg-yellow-100 rounded-lg p-2">
+                  <div key={index} className="flex items-center gap-2 text-sm bg-amber-100/30 rounded-lg p-2">
                     {getFieldIcon(field.fieldName, field.type)}
-                    <span className="text-yellow-600 font-medium">{field.label}:</span>
+                    <span className="text-amber-700 font-medium">{field.label}:</span>
                     <span className={`font-semibold flex-1 ${
-                      field.isEmpty ? 'text-yellow-500 italic' : 'text-yellow-800'
+                      field.isEmpty ? 'text-amber-500 italic' : 'text-amber-800'
                     }`}>
                       {field.value}
                     </span>
@@ -384,12 +375,12 @@ const PartiallyCompletedStepCard: React.FC<{
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="space-y-2 pt-2 border-t border-yellow-200">
+            {/* Action Buttons - more subtle styling */}
+            <div className="space-y-2 pt-2 border-t border-amber-200/50">
               {!hasReworkOrder && (
                 <Button
                   size="sm"
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSetupRework();
@@ -404,7 +395,7 @@ const PartiallyCompletedStepCard: React.FC<{
                 <Button
                   size="sm"
                   variant="outline"
-                  className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleStartNextStep();
@@ -416,7 +407,7 @@ const PartiallyCompletedStepCard: React.FC<{
               )}
               
               {hasReworkOrder && (
-                <div className="text-xs text-yellow-600 text-center p-2 bg-yellow-100 rounded">
+                <div className="text-xs text-amber-600 text-center p-2 bg-amber-100/30 rounded">
                   Rework order already created
                 </div>
               )}
@@ -593,7 +584,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        const edgeColor = step.status === 'partially_completed' ? '#eab308' : 
+        const edgeColor = step.status === 'partially_completed' ? '#f59e0b' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
                          step.status === 'completed' ? 'Completed' : 'In Progress';
@@ -707,7 +698,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
-          const edgeColor = childStep.status === 'partially_completed' ? '#eab308' : 
+          const edgeColor = childStep.status === 'partially_completed' ? '#f59e0b' : 
                            childStep.status === 'completed' ? '#10b981' : '#3b82f6';
           const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
                            childStep.status === 'completed' ? 'Completed' : 'In Progress';

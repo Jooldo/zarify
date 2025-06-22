@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, User, Package, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
+import { Plus, Calendar, User, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
 import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -322,35 +322,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-2 p-4 pt-0">
-          {/* Order Information */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Package className="h-3 w-3" />
-            <span>{data.orderNumber} - {data.productName}</span>
-          </div>
-
-          {/* Quantity and Priority for Manufacturing Orders */}
-          {data.stepName === 'Manufacturing Order' && (
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {data.quantityRequired && (
-                <div>
-                  <span className="text-muted-foreground">Qty:</span>
-                  <span className="font-medium ml-1">{data.quantityRequired}</span>
-                </div>
-              )}
-              {data.priority && (
-                <div>
-                  <span className="text-muted-foreground">Priority:</span>
-                  <span className={`font-medium ml-1 capitalize ${
-                    data.priority === 'high' || data.priority === 'urgent' ? 'text-red-600' : 
-                    data.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
-                  }`}>
-                    {data.priority}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
+          
           {/* Status Pills */}
           {data.stepOrder > 0 && (
             <div className="flex items-center justify-between">
