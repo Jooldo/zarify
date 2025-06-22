@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -279,46 +278,58 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
-  // CRITICAL FIX: Ultra-aggressive event stopping for manufacturing steps
+  // NUCLEAR OPTION: Complete event isolation for manufacturing steps
   const handleCardClick = (e: React.MouseEvent) => {
-    console.log('🚨🚨🚨 CARD CLICK - IMMEDIATE STOP');
+    console.log('🚨🚨🚨 CARD CLICK - NUCLEAR EVENT STOPPING');
+    console.log('Target:', (e.target as HTMLElement).tagName);
+    console.log('Current Target:', (e.currentTarget as HTMLElement).tagName);
     console.log('Step Name:', data.stepName, 'Step Order:', data.stepOrder);
     
-    // IMMEDIATELY STOP ALL PROPAGATION - NO CONDITIONS
+    // NUCLEAR OPTION - Stop everything immediately
     e.preventDefault();
     e.stopPropagation();
-    if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
-      e.nativeEvent.stopImmediatePropagation();
+    e.stopImmediatePropagation();
+    if (e.nativeEvent) {
+      e.nativeEvent.preventDefault();
+      e.nativeEvent.stopPropagation();
+      if (e.nativeEvent.stopImmediatePropagation) {
+        e.nativeEvent.stopImmediatePropagation();
+      }
     }
     
-    // Don't open dialog if clicking on a button
-    if ((e.target as HTMLElement).closest('button')) {
-      console.log('🚨 Button clicked - no action');
-      return;
+    // Return early if clicking on any interactive element
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.tagName === 'BUTTON') {
+      console.log('🚨 Interactive element clicked - no action');
+      return false;
     }
     
     // FOR MANUFACTURING STEPS ONLY: Open StepDetailsDialog
     if (data.stepOrder > 0 && currentOrderStep) {
       console.log('🚨 MANUFACTURING STEP - Opening StepDetailsDialog');
+      console.log('🚨 Current Order Step ID:', currentOrderStep.id);
       setDetailsDialogOpen(true);
-      return;
+      return false; // Prevent any further handling
     }
     
-    // FOR MANUFACTURING ORDER CARDS: Call parent only if no manufacturing steps exist
+    // FOR MANUFACTURING ORDER CARDS: Call parent only if explicitly needed
     if (data.stepName === 'Manufacturing Order' && onStepClick) {
       console.log('🚨 MANUFACTURING ORDER - Calling parent handler');
       onStepClick(data);
-      return;
+      return false;
     }
     
-    console.log('🚨 NO ACTION - just stopped propagation');
+    console.log('🚨 NO ACTION - but all propagation stopped');
+    return false;
   };
 
   const handleAddStep = (e: React.MouseEvent) => {
     console.log('🚨 ADD STEP BUTTON CLICKED');
     e.stopPropagation();
+    e.stopImmediatePropagation();
     e.preventDefault();
     onAddStep?.(data);
+    return false;
   };
 
   const assignedWorkerName = getAssignedWorkerName();
@@ -333,7 +344,18 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       <Card 
         className={cardClassName} 
         onClick={handleCardClick}
-        style={{ zIndex: 1 }} // Ensure card is above other elements
+        onMouseDown={(e) => {
+          console.log('🚨 MOUSE DOWN - Also stopping propagation');
+          e.stopPropagation();
+        }}
+        onMouseUp={(e) => {
+          console.log('🚨 MOUSE UP - Also stopping propagation');
+          e.stopPropagation();
+        }}
+        style={{ 
+          zIndex: 10,
+          position: 'relative'
+        }}
       >
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
@@ -449,6 +471,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
               size="sm" 
               className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
               onClick={handleAddStep}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
             >
               <Plus className="h-3 w-3 mr-1" />
               {getNextStepName()}
