@@ -228,6 +228,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
       const branches = detectStepBranches(orderStep, orderSteps, manufacturingOrders, manufacturingSteps);
       if (branches.length > 0) {
         stepBranchesMap.set(orderStep.id, branches);
+        console.log(`📋 Step ${orderStep.id} has ${branches.length} branches:`, branches);
       }
     });
     
@@ -363,6 +364,9 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           const branchEdgeStyle = branch.type === 'rework' ? '10,5' : 
                                  branch.type === 'qc' ? '2,2' : 'none';
           
+          console.log(`🔗 Creating branch edge from ${stepCardNodeId} to ${branch.targetNodeId}`);
+          console.log(`Branch details:`, branch);
+          
           const branchEdge = {
             id: `branch-edge-${stepCardNodeId}-${branch.targetNodeId}`,
             source: stepCardNodeId,
@@ -397,7 +401,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
             }
           };
           
-          console.log(`✅ Adding branch edge from ${stepCardNodeId} to ${branch.targetNodeId}`);
+          console.log(`✅ Adding branch edge:`, branchEdge);
           edges.push(branchEdge);
         });
 
@@ -425,6 +429,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           x: parentPosition.x + 100,
           y: parentPosition.y + ((childIndex + 1) * 400)
         };
+
+        console.log(`📍 Child order ${childOrder.order_number} positioned at:`, childPosition);
 
         nodes.push({
           id: childNodeId,

@@ -1,4 +1,3 @@
-
 export interface BranchInfo {
   id: string;
   type: 'progression' | 'rework' | 'qc';
@@ -166,31 +165,26 @@ export const detectStepBranches = (
 
   // Check for rework branches (for partially completed steps)
   if (orderStep.status === 'partially_completed') {
-    // Find rework orders created from this step
+    // Find rework orders created from this step's parent order
     const reworkOrders = manufacturingOrders.filter(order => 
       order.parent_order_id === orderStep.manufacturing_order_id &&
       order.rework_from_step === orderStep.manufacturing_steps?.step_order
     );
 
+    console.log(`🔍 Checking rework for step ${orderStep.id} (order ${orderStep.manufacturing_order_id})`);
+    console.log(`Found ${reworkOrders.length} rework orders:`, reworkOrders);
+
     reworkOrders.forEach(reworkOrder => {
-      // Find the current step of the rework order
-      const reworkOrderSteps = orderSteps.filter(step => 
-        String(step.manufacturing_order_id) === String(reworkOrder.id)
-      );
+      console.log(`🔄 Processing rework order: ${reworkOrder.order_number}`);
       
-      if (reworkOrderSteps.length > 0) {
-        const currentReworkStep = reworkOrderSteps
-          .sort((a, b) => b.step_order - a.step_order)[0];
-        
-        branches.push({
-          id: `rework-${orderStep.id}-${reworkOrder.id}`,
-          type: 'rework',
-          targetStepName: currentReworkStep.manufacturing_steps?.step_name || 'Rework',
-          targetNodeId: `child-${reworkOrder.id}`,
-          quantity: reworkOrder.quantity_required,
-          label: 'Rework'
-        });
-      }
+      branches.push({
+        id: `rework-${orderStep.id}-${reworkOrder.id}`,
+        type: 'rework',
+        targetStepName: `Rework: ${reworkOrder.order_number}`,
+        targetNodeId: `child-${reworkOrder.id}`,
+        quantity: reworkOrder.quantity_required,
+        label: 'Rework'
+      });
     });
 
     // Also check for progression of accepted quantity
@@ -222,5 +216,29 @@ export const detectStepBranches = (
     }
   }
 
+  // Special case: Check for rework branches from any completed or in-progress step
+  if (orderStep.status === 'completed' || orderStep.status === 'in_progress') {
+    const reworkOrders = manufacturingOrders.filter(order => 
+      order.parent_order_id === orderStep.manufacturing_order_id
+    );
+
+    reworkOrders.forEach(reworkOrder => {
+      // Only create branch if this is the step where rework originated
+      if (reworkOrder.rework_from_step === orderStep.manufacturing_steps?.step_order) {
+        console.log(`✅ Adding rework branch from ${orderStep.manufacturing_steps?.step_name} to ${reworkOrder.order_number}`);
+        
+        branches.push({
+          id: `rework-${orderStep.id}-${reworkOrder.id}`,
+          type: 'rework',
+          targetStepName: `Rework: ${reworkOrder.order_number}`,
+          targetNodeId: `child-${reworkOrder.id}`,
+          quantity: reworkOrder.quantity_required,
+          label: 'Rework'
+        });
+      }
+    });
+  }
+
+  console.log(`🌿 Step ${orderStep.id} branches:`, branches);
   return branches;
 };
