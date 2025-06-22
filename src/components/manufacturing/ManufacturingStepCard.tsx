@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -278,42 +279,43 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
-  // CRITICAL FIX: ALWAYS stop event propagation for ANY card click
+  // CRITICAL FIX: Ultra-aggressive event stopping for manufacturing steps
   const handleCardClick = (e: React.MouseEvent) => {
-    console.log('🚨 CARD CLICK EVENT TRIGGERED - STOPPING ALL PROPAGATION');
-    console.log('🚨 Target element:', (e.target as HTMLElement).tagName);
-    console.log('🚨 Step Name:', data.stepName);
-    console.log('🚨 Step Order:', data.stepOrder);
+    console.log('🚨🚨🚨 CARD CLICK - IMMEDIATE STOP');
+    console.log('Step Name:', data.stepName, 'Step Order:', data.stepOrder);
     
-    // STOP ALL EVENT PROPAGATION IMMEDIATELY - REGARDLESS OF CARD TYPE
+    // IMMEDIATELY STOP ALL PROPAGATION - NO CONDITIONS
     e.preventDefault();
     e.stopPropagation();
-    e.nativeEvent.stopImmediatePropagation();
+    if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     
-    // Don't open dialog if clicking on the Add Step button
+    // Don't open dialog if clicking on a button
     if ((e.target as HTMLElement).closest('button')) {
-      console.log('🚨 Button clicked - preventing card action');
+      console.log('🚨 Button clicked - no action');
       return;
     }
     
-    // FOR MANUFACTURING STEPS: Open StepDetailsDialog
+    // FOR MANUFACTURING STEPS ONLY: Open StepDetailsDialog
     if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('🚨 MANUFACTURING STEP - Opening StepDetailsDialog for step:', currentOrderStep.id);
+      console.log('🚨 MANUFACTURING STEP - Opening StepDetailsDialog');
       setDetailsDialogOpen(true);
       return;
     }
     
-    // FOR MANUFACTURING ORDER CARDS: Call parent handler only if explicitly requested
+    // FOR MANUFACTURING ORDER CARDS: Call parent only if no manufacturing steps exist
     if (data.stepName === 'Manufacturing Order' && onStepClick) {
-      console.log('🚨 MANUFACTURING ORDER CARD - Calling parent handler');
+      console.log('🚨 MANUFACTURING ORDER - Calling parent handler');
       onStepClick(data);
       return;
     }
     
-    console.log('🚨 NO ACTION TAKEN - but propagation stopped');
+    console.log('🚨 NO ACTION - just stopped propagation');
   };
 
   const handleAddStep = (e: React.MouseEvent) => {
+    console.log('🚨 ADD STEP BUTTON CLICKED');
     e.stopPropagation();
     e.preventDefault();
     onAddStep?.(data);
@@ -328,7 +330,11 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
 
   return (
     <>
-      <Card className={cardClassName} onClick={handleCardClick}>
+      <Card 
+        className={cardClassName} 
+        onClick={handleCardClick}
+        style={{ zIndex: 1 }} // Ensure card is above other elements
+      >
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
         <CardHeader className="pb-2 p-4">
