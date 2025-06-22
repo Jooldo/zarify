@@ -38,8 +38,8 @@ export const useManufacturingSteps = () => {
         .from('manufacturing_order_steps')
         .select(`
           *,
-          manufacturing_steps!manufacturing_order_steps_manufacturing_step_id_fkey(*),
-          workers!manufacturing_order_steps_assigned_worker_id_fkey(name)
+          manufacturing_steps(*),
+          workers(name)
         `);
       if (error) {
         console.error("Error fetching order steps with manufacturing steps", error);
