@@ -170,11 +170,22 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
     setIsCreating(true);
 
     try {
-      // Create rework order with proper step tracking - use parentOrderStep.id instead of currentStep.id
+      // Generate unique rework order number using the database function
+      const { data: reworkOrderNumber, error: reworkNumberError } = await supabase
+        .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
+
+      if (reworkNumberError) {
+        console.error('Error generating rework order number:', reworkNumberError);
+        throw reworkNumberError;
+      }
+
+      console.log('Generated rework order number:', reworkOrderNumber);
+
+      // Create rework order with proper step tracking
       const { data: childOrder, error: orderError } = await supabase
         .from('manufacturing_orders')
         .insert({
-          order_number: `${parentOrder.order_number}-R`,
+          order_number: reworkOrderNumber,
           product_name: parentOrder.product_name,
           product_config_id: parentOrder.product_config_id,
           quantity_required: parentOrder.quantity_required,
@@ -183,7 +194,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_source_step_id: parentOrderStep.id, // Use the manufacturing_order_steps ID, not manufacturing_steps ID
+          rework_source_step_id: parentOrderStep.id, // Use the manufacturing_order_steps ID
           rework_reason: reworkReason,
           assigned_to_step: assignedToStep
         })
@@ -197,6 +208,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
 
       console.log('✅ Created rework order with proper step tracking:', {
         childOrderId: childOrder.id,
+        orderNumber: reworkOrderNumber,
         rework_source_step_id: parentOrderStep.id,
         assigned_to_step: assignedToStep
       });
@@ -244,7 +256,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
 
       toast({
         title: 'Success',
-        description: `Rework order ${childOrder.order_number} created successfully`,
+        description: `Rework order ${reworkOrderNumber} created successfully`,
       });
 
       onSuccess();
