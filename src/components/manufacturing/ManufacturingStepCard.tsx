@@ -166,7 +166,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         const isImmediateNext = stepOrder === nextStepOrder;
         
         if (isImmediateNext) {
-          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
+          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
         }
         
         return isImmediateNext;
@@ -278,13 +278,17 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
-  // CRITICAL FIX: Enhanced handleCardClick with event stopping
+  // CRITICAL FIX: ALWAYS stop event propagation for ANY card click
   const handleCardClick = (e: React.MouseEvent) => {
-    console.log('🚨 CARD CLICK EVENT TRIGGERED');
+    console.log('🚨 CARD CLICK EVENT TRIGGERED - STOPPING ALL PROPAGATION');
     console.log('🚨 Target element:', (e.target as HTMLElement).tagName);
     console.log('🚨 Step Name:', data.stepName);
     console.log('🚨 Step Order:', data.stepOrder);
-    console.log('🚨 Current Order Step Exists:', !!currentOrderStep);
+    
+    // STOP ALL EVENT PROPAGATION IMMEDIATELY - REGARDLESS OF CARD TYPE
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
     
     // Don't open dialog if clicking on the Add Step button
     if ((e.target as HTMLElement).closest('button')) {
@@ -292,29 +296,26 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return;
     }
     
-    // FOR MANUFACTURING STEPS: Stop all propagation and handle locally
+    // FOR MANUFACTURING STEPS: Open StepDetailsDialog
     if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('🚨 MANUFACTURING STEP - STOPPING PROPAGATION');
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log('🚨 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
+      console.log('🚨 MANUFACTURING STEP - Opening StepDetailsDialog for step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
       return;
     }
     
-    // FOR MANUFACTURING ORDER CARDS: Allow parent handling
-    if (data.stepName === 'Manufacturing Order') {
-      console.log('🚨 MANUFACTURING ORDER CARD - CALLING PARENT');
-      onStepClick?.(data);
+    // FOR MANUFACTURING ORDER CARDS: Call parent handler only if explicitly requested
+    if (data.stepName === 'Manufacturing Order' && onStepClick) {
+      console.log('🚨 MANUFACTURING ORDER CARD - Calling parent handler');
+      onStepClick(data);
       return;
     }
     
-    console.log('🚨 NO ACTION TAKEN - step does not exist in database');
+    console.log('🚨 NO ACTION TAKEN - but propagation stopped');
   };
 
   const handleAddStep = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onAddStep?.(data);
   };
 
