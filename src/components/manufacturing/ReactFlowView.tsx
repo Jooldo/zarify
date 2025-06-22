@@ -56,25 +56,25 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
     switch (status?.toLowerCase()) {
       case 'pending':
       case 'not_started':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
       case 'in_progress':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-50 text-blue-600 border-blue-200';
       case 'completed':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-50 text-emerald-600 border-emerald-200';
       case 'partially_completed':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
+        return 'bg-orange-50 text-orange-600 border-orange-200';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'urgent': return 'bg-red-100 text-red-700 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'urgent': return 'bg-red-50 text-red-600 border-red-200';
+      case 'high': return 'bg-orange-50 text-orange-600 border-orange-200';
+      case 'medium': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
+      case 'low': return 'bg-green-50 text-green-600 border-green-200';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
@@ -97,7 +97,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
       
       <Card className={`w-72 shadow-sm border transition-all duration-200 ${
         isChild 
-          ? 'border-l-4 border-l-orange-400 bg-gradient-to-r from-orange-50/20 to-white hover:shadow-md' 
+          ? 'border-l-4 border-l-orange-300 bg-gradient-to-r from-orange-50/50 to-white hover:shadow-md' 
           : 'bg-white hover:shadow-md'
       }`}>
         <CardContent className="p-4">
@@ -536,17 +536,22 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
     });
     
-    // Optimize layout positions
+    // Optimize layout positions with better spacing
     const optimizedPositions = optimizeLayoutPositions(
       parentOrders, 
       childOrdersMap, 
       stepCountsMap, 
-      DEFAULT_LAYOUT_CONFIG
+      {
+        ...DEFAULT_LAYOUT_CONFIG,
+        nodeSpacing: 600, // Increased from 500
+        stepCardSpacing: 450, // Increased from 420
+        childOrderOffset: 400, // Increased from 350
+      }
     );
     
     console.log('📍 Optimized positions:', optimizedPositions);
 
-    // Store step card IDs for rework connections - key format: "parentOrderId-stepOrder"
+    // Store step card IDs for rework connections with better key format
     const stepCardMap = new Map<string, string>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
@@ -567,7 +572,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       console.log(`Current parent step for ${parentOrder.order_number}:`, currentParentStep);
 
       const parentNodeId = `parent-${parentOrder.id}`;
-      const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 500) };
+      const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 600) };
       
       nodes.push({
         id: parentNodeId,
@@ -602,14 +607,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // Store step card mapping for rework connections - key format: "parentOrderId-stepOrder"
-        const stepKey = `${parentOrder.id}-${step.step_order}`;
+        // Store step card mapping using parent order ID and step order
+        const stepKey = `${parentOrder.id}-${step.manufacturing_steps?.step_order || step.step_order}`;
         stepCardMap.set(stepKey, stepCardNodeId);
         
         console.log(`🗺️ Storing step mapping: ${stepKey} -> ${stepCardNodeId}`);
         
         const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
-        const stepPosition = calculateStepCardPosition(parentPosition, stepIndex, DEFAULT_LAYOUT_CONFIG);
+        const stepPosition = {
+          x: parentPosition.x + 450 + (stepIndex * 450), // Increased spacing
+          y: parentPosition.y
+        };
         
         const stepDetailsNode = {
           id: stepCardNodeId,
@@ -631,7 +639,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        const edgeColor = step.status === 'partially_completed' ? '#fb923c' : 
+        const edgeColor = step.status === 'partially_completed' ? '#f97316' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
                          step.status === 'completed' ? 'Completed' : 'In Progress';
@@ -671,7 +679,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
-        console.log(`Processing child order: ${childOrder.order_number}`);
+        console.log(`🔄 Processing child order: ${childOrder.order_number}`);
         console.log(`Child order rework_from_step: ${childOrder.rework_from_step}`);
         
         const childOrderSteps = orderSteps.filter(step => 
@@ -687,7 +695,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
 
         const childNodeId = `child-${childOrder.id}`;
-        const childPosition = calculateChildOrderPosition(parentPosition, childIndex, DEFAULT_LAYOUT_CONFIG);
+        const childPosition = {
+          x: parentPosition.x + 100,
+          y: parentPosition.y + ((childIndex + 1) * 400) // Increased spacing
+        };
 
         nodes.push({
           id: childNodeId,
@@ -709,12 +720,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Connect rework card to originating step card BEFORE processing child steps
+        // Connect rework card to originating step card
         const originatingStepOrder = childOrder.rework_from_step;
         if (originatingStepOrder) {
           console.log(`🔗 Connecting rework order ${childOrder.order_number} to originating step ${originatingStepOrder} from parent order ${parentOrder.id}`);
           
-          // Look up the step card ID using the parent order ID and step order
           const stepKey = `${parentOrder.id}-${originatingStepOrder}`;
           const originatingStepCardId = stepCardMap.get(stepKey);
           
@@ -722,13 +732,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
           
           if (originatingStepCardId) {
-            // Add connection from originating step (bottom) to rework order (top)
             const reworkConnectionEdge = {
               id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
               source: originatingStepCardId,
               target: childNodeId,
-              sourceHandle: 'step-details-output', // Bottom of step card
-              targetHandle: 'order-rework-input', // Top of rework card
+              sourceHandle: 'step-details-output',
+              targetHandle: 'order-rework-input',
               type: 'smoothstep',
               animated: true,
               style: { 
@@ -744,22 +753,23 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               labelStyle: { 
                 fill: '#f97316', 
                 fontWeight: 600,
-                fontSize: '11px',
+                fontSize: '12px',
                 backgroundColor: 'white',
-                padding: '2px 6px',
+                padding: '4px 8px',
                 borderRadius: '4px'
               },
               labelBgStyle: {
                 fill: 'white',
-                fillOpacity: 0.9
+                fillOpacity: 0.95,
+                rx: 4,
+                ry: 4
               }
             };
             
-            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}:`, reworkConnectionEdge);
+            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}`);
             edges.push(reworkConnectionEdge);
           } else {
             console.log(`❌ Could not find originating step card for step order ${originatingStepOrder} in parent order ${parentOrder.id}`);
-            console.log(`Available mappings:`, Array.from(stepCardMap.entries()));
           }
         }
 
@@ -775,10 +785,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           const stepFields = getStepFields(childStep.manufacturing_step_id);
           const childStepCardNodeId = `step-details-${childStep.id}`;
           
-          console.log(`Step fields for child ${childOrder.order_number} step ${childStep.step_order}:`,  stepFields);
-          
           const nodeType = childStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
-          const childStepPosition = calculateStepCardPosition(childPosition, childStepIndex, DEFAULT_LAYOUT_CONFIG);
+          const childStepPosition = {
+            x: childPosition.x + 450 + (childStepIndex * 450), // Increased spacing
+            y: childPosition.y
+          };
           
           const childStepDetailsNode = {
             id: childStepCardNodeId,
@@ -800,7 +811,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
-          const edgeColor = childStep.status === 'partially_completed' ? '#fb923c' : 
+          const edgeColor = childStep.status === 'partially_completed' ? '#f97316' : 
                            childStep.status === 'completed' ? '#10b981' : '#3b82f6';
           const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
                            childStep.status === 'completed' ? 'Completed' : 'In Progress';
@@ -817,7 +828,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               stroke: edgeColor, 
               strokeWidth: 2, 
               strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 
-                             childStep.status ===  'partially_completed' ? '8,4,2,4' : 'none'
+                             childStep.status === 'partially_completed' ? '8,4,2,4' : 'none'
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -835,30 +846,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           edges.push(childStepEdge);
 
           previousChildNodeId = childStepCardNodeId;
-        });
-
-        // Keep the existing parent-to-child connection edge (but make it less prominent)
-        edges.push({
-          id: `edge-${parentNodeId}-${childNodeId}`,
-          source: parentNodeId,
-          target: childNodeId,
-          type: 'smoothstep',
-          animated: false,
-          style: { 
-            stroke: '#e2e8f0', 
-            strokeWidth: 1,
-            strokeDasharray: '3,3'
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: '#e2e8f0',
-          },
-          label: 'Parent-Child',
-          labelStyle: { 
-            fill: '#94a3b8', 
-            fontWeight: 400,
-            fontSize: '9px'
-          },
         });
       });
     });
