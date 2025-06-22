@@ -38,7 +38,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const [reworkReason, setReworkReason] = useState('');
   const [assignedToStep, setAssignedToStep] = useState<number>(1);
   const [selectedStepFields, setSelectedStepFields] = useState<any[]>([]);
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   const activeSteps = manufacturingSteps
     .filter(step => step.is_active)
@@ -51,8 +51,8 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       const fields = stepFields.filter(field => field.manufacturing_step_id === selectedStep.id);
       setSelectedStepFields(fields);
       
-      // Reset field values when step changes
-      const initialValues: Record<string, any> = {};
+      // Initialize field values for new step
+      const initialValues: Record<string, string> = {};
       fields.forEach(field => {
         initialValues[field.field_id] = '';
       });
@@ -63,16 +63,11 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
     }
   }, [assignedToStep, activeSteps, stepFields]);
 
-  const handleFieldValueChange = (fieldId: string, value: any) => {
-    console.log('Field value change:', fieldId, value);
-    setFieldValues(prev => {
-      const updated = {
-        ...prev,
-        [fieldId]: value
-      };
-      console.log('Updated field values:', updated);
-      return updated;
-    });
+  const handleFieldValueChange = (fieldId: string, value: string) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
   };
 
   const renderField = (field: any) => {
@@ -149,7 +144,9 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
 
     // Validate required fields
     const requiredFields = selectedStepFields.filter(field => field.is_required);
-    const missingFields = requiredFields.filter(field => !fieldValues[field.field_id] || fieldValues[field.field_id].toString().trim() === '');
+    const missingFields = requiredFields.filter(field => 
+      !fieldValues[field.field_id] || fieldValues[field.field_id].trim() === ''
+    );
     
     if (missingFields.length > 0) {
       toast({
@@ -177,7 +174,6 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
           rework_source_step_id: parentOrderStep?.id,
-          rework_quantity: parentOrder.quantity_required,
           rework_reason: reworkReason,
           assigned_to_step: assignedToStep
         })
