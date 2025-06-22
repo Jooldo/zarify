@@ -543,9 +543,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
         : null;
 
-      // Position parent order node
+      // Position parent order node with increased vertical spacing
       const parentNodeId = `parent-${parentOrder.id}`;
-      const parentPosition = { x: 50, y: 50 + (parentIndex * 700) }; // Increased vertical spacing
+      const parentPosition = { x: 50, y: 50 + (parentIndex * 800) }; // Increased from 700 to 800
       
       nodes.push({
         id: parentNodeId,
@@ -566,7 +566,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         } as FlowNodeData,
       });
 
-      // Add step detail cards for parent order
+      // Add step detail cards for parent order with increased horizontal spacing  
       const stepsToShow = parentOrderSteps.filter(step => 
         step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
       ).sort((a, b) => a.step_order - b.step_order);
@@ -579,9 +579,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // Store step card info for rework connections
+        // Store step card info for rework connections with increased horizontal spacing
         const stepCardPosition = {
-          x: parentPosition.x + 450 + (stepIndex * 500), // Increased horizontal spacing
+          x: parentPosition.x + 500 + (stepIndex * 550), // Increased spacing 
           y: parentPosition.y
         };
         
@@ -682,14 +682,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         let childPosition;
         if (stepCardInfo) {
           childPosition = {
-            x: stepCardInfo.position.x + 40, // Center align (step card is 380px wide, child card is 300px, so offset by 40px)
-            y: stepCardInfo.position.y + 300 // Place 300px below the origin step card
+            x: stepCardInfo.position.x + 40, // Center align (step card is 320px wide, child card is ~288px, so offset by 40px)
+            y: stepCardInfo.position.y + 400 // Increased distance below the origin step card
           };
         } else {
           // Fallback positioning if step card not found
           childPosition = {
             x: parentPosition.x + 100,
-            y: parentPosition.y + 400 + (childIndex * 350)
+            y: parentPosition.y + 500 + (childIndex * 400) // Increased spacing
           };
         }
 
@@ -715,7 +715,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Create rework connection edge
+        // Create rework connection edge from step card bottom to rework card top
         if (stepCardInfo) {
           console.log(`✅ Creating rework connection from ${stepCardInfo.nodeId} to ${childNodeId}`);
           
@@ -744,9 +744,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             },
             labelBgStyle: {
               fill: 'white',
-              fillOpacity: 0.9,
-              rx: 4,
-              ry: 4
+              fillOpacity: 0.9
             }
           });
         } else {
@@ -766,7 +764,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           
           const nodeType = childStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
           const childStepPosition = {
-            x: childPosition.x + 450 + (childStepIndex * 500), // Increased spacing
+            x: childPosition.x + 500 + (childStepIndex * 550), // Increased spacing
             y: childPosition.y
           };
           
