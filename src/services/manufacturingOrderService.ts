@@ -52,47 +52,104 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
 
   console.log('🏪 Merchant ID:', merchantId);
 
+  // Check if there are existing orders with similar patterns to debug
+  const { data: existingOrders, error: existingError } = await supabase
+    .from('manufacturing_orders')
+    .select('order_number')
+    .eq('merchant_id', merchantId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (existingError) {
+    console.error('Error checking existing orders:', existingError);
+  } else {
+    console.log('🔍 Recent order numbers:', existingOrders?.map(o => o.order_number));
+  }
+
   // Determine if this is a rework order and get appropriate order number
   let orderNumber: string;
+  let maxRetries = 3;
+  let attempt = 0;
   
-  if (data.parent_order_id) {
-    // This is a rework order - get the parent order number first
-    const { data: parentOrder, error: parentError } = await supabase
-      .from('manufacturing_orders')
-      .select('order_number')
-      .eq('id', data.parent_order_id)
-      .single();
+  while (attempt < maxRetries) {
+    attempt++;
+    console.log(`🔄 Attempt ${attempt} to generate order number`);
     
-    if (parentError) {
-      console.error('Error getting parent order:', parentError);
-      throw parentError;
-    }
-    
-    console.log('🔄 Parent order number:', parentOrder.order_number);
-    
-    // Generate rework order number using the new function
-    const { data: reworkOrderNumber, error: reworkOrderNumberError } = await supabase
-      .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
+    try {
+      if (data.parent_order_id) {
+        // This is a rework order - get the parent order number first
+        const { data: parentOrder, error: parentError } = await supabase
+          .from('manufacturing_orders')
+          .select('order_number')
+          .eq('id', data.parent_order_id)
+          .single();
+        
+        if (parentError) {
+          console.error('Error getting parent order:', parentError);
+          throw parentError;
+        }
+        
+        console.log('🔄 Parent order number:', parentOrder.order_number);
+        
+        // Generate rework order number using the new function
+        const { data: reworkOrderNumber, error: reworkOrderNumberError } = await supabase
+          .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
 
-    if (reworkOrderNumberError) {
-      console.error('Error getting rework order number:', reworkOrderNumberError);
-      throw reworkOrderNumberError;
-    }
-    
-    orderNumber = reworkOrderNumber;
-    console.log('📝 Generated rework order number:', orderNumber);
-  } else {
-    // Regular order - use the standard function
-    const { data: regularOrderNumber, error: orderNumberError } = await supabase
-      .rpc('get_next_manufacturing_order_number');
+        if (reworkOrderNumberError) {
+          console.error('Error getting rework order number:', reworkOrderNumberError);
+          throw reworkOrderNumberError;
+        }
+        
+        orderNumber = reworkOrderNumber;
+        console.log('📝 Generated rework order number:', orderNumber);
+      } else {
+        // Regular order - use the standard function
+        const { data: regularOrderNumber, error: orderNumberError } = await supabase
+          .rpc('get_next_manufacturing_order_number');
 
-    if (orderNumberError) {
-      console.error('Error getting order number:', orderNumberError);
-      throw orderNumberError;
+        if (orderNumberError) {
+          console.error('Error getting order number:', orderNumberError);
+          throw orderNumberError;
+        }
+        
+        orderNumber = regularOrderNumber;
+        console.log('📝 Generated regular order number:', orderNumber);
+      }
+
+      // Double-check that this order number doesn't exist
+      const { data: duplicateCheck, error: duplicateError } = await supabase
+        .from('manufacturing_orders')
+        .select('id')
+        .eq('order_number', orderNumber)
+        .eq('merchant_id', merchantId)
+        .maybeSingle();
+
+      if (duplicateError) {
+        console.error('Error checking for duplicates:', duplicateError);
+        throw duplicateError;
+      }
+
+      if (duplicateCheck) {
+        console.warn(`⚠️ Order number ${orderNumber} already exists, retrying...`);
+        if (attempt >= maxRetries) {
+          throw new Error(`Failed to generate unique order number after ${maxRetries} attempts`);
+        }
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+        continue;
+      }
+
+      // Order number is unique, break out of retry loop
+      break;
+
+    } catch (error) {
+      console.error(`Error on attempt ${attempt}:`, error);
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 100 * attempt));
     }
-    
-    orderNumber = regularOrderNumber;
-    console.log('📝 Generated regular order number:', orderNumber);
   }
 
   // Check raw material stock before creating order (only for non-rework orders)
@@ -151,6 +208,11 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
 
   if (error) {
     console.error('Error creating manufacturing order:', error);
+    console.error('Failed order data:', {
+      order_number: orderNumber,
+      merchant_id: merchantId,
+      parent_order_id: data.parent_order_id
+    });
     throw error;
   }
 
