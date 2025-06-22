@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -42,19 +43,23 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const { workers } = useWorkers();
   const { merchant } = useMerchant();
   const { toast } = useToast();
+  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
+  
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
-  // Move the batch creation hook to the top level
-  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
-
   const stepId = step?.id ? String(step.id) : null;
   
+  // Fix the field filtering logic
   const currentStepFields = stepFields.filter(field => {
     const fieldStepId = String(field.manufacturing_step_id);
-    return stepId && fieldStepId === fieldStepId;
+    return stepId && fieldStepId === stepId;
   });
+
+  console.log('Step ID:', stepId);
+  console.log('All step fields:', stepFields);
+  console.log('Current step fields:', currentStepFields);
 
   // Initialize field values only when dialog opens with a new step
   useEffect(() => {
@@ -246,6 +251,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'worker':
         return (
           <Select
+            key={`worker-${field.field_id}`}
             value={value}
             onValueChange={handleSelectChange(field.field_id)}
           >
@@ -254,7 +260,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               {workers.map(worker => (
-                <SelectItem key={worker.id} value={worker.id}>
+                <SelectItem key={`worker-option-${worker.id}`} value={worker.id}>
                   {worker.name}
                 </SelectItem>
               ))}
@@ -264,7 +270,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
       case 'date':
         return (
-          <Popover>
+          <Popover key={`date-${field.field_id}`}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -293,6 +299,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'number':
         return (
           <Input
+            key={`number-${field.field_id}`}
             type="number"
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
@@ -303,6 +310,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'status':
         return (
           <Select
+            key={`status-${field.field_id}`}
             value={value}
             onValueChange={handleSelectChange(field.field_id)}
           >
@@ -311,7 +319,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               {field.field_options?.options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
+                <SelectItem key={`status-option-${option}`} value={option}>
                   {option}
                 </SelectItem>
               ))}
@@ -322,6 +330,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'text':
         return (
           <Textarea
+            key={`text-${field.field_id}`}
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder="Enter text"
@@ -332,6 +341,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       default:
         return (
           <Input
+            key={`default-${field.field_id}`}
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label}`}
@@ -409,7 +419,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               ) : (
                 <div className="space-y-3">
                   {currentStepFields.map(field => (
-                    <div key={field.field_id} className="space-y-1">
+                    <div key={`field-container-${field.field_id}`} className="space-y-1">
                       <Label htmlFor={field.field_id} className="text-sm font-medium">
                         {field.field_label}
                         {field.is_required && (
