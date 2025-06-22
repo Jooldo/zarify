@@ -475,13 +475,8 @@ const nodeTypes = {
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
   console.log('🔄 ReactFlowView render with orders:', manufacturingOrders?.length);
-  console.log('📊 Manufacturing orders data:', manufacturingOrders);
   
   const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
-  console.log('📋 Manufacturing steps:', manufacturingSteps?.length);
-  console.log('📋 Order steps:', orderSteps?.length);
-  console.log('📋 Order steps data:', orderSteps);
-  
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -490,53 +485,26 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     [setEdges],
   );
 
-  // Create a stable reference for onViewDetails that doesn't change
   const stableOnViewDetails = useCallback((order: any) => {
     onViewDetails(order);
   }, [onViewDetails]);
 
-  // Generate nodes and edges - simplified logic
+  // Generate nodes and edges with simplified logic that shows ALL steps
   const { flowNodes, flowEdges } = useMemo(() => {
-    console.log('🔄 Starting node generation...');
-    console.log('📊 Input data:', {
-      manufacturingOrders: manufacturingOrders?.length || 0,
-      orderSteps: orderSteps?.length || 0,
-      manufacturingSteps: manufacturingSteps?.length || 0
-    });
+    console.log('🔄 Generating nodes and edges...');
     
-    // Early return with basic test nodes if no data
     if (!manufacturingOrders || manufacturingOrders.length === 0) {
-      console.log('⚠️ No manufacturing orders found, creating test node');
-      const testNodes = [{
-        id: 'test-node',
-        type: 'orderNode',
-        position: { x: 100, y: 100 },
-        data: {
-          order: {
-            id: 'test',
-            order_number: 'TEST-001',
-            product_name: 'Test Product',
-            quantity_required: 1,
-            priority: 'medium'
-          },
-          step: null,
-          isParent: true,
-          isChild: false,
-          childLevel: 0,
-          onViewDetails: stableOnViewDetails
-        }
-      }];
-      return { flowNodes: testNodes, flowEdges: [] };
+      console.log('⚠️ No manufacturing orders found');
+      return { flowNodes: [], flowEdges: [] };
     }
     
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Process each manufacturing order
     manufacturingOrders.forEach((order, index) => {
       console.log(`🏭 Processing order ${index + 1}:`, order.order_number);
       
-      // Find current step for this order
+      // Find steps for this order
       const orderSpecificSteps = orderSteps?.filter(step => 
         String(step.manufacturing_order_id) === String(order.id)
       ) || [];
@@ -544,10 +512,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       console.log(`📋 Found ${orderSpecificSteps.length} steps for order ${order.order_number}`);
       
       const currentStep = orderSpecificSteps.length > 0 
-        ? orderSpecificSteps
-            .sort((a, b) => (b.step_order || 0) - (a.step_order || 0))
-            .find(step => step.status === 'in_progress') || 
-          orderSpecificSteps.sort((a, b) => (b.step_order || 0) - (a.step_order || 0))[0]
+        ? orderSpecificSteps.sort((a, b) => (a.step_order || 0) - (b.step_order || 0))[0]
         : null;
       
       // Create order node
@@ -573,20 +538,21 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         },
       });
       
-      console.log(`✅ Created node for order ${order.order_number} at position (50, ${yPosition})`);
+      console.log(`✅ Created order node for ${order.order_number}`);
       
-      // Add step detail cards
-      const completedSteps = orderSpecificSteps.filter(step => 
-        step.status === 'completed' || step.status === 'in_progress'
-      ).sort((a, b) => (a.step_order || 0) - (b.step_order || 0));
+      // Create step detail cards for ALL steps (pending, in_progress, completed)
+      const allSteps = orderSpecificSteps.sort((a, b) => (a.step_order || 0) - (b.step_order || 0));
       
-      completedSteps.forEach((step, stepIndex) => {
+      allSteps.forEach((step, stepIndex) => {
         const stepNodeId = `step-${step.id}`;
         const stepFields = getStepFields(step.manufacturing_step_id);
         
+        // Use different node types based on status
+        const nodeType = step.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
+        
         nodes.push({
           id: stepNodeId,
-          type: step.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode',
+          type: nodeType,
           position: { x: 400 + (stepIndex * 400), y: yPosition },
           data: step.status === 'in_progress' ? {
             orderStep: step,
@@ -602,7 +568,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         });
         
         // Add edge from order to first step or from previous step
-        const sourceId = stepIndex === 0 ? nodeId : `step-${completedSteps[stepIndex - 1].id}`;
+        const sourceId = stepIndex === 0 ? nodeId : `step-${allSteps[stepIndex - 1].id}`;
+        const edgeColor = step.status === 'in_progress' ? '#3b82f6' : 
+                         step.status === 'completed' ? '#10b981' : '#6b7280';
+        
         edges.push({
           id: `edge-${sourceId}-${stepNodeId}`,
           source: sourceId,
@@ -612,28 +581,26 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           type: 'smoothstep',
           animated: step.status === 'in_progress',
           style: { 
-            stroke: step.status === 'in_progress' ? '#3b82f6' : '#10b981', 
+            stroke: edgeColor, 
             strokeWidth: 2 
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: step.status === 'in_progress' ? '#3b82f6' : '#10b981',
+            color: edgeColor,
           },
         });
         
-        console.log(`✅ Created step card for ${step.manufacturing_steps?.step_name || 'Unknown Step'}`);
+        console.log(`✅ Created step card for ${step.manufacturing_steps?.step_name || 'Unknown Step'} (${step.status})`);
       });
     });
     
     console.log(`✅ Final result: ${nodes.length} nodes, ${edges.length} edges`);
-    console.log('📊 Generated nodes:', nodes.map(n => ({ id: n.id, type: n.type, position: n.position })));
-    
     return { flowNodes: nodes, flowEdges: edges };
   }, [manufacturingOrders, orderSteps, manufacturingSteps, getStepFields, stableOnViewDetails]);
 
   // Update ReactFlow state when the generated data changes
   useEffect(() => {
-    console.log('📊 Updating ReactFlow nodes and edges:', { 
+    console.log('📊 Updating ReactFlow with:', { 
       nodeCount: flowNodes.length, 
       edgeCount: flowEdges.length 
     });
