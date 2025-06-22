@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CreateManufacturingOrderData, ManufacturingOrder } from '@/types/manufacturingOrders';
 
@@ -85,8 +84,8 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
     }
   }
 
-  // Try to create the order with automatic retry on constraint violations
-  let maxAttempts = 5;
+  // Implement manual retry with unique order number generation
+  let maxAttempts = 10;
   let attempt = 0;
   
   while (attempt < maxAttempts) {
@@ -96,7 +95,7 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
     try {
       let orderNumber: string;
       
-      // Generate order number based on type
+      // Generate order number with timestamp suffix to ensure uniqueness
       if (data.parent_order_id) {
         // This is a rework order - get the parent order number first
         const { data: parentOrder, error: parentError } = await supabase
@@ -112,32 +111,97 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
         
         console.log('🔄 Parent order number:', parentOrder.order_number);
         
-        // Generate rework order number
-        const { data: reworkOrderNumber, error: reworkOrderNumberError } = await supabase
-          .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
+        // Generate unique rework order number with timestamp
+        const baseOrderNumber = parentOrder.order_number;
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000);
+        
+        // Get the highest existing rework number for this base order
+        const { data: existingReworkOrders, error: reworkOrdersError } = await supabase
+          .from('manufacturing_orders')
+          .select('order_number')
+          .eq('merchant_id', merchantId)
+          .like('order_number', `${baseOrderNumber}-R%`)
+          .order('order_number', { ascending: false })
+          .limit(1);
 
-        if (reworkOrderNumberError) {
-          console.error('Error getting rework order number:', reworkOrderNumberError);
-          throw reworkOrderNumberError;
+        if (reworkOrdersError) {
+          console.error('Error getting existing rework orders:', reworkOrdersError);
+          throw reworkOrdersError;
+        }
+
+        let nextReworkNum = 1;
+        if (existingReworkOrders && existingReworkOrders.length > 0) {
+          const lastReworkOrder = existingReworkOrders[0].order_number;
+          const match = lastReworkOrder.match(new RegExp(`^${baseOrderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-R(\\d+)$`));
+          if (match) {
+            nextReworkNum = parseInt(match[1]) + 1;
+          }
         }
         
-        orderNumber = reworkOrderNumber;
+        orderNumber = `${baseOrderNumber}-R${nextReworkNum}`;
         console.log('📝 Generated rework order number:', orderNumber);
       } else {
-        // Regular order - use the standard function
-        const { data: regularOrderNumber, error: orderNumberError } = await supabase
-          .rpc('get_next_manufacturing_order_number');
+        // Regular order - generate with timestamp and random suffix for uniqueness
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000);
+        
+        // Get the highest existing order number
+        const { data: existingOrders, error: ordersError } = await supabase
+          .from('manufacturing_orders')
+          .select('order_number')
+          .eq('merchant_id', merchantId)
+          .like('order_number', 'MO%')
+          .not('order_number', 'like', '%-%') // Exclude rework orders
+          .order('order_number', { ascending: false })
+          .limit(1);
 
-        if (orderNumberError) {
-          console.error('Error getting order number:', orderNumberError);
-          throw orderNumberError;
+        if (ordersError) {
+          console.error('Error getting existing orders:', ordersError);
+          throw ordersError;
+        }
+
+        let nextNum = 1;
+        if (existingOrders && existingOrders.length > 0) {
+          const lastOrder = existingOrders[0].order_number;
+          const match = lastOrder.match(/^MO(\d+)$/);
+          if (match) {
+            nextNum = parseInt(match[1]) + 1;
+          }
         }
         
-        orderNumber = regularOrderNumber;
+        orderNumber = 'MO' + String(nextNum).padStart(6, '0');
         console.log('📝 Generated regular order number:', orderNumber);
       }
 
-      console.log('🚀 Attempting to create order with number:', orderNumber);
+      // Double-check for uniqueness before inserting
+      const { data: duplicateCheck, error: duplicateError } = await supabase
+        .from('manufacturing_orders')
+        .select('id')
+        .eq('order_number', orderNumber)
+        .eq('merchant_id', merchantId)
+        .maybeSingle();
+
+      if (duplicateError) {
+        console.error('Error checking for duplicates:', duplicateError);
+        throw duplicateError;
+      }
+
+      if (duplicateCheck) {
+        console.warn(`⚠️ Order number ${orderNumber} already exists, retrying with new number...`);
+        
+        if (attempt >= maxAttempts) {
+          throw new Error(`Failed to generate unique order number after ${maxAttempts} attempts`);
+        }
+        
+        // Wait before retrying with exponential backoff
+        const waitTime = Math.pow(2, attempt) * 100 + Math.random() * 200;
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+
+      console.log('🚀 Attempting to create order with unique number:', orderNumber);
 
       // Try to insert the order
       const { data: order, error } = await supabase
@@ -171,7 +235,7 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
           }
           
           // Wait a bit before retrying with exponential backoff
-          const waitTime = Math.pow(2, attempt) * 100 + Math.random() * 100;
+          const waitTime = Math.pow(2, attempt) * 150 + Math.random() * 300;
           console.log(`⏳ Waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
@@ -217,7 +281,7 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
           throw new Error(`Failed to create manufacturing order after ${maxAttempts} attempts due to order number conflicts`);
         }
         
-        const waitTime = Math.pow(2, attempt) * 100 + Math.random() * 100;
+        const waitTime = Math.pow(2, attempt) * 150 + Math.random() * 300;
         console.log(`⏳ Waiting ${waitTime}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
