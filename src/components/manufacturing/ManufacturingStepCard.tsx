@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -283,7 +282,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
     : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
-  // Fixed handleCardClick - ONLY handle manufacturing steps locally, don't call parent onStepClick
+  // Fixed handleCardClick - prevent parent onStepClick for manufacturing steps
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open dialog if clicking on the Add Step button
     if ((e.target as HTMLElement).closest('button')) {
@@ -294,18 +293,21 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     console.log('🔧 Current order step exists:', !!currentOrderStep);
     console.log('🔧 Is Manufacturing Order card:', data.stepName === 'Manufacturing Order');
     
-    // ONLY open StepDetailsDialog for actual manufacturing steps (stepOrder > 0) that exist in database
+    // Handle manufacturing steps (stepOrder > 0) - open StepDetailsDialog locally
     if (data.stepOrder > 0 && currentOrderStep) {
       console.log('🔧 Opening StepDetailsDialog for manufacturing step:', currentOrderStep.id);
       setDetailsDialogOpen(true);
-      // DON'T call onStepClick for manufacturing steps - handle locally
-    } else if (data.stepName === 'Manufacturing Order') {
-      console.log('🔧 Manufacturing Order card clicked - calling parent onStepClick');
-      // Only call parent onStepClick for Manufacturing Order cards
-      onStepClick?.(data);
-    } else {
-      console.log('⚠️ Not opening any dialog - step does not exist in database');
+      return; // IMPORTANT: Return early to prevent calling parent onStepClick
     }
+    
+    // Handle Manufacturing Order cards - call parent onStepClick
+    if (data.stepName === 'Manufacturing Order') {
+      console.log('🔧 Manufacturing Order card clicked - calling parent onStepClick');
+      onStepClick?.(data);
+      return;
+    }
+    
+    console.log('⚠️ Not opening any dialog - step does not exist in database');
   };
 
   const handleAddStep = (e: React.MouseEvent) => {
