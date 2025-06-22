@@ -5,232 +5,68 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Play, Package2, User, CalendarIcon, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { useWorkers } from '@/hooks/useWorkers';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useMerchant } from '@/hooks/useMerchant';
+import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
+import { useCreateBatchFromStep } from '@/hooks/useCreateBatchFromStep';
+import { Play, User, Settings } from 'lucide-react';
 
 interface StartStepDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  order: ManufacturingOrder | null;
-  step: ManufacturingStep | null;
+  order: any;
+  step: any;
+  sourceStepId?: string; // If provided, this indicates we're starting a new batch from an existing step
 }
 
 const StartStepDialog: React.FC<StartStepDialogProps> = ({
   isOpen,
   onClose,
   order,
-  step
+  step,
+  sourceStepId
 }) => {
-  const { stepFields, orderSteps } = useManufacturingSteps();
-  const { updateStep } = useUpdateManufacturingStep();
+  const { getStepFields } = useManufacturingSteps();
   const { workers } = useWorkers();
-  const { merchant } = useMerchant();
-  const { toast } = useToast();
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
+  const { createStep, isCreating: isCreatingStep } = useCreateManufacturingStep();
+  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
-  const stepId = step?.id ? String(step.id) : null;
-  
-  const currentStepFields = stepFields.filter(field => {
-    const fieldStepId = String(field.manufacturing_step_id);
-    return stepId && fieldStepId === stepId;
-  });
+  const stepFields = step ? getStepFields(step.id) : [];
+  const isCreating = isCreatingStep || isCreatingBatch;
+  const isNewBatch = !!sourceStepId;
 
-  // Initialize field values only when dialog opens with a new step
+  // Reset form when dialog opens/closes or step changes
   useEffect(() => {
-    if (isOpen && stepId && stepId !== initializedStepId) {
-      console.log('Initializing field values for step:', stepId);
-      const initialValues: Record<string, any> = {};
-      
-      currentStepFields.forEach(field => {
-        if (field.field_type === 'status' && field.field_options?.options) {
-          initialValues[field.field_id] = field.field_options.options[0] || '';
-        } else {
-          initialValues[field.field_id] = '';
-        }
+    if (isOpen && stepFields.length > 0) {
+      const initialValues: Record<string, string> = {};
+      stepFields.forEach(field => {
+        initialValues[field.field_id] = '';
       });
-      
-      console.log('Initial values:', initialValues);
       setFieldValues(initialValues);
-      setInitializedStepId(stepId);
-    } else if (!isOpen) {
+    } else {
       setFieldValues({});
-      setInitializedStepId(null);
     }
-  }, [isOpen, stepId, currentStepFields.length, initializedStepId]);
+  }, [isOpen, stepFields]);
 
-  // Early return with error dialog if no order or step when dialog is open
-  if (isOpen && (!order || !step)) {
-    return (
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open && !isSubmitting) {
-          onClose();
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              No Next Step Available
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              {!order ? 'Order information is not available.' : 'There is no next step available for this manufacturing order.'}
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={onClose} variant="outline">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  // Don't render anything if dialog is closed
-  if (!isOpen) {
-    return null;
-  }
-
-  const handleFieldChange = (fieldId: string, value: any) => {
-    console.log('Field change:', fieldId, value);
+  const handleFieldValueChange = (fieldId: string, value: string) => {
     setFieldValues(prev => ({
       ...prev,
       [fieldId]: value
     }));
   };
 
-  const handleSelectChange = (fieldId: string) => (value: string) => {
-    console.log('Select change:', fieldId, value);
-    handleFieldChange(fieldId, value);
-  };
-
-  const handleDateSelect = (fieldId: string) => (date: Date | undefined) => {
-    if (date) {
-      handleFieldChange(fieldId, format(date, 'yyyy-MM-dd'));
-    }
-  };
-
-  const handleStartStep = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!merchant?.id) {
-      toast({
-        title: 'Error',
-        description: 'Merchant information not available',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      console.log('Starting step with values:', fieldValues);
-      
-      let orderStep = orderSteps.find(os => 
-        os.manufacturing_order_id === order.id && 
-        os.manufacturing_step_id === stepId
-      );
-
-      let stepIdForUpdate = orderStep?.id;
-
-      if (!orderStep) {
-        console.log('Creating new order step');
-        // Get the step_order from the manufacturing_steps table
-        const { data: stepData, error: stepError } = await supabase
-          .from('manufacturing_steps')
-          .select('step_order')
-          .eq('id', stepId)
-          .single();
-
-        if (stepError) {
-          console.error('Error fetching step data:', stepError);
-          throw stepError;
-        }
-
-        const { data: newOrderStep, error: createError } = await supabase
-          .from('manufacturing_order_steps')
-          .insert({
-            manufacturing_order_id: order.id,
-            manufacturing_step_id: stepId,
-            step_order: stepData.step_order,
-            status: 'in_progress',
-            merchant_id: merchant.id,
-            started_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating order step:', createError);
-          throw createError;
-        }
-        
-        stepIdForUpdate = newOrderStep.id;
-        console.log('Created new order step:', stepIdForUpdate);
-      }
-
-      if (stepIdForUpdate) {
-        console.log('Updating step with ID:', stepIdForUpdate);
-        await updateStep({
-          stepId: stepIdForUpdate,
-          fieldValues,
-          status: 'in_progress',
-          progress: 0,
-          stepName: step.step_name,
-          orderNumber: order.order_number
-        });
-
-        toast({
-          title: 'Success',
-          description: `${step.step_name} started successfully`,
-        });
-
-        // Reset form and close dialog
-        setFieldValues({});
-        setInitializedStepId(null);
-        onClose();
-      }
-    } catch (error) {
-      console.error('Error starting step:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to start manufacturing step',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const renderField = (field: any) => {
-    const value = fieldValues[field.field_id] || '';
+    const currentValue = fieldValues[field.field_id] || '';
 
     switch (field.field_type) {
       case 'worker':
         return (
-          <Select
-            value={value}
-            onValueChange={handleSelectChange(field.field_id)}
+          <Select 
+            value={currentValue} 
+            onValueChange={(value) => handleFieldValueChange(field.field_id, value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
@@ -244,178 +80,171 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </SelectContent>
           </Select>
         );
-
-      case 'date':
-        return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={handleDateSelect(field.field_id)}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        );
-
       case 'number':
         return (
           <Input
             type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder="Enter number"
+            value={currentValue}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
-
-      case 'status':
-        return (
-          <Select
-            value={value}
-            onValueChange={handleSelectChange(field.field_id)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {field.field_options?.options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-
       case 'text':
         return (
-          <Textarea
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder="Enter text"
-            rows={3}
+          <Input
+            type="text"
+            value={currentValue}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
-
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={currentValue}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+          />
+        );
       default:
         return (
           <Input
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label}`}
+            type="text"
+            value={currentValue}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
     }
   };
 
-  const requiredFields = currentStepFields.filter(field => field.is_required);
-  const isFormValid = requiredFields.every(field => {
-    const value = fieldValues[field.field_id];
-    return value !== undefined && value !== null && value !== '';
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!order || !step) {
+      return;
+    }
+
+    // Validate required fields
+    const requiredFields = stepFields.filter(field => field.is_required);
+    const missingFields = requiredFields.filter(field => 
+      !fieldValues[field.field_id] || fieldValues[field.field_id].toString().trim() === ''
+    );
+    
+    if (missingFields.length > 0) {
+      return;
+    }
+
+    try {
+      if (isNewBatch && sourceStepId) {
+        // Create a new batch from existing step
+        await createBatch({
+          sourceOrderId: order.id,
+          sourceStepId: sourceStepId,
+          targetStepId: step.id,
+          fieldValues: fieldValues
+        });
+      } else {
+        // Create next step in sequence (existing functionality)
+        await createStep({
+          manufacturingOrderId: order.id,
+          stepId: step.id,
+          fieldValues: fieldValues
+        });
+      }
+
+      onClose();
+      setFieldValues({});
+    } catch (error) {
+      console.error('Error starting step:', error);
+    }
+  };
+
+  if (!order || !step) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open && !isSubmitting) {
-        onClose();
-      }
-    }}>
-      <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5" />
-            Start {step.step_name}
-            <Badge variant="outline" className="ml-2">
-              {order.order_number}
-            </Badge>
+            <Play className="h-5 w-5 text-blue-600" />
+            {isNewBatch ? `Start New ${step.step_name} Batch` : `Start ${step.step_name}`}
           </DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleStartStep} className="space-y-4">
-          {/* Order Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Package2 className="h-4 w-4" />
-                Order Summary
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Order Information */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-blue-800 flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Order Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="text-muted-foreground">Product:</span>
-                  <div className="font-medium">{order.product_name}</div>
+                  <Label className="text-sm font-medium text-blue-700">Order Number</Label>
+                  <div className="font-semibold text-blue-900">{order.order_number}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Quantity:</span>
-                  <div className="font-medium">{order.quantity_required}</div>
+                  <Label className="text-sm font-medium text-blue-700">
+                    {isNewBatch ? 'New Batch Step' : 'Next Step'}
+                  </Label>
+                  <div className="font-semibold text-blue-900">{step.step_name}</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Step Fields */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4" />
-                {step.step_name} Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {currentStepFields.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  No configuration required for this step
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {currentStepFields.map(field => (
-                    <div key={field.field_id} className="space-y-1">
-                      <Label htmlFor={field.field_id} className="text-sm font-medium">
-                        {field.field_label}
-                        {field.is_required && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </Label>
-                      {renderField(field)}
-                    </div>
-                  ))}
+              <div>
+                <Label className="text-sm font-medium text-blue-700">Product</Label>
+                <div className="font-semibold text-blue-900">{order.product_name}</div>
+              </div>
+              {isNewBatch && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 mb-2">
+                    New Batch
+                  </Badge>
+                  <p className="text-sm text-orange-700">
+                    This will create a new {step.step_name} batch/path, separate from any existing steps.
+                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose} 
-              disabled={isSubmitting}
-            >
+          {/* Step Configuration Fields */}
+          {stepFields.length > 0 && (
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-green-800 flex items-center justify-between">
+                  Step Configuration
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    {stepFields.length} field{stepFields.length !== 1 ? 's' : ''}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {stepFields.map(field => (
+                    <div key={field.id} className="space-y-2">
+                      <Label>
+                        {field.field_label}
+                        {field.field_options?.unit && ` (${field.field_options.unit})`}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {renderField(field)}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit"
-              disabled={!isFormValid || isSubmitting}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? 'Starting...' : (isNewBatch ? `Start New ${step.step_name} Batch` : `Start ${step.step_name}`)}
             </Button>
           </div>
         </form>
