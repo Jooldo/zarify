@@ -287,26 +287,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     onAddStep?.(data);
   };
 
-  const handleCardClick = () => {
-    console.log('=== CARD CLICK DEBUG ===');
-    console.log('Step clicked:', data.stepName);
-    console.log('Step order:', data.stepOrder);
-    console.log('Is Manufacturing Order card:', data.stepName === 'Manufacturing Order');
-    console.log('Current order step exists:', !!currentOrderStep);
-    console.log('Current order step data:', currentOrderStep);
-    
-    // Only open details dialog if this is an actual manufacturing step (not Manufacturing Order card) AND we have a valid order step
-    if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('✅ Opening step details dialog for step:', currentOrderStep.id);
-      setDetailsDialogOpen(true);
-    } else if (data.stepOrder === 0) {
-      console.log('❌ Cannot open details - this is Manufacturing Order card (step_order = 0)');
-    } else if (!currentOrderStep) {
-      console.log('❌ Cannot open details - no order step found in database');
-      console.log('Available order steps for this order:', orderSteps.filter(s => s.manufacturing_order_id === data.orderId));
-    }
-    console.log('========================');
-  };
+  
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
@@ -436,7 +417,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <Handle type="source" position={Position.Right} className="!bg-gray-400" />
       </Card>
 
-      {/* ALWAYS render dialog, but only pass step if valid */}
+      {/* ALWAYS render dialog, but only pass step if valid - NOW OPENS IN EDIT MODE */}
       <StepDetailsDialog
         open={detailsDialogOpen}
         onOpenChange={(open) => {
@@ -444,6 +425,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
           setDetailsDialogOpen(open);
         }}
         step={currentOrderStep || null}
+        openInEditMode={true} // Always open in edit mode when clicked from card
       />
     </>
   );
