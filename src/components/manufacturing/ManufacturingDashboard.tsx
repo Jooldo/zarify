@@ -1,18 +1,20 @@
-
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Package2, Clock, CheckCircle, Workflow, Search, Table, Kanban } from 'lucide-react';
+import { Plus, Package2, Clock, CheckCircle, Search, Table, Kanban, GitBranch, X } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
 import ManufacturingOrdersTable from './ManufacturingOrdersTable';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
-import ProductionQueueView from './ProductionQueueView';
 import ProductionKanbanView from './ProductionKanbanView';
+import ReactFlowView from './ReactFlowView';
 import ManufacturingOrdersFilter from './ManufacturingOrdersFilter';
+import ProductionQueueFilter from './ProductionQueueFilter';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
+import { Badge } from '@/components/ui/badge';
 
 interface ManufacturingFilters {
   status: string;
@@ -23,6 +25,16 @@ interface ManufacturingFilters {
   createdDateRange: string;
   hasSpecialInstructions: boolean;
   overdueOrders: boolean;
+}
+
+interface ProductionQueueFilters {
+  status: string;
+  priority: string;
+  productName: string;
+  orderNumber: string;
+  hasInProgressSteps: boolean;
+  hasCompletedSteps: boolean;
+  urgentOnly: boolean;
 }
 
 const ManufacturingDashboard = () => {
@@ -42,10 +54,20 @@ const ManufacturingDashboard = () => {
     hasSpecialInstructions: false,
     overdueOrders: false,
   });
+  const [reactFlowFilters, setReactFlowFilters] = useState<ProductionQueueFilters>({
+    status: '',
+    priority: '',
+    productName: '',
+    orderNumber: '',
+    hasInProgressSteps: false,
+    hasCompletedSteps: false,
+    urgentOnly: false,
+  });
   
   const { manufacturingOrders, isLoading, updateOrder, deleteOrder, refetch } = useManufacturingOrders();
+  const { orderSteps } = useManufacturingSteps();
 
-  // Filter and search logic
+  // Filter and search logic for table view
   const filteredOrders = useMemo(() => {
     return manufacturingOrders.filter(order => {
       // Text search filter
@@ -114,6 +136,35 @@ const ManufacturingDashboard = () => {
     });
   }, [manufacturingOrders, searchTerm, filters]);
 
+  // Filter and search logic for React Flow view
+  const filteredOrdersForFlow = useMemo(() => {
+    return manufacturingOrders.filter(order => {
+      // Apply React Flow specific filters
+      if (reactFlowFilters.status && order.status !== reactFlowFilters.status) return false;
+      if (reactFlowFilters.priority && order.priority !== reactFlowFilters.priority) return false;
+      if (reactFlowFilters.productName && !order.product_name.toLowerCase().includes(reactFlowFilters.productName.toLowerCase())) return false;
+      if (reactFlowFilters.orderNumber && !order.order_number.toLowerCase().includes(reactFlowFilters.orderNumber.toLowerCase())) return false;
+      
+      // Get order steps for this order
+      const orderOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+      
+      // Quick filters
+      if (reactFlowFilters.hasInProgressSteps) {
+        const hasInProgress = orderOrderSteps.some(step => step.status === 'in_progress');
+        if (!hasInProgress) return false;
+      }
+      
+      if (reactFlowFilters.hasCompletedSteps) {
+        const hasCompleted = orderOrderSteps.some(step => step.status === 'completed');
+        if (!hasCompleted) return false;
+      }
+      
+      if (reactFlowFilters.urgentOnly && order.priority !== 'urgent') return false;
+
+      return true;
+    });
+  }, [manufacturingOrders, orderSteps, reactFlowFilters]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -164,11 +215,19 @@ const ManufacturingDashboard = () => {
 
   const handleViewFlow = (order: ManufacturingOrder) => {
     setSelectedOrderForFlow(order);
-    setActiveTab('flow');
+    setReactFlowFilters(prev => ({
+      ...prev,
+      orderNumber: order.order_number,
+    }));
+    setActiveTab('reactflow');
   };
 
   const handleClearOrderFilter = () => {
     setSelectedOrderForFlow(null);
+    setReactFlowFilters(prev => ({
+      ...prev,
+      orderNumber: '',
+    }));
   };
 
   const handleStatusUpdate = (orderId: string, status: 'pending' | 'in_progress' | 'completed') => {
@@ -185,6 +244,8 @@ const ManufacturingDashboard = () => {
       setSelectedOrder(null);
     }
   };
+
+  const isOrderFiltered = Boolean(reactFlowFilters.orderNumber);
 
   return (
     <div className="space-y-6">
@@ -234,7 +295,7 @@ const ManufacturingDashboard = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-medium text-orange-800">In Progress</CardTitle>
             <div className="p-1.5 bg-orange-200 rounded-full">
-              <Workflow className="h-4 w-4 text-orange-700" />
+              <GitBranch className="h-4 w-4 text-orange-700" />
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
@@ -264,13 +325,13 @@ const ManufacturingDashboard = () => {
             <Table className="h-4 w-4" />
             Table View
           </TabsTrigger>
+          <TabsTrigger value="reactflow" className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            React Flow View
+          </TabsTrigger>
           <TabsTrigger value="kanban" className="flex items-center gap-2">
             <Kanban className="h-4 w-4" />
             Kanban View
-          </TabsTrigger>
-          <TabsTrigger value="flow" className="flex items-center gap-2">
-            <Workflow className="h-4 w-4" />
-            Flow View
           </TabsTrigger>
         </TabsList>
         
@@ -323,15 +384,52 @@ const ManufacturingDashboard = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="kanban" className="mt-4">
-          <ProductionKanbanView />
+        <TabsContent value="reactflow" className="space-y-4">
+          {/* React Flow View Header with Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Production Queue</h2>
+              {isOrderFiltered && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Order: {reactFlowFilters.orderNumber}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleClearOrderFilter}
+                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            {!isOrderFiltered && (
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search production queue..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-8"
+                  />
+                </div>
+                <ProductionQueueFilter onFiltersChange={setReactFlowFilters} />
+              </div>
+            )}
+          </div>
+
+          <ReactFlowView
+            manufacturingOrders={filteredOrdersForFlow}
+            onViewDetails={handleViewOrder}
+          />
         </TabsContent>
 
-        <TabsContent value="flow" className="mt-4">
-          <ProductionQueueView 
-            selectedOrderForFlow={selectedOrderForFlow} 
-            onClearOrderFilter={handleClearOrderFilter}
-          />
+        <TabsContent value="kanban" className="mt-4">
+          <ProductionKanbanView />
         </TabsContent>
       </Tabs>
 
