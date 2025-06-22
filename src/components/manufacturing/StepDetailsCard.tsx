@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,11 +121,16 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     setUpdateDialogOpen(true);
   };
 
-  // Create stepData object for UpdateStepDialog
+  // Create stepData object for UpdateStepDialog with all required properties
   const stepData = {
     stepName: orderStep.manufacturing_steps?.step_name || 'Unknown Step',
     orderNumber: orderStep.manufacturing_orders?.order_number || 'Unknown Order',
-    stepFields: stepFields
+    stepFields: stepFields,
+    stepOrder: orderStep.manufacturing_steps?.step_order || 0,
+    orderId: orderStep.manufacturing_order_id || '',
+    productName: orderStep.manufacturing_orders?.product_name || 'Unknown Product',
+    status: orderStep.status || 'pending',
+    progress: orderStep.progress_percentage || 0
   };
 
   return (
