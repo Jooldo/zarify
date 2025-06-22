@@ -118,7 +118,7 @@ const CreateChildOrderDialog = ({
           priority: 'high', // Rework orders get high priority
           status: 'pending',
           due_date: parentOrder.due_date,
-          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep?.step_name || 'Unknown'}`,
+          special_instructions: `Rework from ${parentOrder.order_number || 'Unknown Order'} - Step ${currentStep?.step_name || 'Unknown'}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
           rework_from_step: currentStep?.step_order || 0,
@@ -240,108 +240,6 @@ const CreateChildOrderDialog = ({
             placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
-    }
-  };
-
-  const handleCreateChildOrder = async () => {
-    if (!selectedStepId) {
-      toast({
-        title: 'Error',
-        description: 'Please select a step for reassignment',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate required fields
-    const requiredFields = stepFields.filter(field => field.is_required);
-    for (const field of requiredFields) {
-      if (!fieldValues[field.field_id] || fieldValues[field.field_id].trim() === '') {
-        toast({
-          title: 'Error',
-          description: `${field.field_label} is required`,
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    setIsCreating(true);
-
-    try {
-      // Get next child order number
-      const { data: childOrderNumber, error: orderNumberError } = await supabase
-        .rpc('get_next_manufacturing_order_number');
-
-      if (orderNumberError) throw orderNumberError;
-
-      // Create child manufacturing order - use parent's quantity by default
-      const { data: childOrder, error: childOrderError } = await supabase
-        .from('manufacturing_orders')
-        .insert({
-          order_number: `${childOrderNumber}-R`, // R for Rework
-          product_name: parentOrder.product_name,
-          product_config_id: parentOrder.product_config_id,
-          quantity_required: parentOrder.quantity_required,
-          priority: 'high', // Rework orders get high priority
-          status: 'pending',
-          due_date: parentOrder.due_date,
-          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep?.step_name || 'Unknown'}`,
-          merchant_id: parentOrder.merchant_id,
-          parent_order_id: parentOrder.id,
-          rework_from_step: currentStep?.step_order || 0,
-          assigned_to_step: selectedStep?.step_order
-        })
-        .select()
-        .single();
-
-      if (childOrderError) throw childOrderError;
-
-      // Create the manufacturing order step for the selected step
-      const { error: stepError } = await supabase
-        .from('manufacturing_order_steps')
-        .insert({
-          manufacturing_order_id: childOrder.id,
-          manufacturing_step_id: selectedStepId,
-          step_order: selectedStep?.step_order || 1,
-          status: 'pending',
-          merchant_id: parentOrder.merchant_id
-        });
-
-      if (stepError) throw stepError;
-
-      // Save field values if any
-      if (Object.keys(fieldValues).length > 0) {
-        const stepValueInserts = Object.entries(fieldValues).map(([fieldId, value]) => ({
-          manufacturing_order_step_id: childOrder.id,
-          field_id: fieldId,
-          field_value: value,
-          merchant_id: parentOrder.merchant_id
-        }));
-
-        const { error: valuesError } = await supabase
-          .from('manufacturing_order_step_values')
-          .insert(stepValueInserts);
-
-        if (valuesError) throw valuesError;
-      }
-
-      toast({
-        title: 'Success',
-        description: `Child order ${childOrder.order_number} created successfully`,
-      });
-
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      console.error('Error creating child order:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create child order',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCreating(false);
     }
   };
 
