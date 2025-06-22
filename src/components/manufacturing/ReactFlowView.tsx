@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
@@ -551,7 +552,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     console.log('📍 Optimized positions:', optimizedPositions);
 
-    // Store step card IDs for rework connections with better key format
+    // Store step card IDs for rework connections with improved tracking
     const stepCardMap = new Map<string, string>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
@@ -607,11 +608,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // Store step card mapping using parent order ID and step order
-        const stepKey = `${parentOrder.id}-${step.manufacturing_steps?.step_order || step.step_order}`;
-        stepCardMap.set(stepKey, stepCardNodeId);
+        // Enhanced step mapping - store multiple keys for better lookup
+        const stepOrderKey = `${parentOrder.id}-${step.manufacturing_steps?.step_order || step.step_order}`;
+        const stepIdKey = `${parentOrder.id}-stepid-${step.manufacturing_step_id}`;
+        stepCardMap.set(stepOrderKey, stepCardNodeId);
+        stepCardMap.set(stepIdKey, stepCardNodeId);
         
-        console.log(`🗺️ Storing step mapping: ${stepKey} -> ${stepCardNodeId}`);
+        console.log(`🗺️ Storing step mappings: ${stepOrderKey} -> ${stepCardNodeId}, ${stepIdKey} -> ${stepCardNodeId}`);
         
         const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
         const stepPosition = {
@@ -680,7 +683,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
         console.log(`🔄 Processing child order: ${childOrder.order_number}`);
-        console.log(`Child order rework_from_step: ${childOrder.rework_from_step}`);
+        console.log(`Child order details:`, {
+          rework_source_step_id: childOrder.rework_source_step_id,
+          assigned_to_step: childOrder.assigned_to_step,
+          rework_reason: childOrder.rework_reason
+        });
         
         const childOrderSteps = orderSteps.filter(step => 
           String(step.manufacturing_order_id) === String(childOrder.id)
@@ -720,57 +727,72 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Connect rework card to originating step card
-        const originatingStepOrder = childOrder.rework_from_step;
-        if (originatingStepOrder) {
-          console.log(`🔗 Connecting rework order ${childOrder.order_number} to originating step ${originatingStepOrder} from parent order ${parentOrder.id}`);
+        // Enhanced rework connection logic
+        let originatingStepCardId = null;
+        
+        // First try: Use rework_source_step_id if available
+        if (childOrder.rework_source_step_id) {
+          console.log(`🔗 Looking for originating step card using rework_source_step_id: ${childOrder.rework_source_step_id}`);
           
-          const stepKey = `${parentOrder.id}-${originatingStepOrder}`;
-          const originatingStepCardId = stepCardMap.get(stepKey);
+          // Find the step card by step ID
+          const stepIdKey = `${parentOrder.id}-stepid-${childOrder.rework_source_step_id}`;
+          originatingStepCardId = stepCardMap.get(stepIdKey);
           
-          console.log(`Step key: ${stepKey}, found step card ID: ${originatingStepCardId}`);
-          console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+          console.log(`Step ID key: ${stepIdKey}, found step card ID: ${originatingStepCardId}`);
+        }
+        
+        // Second try: Use assigned_to_step as fallback
+        if (!originatingStepCardId && childOrder.assigned_to_step) {
+          console.log(`🔗 Fallback: Looking for originating step card using assigned_to_step: ${childOrder.assigned_to_step}`);
           
-          if (originatingStepCardId) {
-            const reworkConnectionEdge = {
-              id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
-              source: originatingStepCardId,
-              target: childNodeId,
-              sourceHandle: 'step-details-output',
-              targetHandle: 'order-rework-input',
-              type: 'smoothstep',
-              animated: true,
-              style: { 
-                stroke: '#f97316', 
-                strokeWidth: 3, 
-                strokeDasharray: '10,5'
-              },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: '#f97316',
-              },
-              label: 'Rework Origin',
-              labelStyle: { 
-                fill: '#f97316', 
-                fontWeight: 600,
-                fontSize: '12px',
-                backgroundColor: 'white',
-                padding: '4px 8px',
-                borderRadius: '4px'
-              },
-              labelBgStyle: {
-                fill: 'white',
-                fillOpacity: 0.95,
-                rx: 4,
-                ry: 4
-              }
-            };
-            
-            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}`);
-            edges.push(reworkConnectionEdge);
-          } else {
-            console.log(`❌ Could not find originating step card for step order ${originatingStepOrder} in parent order ${parentOrder.id}`);
-          }
+          const stepOrderKey = `${parentOrder.id}-${childOrder.assigned_to_step}`;
+          originatingStepCardId = stepCardMap.get(stepOrderKey);
+          
+          console.log(`Step order key: ${stepOrderKey}, found step card ID: ${originatingStepCardId}`);
+        }
+        
+        console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+        
+        if (originatingStepCardId) {
+          const reworkConnectionEdge = {
+            id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
+            source: originatingStepCardId,
+            target: childNodeId,
+            sourceHandle: 'step-details-output',
+            targetHandle: 'order-rework-input',
+            type: 'smoothstep',
+            animated: true,
+            style: { 
+              stroke: '#f97316', 
+              strokeWidth: 3, 
+              strokeDasharray: '10,5'
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#f97316',
+            },
+            label: 'Rework Origin',
+            labelStyle: { 
+              fill: '#f97316', 
+              fontWeight: 600,
+              fontSize: '12px',
+              backgroundColor: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px'
+            },
+            labelBgStyle: {
+              fill: 'white',
+              fillOpacity: 0.95,
+              rx: 4,
+              ry: 4
+            }
+          };
+          
+          console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}`);
+          edges.push(reworkConnectionEdge);
+        } else {
+          console.log(`❌ Could not find originating step card for rework order ${childOrder.order_number}`);
+          console.log(`Attempted keys: rework_source_step_id(${childOrder.rework_source_step_id}), assigned_to_step(${childOrder.assigned_to_step})`);
         }
 
         const childStepsToShow = childOrderSteps.filter(step => 
@@ -855,7 +877,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
-    JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status, parent_order_id: o.parent_order_id, rework_from_step: o.rework_from_step }))),
+    JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status, parent_order_id: o.parent_order_id, rework_source_step_id: o.rework_source_step_id, assigned_to_step: o.assigned_to_step }))),
     JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status, step_order: s.step_order }))),
     manufacturingSteps.length,
     onViewDetails

@@ -170,7 +170,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
     setIsCreating(true);
 
     try {
-      // Create rework order
+      // Create rework order with proper step tracking
       const { data: childOrder, error: orderError } = await supabase
         .from('manufacturing_orders')
         .insert({
@@ -183,7 +183,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_source_step_id: parentOrderStep?.id,
+          rework_source_step_id: currentStep.id, // Store the actual step ID for proper tracking
           rework_reason: reworkReason,
           assigned_to_step: assignedToStep
         })
@@ -194,6 +194,12 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
         console.error('Error creating rework order:', orderError);
         throw orderError;
       }
+
+      console.log('✅ Created rework order with proper step tracking:', {
+        childOrderId: childOrder.id,
+        rework_source_step_id: currentStep.id,
+        assigned_to_step: assignedToStep
+      });
 
       // Create manufacturing order step for the assigned step
       const assignedStep = activeSteps.find(step => step.step_order === assignedToStep);
