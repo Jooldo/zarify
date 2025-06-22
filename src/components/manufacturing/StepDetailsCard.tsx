@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,14 +181,14 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     setUpdateDialogOpen(true);
   };
 
-  // Create stepData object for UpdateStepDialog with all required properties
+  // Create stepData object for UpdateStepDialog with all required properties and correct order number
   const stepData = {
     stepName: orderStep.manufacturing_steps?.step_name || 'Unknown Step',
-    orderNumber: orderStep.manufacturing_orders?.order_number || 'Unknown Order',
+    orderNumber: manufacturingOrder?.order_number || 'Loading...',
     stepFields: stepFields,
     stepOrder: orderStep.manufacturing_steps?.step_order || 0,
     orderId: orderStep.manufacturing_order_id || '',
-    productName: orderStep.manufacturing_orders?.product_name || 'Unknown Product',
+    productName: manufacturingOrder?.product_name || 'Unknown Product',
     status: orderStep.status || 'pending',
     progress: orderStep.progress_percentage || 0
   };
@@ -242,6 +241,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-2">
+          
           {/* Progress */}
           {orderStep.progress_percentage > 0 && (
             <div className="mb-2">

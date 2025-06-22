@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
+import { useWorkers } from '@/hooks/useWorkers';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreateChildOrderDialogProps {
@@ -16,7 +18,7 @@ interface CreateChildOrderDialogProps {
   parentOrder: any;
   currentStep: any;
   onSuccess: () => void;
-  parentOrderStep?: any; // Add this to get the parent order step with field values
+  parentOrderStep?: any;
 }
 
 const CreateChildOrderDialog = ({ 
@@ -30,6 +32,7 @@ const CreateChildOrderDialog = ({
   const { toast } = useToast();
   const { manufacturingSteps, getStepFields } = useManufacturingSteps();
   const { getStepValue } = useManufacturingStepValues();
+  const { workers } = useWorkers();
   const [selectedStepId, setSelectedStepId] = useState<string>('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -52,6 +55,12 @@ const CreateChildOrderDialog = ({
       return getStepValue(parentOrderStep.id, fieldId);
     }
     return null;
+  };
+
+  // Get worker name from worker ID
+  const getWorkerName = (workerId: string) => {
+    const worker = workers.find(w => w.id === workerId);
+    return worker ? worker.name : 'Unknown Worker';
   };
 
   const handleStepSelection = (stepId: string) => {
@@ -234,6 +243,108 @@ const CreateChildOrderDialog = ({
     }
   };
 
+  const handleCreateChildOrder = async () => {
+    if (!selectedStepId) {
+      toast({
+        title: 'Error',
+        description: 'Please select a step for reassignment',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate required fields
+    const requiredFields = stepFields.filter(field => field.is_required);
+    for (const field of requiredFields) {
+      if (!fieldValues[field.field_id] || fieldValues[field.field_id].trim() === '') {
+        toast({
+          title: 'Error',
+          description: `${field.field_label} is required`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    setIsCreating(true);
+
+    try {
+      // Get next child order number
+      const { data: childOrderNumber, error: orderNumberError } = await supabase
+        .rpc('get_next_manufacturing_order_number');
+
+      if (orderNumberError) throw orderNumberError;
+
+      // Create child manufacturing order - use parent's quantity by default
+      const { data: childOrder, error: childOrderError } = await supabase
+        .from('manufacturing_orders')
+        .insert({
+          order_number: `${childOrderNumber}-R`, // R for Rework
+          product_name: parentOrder.product_name,
+          product_config_id: parentOrder.product_config_id,
+          quantity_required: parentOrder.quantity_required,
+          priority: 'high', // Rework orders get high priority
+          status: 'pending',
+          due_date: parentOrder.due_date,
+          special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep?.step_name || 'Unknown'}`,
+          merchant_id: parentOrder.merchant_id,
+          parent_order_id: parentOrder.id,
+          rework_from_step: currentStep?.step_order || 0,
+          assigned_to_step: selectedStep?.step_order
+        })
+        .select()
+        .single();
+
+      if (childOrderError) throw childOrderError;
+
+      // Create the manufacturing order step for the selected step
+      const { error: stepError } = await supabase
+        .from('manufacturing_order_steps')
+        .insert({
+          manufacturing_order_id: childOrder.id,
+          manufacturing_step_id: selectedStepId,
+          step_order: selectedStep?.step_order || 1,
+          status: 'pending',
+          merchant_id: parentOrder.merchant_id
+        });
+
+      if (stepError) throw stepError;
+
+      // Save field values if any
+      if (Object.keys(fieldValues).length > 0) {
+        const stepValueInserts = Object.entries(fieldValues).map(([fieldId, value]) => ({
+          manufacturing_order_step_id: childOrder.id,
+          field_id: fieldId,
+          field_value: value,
+          merchant_id: parentOrder.merchant_id
+        }));
+
+        const { error: valuesError } = await supabase
+          .from('manufacturing_order_step_values')
+          .insert(stepValueInserts);
+
+        if (valuesError) throw valuesError;
+      }
+
+      toast({
+        title: 'Success',
+        description: `Child order ${childOrder.order_number} created successfully`,
+      });
+
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error('Error creating child order:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create child order',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   // Don't render if currentStep is null or invalid
   if (!currentStep) {
     return null;
@@ -247,52 +358,43 @@ const CreateChildOrderDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Parent Order Details */}
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
-            <h4 className="font-semibold text-blue-900">Parent Order Details</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          {/* Current Step Information */}
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 space-y-3">
+            <h4 className="font-semibold text-amber-900">Current Step Information</h4>
+            <div className="space-y-2">
               <div>
-                <span className="text-blue-700 font-medium">Order Number:</span>
-                <div className="text-blue-900 font-semibold">{parentOrder?.order_number || 'Unknown Order'}</div>
+                <span className="text-amber-700 font-medium">Step Name:</span>
+                <div className="text-amber-900 font-semibold">{currentStep?.step_name || 'Unknown Step'}</div>
               </div>
               <div>
-                <span className="text-blue-700 font-medium">Product:</span>
-                <div className="text-blue-900">{parentOrder?.product_name || 'Unknown Product'}</div>
+                <span className="text-amber-700 font-medium">Step Order:</span>
+                <div className="text-amber-900">{currentStep?.step_order || 'N/A'}</div>
               </div>
-              <div>
-                <span className="text-blue-700 font-medium">Quantity:</span>
-                <div className="text-blue-900">{parentOrder?.quantity_required || 'N/A'}</div>
-              </div>
-              <div>
-                <span className="text-blue-700 font-medium">Priority:</span>
-                <div className="text-blue-900">
-                  <Badge variant="outline" className="text-xs">
-                    {parentOrder?.priority?.toUpperCase() || 'MEDIUM'}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            <div>
-              <span className="text-blue-700 font-medium">Failed at Step:</span>
-              <div className="text-blue-900 font-medium">{currentStep?.step_name || 'Unknown Step'}</div>
             </div>
           </div>
 
           {/* Current Step Field Values */}
           {currentStepFields.length > 0 && (
-            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 space-y-3">
-              <h4 className="font-semibold text-amber-900">Current Step Field Values</h4>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
+              <h4 className="font-semibold text-blue-900">Current Step Field Values</h4>
               <div className="space-y-2">
                 {currentStepFields.map(field => {
                   const fieldValue = getCurrentStepFieldValue(field.field_id);
+                  let displayValue = fieldValue || 'Not set';
+                  
+                  // If it's a worker field, show worker name instead of ID
+                  if (field.field_type === 'worker' && fieldValue) {
+                    displayValue = getWorkerName(fieldValue);
+                  }
+                  
                   return (
                     <div key={field.field_id} className="flex justify-between items-center text-sm">
-                      <span className="text-amber-700 font-medium">
+                      <span className="text-blue-700 font-medium">
                         {field.field_label}
                         {field.field_options?.unit && ` (${field.field_options.unit})`}:
                       </span>
-                      <span className="text-amber-900 font-semibold">
-                        {fieldValue || 'Not set'}
+                      <span className="text-blue-900 font-semibold">
+                        {displayValue}
                       </span>
                     </div>
                   );

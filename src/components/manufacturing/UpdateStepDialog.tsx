@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
+import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { StepCardData } from './ManufacturingStepCard';
 import { ManufacturingStepField, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
@@ -36,6 +36,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const { workers } = useWorkers();
   const { getStepValue } = useManufacturingStepValues();
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
+  const { manufacturingOrders } = useManufacturingOrders();
   
   // Initialize state once when dialog opens
   const [initialized, setInitialized] = useState(false);
@@ -44,6 +45,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     status: 'pending' as StepStatus,
   });
   const [showReworkDialog, setShowReworkDialog] = useState(false);
+
+  // Get the manufacturing order for the current step
+  const manufacturingOrder = currentOrderStep ? 
+    manufacturingOrders.find(order => order.id === currentOrderStep.manufacturing_order_id) : 
+    null;
 
   // Initialize form data only once when dialog opens and we have all required data
   useEffect(() => {
@@ -256,7 +262,9 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Update {stepData.stepName} - {stepData.orderNumber}</DialogTitle>
+            <DialogTitle>
+              Update {stepData.stepName} - {manufacturingOrder?.order_number || 'Loading...'}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -409,12 +417,12 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Rework Dialog - Pass the current order step as parentOrderStep */}
-      {showReworkDialog && stepData && currentOrderStep && (
+      {/* Rework Dialog - Pass the manufacturing order and current step */}
+      {showReworkDialog && manufacturingOrder && currentOrderStep && (
         <CreateChildOrderDialog
           isOpen={showReworkDialog}
           onClose={() => setShowReworkDialog(false)}
-          parentOrder={stepData}
+          parentOrder={manufacturingOrder}
           currentStep={currentOrderStep.manufacturing_steps}
           parentOrderStep={currentOrderStep}
           onSuccess={handleReworkSuccess}
