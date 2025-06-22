@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
@@ -213,14 +212,18 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     parentOrders.forEach((parentOrder, parentIndex) => {
       console.log(`Processing parent order: ${parentOrder.order_number}`);
       
-      // Get current step for parent order
+      // Get ALL step details for parent order (not just current step)
       const parentOrderSteps = orderSteps.filter(step => 
         String(step.manufacturing_order_id) === String(parentOrder.id)
       );
-      console.log(`Parent order steps for ${parentOrder.order_number}:`, parentOrderSteps);
+      console.log(`All parent order steps for ${parentOrder.order_number}:`, parentOrderSteps);
       
+      // Get the current active step (latest step that's not completed, or latest step if all completed)
       const currentParentStep = parentOrderSteps.length > 0 
-        ? parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
+        ? parentOrderSteps
+            .sort((a, b) => b.step_order - a.step_order)
+            .find(step => step.status === 'in_progress') || 
+          parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
         : null;
       
       console.log(`Current parent step for ${parentOrder.order_number}:`, currentParentStep);
@@ -246,21 +249,27 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         } as FlowNodeData,
       });
 
-      // Add step details card if parent step is in progress OR completed
-      if (currentParentStep && (currentParentStep.status === 'in_progress' || currentParentStep.status === 'completed')) {
-        console.log(`🎯 Creating step details card for parent order ${parentOrder.order_number}`);
+      // Add step details cards for ALL steps that have been started (in_progress or completed)
+      const stepsToShow = parentOrderSteps.filter(step => 
+        step.status === 'in_progress' || step.status === 'completed'
+      ).sort((a, b) => a.step_order - b.step_order);
+      
+      console.log(`Steps to show for ${parentOrder.order_number}:`, stepsToShow);
+
+      stepsToShow.forEach((step, stepIndex) => {
+        console.log(`🎯 Creating step details card for parent order ${parentOrder.order_number}, step ${step.step_order}`);
         
-        const stepFields = getStepFields(currentParentStep.manufacturing_step_id);
-        const stepCardNodeId = `step-details-${currentParentStep.id}`;
+        const stepFields = getStepFields(step.manufacturing_step_id);
+        const stepCardNodeId = `step-details-${step.id}`;
         
-        console.log(`Step fields for ${parentOrder.order_number}:`, stepFields);
+        console.log(`Step fields for ${parentOrder.order_number} step ${step.step_order}:`, stepFields);
         
         const stepDetailsNode = {
           id: stepCardNodeId,
           type: 'stepDetailsNode',
-          position: { x: stepCardOffset, y: yOffset },
+          position: { x: stepCardOffset + (stepIndex * 400), y: yOffset },
           data: {
-            orderStep: currentParentStep,
+            orderStep: step,
             stepFields: stepFields,
             onViewDetails: () => onViewDetails(parentOrder)
           },
@@ -277,19 +286,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           sourceHandle: 'order-output',
           targetHandle: 'step-details-input',
           type: 'smoothstep',
-          animated: currentParentStep.status === 'in_progress',
+          animated: step.status === 'in_progress',
           style: { 
-            stroke: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+            stroke: step.status === 'completed' ? '#10b981' : '#3b82f6', 
             strokeWidth: 2, 
-            strokeDasharray: currentParentStep.status === 'in_progress' ? '5,5' : 'none'
+            strokeDasharray: step.status === 'in_progress' ? '5,5' : 'none'
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6',
+            color: step.status === 'completed' ? '#10b981' : '#3b82f6',
           },
-          label: currentParentStep.status === 'completed' ? 'Completed' : 'In Progress',
+          label: step.status === 'completed' ? 'Completed' : 'In Progress',
           labelStyle: { 
-            fill: currentParentStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+            fill: step.status === 'completed' ? '#10b981' : '#3b82f6', 
             fontWeight: 600,
             fontSize: '12px'
           },
@@ -297,7 +306,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         
         console.log(`Adding step edge:`, stepEdge);
         edges.push(stepEdge);
-      }
+      });
 
       // Create child nodes for this parent
       const relatedChildOrders = childOrders.filter(child => 
@@ -311,7 +320,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           String(step.manufacturing_order_id) === String(childOrder.id)
         );
         const currentChildStep = childOrderSteps.length > 0 
-          ? childOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
+          ? childOrderSteps
+              .sort((a, b) => b.step_order - a.step_order)
+              .find(step => step.status === 'in_progress') || 
+            childOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
           : null;
 
         console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
@@ -339,21 +351,25 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
-        // Add step details card if child step is in progress OR completed
-        if (currentChildStep && (currentChildStep.status === 'in_progress' || currentChildStep.status === 'completed')) {
-          console.log(`🎯 Creating step details card for child order ${childOrder.order_number}`);
+        // Add step details cards for child steps that have been started
+        const childStepsToShow = childOrderSteps.filter(step => 
+          step.status === 'in_progress' || step.status === 'completed'
+        ).sort((a, b) => a.step_order - b.step_order);
+
+        childStepsToShow.forEach((childStep, childStepIndex) => {
+          console.log(`🎯 Creating step details card for child order ${childOrder.order_number}, step ${childStep.step_order}`);
           
-          const stepFields = getStepFields(currentChildStep.manufacturing_step_id);
-          const childStepCardNodeId = `step-details-${currentChildStep.id}`;
+          const stepFields = getStepFields(childStep.manufacturing_step_id);
+          const childStepCardNodeId = `step-details-${childStep.id}`;
           
-          console.log(`Step fields for child ${childOrder.order_number}:`, stepFields);
+          console.log(`Step fields for child ${childOrder.order_number} step ${childStep.step_order}:`, stepFields);
           
           const childStepDetailsNode = {
             id: childStepCardNodeId,
             type: 'stepDetailsNode',
-            position: { x: 500 + stepCardOffset, y: childYOffset },
+            position: { x: 500 + stepCardOffset + (childStepIndex * 400), y: childYOffset },
             data: {
-              orderStep: currentChildStep,
+              orderStep: childStep,
               stepFields: stepFields,
               onViewDetails: () => onViewDetails(childOrder)
             },
@@ -370,19 +386,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             sourceHandle: 'order-output',
             targetHandle: 'step-details-input',
             type: 'smoothstep',
-            animated: currentChildStep.status === 'in_progress',
+            animated: childStep.status === 'in_progress',
             style: { 
-              stroke: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+              stroke: childStep.status === 'completed' ? '#10b981' : '#3b82f6', 
               strokeWidth: 2, 
-              strokeDasharray: currentChildStep.status === 'in_progress' ? '5,5' : 'none'
+              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 'none'
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6',
+              color: childStep.status === 'completed' ? '#10b981' : '#3b82f6',
             },
-            label: currentChildStep.status === 'completed' ? 'Completed' : 'In Progress',
+            label: childStep.status === 'completed' ? 'Completed' : 'In Progress',
             labelStyle: { 
-              fill: currentChildStep.status === 'completed' ? '#10b981' : '#3b82f6', 
+              fill: childStep.status === 'completed' ? '#10b981' : '#3b82f6', 
               fontWeight: 600,
               fontSize: '12px'
             },
@@ -390,7 +406,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           
           console.log(`Adding child step edge:`, childStepEdge);
           edges.push(childStepEdge);
-        }
+        });
 
         // Create edge from parent to child (no handles needed for this connection)
         edges.push({
@@ -413,7 +429,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         });
       });
 
-      // Update yOffset for next parent order group
+      // Update yOffset for next parent order group - account for multiple step cards
+      const totalStepCards = stepsToShow.length + relatedChildOrders.reduce((acc, child) => {
+        const childSteps = orderSteps.filter(step => 
+          String(step.manufacturing_order_id) === String(child.id) &&
+          (step.status === 'in_progress' || step.status === 'completed')
+        );
+        return acc + childSteps.length;
+      }, 0);
+      
       yOffset += Math.max(nodeSpacing, (relatedChildOrders.length + 1) * childOffset);
     });
 
@@ -423,7 +447,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
     JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status }))),
-    JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status }))),
+    JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status, step_order: s.step_order }))),
     manufacturingSteps.length,
     onViewDetails
   ]);
