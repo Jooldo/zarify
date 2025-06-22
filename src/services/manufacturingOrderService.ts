@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CreateManufacturingOrderData, ManufacturingOrder } from '@/types/manufacturingOrders';
 
@@ -52,45 +53,77 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
 
   console.log('🏪 Merchant ID:', merchantId);
 
-  // Get next order number
-  const { data: orderNumber, error: orderNumberError } = await supabase
-    .rpc('get_next_manufacturing_order_number');
+  // Determine if this is a rework order and get appropriate order number
+  let orderNumber: string;
+  
+  if (data.parent_order_id) {
+    // This is a rework order - get the parent order number first
+    const { data: parentOrder, error: parentError } = await supabase
+      .from('manufacturing_orders')
+      .select('order_number')
+      .eq('id', data.parent_order_id)
+      .single();
+    
+    if (parentError) {
+      console.error('Error getting parent order:', parentError);
+      throw parentError;
+    }
+    
+    // Generate rework order number using the new function
+    const { data: reworkOrderNumber, error: reworkOrderNumberError } = await supabase
+      .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
 
-  if (orderNumberError) {
-    console.error('Error getting order number:', orderNumberError);
-    throw orderNumberError;
+    if (reworkOrderNumberError) {
+      console.error('Error getting rework order number:', reworkOrderNumberError);
+      throw reworkOrderNumberError;
+    }
+    
+    orderNumber = reworkOrderNumber;
+    console.log('📝 Generated rework order number:', orderNumber);
+  } else {
+    // Regular order - use the standard function
+    const { data: regularOrderNumber, error: orderNumberError } = await supabase
+      .rpc('get_next_manufacturing_order_number');
+
+    if (orderNumberError) {
+      console.error('Error getting order number:', orderNumberError);
+      throw orderNumberError;
+    }
+    
+    orderNumber = regularOrderNumber;
+    console.log('📝 Generated order number:', orderNumber);
   }
 
-  console.log('📝 Generated order number:', orderNumber);
+  // Check raw material stock before creating order (only for non-rework orders)
+  if (!data.parent_order_id && data.product_config_id) {
+    console.log('🔍 Checking raw material requirements...');
+    const { data: materialRequirements, error: materialError } = await supabase
+      .from('product_config_materials')
+      .select(`
+        quantity_required,
+        raw_materials(
+          id,
+          name,
+          current_stock,
+          unit
+        )
+      `)
+      .eq('product_config_id', data.product_config_id);
 
-  // Check raw material stock before creating order
-  console.log('🔍 Checking raw material requirements...');
-  const { data: materialRequirements, error: materialError } = await supabase
-    .from('product_config_materials')
-    .select(`
-      quantity_required,
-      raw_materials(
-        id,
-        name,
-        current_stock,
-        unit
-      )
-    `)
-    .eq('product_config_id', data.product_config_id);
+    if (materialError) {
+      console.error('Error fetching material requirements:', materialError);
+      throw materialError;
+    }
 
-  if (materialError) {
-    console.error('Error fetching material requirements:', materialError);
-    throw materialError;
-  }
+    console.log('📦 Material requirements:', materialRequirements);
 
-  console.log('📦 Material requirements:', materialRequirements);
-
-  // Log current stock levels before creation
-  if (materialRequirements) {
-    materialRequirements.forEach(req => {
-      const requiredQty = req.quantity_required * data.quantity_required;
-      console.log(`📊 Material: ${req.raw_materials?.name}, Required: ${requiredQty}, Available: ${req.raw_materials?.current_stock}`);
-    });
+    // Log current stock levels before creation
+    if (materialRequirements) {
+      materialRequirements.forEach(req => {
+        const requiredQty = req.quantity_required * data.quantity_required;
+        console.log(`📊 Material: ${req.raw_materials?.name}, Required: ${requiredQty}, Available: ${req.raw_materials?.current_stock}`);
+      });
+    }
   }
 
   const { data: order, error } = await supabase
@@ -104,6 +137,11 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
       due_date: data.due_date,
       special_instructions: data.special_instructions,
       merchant_id: merchantId,
+      parent_order_id: data.parent_order_id,
+      rework_source_step_id: data.rework_source_step_id,
+      rework_quantity: data.rework_quantity,
+      assigned_to_step: data.assigned_to_step,
+      rework_reason: data.rework_reason,
     })
     .select()
     .single();
@@ -115,17 +153,26 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
 
   console.log('✅ Manufacturing order created:', order);
 
-  // Check stock levels after creation to verify deduction
-  console.log('🔍 Checking stock levels after order creation...');
-  const { data: updatedMaterials, error: updatedError } = await supabase
-    .from('raw_materials')
-    .select('id, name, current_stock, in_manufacturing')
-    .in('id', materialRequirements?.map(req => req.raw_materials?.id).filter(Boolean) || []);
+  // Check stock levels after creation to verify deduction (only for non-rework orders)
+  if (!data.parent_order_id && data.product_config_id) {
+    console.log('🔍 Checking stock levels after order creation...');
+    const { data: materialRequirements } = await supabase
+      .from('product_config_materials')
+      .select('raw_material_id')
+      .eq('product_config_id', data.product_config_id);
 
-  if (updatedError) {
-    console.error('Error fetching updated materials:', updatedError);
-  } else {
-    console.log('📊 Updated material stock levels:', updatedMaterials);
+    if (materialRequirements && materialRequirements.length > 0) {
+      const { data: updatedMaterials, error: updatedError } = await supabase
+        .from('raw_materials')
+        .select('id, name, current_stock, in_manufacturing')
+        .in('id', materialRequirements.map(req => req.raw_material_id));
+
+      if (updatedError) {
+        console.error('Error fetching updated materials:', updatedError);
+      } else {
+        console.log('📊 Updated material stock levels:', updatedMaterials);
+      }
+    }
   }
 
   return order;

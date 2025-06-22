@@ -1787,6 +1787,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_next_rework_order_number: {
+        Args: { base_order_number: string }
+        Returns: string
+      }
       get_next_suborder_id: {
         Args: { order_number: string; item_index: number }
         Returns: string
