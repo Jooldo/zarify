@@ -9,22 +9,18 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit3, Save, X, Play } from 'lucide-react';
-import { format } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
 import { useStepDetailsData } from '@/hooks/useStepDetailsData';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
-import { useWorkers } from '@/hooks/useWorkers';
 import { StepDebugLogger } from './debug/StepDebugLogger';
 import { PreviousStepsDisplay } from './PreviousStepsDisplay';
+import { StepEditForm } from './step-details/StepEditForm';
+import { StepDisplayCard } from './step-details/StepDisplayCard';
+import { StepActionButtons } from './step-details/StepActionButtons';
 
 interface StepDetailsDialogProps {
   open: boolean;
@@ -44,10 +40,9 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   } = useStepDetailsData(step);
 
   const { orderSteps, stepFields, manufacturingSteps } = useManufacturingSteps();
-  const { stepValues, getStepValue } = useManufacturingStepValues();
+  const { getStepValue } = useManufacturingStepValues();
   const { updateStep, isUpdating } = useUpdateManufacturingStep();
   const { createStep } = useCreateManufacturingStep();
-  const { workers } = useWorkers();
 
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
@@ -160,63 +155,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     });
   };
 
-  const renderEditableField = (field: any) => {
-    const value = editFormData.fieldValues[field.field_id] || '';
-
-    switch (field.field_type) {
-      case 'worker':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleFieldValueChange(field.field_id, val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select worker" />
-            </SelectTrigger>
-            <SelectContent>
-              {workers.map(worker => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-      case 'text':
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-      default:
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label.toLowerCase()}`}
-          />
-        );
-    }
-  };
-
-  const getWorkerName = (workerId: string) => {
-    const worker = workers.find(w => w.id === workerId);
-    return worker ? worker.name : 'Unknown Worker';
-  };
-
   const getStepStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending': return 'bg-gray-100 text-gray-800';
@@ -252,144 +190,30 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Action Buttons - Always Visible */}
-          <div className="flex gap-3 p-4 bg-gray-50 rounded-lg border">
-            {!isEditMode ? (
-              <>
-                <Button
-                  onClick={() => setIsEditMode(true)}
-                  className="flex items-center gap-2"
-                  variant="default"
-                >
-                  <Edit3 className="h-4 w-4" />
-                  Edit Step Details
-                </Button>
-                <Button
-                  onClick={handleStartNextStep}
-                  className="flex items-center gap-2"
-                  variant="outline"
-                >
-                  <Play className="h-4 w-4" />
-                  Start Next Step
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={handleSaveChanges}
-                  disabled={isUpdating}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {isUpdating ? 'Saving...' : 'Save Changes'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditMode(false)}
-                  className="flex items-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-              </>
-            )}
-          </div>
+          {/* Action Buttons */}
+          <StepActionButtons
+            isEditMode={isEditMode}
+            onEditClick={() => setIsEditMode(true)}
+            onStartNextStep={handleStartNextStep}
+          />
 
           {/* Current Step Configuration */}
-          <Card className="border-2 border-blue-200 bg-blue-50/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">
-                Current Step Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditMode ? (
-                <>
-                  <div>
-                    <Label className="text-sm font-medium">Status</Label>
-                    <Select value={editFormData.status} onValueChange={handleStatusChange}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="partially_completed">Partially Completed (QC Failed)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {currentStepFields.length > 0 && (
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Configure Step Fields</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {currentStepFields.map(field => (
-                          <div key={field.id} className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              {field.field_label}
-                              {field.field_options?.unit && ` (${field.field_options.unit})`}
-                              {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                            </Label>
-                            {renderEditableField(field)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Display current step information */}
-                  <div className="space-y-3">
-                    <div>
-                      <span className="text-sm text-muted-foreground">Progress:</span>
-                      <span className="ml-2 font-medium">{step.progress_percentage || 0}%</span>
-                    </div>
-                    
-                    {step.assigned_worker_id && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Assigned Worker:</span>
-                        <span className="ml-2 font-medium">{getWorkerName(step.assigned_worker_id)}</span>
-                      </div>
-                    )}
-
-                    {step.started_at && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Started:</span>
-                        <span className="ml-2 font-medium">{format(new Date(step.started_at), 'MMM dd, yyyy HH:mm')}</span>
-                      </div>
-                    )}
-
-                    {step.completed_at && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Completed:</span>
-                        <span className="ml-2 font-medium">{format(new Date(step.completed_at), 'MMM dd, yyyy HH:mm')}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Current Step Field Values */}
-                  {currentStepValues.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Current Field Values</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentStepValues.map((value, index) => (
-                          <div key={index} className="bg-muted/50 p-3 rounded">
-                            <span className="text-sm text-muted-foreground block">{value.label}:</span>
-                            <span className="font-medium">
-                              {value.value}
-                              {value.unit && ` ${value.unit}`}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+          {isEditMode ? (
+            <StepEditForm
+              editFormData={editFormData}
+              currentStepFields={currentStepFields}
+              isUpdating={isUpdating}
+              onFieldValueChange={handleFieldValueChange}
+              onStatusChange={handleStatusChange}
+              onSave={handleSaveChanges}
+              onCancel={() => setIsEditMode(false)}
+            />
+          ) : (
+            <StepDisplayCard
+              step={step}
+              currentStepValues={currentStepValues}
+            />
+          )}
 
           {/* Previous Steps Data */}
           {!isEditMode && (
