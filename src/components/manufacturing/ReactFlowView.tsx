@@ -26,6 +26,7 @@ import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsCard from './StepDetailsCard';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
 import StartStepDialog from './StartStepDialog';
+import StepDetailsDialog from './StepDetailsDialog';
 import { 
   optimizeLayoutPositions, 
   calculateStepCardPosition, 
@@ -61,8 +62,6 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         return 'bg-blue-50 text-blue-600 border-blue-200';
       case 'completed':
         return 'bg-emerald-50 text-emerald-600 border-emerald-200';
-      case 'partially_completed':
-        return 'bg-orange-50 text-orange-600 border-orange-200';
       default:
         return 'bg-slate-50 text-slate-600 border-slate-200';
     }
@@ -132,7 +131,6 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
                 <Badge className={`${getStatusColor(step.status)} border text-xs`}>
                   {step.status === 'not_started' ? 'Not Started' : 
                    step.status === 'in_progress' ? 'In Progress' : 
-                   step.status === 'partially_completed' ? 'Partially Completed' :
                    step.status?.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
@@ -187,9 +185,10 @@ const InProgressStepCard: React.FC<{
     order: any;
     manufacturingOrders: any[];
     onViewDetails: (order: any) => void;
+    onViewStepDetails: (step: any) => void;
   }
 }> = ({ data }) => {
-  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails } = data;
+  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails, onViewStepDetails } = data;
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const { manufacturingSteps } = useManufacturingSteps();
@@ -307,7 +306,7 @@ const InProgressStepCard: React.FC<{
   };
 
   const handleCardClick = () => {
-    onViewDetails(order);
+    onViewStepDetails(orderStep);
   };
 
   const nextStep = getNextStepInfo();
@@ -487,7 +486,7 @@ const nodeTypes = {
     <StepDetailsCard
       orderStep={data.orderStep}
       stepFields={data.stepFields}
-      onViewDetails={data.onViewDetails}
+      onViewDetails={() => data.onViewStepDetails(data.orderStep)}
     />
   ),
   inProgressStepNode: InProgressStepCard,
@@ -497,11 +496,18 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [stepDetailsDialogOpen, setStepDetailsDialogOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<any>(null);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
     [setEdges],
   );
+
+  const handleViewStepDetails = (step: any) => {
+    setSelectedStep(step);
+    setStepDetailsDialogOpen(true);
+  };
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
     console.log('🔄 Generating optimized nodes and edges...');
@@ -630,11 +636,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             stepFields: stepFields,
             order: parentOrder,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: () => onViewDetails(parentOrder)
+            onViewDetails: () => onViewDetails(parentOrder),
+            onViewStepDetails: handleViewStepDetails
           } : {
             orderStep: step,
             stepFields: stepFields,
-            onViewDetails: () => onViewDetails(parentOrder)
+            onViewDetails: () => handleViewStepDetails(step),
+            onViewStepDetails: handleViewStepDetails
           },
         };
         
@@ -820,11 +828,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               stepFields: stepFields,
               order: childOrder,
               manufacturingOrders: manufacturingOrders,
-              onViewDetails: () => onViewDetails(childOrder)
+              onViewDetails: () => onViewDetails(childOrder),
+              onViewStepDetails: handleViewStepDetails
             } : {
               orderStep: childStep,
               stepFields: stepFields,
-              onViewDetails: () => onViewDetails(childOrder)
+              onViewDetails: () => handleViewStepDetails(childStep),
+              onViewStepDetails: handleViewStepDetails
             },
           };
           
@@ -875,7 +885,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     JSON.stringify(manufacturingOrders?.map(o => ({ id: o.id, order_number: o.order_number, status: o.status, parent_order_id: o.parent_order_id, rework_source_step_id: o.rework_source_step_id, assigned_to_step: o.assigned_to_step }))),
     JSON.stringify(orderSteps?.map(s => ({ id: s.id, manufacturing_order_id: s.manufacturing_order_id, status: s.status, step_order: s.step_order }))),
     manufacturingSteps.length,
-    onViewDetails
+    onViewDetails,
+    handleViewStepDetails
   ]);
 
   React.useEffect(() => {
@@ -888,30 +899,39 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   }, [generatedNodes, generatedEdges, setNodes, setEdges]);
 
   return (
-    <div className="h-[800px] w-full border rounded-lg overflow-hidden">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="top-right"
-        style={{ backgroundColor: "#F7F9FB" }}
-      >
-        <Controls />
-        <MiniMap 
-          zoomable 
-          pannable 
-          style={{ 
-            backgroundColor: "#F7F9FB",
-            border: "1px solid #e2e8f0"
-          }}
-        />
-        <Background color="#aaa" gap={16} />
-      </ReactFlow>
-    </div>
+    <>
+      <div className="h-[800px] w-full border rounded-lg overflow-hidden">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="top-right"
+          style={{ backgroundColor: "#F7F9FB" }}
+        >
+          <Controls />
+          <MiniMap 
+            zoomable 
+            pannable 
+            style={{ 
+              backgroundColor: "#F7F9FB",
+              border: "1px solid #e2e8f0"
+            }}
+          />
+          <Background color="#aaa" gap={16} />
+        </ReactFlow>
+      </div>
+
+      {/* Step Details Dialog */}
+      <StepDetailsDialog
+        open={stepDetailsDialogOpen}
+        onOpenChange={setStepDetailsDialogOpen}
+        step={selectedStep}
+      />
+    </>
   );
 };
 
