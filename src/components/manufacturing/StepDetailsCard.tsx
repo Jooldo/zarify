@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type, Play } from 'lucide-react';
+import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type, Play, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
@@ -13,6 +13,7 @@ import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import UpdateStepDialog from './UpdateStepDialog';
 import StartStepDialog from './StartStepDialog';
+import CreateChildOrderDialog from './CreateChildOrderDialog';
 
 interface StepDetailsCardProps {
   orderStep: any;
@@ -32,6 +33,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [showReworkDialog, setShowReworkDialog] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -172,11 +174,29 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     setStartStepDialogOpen(true);
   };
 
+  // Handle setup rework
+  const handleSetupRework = () => {
+    setShowReworkDialog(true);
+  };
+
+  // Handle rework success
+  const handleReworkSuccess = () => {
+    setShowReworkDialog(false);
+  };
+
+  // Check if rework order already exists for this order
+  const hasReworkOrder = () => {
+    const order = getManufacturingOrder();
+    if (!order) return false;
+    return manufacturingOrders?.some(mo => mo.parent_order_id === order.id);
+  };
+
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
   const nextStep = getNextStepInfo();
   const manufacturingOrder = getManufacturingOrder();
   const isCompleted = orderStep.status === 'completed';
+  const isInProgress = orderStep.status === 'in_progress';
 
   const handleCardClick = () => {
     setUpdateDialogOpen(true);
@@ -293,23 +313,53 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
             </div>
           )}
 
-          {/* Next Step Action for Completed Steps */}
-          {isCompleted && nextStep && (
-            <div className="p-3 bg-emerald-50 rounded-md border border-emerald-100">
-              <div className="text-xs text-slate-600 mb-2">
-                Next Step Available: <span className="font-medium text-emerald-700">{nextStep.step_name}</span>
-              </div>
-              <Button
-                size="sm"
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartNextStep();
-                }}
-              >
-                <Play className="h-3 w-3 mr-1" />
-                Start {nextStep.step_name}
-              </Button>
+          {/* Action Buttons for Completed and In Progress Steps */}
+          {(isCompleted || isInProgress) && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              {/* Rework Button */}
+              {!hasReworkOrder() && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={`w-full ${
+                    isCompleted 
+                      ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50' 
+                      : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSetupRework();
+                  }}
+                >
+                  <Wrench className="h-3 w-3 mr-1" />
+                  Setup Rework
+                </Button>
+              )}
+              
+              {/* Next Step Button */}
+              {nextStep && (
+                <Button
+                  size="sm"
+                  className={`w-full shadow-sm ${
+                    isCompleted 
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartNextStep();
+                  }}
+                >
+                  <Play className="h-3 w-3 mr-1" />
+                  Start {nextStep.step_name}
+                </Button>
+              )}
+              
+              {hasReworkOrder() && (
+                <div className="text-xs text-slate-500 text-center p-2 bg-slate-50/50 rounded-md">
+                  Rework order already created
+                </div>
+              )}
             </div>
           )}
 
@@ -350,6 +400,18 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         order={manufacturingOrder}
         step={nextStep}
       />
+
+      {/* Rework Dialog */}
+      {showReworkDialog && orderStep.manufacturing_steps && manufacturingOrder && (
+        <CreateChildOrderDialog
+          isOpen={showReworkDialog}
+          onClose={() => setShowReworkDialog(false)}
+          parentOrder={manufacturingOrder}
+          currentStep={orderStep.manufacturing_steps}
+          parentOrderStep={orderStep}
+          onSuccess={handleReworkSuccess}
+        />
+      )}
     </>
   );
 };
