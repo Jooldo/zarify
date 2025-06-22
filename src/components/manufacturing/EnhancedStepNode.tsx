@@ -129,32 +129,42 @@ const EnhancedStepNode: React.FC<EnhancedStepNodeProps> = ({ data }) => {
   const isPartiallyCompleted = orderStep.status === 'partially_completed';
   const hasBranches = branches.length > 0;
 
-  // Calculate handle positions for branches
+  // Enhanced handle positioning for parallel branching
   const getBranchHandles = useMemo(() => {
     if (!hasBranches) {
       return [{
-        id: 'step-details-output',
+        id: 'step-output-main',
         type: 'source' as const,
         position: Position.Right,
         style: { background: isCompleted ? '#10b981' : '#3b82f6', border: 'none', width: 8, height: 8 }
       }];
     }
 
+    // Enhanced positioning for parallel branch handles
     return branches.map((branch, index) => {
-      const verticalOffset = branches.length > 1 ? (index - (branches.length - 1) / 2) * 20 : 0;
-      const color = branch.type === 'rework' ? '#f97316' : 
-                   branch.type === 'qc' ? '#eab308' : '#10b981';
+      const isReworkBranch = branch.type === 'rework';
+      const isProgressionBranch = branch.type === 'progression';
+      
+      // Enhanced vertical spacing for clear visual separation
+      const totalBranches = branches.length;
+      const spacing = 25; // Increased spacing between handles
+      const startOffset = -(totalBranches - 1) * spacing / 2;
+      const verticalOffset = startOffset + (index * spacing);
+      
+      // Enhanced color coding for branch types
+      const handleColor = isReworkBranch ? '#3b82f6' : '#10b981'; // Blue for rework, Green for progression
       
       return {
         id: `step-output-${branch.id}`,
         type: 'source' as const,
         position: Position.Right,
         style: { 
-          background: color, 
+          background: handleColor, 
           border: 'none', 
-          width: 8, 
-          height: 8,
-          top: `calc(50% + ${verticalOffset}px)`
+          width: 10, 
+          height: 10,
+          top: `calc(50% + ${verticalOffset}px)`,
+          borderRadius: isReworkBranch ? '2px' : '50%' // Square for rework, circle for progression
         }
       };
     });
@@ -168,6 +178,15 @@ const EnhancedStepNode: React.FC<EnhancedStepNodeProps> = ({ data }) => {
     }
   };
 
+  const getBranchTypeLabel = (type: string) => {
+    switch (type) {
+      case 'rework': return 'Rework Path';
+      case 'progression': return 'Accepted Path';
+      case 'qc': return 'QC Path';
+      default: return 'Flow Path';
+    }
+  };
+
   return (
     <>
       <Handle
@@ -177,7 +196,7 @@ const EnhancedStepNode: React.FC<EnhancedStepNodeProps> = ({ data }) => {
         style={{ background: isCompleted ? '#10b981' : '#3b82f6', border: 'none', width: 8, height: 8 }}
       />
       
-      {/* Dynamic branch handles */}
+      {/* Enhanced dynamic branch handles */}
       {getBranchHandles.map(handle => (
         <Handle
           key={handle.id}
@@ -296,22 +315,42 @@ const EnhancedStepNode: React.FC<EnhancedStepNodeProps> = ({ data }) => {
             </div>
           )}
 
-          {/* Branch Information */}
+          {/* Enhanced Branch Information */}
           {hasBranches && (
             <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="text-xs font-medium text-slate-600">Outgoing Branches:</div>
-              {branches.map((branch, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs p-2 rounded-md bg-slate-50 border border-slate-100">
-                  {getBranchIcon(branch.type)}
-                  <span className="font-medium text-slate-600">{branch.label}:</span>
-                  <span className="text-slate-700 flex-1">{branch.targetStepName}</span>
-                  {branch.quantity && (
-                    <Badge variant="outline" className="text-xs">
-                      Qty: {branch.quantity}
-                    </Badge>
-                  )}
-                </div>
-              ))}
+              <div className="text-xs font-medium text-slate-600 flex items-center gap-2">
+                <GitBranch className="h-3 w-3" />
+                Parallel Branches:
+              </div>
+              {branches.map((branch, index) => {
+                const isReworkBranch = branch.type === 'rework';
+                const isProgressionBranch = branch.type === 'progression';
+                
+                return (
+                  <div key={index} className={`flex items-center gap-2 text-xs p-2 rounded-md border ${
+                    isReworkBranch 
+                      ? 'bg-blue-50 border-blue-100' 
+                      : 'bg-emerald-50 border-emerald-100'
+                  }`}>
+                    {getBranchIcon(branch.type)}
+                    <span className={`font-medium ${
+                      isReworkBranch ? 'text-blue-600' : 'text-emerald-600'
+                    }`}>
+                      {getBranchTypeLabel(branch.type)}:
+                    </span>
+                    <span className="text-slate-700 flex-1">{branch.targetStepName}</span>
+                    {branch.quantity && (
+                      <Badge variant="outline" className={`text-xs ${
+                        isReworkBranch 
+                          ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                      }`}>
+                        Qty: {branch.quantity}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

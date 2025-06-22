@@ -197,7 +197,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
   );
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
-    console.log('🔄 Generating multi-branch nodes and edges...');
+    console.log('🔄 Generating enhanced multi-branch nodes and edges...');
     console.log('Manufacturing Orders:', manufacturingOrders);
     console.log('Order Steps:', orderSteps);
     
@@ -223,16 +223,16 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
       childOrdersMap.set(parentOrder.id, relatedChildOrders);
     });
 
-    // Detect branches for all steps
+    // Enhanced branch detection for parallel flows
     orderSteps.forEach(orderStep => {
       const branches = detectStepBranches(orderStep, orderSteps, manufacturingOrders, manufacturingSteps);
       if (branches.length > 0) {
         stepBranchesMap.set(orderStep.id, branches);
-        console.log(`📋 Step ${orderStep.id} has ${branches.length} branches:`, branches);
+        console.log(`🌿 Enhanced step ${orderStep.id} has ${branches.length} branches:`, branches);
       }
     });
     
-    // Optimize layout positions for multi-branch support
+    // Optimize layout positions for enhanced multi-branch support
     const optimizedPositions = optimizeBranchLayout(
       parentOrders, 
       childOrdersMap, 
@@ -240,8 +240,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
       DEFAULT_MULTI_BRANCH_CONFIG
     );
     
-    console.log('📍 Multi-branch optimized positions:', optimizedPositions);
-    console.log('🌳 Step branches map:', stepBranchesMap);
+    console.log('📍 Enhanced multi-branch optimized positions:', optimizedPositions);
+    console.log('🌳 Enhanced step branches map:', stepBranchesMap);
 
     parentOrders.forEach((parentOrder, parentIndex) => {
       console.log(`Processing parent order: ${parentOrder.order_number}`);
@@ -292,18 +292,17 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
         const stepCardNodeId = `step-details-${step.id}`;
         const stepBranches = stepBranchesMap.get(step.id) || [];
         
-        // Base position for the step
+        // Enhanced positioning for parallel branches
         const baseStepPosition = {
           x: parentPosition.x + 450 + (stepIndex * 500),
           y: parentPosition.y
         };
 
-        // If there are branches, adjust positions accordingly
+        // Enhanced branch positioning for visual separation
         let stepPosition = baseStepPosition;
         if (stepBranches.length > 1) {
-          // For multi-branch steps, calculate branch positions
           const branchPositions = calculateBranchPositions(baseStepPosition, stepBranches, stepIndex);
-          console.log(`Multi-branch positions for step ${step.id}:`, branchPositions);
+          console.log(`🚀 Enhanced multi-branch positions for step ${step.id}:`, branchPositions);
         }
         
         const stepDetailsNode = {
@@ -320,10 +319,10 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           },
         };
         
-        console.log(`Adding enhanced step node:`, stepDetailsNode);
+        console.log(`✅ Adding enhanced step node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        // Create edge from previous node to this step
+        // Enhanced edge creation with visual distinction
         const edgeColor = step.status === 'partially_completed' ? '#f97316' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
@@ -357,15 +356,23 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
         
         edges.push(stepEdge);
 
-        // Create branch edges
+        // Enhanced branch edges with clear visual distinction
         stepBranches.forEach((branch, branchIndex) => {
-          const branchEdgeColor = branch.type === 'rework' ? '#f97316' : 
-                                 branch.type === 'qc' ? '#eab308' : '#10b981';
-          const branchEdgeStyle = branch.type === 'rework' ? '10,5' : 
-                                 branch.type === 'qc' ? '2,2' : 'none';
+          // Enhanced visual styling for different branch types
+          const isReworkBranch = branch.type === 'rework';
+          const isProgressionBranch = branch.type === 'progression';
           
-          console.log(`🔗 Creating branch edge from ${stepCardNodeId} to ${branch.targetNodeId}`);
-          console.log(`Branch details:`, branch);
+          const branchEdgeColor = isReworkBranch ? '#3b82f6' : '#10b981'; // Blue for rework, Green for progression
+          const branchEdgeStyle = isReworkBranch ? '10,5' : 'none'; // Dashed for rework, solid for progression
+          const branchStrokeWidth = 3;
+          
+          // Enhanced labeling for clear identification
+          const enhancedLabel = isReworkBranch 
+            ? `Rework → ${branch.targetStepName}${branch.quantity ? ` (${branch.quantity})` : ''}`
+            : `Accepted Qty → ${branch.targetStepName}${branch.quantity ? ` (${branch.quantity})` : ''}`;
+          
+          console.log(`🔗 Creating enhanced branch edge from ${stepCardNodeId} to ${branch.targetNodeId}`);
+          console.log(`🎨 Branch style - Color: ${branchEdgeColor}, Pattern: ${branchEdgeStyle}, Label: ${enhancedLabel}`);
           
           const branchEdge = {
             id: `branch-edge-${stepCardNodeId}-${branch.targetNodeId}`,
@@ -377,42 +384,43 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
             animated: true,
             style: { 
               stroke: branchEdgeColor, 
-              strokeWidth: 3, 
+              strokeWidth: branchStrokeWidth, 
               strokeDasharray: branchEdgeStyle
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
               color: branchEdgeColor,
             },
-            label: branch.label + (branch.quantity ? ` (${branch.quantity})` : ''),
+            label: enhancedLabel,
             labelStyle: { 
               fill: branchEdgeColor, 
               fontWeight: 600,
               fontSize: '12px',
               backgroundColor: 'white',
-              padding: '4px 8px',
-              borderRadius: '4px'
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: `1px solid ${branchEdgeColor}20`
             },
             labelBgStyle: {
               fill: 'white',
               fillOpacity: 0.95,
-              rx: 4,
-              ry: 4
+              rx: 6,
+              ry: 6
             }
           };
           
-          console.log(`✅ Adding branch edge:`, branchEdge);
+          console.log(`✅ Adding enhanced branch edge:`, branchEdge);
           edges.push(branchEdge);
         });
 
         previousNodeId = stepCardNodeId;
       });
 
-      // Handle child orders (rework orders)
+      // Enhanced child order handling with better visual integration
       const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
-        console.log(`🔄 Processing child order: ${childOrder.order_number}`);
+        console.log(`🔄 Processing enhanced child order: ${childOrder.order_number}`);
         
         const childOrderSteps = orderSteps.filter(step => 
           String(step.manufacturing_order_id) === String(childOrder.id)
@@ -430,7 +438,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           y: parentPosition.y + ((childIndex + 1) * 400)
         };
 
-        console.log(`📍 Child order ${childOrder.order_number} positioned at:`, childPosition);
+        console.log(`📍 Enhanced child order ${childOrder.order_number} positioned at:`, childPosition);
 
         nodes.push({
           id: childNodeId,
@@ -452,7 +460,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           } as FlowNodeData,
         });
 
-        // Process child order steps
+        // Enhanced child order step processing
         const childStepsToShow = childOrderSteps.filter(step => 
           step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
         ).sort((a, b) => a.step_order - b.step_order);
@@ -485,6 +493,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           
           nodes.push(childStepDetailsNode);
 
+          // Enhanced child step edge styling
           const edgeColor = childStep.status === 'partially_completed' ? '#f97316' : 
                            childStep.status === 'completed' ? '#10b981' : '#3b82f6';
           const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
@@ -518,12 +527,15 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
           
           edges.push(childStepEdge);
 
-          // Create branch edges for child steps
+          // Enhanced child step branch edges
           childStepBranches.forEach((branch) => {
-            const branchEdgeColor = branch.type === 'rework' ? '#f97316' : 
-                                   branch.type === 'qc' ? '#eab308' : '#10b981';
-            const branchEdgeStyle = branch.type === 'rework' ? '10,5' : 
-                                   branch.type === 'qc' ? '2,2' : 'none';
+            const isReworkBranch = branch.type === 'rework';
+            const branchEdgeColor = isReworkBranch ? '#3b82f6' : '#10b981';
+            const branchEdgeStyle = isReworkBranch ? '10,5' : 'none';
+            
+            const enhancedLabel = isReworkBranch 
+              ? `Rework → ${branch.targetStepName}${branch.quantity ? ` (${branch.quantity})` : ''}`
+              : `Accepted Qty → ${branch.targetStepName}${branch.quantity ? ` (${branch.quantity})` : ''}`;
             
             const branchEdge = {
               id: `branch-edge-${childStepCardNodeId}-${branch.targetNodeId}`,
@@ -542,11 +554,14 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
                 type: MarkerType.ArrowClosed,
                 color: branchEdgeColor,
               },
-              label: branch.label + (branch.quantity ? ` (${branch.quantity})` : ''),
+              label: enhancedLabel,
               labelStyle: { 
                 fill: branchEdgeColor, 
                 fontWeight: 600,
-                fontSize: '12px'
+                fontSize: '12px',
+                backgroundColor: 'white',
+                padding: '6px 10px',
+                borderRadius: '6px'
               },
             };
             
@@ -558,8 +573,8 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
       });
     });
 
-    console.log('🔥 Final multi-branch nodes:', nodes);
-    console.log('🔥 Final multi-branch edges:', edges);
+    console.log('🔥 Final enhanced multi-branch nodes:', nodes);
+    console.log('🔥 Final enhanced multi-branch edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
@@ -570,7 +585,7 @@ const MultiBranchReactFlowView: React.FC<MultiBranchReactFlowViewProps> = ({ man
   ]);
 
   React.useEffect(() => {
-    console.log('📊 Setting multi-branch nodes and edges');
+    console.log('📊 Setting enhanced multi-branch nodes and edges');
     console.log('Setting nodes:', generatedNodes.length);
     console.log('Setting edges:', generatedEdges.length);
     
