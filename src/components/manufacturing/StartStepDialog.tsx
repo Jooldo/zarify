@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -57,8 +56,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return stepId && fieldStepId === stepId;
   });
 
-  console.log('Dialog props:', { stepId, sourceStepId, isBatchCreation });
-  console.log('Current step fields count:', currentStepFields.length);
+  console.log('Dialog state:', { 
+    stepId, 
+    sourceStepId, 
+    isBatchCreation, 
+    currentStepFieldsCount: currentStepFields.length,
+    isOpen 
+  });
 
   // Initialize field values when dialog opens
   useEffect(() => {
@@ -74,10 +78,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         }
       });
       
-      console.log('Initial field values:', initialValues);
+      console.log('Initial field values set:', initialValues);
       setFieldValues(initialValues);
     } else if (!isOpen) {
-      // Reset when dialog closes
       setFieldValues({});
     }
   }, [isOpen, stepId, currentStepFields.length]);
@@ -160,22 +163,34 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      console.log('Starting step - isBatchCreation:', isBatchCreation);
-      console.log('Field values:', fieldValues);
+      console.log('Starting step process...');
+      console.log('Is batch creation:', isBatchCreation);
       console.log('Source step ID:', sourceStepId);
       console.log('Target step ID:', stepId);
+      console.log('Field values to submit:', fieldValues);
       
       if (isBatchCreation && sourceStepId && stepId) {
         // Create a new batch from source step
-        console.log('Creating new batch from source step:', sourceStepId, 'to target step:', stepId);
-        await createBatch({
-          sourceOrderStepId: sourceStepId,  // This should be the source order step ID
-          targetStepId: stepId,             // This should be the target manufacturing step ID
+        console.log('Creating batch with parameters:', {
+          sourceOrderStepId: sourceStepId,
+          targetStepId: stepId,
+          fieldValues,
+          merchantId: merchant.id
+        });
+
+        const result = await createBatch({
+          sourceOrderStepId: sourceStepId,
+          targetStepId: stepId,
           fieldValues,
           merchantId: merchant.id
         });
         
-        console.log('Batch created successfully');
+        console.log('Batch creation result:', result);
+        
+        toast({
+          title: 'Success',
+          description: `New ${step.step_name} batch started successfully`,
+        });
       } else {
         // Regular step creation/update logic
         let orderStep = orderSteps.find(os => 
@@ -231,24 +246,22 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             orderNumber: order.order_number
           });
         }
+        
+        toast({
+          title: 'Success',  
+          description: `${step.step_name} started successfully`,
+        });
       }
-
-      toast({
-        title: 'Success',
-        description: isBatchCreation 
-          ? `New ${step.step_name} batch started successfully` 
-          : `${step.step_name} started successfully`,
-      });
 
       // Reset form and close dialog
       setFieldValues({});
       onClose();
     } catch (error) {
-      console.error('Error starting step:', error);
+      console.error('Error in handleStartStep:', error);
       toast({
         title: 'Error',
         description: isBatchCreation 
-          ? 'Failed to start new manufacturing batch'
+          ? `Failed to start new manufacturing batch: ${error instanceof Error ? error.message : 'Unknown error'}`
           : 'Failed to start manufacturing step',
         variant: 'destructive',
       });

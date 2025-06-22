@@ -12,7 +12,7 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
   console.log('Creating batch from step with data:', data);
   
   try {
-    // Get the source order step details
+    // Get the source order step details with full information
     const { data: sourceStep, error: sourceError } = await supabase
       .from('manufacturing_order_steps')
       .select(`
@@ -25,7 +25,11 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
 
     if (sourceError) {
       console.error('Error fetching source step:', sourceError);
-      throw sourceError;
+      throw new Error(`Failed to fetch source step: ${sourceError.message}`);
+    }
+
+    if (!sourceStep) {
+      throw new Error('Source step not found');
     }
 
     console.log('Source step found:', sourceStep);
@@ -39,22 +43,35 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
 
     if (targetError) {
       console.error('Error fetching target step:', targetError);
-      throw targetError;
+      throw new Error(`Failed to fetch target step: ${targetError.message}`);
+    }
+
+    if (!targetStep) {
+      throw new Error('Target step not found');
     }
 
     console.log('Target step found:', targetStep);
 
+    // Verify we have the manufacturing order ID
+    if (!sourceStep.manufacturing_order_id) {
+      throw new Error('Source step does not have a manufacturing order ID');
+    }
+
     // Create new order step for the batch
+    const newOrderStepData = {
+      manufacturing_order_id: sourceStep.manufacturing_order_id,
+      manufacturing_step_id: data.targetStepId,
+      step_order: targetStep.step_order,
+      status: 'in_progress',
+      merchant_id: data.merchantId,
+      started_at: new Date().toISOString()
+    };
+
+    console.log('Creating new order step with data:', newOrderStepData);
+
     const { data: newOrderStep, error: createError } = await supabase
       .from('manufacturing_order_steps')
-      .insert({
-        manufacturing_order_id: sourceStep.manufacturing_order_id,
-        manufacturing_step_id: data.targetStepId,
-        step_order: targetStep.step_order,
-        status: 'in_progress',
-        merchant_id: data.merchantId,
-        started_at: new Date().toISOString()
-      })
+      .insert(newOrderStepData)
       .select(`
         *,
         manufacturing_steps(*),
@@ -64,12 +81,16 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
 
     if (createError) {
       console.error('Error creating new order step:', createError);
-      throw createError;
+      throw new Error(`Failed to create new order step: ${createError.message}`);
     }
 
-    console.log('New order step created:', newOrderStep);
+    if (!newOrderStep) {
+      throw new Error('Failed to create new order step - no data returned');
+    }
 
-    // Store field values for the new step
+    console.log('New order step created successfully:', newOrderStep);
+
+    // Store field values for the new step if provided
     if (data.fieldValues && Object.keys(data.fieldValues).length > 0) {
       const fieldValuesToInsert = Object.entries(data.fieldValues)
         .filter(([_, value]) => value !== null && value !== undefined && value !== '')
@@ -89,7 +110,10 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
 
         if (valuesError) {
           console.error('Error inserting field values:', valuesError);
-          throw valuesError;
+          // Don't throw here, as the step was created successfully
+          console.warn('Field values insertion failed, but step was created');
+        } else {
+          console.log('Field values inserted successfully');
         }
       }
     }
