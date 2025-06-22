@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { AlertTriangle } from 'lucide-react';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
@@ -46,6 +46,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     status: 'pending' as StepStatus,
   });
   const [showReworkDialog, setShowReworkDialog] = useState(false);
+  const [showReworkCTA, setShowReworkCTA] = useState(false);
 
   // Get the manufacturing order for the current step
   const manufacturingOrder = currentOrderStep ? 
@@ -69,6 +70,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       });
       
       setInitialized(true);
+      setShowReworkCTA(currentOrderStep.status === 'partially_completed');
     }
   }, [open, currentOrderStep?.id, stepFields, getStepValue, initialized]);
 
@@ -81,6 +83,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         status: 'pending' as StepStatus,
       });
       setShowReworkDialog(false);
+      setShowReworkCTA(false);
     }
   }, [open]);
 
@@ -96,10 +99,16 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   };
 
   const handleStatusChange = (value: string) => {
+    const newStatus = value as StepStatus;
     setFormData(prev => ({
       ...prev,
-      status: value as StepStatus
+      status: newStatus
     }));
+    
+    // Hide rework CTA if status changes away from partially_completed
+    if (newStatus !== 'partially_completed') {
+      setShowReworkCTA(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -107,18 +116,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
     console.log('Submitting form data:', formData);
 
-    // Check if partially completed status is selected to show rework option
-    if (formData.status === 'partially_completed') {
-      // First update the step with the current field values
-      await updateStepData();
-      // Then show the rework dialog
-      setShowReworkDialog(true);
-      return;
-    }
-
-    // For other statuses, just update normally
     await updateStepData();
-    onOpenChange(false);
+    
+    // Show rework CTA if status is partially_completed
+    if (formData.status === 'partially_completed') {
+      setShowReworkCTA(true);
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const updateStepData = async () => {
@@ -149,8 +154,13 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     });
   };
 
+  const handleSetupRework = () => {
+    setShowReworkDialog(true);
+  };
+
   const handleReworkSuccess = () => {
     setShowReworkDialog(false);
+    setShowReworkCTA(false);
     onOpenChange(false);
   };
 
@@ -290,7 +300,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                   </Select>
                   {formData.status === 'partially_completed' && (
                     <p className="text-sm text-amber-600 mt-1">
-                      Select this when some quantity fails QC and needs rework
+                      Use this when some quantity fails QC and needs rework
                     </p>
                   )}
                 </div>
@@ -315,6 +325,26 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Rework CTA */}
+            {showReworkCTA && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <h4 className="font-semibold text-amber-800">Quality Control Failed</h4>
+                </div>
+                <p className="text-sm text-amber-700">
+                  This step has been marked as partially completed due to QC failure. 
+                  You can now create a rework order to process the failed quantity.
+                </p>
+                <Button 
+                  onClick={handleSetupRework}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Setup Rework Order
+                </Button>
+              </div>
+            )}
 
             {/* Previous Steps */}
             <div className="space-y-4">
@@ -411,8 +441,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={isUpdating}>
-                {isUpdating ? 'Updating...' : 
-                 formData.status === 'partially_completed' ? 'Update & Setup Rework' : 'Update Step'}
+                {isUpdating ? 'Updating...' : 'Update Step'}
               </Button>
             </div>
           </div>
