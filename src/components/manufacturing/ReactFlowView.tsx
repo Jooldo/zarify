@@ -474,6 +474,8 @@ const nodeTypes = {
 };
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
+  console.log('🔄 ReactFlowView render with orders:', manufacturingOrders?.length);
+  
   const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -483,21 +485,22 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     [setEdges],
   );
 
-  // Create stable reference for the view details handler
-  const handleViewDetailsRef = useRef(onViewDetails);
-  
-  // Update the ref only when onViewDetails actually changes
-  React.useEffect(() => {
-    handleViewDetailsRef.current = onViewDetails;
-  }, [onViewDetails]);
+  // Stable reference for onViewDetails
+  const onViewDetailsRef = useRef(onViewDetails);
+  onViewDetailsRef.current = onViewDetails;
 
-  // Generate nodes and edges - completely remove array dependencies
-  const { generatedNodes, generatedEdges } = useMemo(() => {
-    console.log('🔄 Generating nodes and edges...');
+  // Create a stable wrapper for onViewDetails
+  const stableOnViewDetails = useCallback((order: any) => {
+    onViewDetailsRef.current(order);
+  }, []);
+
+  // Generate nodes and edges with proper memoization
+  const { flowNodes, flowEdges } = useMemo(() => {
+    console.log('🔄 Generating flow nodes and edges...');
     
     if (!manufacturingOrders?.length || !orderSteps?.length) {
       console.log('⚠️ Missing data, returning empty arrays');
-      return { generatedNodes: [], generatedEdges: [] };
+      return { flowNodes: [], flowEdges: [] };
     }
     
     const nodes: Node[] = [];
@@ -523,7 +526,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
     });
     
-    // Optimize layout positions with better spacing
+    // Optimize layout positions
     const optimizedPositions = optimizeLayoutPositions(
       parentOrders, 
       childOrdersMap, 
@@ -555,6 +558,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       const parentNodeId = `parent-${parentOrder.id}`;
       const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 600) };
       
+      // Add parent order node
       nodes.push({
         id: parentNodeId,
         type: 'orderNode',
@@ -570,10 +574,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           isParent: true,
           isChild: false,
           childLevel: 0,
-          onViewDetails: (order: any) => handleViewDetailsRef.current(order)
+          onViewDetails: stableOnViewDetails
         } as FlowNodeData,
       });
 
+      // Add step cards for parent order
       const stepsToShow = parentOrderSteps.filter(step => 
         step.status === 'in_progress' || step.status === 'completed'
       ).sort((a, b) => a.step_order - b.step_order);
@@ -603,16 +608,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             stepFields: stepFields,
             order: parentOrder,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
+            onViewDetails: stableOnViewDetails
           } : {
             orderStep: step,
             stepFields: stepFields,
-            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
+            onViewDetails: stableOnViewDetails
           },
         };
         
         nodes.push(stepDetailsNode);
 
+        // Add edge to step card
         const edgeColor = step.status === 'in_progress' ? '#3b82f6' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'in_progress' ? 'In Progress' :
@@ -647,6 +653,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         previousNodeId = stepCardNodeId;
       });
 
+      // Handle child orders (rework orders)
       const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
@@ -667,6 +674,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           y: parentPosition.y + ((childIndex + 1) * 400)
         };
         
+        // Position child order near the originating step if available
         if (childOrder.rework_source_step_id) {
           const originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
           if (originatingStepCardId) {
@@ -680,6 +688,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           }
         }
 
+        // Add child order node
         nodes.push({
           id: childNodeId,
           type: 'orderNode',
@@ -696,348 +705,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             isChild: true,
             parentOrderId: parentOrder.id,
             childLevel: 1,
-            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
+            onViewDetails: stableOnViewDetails
           } as FlowNodeData,
         });
 
-        let originatingStepCardId = null;
-        
+        // Add rework connection edge if applicable
         if (childOrder.rework_source_step_id) {
-          originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
-        }
-        
-        if (originatingStepCardId) {
-          const reworkConnectionEdge = {
-            id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
-            source: originatingStepCardId,
-            target: childNodeId,
-            sourceHandle: 'step-details-output',
-            targetHandle: 'order-rework-input',
-            type: 'smoothstep',
-            animated: true,
-            style: { 
-              stroke: '#f97316', 
-              strokeWidth: 3, 
-              strokeDasharray: '10,5'
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#f97316',
-            },
-            label: 'Rework Origin',
-            labelStyle: { 
-              fill: '#f97316', 
-              fontWeight: 600,
-              fontSize: '12px',
-              backgroundColor: 'white',
-              padding: '4px 8px',
-              borderRadius: '4px'
-            },
-            labelBgStyle: {
-              fill: 'white',
-              fillOpacity: 0.95,
-              rx: 4,
-              ry: 4
-            }
-          };
-          
-          edges.push(reworkConnectionEdge);
-        }
-
-        const childStepsToShow = childOrderSteps.filter(step => 
-          step.status === 'in_progress' || step.status === 'completed'
-        ).sort((a, b) => a.step_order - b.step_order);
-
-        let previousChildNodeId = childNodeId;
-
-        childStepsToShow.forEach((childStep, childStepIndex) => {
-          const stepFields = getStepFields(childStep.manufacturing_step_id);
-          const childStepCardNodeId = `step-details-${childStep.id}`;
-          
-          const nodeType = childStep.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
-          const childStepPosition = {
-            x: childPosition.x + 450 + (childStepIndex * 450),
-            y: childPosition.y
-          };
-          
-          const childStepDetailsNode = {
-            id: childStepCardNodeId,
-            type: nodeType,
-            position: childStepPosition,
-            data: childStep.status === 'in_progress' ? {
-              orderStep: childStep,
-              stepFields: stepFields,
-              order: childOrder,
-              manufacturingOrders: manufacturingOrders,
-              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-            } : {
-              orderStep: childStep,
-              stepFields: stepFields,
-              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-            },
-          };
-          
-          nodes.push(childStepDetailsNode);
-
-          const edgeColor = childStep.status === 'in_progress' ? '#3b82f6' : 
-                           childStep.status === 'completed' ? '#10b981' : '#3b82f6';
-          const edgeLabel = childStep.status === 'in_progress' ? 'In Progress' :
-                           childStep.status === 'completed' ? 'Completed' : 'In Progress';
-          
-          const childStepEdge = {
-            id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
-            source: previousChildNodeId,
-            target: childStepCardNodeId,
-            sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
-            targetHandle: 'step-details-input',
-            type: 'smoothstep',
-            animated: childStep.status === 'in_progress',
-            style: { 
-              stroke: edgeColor, 
-              strokeWidth: 2, 
-              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 'none'
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: edgeColor,
-            },
-            label: edgeLabel,
-            labelStyle: { 
-              fill: edgeColor, 
-              fontWeight: 500,
-              fontSize: '11px'
-            },
-          };
-          
-          edges.push(childStepEdge);
-          previousChildNodeId = childStepCardNodeId;
-        });
-      });
-    });
-    
-    return { generatedNodes: nodes, generatedEdges: edges };
-  }, []); // Remove ALL dependencies to prevent re-renders
-
-  // Use a separate effect to update when data actually changes
-  React.useEffect(() => {
-    if (manufacturingOrders?.length || orderSteps?.length) {
-      console.log('📊 Data changed, regenerating flow...');
-      // Force regeneration by updating a timestamp
-      const timestamp = Date.now();
-      
-      // Regenerate nodes and edges with current data
-      const nodes: Node[] = [];
-      const edges: Edge[] = [];
-      
-      if (!manufacturingOrders?.length || !orderSteps?.length) {
-        setNodes([]);
-        setEdges([]);
-        return;
-      }
-      
-      const parentOrders = manufacturingOrders.filter(order => !order.parent_order_id);
-      const childOrders = manufacturingOrders.filter(order => order.parent_order_id);
-      
-      // Create maps for efficient lookups
-      const childOrdersMap = new Map<string, any[]>();
-      const stepCountsMap = new Map<string, number>();
-      
-      parentOrders.forEach(parentOrder => {
-        const relatedChildOrders = childOrders.filter(child => 
-          String(child.parent_order_id) === String(parentOrder.id)
-        );
-        childOrdersMap.set(parentOrder.id, relatedChildOrders);
-        
-        const parentOrderSteps = orderSteps.filter(step => 
-          String(step.manufacturing_order_id) === String(parentOrder.id) &&
-          (step.status === 'in_progress' || step.status === 'completed')
-        );
-        stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
-      });
-      
-      // Optimize layout positions with better spacing
-      const optimizedPositions = optimizeLayoutPositions(
-        parentOrders, 
-        childOrdersMap, 
-        stepCountsMap, 
-        {
-          ...DEFAULT_LAYOUT_CONFIG,
-          nodeSpacing: 600,
-          stepCardSpacing: 450,
-          childOrderOffset: 400,
-        }
-      );
-
-      // Store step card IDs and positions for rework connections
-      const stepCardMap = new Map<string, string>();
-      const stepCardPositions = new Map<string, { x: number; y: number }>();
-
-      parentOrders.forEach((parentOrder, parentIndex) => {
-        const parentOrderSteps = orderSteps.filter(step => 
-          String(step.manufacturing_order_id) === String(parentOrder.id)
-        );
-        
-        const currentParentStep = parentOrderSteps.length > 0 
-          ? parentOrderSteps
-              .sort((a, b) => b.step_order - a.step_order)
-              .find(step => step.status === 'in_progress') || 
-            parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
-          : null;
-
-        const parentNodeId = `parent-${parentOrder.id}`;
-        const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 600) };
-        
-        nodes.push({
-          id: parentNodeId,
-          type: 'orderNode',
-          position: parentPosition,
-          data: {
-            order: parentOrder,
-            step: currentParentStep?.manufacturing_steps ? {
-              ...currentParentStep.manufacturing_steps,
-              status: currentParentStep.status,
-              workers: currentParentStep.workers,
-              started_at: currentParentStep.started_at
-            } : null,
-            isParent: true,
-            isChild: false,
-            childLevel: 0,
-            onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-          } as FlowNodeData,
-        });
-
-        const stepsToShow = parentOrderSteps.filter(step => 
-          step.status === 'in_progress' || step.status === 'completed'
-        ).sort((a, b) => a.step_order - b.step_order);
-
-        let previousNodeId = parentNodeId;
-
-        stepsToShow.forEach((step, stepIndex) => {
-          const stepFields = getStepFields(step.manufacturing_step_id);
-          const stepCardNodeId = `step-details-${step.id}`;
-          
-          stepCardMap.set(step.id, stepCardNodeId);
-          
-          const nodeType = step.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
-          const stepPosition = {
-            x: parentPosition.x + 450 + (stepIndex * 450),
-            y: parentPosition.y
-          };
-          
-          stepCardPositions.set(stepCardNodeId, stepPosition);
-          
-          const stepDetailsNode = {
-            id: stepCardNodeId,
-            type: nodeType,
-            position: stepPosition,
-            data: step.status === 'in_progress' ? {
-              orderStep: step,
-              stepFields: stepFields,
-              order: parentOrder,
-              manufacturingOrders: manufacturingOrders,
-              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-            } : {
-              orderStep: step,
-              stepFields: stepFields,
-              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-            },
-          };
-          
-          nodes.push(stepDetailsNode);
-
-          const edgeColor = step.status === 'in_progress' ? '#3b82f6' : 
-                           step.status === 'completed' ? '#10b981' : '#3b82f6';
-          const edgeLabel = step.status === 'in_progress' ? 'In Progress' :
-                           step.status === 'completed' ? 'Completed' : 'In Progress';
-          
-          const stepEdge = {
-            id: `edge-${previousNodeId}-${stepCardNodeId}`,
-            source: previousNodeId,
-            target: stepCardNodeId,
-            sourceHandle: stepIndex === 0 ? 'order-output' : 'step-details-output',
-            targetHandle: 'step-details-input',
-            type: 'smoothstep',
-            animated: step.status === 'in_progress',
-            style: { 
-              stroke: edgeColor, 
-              strokeWidth: 2, 
-              strokeDasharray: step.status === 'in_progress' ? '5,5' : 'none'
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: edgeColor,
-            },
-            label: edgeLabel,
-            labelStyle: { 
-              fill: edgeColor, 
-              fontWeight: 500,
-              fontSize: '11px'
-            },
-          };
-          
-          edges.push(stepEdge);
-          previousNodeId = stepCardNodeId;
-        });
-
-        const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
-
-        relatedChildOrders.forEach((childOrder, childIndex) => {
-          const childOrderSteps = orderSteps.filter(step => 
-            String(step.manufacturing_order_id) === String(childOrder.id)
-          );
-          const currentChildStep = childOrderSteps.length > 0 
-            ? childOrderSteps
-                .sort((a, b) => b.step_order - a.step_order)
-                .find(step => step.status === 'in_progress') || 
-              childOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
-            : null;
-
-          const childNodeId = `child-${childOrder.id}`;
-          
-          let childPosition = {
-            x: parentPosition.x + 100,
-            y: parentPosition.y + ((childIndex + 1) * 400)
-          };
-          
-          if (childOrder.rework_source_step_id) {
-            const originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
-            if (originatingStepCardId) {
-              const originatingStepPosition = stepCardPositions.get(originatingStepCardId);
-              if (originatingStepPosition) {
-                childPosition = {
-                  x: originatingStepPosition.x + 100,
-                  y: originatingStepPosition.y + 150 + (childIndex * 200)
-                };
-              }
-            }
-          }
-
-          nodes.push({
-            id: childNodeId,
-            type: 'orderNode',
-            position: childPosition,
-            data: {
-              order: childOrder,
-              step: currentChildStep?.manufacturing_steps ? {
-                ...currentChildStep.manufacturing_steps,
-                status: currentChildStep.status,
-                workers: currentChildStep.workers,
-                started_at: currentChildStep.started_at
-              } : null,
-              isParent: false,
-              isChild: true,
-              parentOrderId: parentOrder.id,
-              childLevel: 1,
-              onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-            } as FlowNodeData,
-          });
-
-          let originatingStepCardId = null;
-          
-          if (childOrder.rework_source_step_id) {
-            originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
-          }
-          
+          const originatingStepCardId = stepCardMap.get(childOrder.rework_source_step_id);
           if (originatingStepCardId) {
             const reworkConnectionEdge = {
               id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
@@ -1075,82 +749,91 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             
             edges.push(reworkConnectionEdge);
           }
+        }
 
-          const childStepsToShow = childOrderSteps.filter(step => 
-            step.status === 'in_progress' || step.status === 'completed'
-          ).sort((a, b) => a.step_order - b.step_order);
+        // Add step cards for child order
+        const childStepsToShow = childOrderSteps.filter(step => 
+          step.status === 'in_progress' || step.status === 'completed'
+        ).sort((a, b) => a.step_order - b.step_order);
 
-          let previousChildNodeId = childNodeId;
+        let previousChildNodeId = childNodeId;
 
-          childStepsToShow.forEach((childStep, childStepIndex) => {
-            const stepFields = getStepFields(childStep.manufacturing_step_id);
-            const childStepCardNodeId = `step-details-${childStep.id}`;
-            
-            const nodeType = childStep.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
-            const childStepPosition = {
-              x: childPosition.x + 450 + (childStepIndex * 450),
-              y: childPosition.y
-            };
-            
-            const childStepDetailsNode = {
-              id: childStepCardNodeId,
-              type: nodeType,
-              position: childStepPosition,
-              data: childStep.status === 'in_progress' ? {
-                orderStep: childStep,
-                stepFields: stepFields,
-                order: childOrder,
-                manufacturingOrders: manufacturingOrders,
-                onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-              } : {
-                orderStep: childStep,
-                stepFields: stepFields,
-                onViewDetails: (order: any) => handleViewDetailsRef.current(order)
-              },
-            };
-            
-            nodes.push(childStepDetailsNode);
+        childStepsToShow.forEach((childStep, childStepIndex) => {
+          const stepFields = getStepFields(childStep.manufacturing_step_id);
+          const childStepCardNodeId = `step-details-${childStep.id}`;
+          
+          const nodeType = childStep.status === 'in_progress' ? 'inProgressStepNode' : 'stepDetailsNode';
+          const childStepPosition = {
+            x: childPosition.x + 450 + (childStepIndex * 450),
+            y: childPosition.y
+          };
+          
+          const childStepDetailsNode = {
+            id: childStepCardNodeId,
+            type: nodeType,
+            position: childStepPosition,
+            data: childStep.status === 'in_progress' ? {
+              orderStep: childStep,
+              stepFields: stepFields,
+              order: childOrder,
+              manufacturingOrders: manufacturingOrders,
+              onViewDetails: stableOnViewDetails
+            } : {
+              orderStep: childStep,
+              stepFields: stepFields,
+              onViewDetails: stableOnViewDetails
+            },
+          };
+          
+          nodes.push(childStepDetailsNode);
 
-            const edgeColor = childStep.status === 'in_progress' ? '#3b82f6' : 
-                             childStep.status === 'completed' ? '#10b981' : '#3b82f6';
-            const edgeLabel = childStep.status === 'in_progress' ? 'In Progress' :
-                             childStep.status === 'completed' ? 'Completed' : 'In Progress';
-            
-            const childStepEdge = {
-              id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
-              source: previousChildNodeId,
-              target: childStepCardNodeId,
-              sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
-              targetHandle: 'step-details-input',
-              type: 'smoothstep',
-              animated: childStep.status === 'in_progress',
-              style: { 
-                stroke: edgeColor, 
-                strokeWidth: 2, 
-                strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 'none'
-              },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: edgeColor,
-              },
-              label: edgeLabel,
-              labelStyle: { 
-                fill: edgeColor, 
-                fontWeight: 500,
-                fontSize: '11px'
-              },
-            };
-            
-            edges.push(childStepEdge);
-            previousChildNodeId = childStepCardNodeId;
-          });
+          // Add edge to child step card
+          const edgeColor = childStep.status === 'in_progress' ? '#3b82f6' : 
+                           childStep.status === 'completed' ? '#10b981' : '#3b82f6';
+          const edgeLabel = childStep.status === 'in_progress' ? 'In Progress' :
+                           childStep.status === 'completed' ? 'Completed' : 'In Progress';
+          
+          const childStepEdge = {
+            id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
+            source: previousChildNodeId,
+            target: childStepCardNodeId,
+            sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
+            targetHandle: 'step-details-input',
+            type: 'smoothstep',
+            animated: childStep.status === 'in_progress',
+            style: { 
+              stroke: edgeColor, 
+              strokeWidth: 2, 
+              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 'none'
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: edgeColor,
+            },
+            label: edgeLabel,
+            labelStyle: { 
+              fill: edgeColor, 
+              fontWeight: 500,
+              fontSize: '11px'
+            },
+          };
+          
+          edges.push(childStepEdge);
+          previousChildNodeId = childStepCardNodeId;
         });
       });
-      
-      setNodes(nodes);
-      setEdges(edges);
-    }
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, getStepFields, setNodes, setEdges]);
+    });
+    
+    console.log('✅ Generated', nodes.length, 'nodes and', edges.length, 'edges');
+    return { flowNodes: nodes, flowEdges: edges };
+  }, [manufacturingOrders, orderSteps, manufacturingSteps, getStepFields, stableOnViewDetails]);
+
+  // Update ReactFlow state when data changes
+  React.useEffect(() => {
+    console.log('📊 Updating ReactFlow with new data');
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+  }, [flowNodes, flowEdges, setNodes, setEdges]);
 
   return (
     <div className="h-[800px] w-full border rounded-lg overflow-hidden">
