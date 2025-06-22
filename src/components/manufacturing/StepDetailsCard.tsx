@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +25,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
-  const { manufacturingSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
@@ -122,23 +121,32 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     return null;
   };
 
-  // Check if there's a next step available
+  // Check if there's a next step available - improved logic
   const getNextStepInfo = () => {
-    if (!orderStep.manufacturing_steps) return null;
+    if (!orderStep.manufacturing_steps || !manufacturingSteps.length) return null;
     
     const currentStepOrder = orderStep.manufacturing_steps.step_order;
+    
+    // Find the next step in the configured manufacturing steps
     const nextStep = manufacturingSteps.find(step => 
       step.step_order === currentStepOrder + 1 && 
       step.is_active && 
       step.merchant_id === orderStep.merchant_id
     );
     
+    console.log('Current step order:', currentStepOrder);
+    console.log('Looking for next step with order:', currentStepOrder + 1);
+    console.log('Available manufacturing steps:', manufacturingSteps);
+    console.log('Found next step:', nextStep);
+    
     return nextStep;
   };
 
   // Handle starting the next step - now opens dialog instead of direct creation
   const handleStartNextStep = () => {
-    console.log('Opening start step dialog');
+    const nextStep = getNextStepInfo();
+    console.log('Starting next step:', nextStep);
+    console.log('Order step manufacturing_orders:', orderStep.manufacturing_orders);
     setStartStepDialogOpen(true);
   };
 
@@ -324,7 +332,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         isOpen={startStepDialogOpen}
         onClose={() => setStartStepDialogOpen(false)}
         order={orderStep.manufacturing_orders}
-        step={getNextStepInfo()}
+        step={nextStep}
       />
     </>
   );
