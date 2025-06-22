@@ -15,7 +15,7 @@ import { RotateCcw, AlertTriangle } from 'lucide-react';
 interface CreateReworkOrderDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  originalOrder: ManufacturingOrder;
+  originalOrder: ManufacturingOrder | null;
   sourceStepId?: string;
 }
 
@@ -30,12 +30,17 @@ const CreateReworkOrderDialog = ({
   const { manufacturingSteps } = useManufacturingSteps();
   
   const [formData, setFormData] = useState({
-    rework_quantity: originalOrder.quantity_required,
+    rework_quantity: originalOrder?.quantity_required || 0,
     rework_reason: '',
     rework_source_step_id: sourceStepId || '',
-    priority: originalOrder.priority as 'low' | 'medium' | 'high' | 'urgent',
+    priority: (originalOrder?.priority as 'low' | 'medium' | 'high' | 'urgent') || 'medium',
     special_instructions: ''
   });
+
+  // Don't render if originalOrder is null
+  if (!originalOrder) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
