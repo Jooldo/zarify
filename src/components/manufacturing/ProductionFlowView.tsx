@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,23 +30,56 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
       grouped[step.id] = [];
     });
 
+    console.log('Processing manufacturing orders:', manufacturingOrders.length);
+    console.log('Available order steps:', orderSteps.length);
+
     manufacturingOrders.forEach(order => {
+      console.log(`Processing order ${order.order_number}:`, {
+        id: order.id,
+        isChild: Boolean(order.parent_order_id),
+        assignedToStep: order.assigned_to_step
+      });
+
       const orderOrderSteps = orderSteps.filter(step => 
         String(step.manufacturing_order_id) === String(order.id)
       );
 
+      console.log(`Found ${orderOrderSteps.length} order steps for order ${order.order_number}`);
+
+      // Handle child orders (rework orders) differently
+      if (order.parent_order_id && order.assigned_to_step) {
+        // This is a child/rework order - place it in the assigned step
+        const assignedStep = activeSteps.find(step => step.step_order === order.assigned_to_step);
+        if (assignedStep) {
+          console.log(`Placing child order ${order.order_number} in step ${assignedStep.step_name}`);
+          grouped[assignedStep.id].push({
+            ...order,
+            currentStep: null,
+            stepStatus: 'pending',
+            isChildOrder: true,
+            parentOrderNumber: order.special_instructions?.split(' - ')[0]?.replace('Rework from ', ''),
+            reworkFromStep: order.special_instructions?.split(' - Step ')[1]?.split(' ')[0]
+          });
+        }
+        return; // Skip normal processing for child orders
+      }
+
+      // Normal processing for parent orders
       if (orderOrderSteps.length === 0) {
+        // No steps created yet - place in first step
         if (activeSteps[0]) {
+          console.log(`Placing order ${order.order_number} with no steps in first step`);
           grouped[activeSteps[0].id].push({
             ...order,
             currentStep: null,
             stepStatus: 'not_started',
-            isChildOrder: Boolean(order.parent_order_id),
-            parentOrderNumber: order.parent_order_id ? order.special_instructions?.split(' - ')[0]?.replace('Rework from ', '') : null,
-            reworkFromStep: order.rework_from_step
+            isChildOrder: false,
+            parentOrderNumber: null,
+            reworkFromStep: null
           });
         }
       } else {
+        // Find the latest step for this order
         const sortedSteps = orderOrderSteps.sort((a, b) => b.step_order - a.step_order);
         const latestOrderStep = sortedSteps[0];
 
@@ -58,17 +90,27 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
             grouped[stepId] = [];
           }
           
+          console.log(`Placing order ${order.order_number} in step based on latest order step`);
           grouped[stepId].push({
             ...order,
             currentStep: latestOrderStep,
             stepStatus: latestOrderStep.status,
             assignedWorker: latestOrderStep.workers?.name,
-            isChildOrder: Boolean(order.parent_order_id),
-            parentOrderNumber: order.parent_order_id ? order.special_instructions?.split(' - ')[0]?.replace('Rework from ', '') : null,
-            reworkFromStep: order.rework_from_step
+            isChildOrder: false,
+            parentOrderNumber: null,
+            reworkFromStep: null
           });
         }
       }
+    });
+
+    // Log final grouping
+    Object.keys(grouped).forEach(stepId => {
+      const step = activeSteps.find(s => s.id === stepId);
+      console.log(`Step ${step?.step_name}: ${grouped[stepId].length} orders`);
+      grouped[stepId].forEach(order => {
+        console.log(`  - ${order.order_number} (${order.isChildOrder ? 'child' : 'parent'})`);
+      });
     });
 
     return grouped;
