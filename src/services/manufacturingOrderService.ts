@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CreateManufacturingOrderData, ManufacturingOrder } from '@/types/manufacturingOrders';
 
@@ -84,215 +85,108 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
     }
   }
 
-  // Implement manual retry with unique order number generation
-  let maxAttempts = 10;
-  let attempt = 0;
-  
-  while (attempt < maxAttempts) {
-    attempt++;
-    console.log(`🔄 Attempt ${attempt} to create manufacturing order`);
+  // Use database function to generate unique order number
+  try {
+    let orderNumber: string;
     
-    try {
-      let orderNumber: string;
-      
-      // Generate order number with timestamp suffix to ensure uniqueness
-      if (data.parent_order_id) {
-        // This is a rework order - get the parent order number first
-        const { data: parentOrder, error: parentError } = await supabase
-          .from('manufacturing_orders')
-          .select('order_number')
-          .eq('id', data.parent_order_id)
-          .single();
-        
-        if (parentError) {
-          console.error('Error getting parent order:', parentError);
-          throw parentError;
-        }
-        
-        console.log('🔄 Parent order number:', parentOrder.order_number);
-        
-        // Generate unique rework order number with timestamp
-        const baseOrderNumber = parentOrder.order_number;
-        const timestamp = Date.now();
-        const randomSuffix = Math.floor(Math.random() * 1000);
-        
-        // Get the highest existing rework number for this base order
-        const { data: existingReworkOrders, error: reworkOrdersError } = await supabase
-          .from('manufacturing_orders')
-          .select('order_number')
-          .eq('merchant_id', merchantId)
-          .like('order_number', `${baseOrderNumber}-R%`)
-          .order('order_number', { ascending: false })
-          .limit(1);
-
-        if (reworkOrdersError) {
-          console.error('Error getting existing rework orders:', reworkOrdersError);
-          throw reworkOrdersError;
-        }
-
-        let nextReworkNum = 1;
-        if (existingReworkOrders && existingReworkOrders.length > 0) {
-          const lastReworkOrder = existingReworkOrders[0].order_number;
-          const match = lastReworkOrder.match(new RegExp(`^${baseOrderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-R(\\d+)$`));
-          if (match) {
-            nextReworkNum = parseInt(match[1]) + 1;
-          }
-        }
-        
-        orderNumber = `${baseOrderNumber}-R${nextReworkNum}`;
-        console.log('📝 Generated rework order number:', orderNumber);
-      } else {
-        // Regular order - generate with timestamp and random suffix for uniqueness
-        const timestamp = Date.now();
-        const randomSuffix = Math.floor(Math.random() * 1000);
-        
-        // Get the highest existing order number
-        const { data: existingOrders, error: ordersError } = await supabase
-          .from('manufacturing_orders')
-          .select('order_number')
-          .eq('merchant_id', merchantId)
-          .like('order_number', 'MO%')
-          .not('order_number', 'like', '%-%') // Exclude rework orders
-          .order('order_number', { ascending: false })
-          .limit(1);
-
-        if (ordersError) {
-          console.error('Error getting existing orders:', ordersError);
-          throw ordersError;
-        }
-
-        let nextNum = 1;
-        if (existingOrders && existingOrders.length > 0) {
-          const lastOrder = existingOrders[0].order_number;
-          const match = lastOrder.match(/^MO(\d+)$/);
-          if (match) {
-            nextNum = parseInt(match[1]) + 1;
-          }
-        }
-        
-        orderNumber = 'MO' + String(nextNum).padStart(6, '0');
-        console.log('📝 Generated regular order number:', orderNumber);
-      }
-
-      // Double-check for uniqueness before inserting
-      const { data: duplicateCheck, error: duplicateError } = await supabase
+    if (data.parent_order_id) {
+      // For rework orders, get parent order number first
+      const { data: parentOrder, error: parentError } = await supabase
         .from('manufacturing_orders')
-        .select('id')
-        .eq('order_number', orderNumber)
-        .eq('merchant_id', merchantId)
-        .maybeSingle();
-
-      if (duplicateError) {
-        console.error('Error checking for duplicates:', duplicateError);
-        throw duplicateError;
-      }
-
-      if (duplicateCheck) {
-        console.warn(`⚠️ Order number ${orderNumber} already exists, retrying with new number...`);
-        
-        if (attempt >= maxAttempts) {
-          throw new Error(`Failed to generate unique order number after ${maxAttempts} attempts`);
-        }
-        
-        // Wait before retrying with exponential backoff
-        const waitTime = Math.pow(2, attempt) * 100 + Math.random() * 200;
-        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
-      }
-
-      console.log('🚀 Attempting to create order with unique number:', orderNumber);
-
-      // Try to insert the order
-      const { data: order, error } = await supabase
-        .from('manufacturing_orders')
-        .insert({
-          order_number: orderNumber,
-          product_name: data.product_name,
-          product_config_id: data.product_config_id,
-          quantity_required: data.quantity_required,
-          priority: data.priority,
-          due_date: data.due_date,
-          special_instructions: data.special_instructions,
-          merchant_id: merchantId,
-          parent_order_id: data.parent_order_id,
-          rework_source_step_id: data.rework_source_step_id,
-          rework_quantity: data.rework_quantity,
-          assigned_to_step: data.assigned_to_step,
-          rework_reason: data.rework_reason,
-        })
-        .select()
+        .select('order_number')
+        .eq('id', data.parent_order_id)
         .single();
-
-      if (error) {
-        // Check if it's a duplicate key constraint violation
-        if (error.code === '23505' && error.message.includes('manufacturing_orders_order_number_merchant_key')) {
-          console.warn(`⚠️ Duplicate key constraint violation on attempt ${attempt}, retrying...`);
-          
-          if (attempt >= maxAttempts) {
-            console.error('❌ Max attempts reached, throwing error');
-            throw new Error(`Failed to create manufacturing order after ${maxAttempts} attempts due to order number conflicts`);
-          }
-          
-          // Wait a bit before retrying with exponential backoff
-          const waitTime = Math.pow(2, attempt) * 150 + Math.random() * 300;
-          console.log(`⏳ Waiting ${waitTime}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        } else {
-          // Different error, throw immediately
-          console.error('Error creating manufacturing order:', error);
-          throw error;
-        }
-      }
-
-      console.log('✅ Manufacturing order created successfully:', order);
-
-      // Check stock levels after creation to verify deduction (only for non-rework orders)
-      if (!data.parent_order_id && data.product_config_id) {
-        console.log('🔍 Checking stock levels after order creation...');
-        const { data: materialRequirements } = await supabase
-          .from('product_config_materials')
-          .select('raw_material_id')
-          .eq('product_config_id', data.product_config_id);
-
-        if (materialRequirements && materialRequirements.length > 0) {
-          const { data: updatedMaterials, error: updatedError } = await supabase
-            .from('raw_materials')
-            .select('id, name, current_stock, in_manufacturing')
-            .in('id', materialRequirements.map(req => req.raw_material_id));
-
-          if (updatedError) {
-            console.error('Error fetching updated materials:', updatedError);
-          } else {
-            console.log('📊 Updated material stock levels:', updatedMaterials);
-          }
-        }
-      }
-
-      return order;
-
-    } catch (error: any) {
-      console.error(`❌ Error on attempt ${attempt}:`, error);
       
-      // If it's a constraint violation and we haven't exhausted attempts, continue
-      if (error.code === '23505' && error.message.includes('manufacturing_orders_order_number_merchant_key')) {
-        if (attempt >= maxAttempts) {
-          throw new Error(`Failed to create manufacturing order after ${maxAttempts} attempts due to order number conflicts`);
-        }
-        
-        const waitTime = Math.pow(2, attempt) * 150 + Math.random() * 300;
-        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
+      if (parentError) {
+        console.error('Error getting parent order:', parentError);
+        throw parentError;
       }
       
-      // For any other error, throw immediately
+      console.log('🔄 Parent order number:', parentOrder.order_number);
+      
+      // Use database function to generate rework order number
+      const { data: reworkOrderNumber, error: reworkError } = await supabase
+        .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
+      
+      if (reworkError) {
+        console.error('Error generating rework order number:', reworkError);
+        throw reworkError;
+      }
+      
+      orderNumber = reworkOrderNumber;
+      console.log('📝 Generated rework order number:', orderNumber);
+    } else {
+      // Use database function to generate regular order number
+      const { data: regularOrderNumber, error: regularError } = await supabase
+        .rpc('get_next_manufacturing_order_number');
+      
+      if (regularError) {
+        console.error('Error generating regular order number:', regularError);
+        throw regularError;
+      }
+      
+      orderNumber = regularOrderNumber;
+      console.log('📝 Generated regular order number:', orderNumber);
+    }
+
+    console.log('🚀 Attempting to create order with number:', orderNumber);
+
+    // Create the order
+    const { data: order, error } = await supabase
+      .from('manufacturing_orders')
+      .insert({
+        order_number: orderNumber,
+        product_name: data.product_name,
+        product_config_id: data.product_config_id,
+        quantity_required: data.quantity_required,
+        priority: data.priority,
+        due_date: data.due_date,
+        special_instructions: data.special_instructions,
+        merchant_id: merchantId,
+        parent_order_id: data.parent_order_id,
+        rework_source_step_id: data.rework_source_step_id,
+        rework_quantity: data.rework_quantity,
+        assigned_to_step: data.assigned_to_step,
+        rework_reason: data.rework_reason,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating manufacturing order:', error);
       throw error;
     }
-  }
 
-  throw new Error(`Failed to create manufacturing order after ${maxAttempts} attempts`);
+    console.log('✅ Manufacturing order created successfully:', order);
+
+    // Check stock levels after creation to verify deduction (only for non-rework orders)
+    if (!data.parent_order_id && data.product_config_id) {
+      console.log('🔍 Checking stock levels after order creation...');
+      const { data: materialRequirements } = await supabase
+        .from('product_config_materials')
+        .select('raw_material_id')
+        .eq('product_config_id', data.product_config_id);
+
+      if (materialRequirements && materialRequirements.length > 0) {
+        const { data: updatedMaterials, error: updatedError } = await supabase
+          .from('raw_materials')
+          .select('id, name, current_stock, in_manufacturing')
+          .in('id', materialRequirements.map(req => req.raw_material_id));
+
+        if (updatedError) {
+          console.error('Error fetching updated materials:', updatedError);
+        } else {
+          console.log('📊 Updated material stock levels:', updatedMaterials);
+        }
+      }
+    }
+
+    return order;
+
+  } catch (error: any) {
+    console.error('❌ Error creating manufacturing order:', error);
+    throw error;
+  }
 };
 
 export const updateManufacturingOrder = async (orderId: string, updates: Partial<ManufacturingOrder>) => {
