@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type } from 'lucide-
 import { format } from 'date-fns';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
+import UpdateStepDialog from './UpdateStepDialog';
 
 interface StepDetailsCardProps {
   orderStep: any;
@@ -20,6 +22,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 }) => {
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -116,7 +119,14 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   const assignedWorkerName = getAssignedWorkerName();
 
   const handleCardClick = () => {
-    onViewDetails?.();
+    setUpdateDialogOpen(true);
+  };
+
+  // Create stepData object for UpdateStepDialog
+  const stepData = {
+    stepName: orderStep.manufacturing_steps?.step_name || 'Unknown Step',
+    orderNumber: orderStep.manufacturing_orders?.order_number || 'Unknown Order',
+    stepFields: stepFields
   };
 
   return (
@@ -210,6 +220,16 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Update Step Dialog */}
+      <UpdateStepDialog
+        open={updateDialogOpen}
+        onOpenChange={setUpdateDialogOpen}
+        stepData={stepData}
+        currentOrderStep={orderStep}
+        stepFields={stepFields}
+        previousSteps={[]} // You may need to pass previous steps if required
+      />
     </>
   );
 };
