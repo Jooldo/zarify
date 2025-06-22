@@ -1,6 +1,6 @@
 
 import React from 'react';
-import MultiBranchReactFlowView from './MultiBranchReactFlowView';
+import ManufacturingFlowView from './ManufacturingFlowView';
 
 interface ReactFlowViewProps {
   manufacturingOrders: any[];
@@ -8,7 +8,7 @@ interface ReactFlowViewProps {
 }
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
-  return <MultiBranchReactFlowView manufacturingOrders={manufacturingOrders} onViewDetails={onViewDetails} />;
+  return <ManufacturingFlowView manufacturingOrders={manufacturingOrders} onViewDetails={onViewDetails} />;
 };
 
 export default ReactFlowView;
