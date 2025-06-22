@@ -190,14 +190,17 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Action Buttons */}
+          {/* Always show Action Buttons - they handle their own visibility logic */}
           <StepActionButtons
             isEditMode={isEditMode}
-            onEditClick={() => setIsEditMode(true)}
+            onEditClick={() => {
+              console.log('Edit button clicked, setting edit mode to true');
+              setIsEditMode(true);
+            }}
             onStartNextStep={handleStartNextStep}
           />
 
-          {/* Current Step Configuration */}
+          {/* Current Step Configuration - Toggle between edit and display */}
           {isEditMode ? (
             <StepEditForm
               editFormData={editFormData}
@@ -206,7 +209,10 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
               onFieldValueChange={handleFieldValueChange}
               onStatusChange={handleStatusChange}
               onSave={handleSaveChanges}
-              onCancel={() => setIsEditMode(false)}
+              onCancel={() => {
+                console.log('Cancel button clicked, setting edit mode to false');
+                setIsEditMode(false);
+              }}
             />
           ) : (
             <StepDisplayCard
@@ -215,7 +221,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
             />
           )}
 
-          {/* Previous Steps Data */}
+          {/* Previous Steps Data - Only show when not in edit mode */}
           {!isEditMode && (
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <PreviousStepsDisplay
