@@ -9,7 +9,7 @@ export interface CreateBatchStepData {
 }
 
 export const createBatchFromStep = async (data: CreateBatchStepData) => {
-  console.log('Creating batch from step:', data);
+  console.log('Creating batch from step with data:', data);
   
   try {
     // Get the source order step details
@@ -23,7 +23,12 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
       .eq('id', data.sourceOrderStepId)
       .single();
 
-    if (sourceError) throw sourceError;
+    if (sourceError) {
+      console.error('Error fetching source step:', sourceError);
+      throw sourceError;
+    }
+
+    console.log('Source step found:', sourceStep);
 
     // Get target step details
     const { data: targetStep, error: targetError } = await supabase
@@ -32,7 +37,12 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
       .eq('id', data.targetStepId)
       .single();
 
-    if (targetError) throw targetError;
+    if (targetError) {
+      console.error('Error fetching target step:', targetError);
+      throw targetError;
+    }
+
+    console.log('Target step found:', targetStep);
 
     // Create new order step for the batch
     const { data: newOrderStep, error: createError } = await supabase
@@ -52,22 +62,36 @@ export const createBatchFromStep = async (data: CreateBatchStepData) => {
       `)
       .single();
 
-    if (createError) throw createError;
+    if (createError) {
+      console.error('Error creating new order step:', createError);
+      throw createError;
+    }
+
+    console.log('New order step created:', newOrderStep);
 
     // Store field values for the new step
     if (data.fieldValues && Object.keys(data.fieldValues).length > 0) {
-      const fieldValuesToInsert = Object.entries(data.fieldValues).map(([fieldId, value]) => ({
-        manufacturing_order_step_id: newOrderStep.id,
-        field_id: fieldId,
-        field_value: typeof value === 'string' ? value : JSON.stringify(value),
-        merchant_id: data.merchantId,
-      }));
+      const fieldValuesToInsert = Object.entries(data.fieldValues)
+        .filter(([_, value]) => value !== null && value !== undefined && value !== '')
+        .map(([fieldId, value]) => ({
+          manufacturing_order_step_id: newOrderStep.id,
+          field_id: fieldId,
+          field_value: typeof value === 'string' ? value : JSON.stringify(value),
+          merchant_id: data.merchantId,
+        }));
 
-      const { error: valuesError } = await supabase
-        .from('manufacturing_order_step_values')
-        .insert(fieldValuesToInsert);
+      if (fieldValuesToInsert.length > 0) {
+        console.log('Inserting field values:', fieldValuesToInsert);
+        
+        const { error: valuesError } = await supabase
+          .from('manufacturing_order_step_values')
+          .insert(fieldValuesToInsert);
 
-      if (valuesError) throw valuesError;
+        if (valuesError) {
+          console.error('Error inserting field values:', valuesError);
+          throw valuesError;
+        }
+      }
     }
 
     console.log('Batch step created successfully:', newOrderStep);

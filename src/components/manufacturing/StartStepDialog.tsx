@@ -148,25 +148,38 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       return;
     }
 
+    if (!step || !order) {
+      toast({
+        title: 'Error',
+        description: 'Step or order information not available',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       console.log('Starting step - isBatchCreation:', isBatchCreation);
       console.log('Field values:', fieldValues);
+      console.log('Source step ID:', sourceStepId);
+      console.log('Target step ID:', stepId);
       
       if (isBatchCreation && sourceStepId && stepId) {
         // Create a new batch from source step
         console.log('Creating new batch from source step:', sourceStepId, 'to target step:', stepId);
         await createBatch({
-          sourceOrderStepId: sourceStepId,
-          targetStepId: stepId,
+          sourceOrderStepId: sourceStepId,  // This should be the source order step ID
+          targetStepId: stepId,             // This should be the target manufacturing step ID
           fieldValues,
           merchantId: merchant.id
         });
+        
+        console.log('Batch created successfully');
       } else {
         // Regular step creation/update logic
         let orderStep = orderSteps.find(os => 
-          os.manufacturing_order_id === order!.id && 
+          os.manufacturing_order_id === order.id && 
           os.manufacturing_step_id === stepId
         );
 
@@ -188,7 +201,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           const { data: newOrderStep, error: createError } = await supabase
             .from('manufacturing_order_steps')
             .insert({
-              manufacturing_order_id: order!.id,
+              manufacturing_order_id: order.id,
               manufacturing_step_id: stepId,
               step_order: stepData.step_order,
               status: 'in_progress',
@@ -215,7 +228,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             status: 'in_progress',
             progress: 0,
             stepName: step.step_name,
-            orderNumber: order!.order_number
+            orderNumber: order.order_number
           });
         }
       }
