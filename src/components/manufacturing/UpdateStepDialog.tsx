@@ -105,13 +105,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       return;
     }
 
+    const progressValue = formData.status === 'completed' ? 100 : 
+                         formData.status === 'in_progress' ? 50 : 
+                         formData.status === 'partially_completed' ? 75 : 0;
+
     updateStep({
       stepId: currentOrderStep.id,
       fieldValues: formData.fieldValues,
       status: formData.status,
-      progress: formData.status === 'completed' ? 100 : 
-                formData.status === 'in_progress' ? 50 : 
-                formData.status === 'partially_completed' ? 75 : 0
+      progress: progressValue
     });
 
     onOpenChange(false);

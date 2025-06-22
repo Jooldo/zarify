@@ -26,7 +26,7 @@ interface ReactFlowViewProps {
   onViewDetails: (order: any) => void;
 }
 
-interface FlowNodeData {
+interface FlowNodeData extends Record<string, unknown> {
   order: any;
   step: any;
   isParent: boolean;
