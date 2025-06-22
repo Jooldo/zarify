@@ -463,8 +463,8 @@ const ProductionKanbanView = () => {
           setSelectedStepForChild(null);
         }}
         parentOrder={selectedOrderForChild}
-        currentStep={selectedStepForChild}
-        onSuccess={handleChildOrderSuccess}
+        sourceStepId={selectedStepForChild?.id}
+        sourceStepName={selectedStepForChild?.step_name}
       />
     </div>
   );
