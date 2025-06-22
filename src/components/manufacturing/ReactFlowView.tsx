@@ -26,6 +26,13 @@ import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsCard from './StepDetailsCard';
 import CreateChildOrderDialog from './CreateChildOrderDialog';
 import StartStepDialog from './StartStepDialog';
+import { 
+  optimizeLayoutPositions, 
+  calculateStepCardPosition, 
+  calculateChildOrderPosition,
+  DEFAULT_LAYOUT_CONFIG,
+  LayoutPosition 
+} from '@/utils/reactFlowLayoutUtils';
 
 interface ReactFlowViewProps {
   manufacturingOrders: any[];
@@ -80,6 +87,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
       />
       
+      {/* Add target handle for rework connections */}
       <Handle
         type="target"
         position={Position.Top}
@@ -171,27 +179,25 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   );
 };
 
-// Enhanced Step Details Card with proper handles for branching
-const EnhancedStepDetailsCard: React.FC<{
+// Updated PartiallyCompletedStepCard with refined styling
+const PartiallyCompletedStepCard: React.FC<{ 
   data: {
     orderStep: any;
     stepFields: any[];
     order: any;
     manufacturingOrders: any[];
     onViewDetails: (order: any) => void;
-    canBranch?: boolean;
-    hasNextStep?: boolean;
-    hasReworkOrder?: boolean;
   }
 }> = ({ data }) => {
-  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails, canBranch, hasNextStep, hasReworkOrder } = data;
+  const { orderStep, stepFields, order, manufacturingOrders, onViewDetails } = data;
   const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const { manufacturingSteps } = useManufacturingSteps();
   const [showReworkDialog, setShowReworkDialog] = useState(false);
   const [showStartNextDialog, setShowStartNextDialog] = useState(false);
 
-  const isPartiallyCompleted = orderStep.status === 'partially_completed';
+  // Check if rework order already exists for this order
+  const hasReworkOrder = manufacturingOrders?.some(mo => mo.parent_order_id === order.id);
 
   // Get next step information
   const getNextStepInfo = () => {
@@ -207,70 +213,125 @@ const EnhancedStepDetailsCard: React.FC<{
     return nextStep;
   };
 
+  // Get configured field values for display - only required fields
+  const getConfiguredFieldValues = () => {
+    if (!stepFields || stepFields.length === 0) {
+      return [];
+    }
+    
+    const fieldValues = stepFields
+      .filter(field => field.field_type !== 'worker' && field.is_required)
+      .map(field => {
+        let value = 'Not set';
+        let displayValue = 'Not set';
+        
+        const savedValue = getStepValue(orderStep.id, field.field_id);
+        
+        if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+          value = savedValue;
+          displayValue = savedValue;
+          
+          if (field.field_options?.unit) {
+            displayValue = `${value} ${field.field_options.unit}`;
+          }
+        }
+        
+        return {
+          label: field.field_label,
+          value: displayValue,
+          type: field.field_type,
+          isEmpty: value === 'Not set',
+          fieldName: field.field_name
+        };
+      });
+    
+    return fieldValues;
+  };
+
+  // Get icon for field type
+  const getFieldIcon = (fieldName: string, fieldType: string) => {
+    if (fieldName.toLowerCase().includes('weight')) {
+      return <Weight className="h-3 w-3 text-slate-400" />;
+    }
+    if (fieldName.toLowerCase().includes('quantity')) {
+      return <Hash className="h-3 w-3 text-slate-400" />;
+    }
+    if (fieldType === 'date') {
+      return <Calendar className="h-3 w-3 text-slate-400" />;
+    }
+    if (fieldType === 'number') {
+      return <Hash className="h-3 w-3 text-slate-400" />;
+    }
+    return <Type className="h-3 w-3 text-slate-400" />;
+  };
+
+  // Get assigned worker name
+  const getAssignedWorkerName = () => {
+    if (stepFields) {
+      const workerField = stepFields.find(field => field.field_type === 'worker');
+      if (workerField) {
+        const workerId = getStepValue(orderStep.id, workerField.field_id);
+        if (workerId) {
+          const worker = workers.find(w => w.id === workerId);
+          if (worker) {
+            return worker.name;
+          }
+        }
+      }
+    }
+    
+    if (orderStep.assigned_worker_id) {
+      const worker = workers.find(w => w.id === orderStep.assigned_worker_id);
+      if (worker) {
+        return worker.name;
+      }
+    }
+    
+    if (orderStep.workers?.name) {
+      return orderStep.workers.name;
+    }
+    
+    return null;
+  };
+
+  const handleSetupRework = () => {
+    setShowReworkDialog(true);
+  };
+
+  const handleStartNextStep = () => {
+    setShowStartNextDialog(true);
+  };
+
+  const handleReworkSuccess = () => {
+    setShowReworkDialog(false);
+  };
+
+  const handleCardClick = () => {
+    onViewDetails(order);
+  };
+
   const nextStep = getNextStepInfo();
+  const configuredFieldValues = getConfiguredFieldValues();
+  const assignedWorkerName = getAssignedWorkerName();
 
   return (
     <>
-      {/* Input handle */}
       <Handle
         type="target"
         position={Position.Left}
-        id="step-input"
-        style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
+        id="step-details-input"
+        style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="step-details-output"
+        style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
       />
       
-      {/* Output handles for branching - only show if this step can branch */}
-      {canBranch && isPartiallyCompleted && (
-        <>
-          {/* Next step output handle (top right) */}
-          {hasNextStep && (
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="next-step-output"
-              style={{ 
-                background: '#10b981', 
-                border: 'none', 
-                width: 10, 
-                height: 10, 
-                top: '30%' 
-              }}
-            />
-          )}
-          
-          {/* Rework output handle (bottom right) */}
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="rework-output"
-            style={{ 
-              background: '#f97316', 
-              border: 'none', 
-              width: 10, 
-              height: 10, 
-              top: '70%' 
-            }}
-          />
-        </>
-      )}
-      
-      {/* Standard output handle for non-branching steps */}
-      {!canBranch && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="step-output"
-          style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
-        />
-      )}
-      
       <Card 
-        className={`w-80 shadow-sm border transition-all duration-200 ${
-          isPartiallyCompleted 
-            ? 'border-l-4 border-l-orange-400 bg-gradient-to-r from-orange-50/30 to-white' 
-            : 'bg-white'
-        } hover:shadow-md cursor-pointer`}
-        onClick={() => onViewDetails(order)}
+        className="w-80 border-l-2 border-l-orange-400 bg-gradient-to-r from-orange-50/30 to-white hover:shadow-md transition-shadow cursor-pointer shadow-sm border-orange-100"
+        onClick={handleCardClick}
       >
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
@@ -288,42 +349,15 @@ const EnhancedStepDetailsCard: React.FC<{
                 Step {orderStep.manufacturing_steps?.step_order}
               </p>
             </div>
-            <Badge className={`text-xs ${
-              isPartiallyCompleted 
-                ? 'bg-orange-100 text-orange-700 border border-orange-200' 
-                : orderStep.status === 'completed'
-                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                : 'bg-blue-100 text-blue-700 border border-blue-200'
-            }`}>
-              {orderStep.status === 'partially_completed' ? 'PARTIALLY COMPLETED' :
-               orderStep.status === 'completed' ? 'COMPLETED' :
-               orderStep.status === 'in_progress' ? 'IN PROGRESS' : 
-               orderStep.status?.toUpperCase()}
+            <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-200">
+              PARTIALLY COMPLETED
             </Badge>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {/* Show branching indicator for partially completed steps */}
-          {isPartiallyCompleted && canBranch && (
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-              <div className="text-xs font-medium text-slate-600 mb-2">Parallel Outcomes:</div>
-              <div className="space-y-2">
-                {hasNextStep && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-0.5 bg-green-500 rounded"></div>
-                    <span className="text-green-600 font-medium">Continue to Next Step</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="w-3 h-0.5 bg-orange-500 rounded border-dashed border border-orange-400"></div>
-                  <span className="text-orange-600 font-medium">Setup Rework</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Progress bar for partially completed */}
+          
+          {/* Progress */}
           {orderStep.progress_percentage > 0 && (
             <div>
               <div className="flex justify-between text-xs mb-2">
@@ -340,16 +374,72 @@ const EnhancedStepDetailsCard: React.FC<{
           )}
 
           {/* Worker Assignment */}
-          {orderStep.workers?.name && (
-            <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-blue-50 border border-blue-100">
-              <User className="h-3 w-3 text-blue-500" />
+          {assignedWorkerName && (
+            <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-orange-50 border border-orange-100">
+              <User className="h-3 w-3 text-orange-500" />
               <span className="text-slate-600">Assigned to:</span>
-              <span className="font-medium text-blue-700">{orderStep.workers.name}</span>
+              <span className="font-medium text-orange-700">{assignedWorkerName}</span>
             </div>
           )}
 
+          {/* Configured Field Values */}
+          {configuredFieldValues.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-slate-600">Field Values:</div>
+              {configuredFieldValues.map((field, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded-md border border-orange-100">
+                  {getFieldIcon(field.fieldName, field.type)}
+                  <span className="font-medium text-slate-600">{field.label}:</span>
+                  <span className={`font-medium flex-1 ${
+                    field.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
+                  }`}>
+                    {field.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-2 pt-2 border-t border-orange-100">
+            {!hasReworkOrder && (
+              <Button
+                size="sm"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetupRework();
+                }}
+              >
+                <Wrench className="h-3 w-3 mr-1" />
+                Setup Rework
+              </Button>
+            )}
+            
+            {nextStep && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartNextStep();
+                }}
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Start {nextStep.step_name}
+              </Button>
+            )}
+            
+            {hasReworkOrder && (
+              <div className="text-xs text-slate-500 text-center p-2 bg-orange-50/50 rounded-md">
+                Rework order already created
+              </div>
+            )}
+          </div>
+
           {/* Timestamps */}
-          <div className="space-y-1 text-xs text-slate-500 border-t pt-2">
+          <div className="space-y-1 text-xs border-t pt-2 text-slate-500 border-orange-100">
             {orderStep.started_at && (
               <div className="flex items-center gap-2">
                 <Clock className="h-3 w-3" />
@@ -366,7 +456,7 @@ const EnhancedStepDetailsCard: React.FC<{
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
+      {/* Rework Dialog */}
       {showReworkDialog && orderStep.manufacturing_steps && (
         <CreateChildOrderDialog
           isOpen={showReworkDialog}
@@ -374,10 +464,11 @@ const EnhancedStepDetailsCard: React.FC<{
           parentOrder={order}
           currentStep={orderStep.manufacturing_steps}
           parentOrderStep={orderStep}
-          onSuccess={() => setShowReworkDialog(false)}
+          onSuccess={handleReworkSuccess}
         />
       )}
 
+      {/* Start Next Step Dialog */}
       {showStartNextDialog && nextStep && (
         <StartStepDialog
           isOpen={showStartNextDialog}
@@ -393,33 +484,13 @@ const EnhancedStepDetailsCard: React.FC<{
 const nodeTypes = {
   orderNode: OrderNode,
   stepDetailsNode: ({ data }: { data: any }) => (
-    <EnhancedStepDetailsCard
-      data={{
-        orderStep: data.orderStep,
-        stepFields: data.stepFields,
-        order: data.order,
-        manufacturingOrders: data.manufacturingOrders,
-        onViewDetails: data.onViewDetails,
-        canBranch: data.canBranch,
-        hasNextStep: data.hasNextStep,
-        hasReworkOrder: data.hasReworkOrder
-      }}
+    <StepDetailsCard
+      orderStep={data.orderStep}
+      stepFields={data.stepFields}
+      onViewDetails={data.onViewDetails}
     />
   ),
-  partiallyCompletedStepNode: ({ data }: { data: any }) => (
-    <EnhancedStepDetailsCard
-      data={{
-        orderStep: data.orderStep,
-        stepFields: data.stepFields,
-        order: data.order,
-        manufacturingOrders: data.manufacturingOrders,
-        onViewDetails: data.onViewDetails,
-        canBranch: true,
-        hasNextStep: data.hasNextStep,
-        hasReworkOrder: data.hasReworkOrder
-      }}
-    />
-  ),
+  partiallyCompletedStepNode: PartiallyCompletedStepCard,
 };
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
@@ -433,7 +504,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   );
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
-    console.log('🔄 Generating enhanced parallel branching flow...');
+    console.log('🔄 Generating optimized nodes and edges...');
     console.log('Manufacturing Orders:', manufacturingOrders);
     console.log('Order Steps:', orderSteps);
     
@@ -448,20 +519,48 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     const parentOrders = manufacturingOrders.filter(order => !order.parent_order_id);
     const childOrders = manufacturingOrders.filter(order => order.parent_order_id);
     
-    // Enhanced layout with wider horizontal spacing for parallel branches
-    const HORIZONTAL_SPACING = 500;
-    const VERTICAL_SPACING = 800;
-    const REWORK_VERTICAL_OFFSET = 300;
+    // Create maps for efficient lookups
+    const childOrdersMap = new Map<string, any[]>();
+    const stepCountsMap = new Map<string, number>();
     
-    console.log('👨‍👩‍👧‍👦 Parent Orders:', parentOrders.length);
-    console.log('👶 Child Orders:', childOrders.length);
+    parentOrders.forEach(parentOrder => {
+      const relatedChildOrders = childOrders.filter(child => 
+        String(child.parent_order_id) === String(parentOrder.id)
+      );
+      childOrdersMap.set(parentOrder.id, relatedChildOrders);
+      
+      const parentOrderSteps = orderSteps.filter(step => 
+        String(step.manufacturing_order_id) === String(parentOrder.id) &&
+        (step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed')
+      );
+      stepCountsMap.set(parentOrder.id, parentOrderSteps.length);
+    });
+    
+    // Optimize layout positions with better spacing
+    const optimizedPositions = optimizeLayoutPositions(
+      parentOrders, 
+      childOrdersMap, 
+      stepCountsMap, 
+      {
+        ...DEFAULT_LAYOUT_CONFIG,
+        nodeSpacing: 600, // Increased from 500
+        stepCardSpacing: 450, // Increased from 420
+        childOrderOffset: 400, // Increased from 350
+      }
+    );
+    
+    console.log('📍 Optimized positions:', optimizedPositions);
+
+    // Store step card IDs for rework connections with better key format
+    const stepCardMap = new Map<string, string>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
-      console.log(`\n🏭 Processing parent order: ${parentOrder.order_number}`);
+      console.log(`Processing parent order: ${parentOrder.order_number}`);
       
       const parentOrderSteps = orderSteps.filter(step => 
         String(step.manufacturing_order_id) === String(parentOrder.id)
       );
+      console.log(`All parent order steps for ${parentOrder.order_number}:`, parentOrderSteps);
       
       const currentParentStep = parentOrderSteps.length > 0 
         ? parentOrderSteps
@@ -469,10 +568,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             .find(step => step.status === 'in_progress') || 
           parentOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
         : null;
+      
+      console.log(`Current parent step for ${parentOrder.order_number}:`, currentParentStep);
 
-      // Position parent order node
       const parentNodeId = `parent-${parentOrder.id}`;
-      const parentPosition = { x: 50, y: 50 + (parentIndex * VERTICAL_SPACING) };
+      const parentPosition = optimizedPositions.get(parentNodeId) || { x: 50, y: 50 + (parentIndex * 600) };
       
       nodes.push({
         id: parentNodeId,
@@ -493,81 +593,63 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         } as FlowNodeData,
       });
 
-      // Create step detail cards with enhanced branching support
       const stepsToShow = parentOrderSteps.filter(step => 
         step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
       ).sort((a, b) => a.step_order - b.step_order);
       
-      console.log(`📋 Steps to show for ${parentOrder.order_number}:`, stepsToShow.length);
+      console.log(`Steps to show for ${parentOrder.order_number}:`, stepsToShow);
 
       let previousNodeId = parentNodeId;
 
       stepsToShow.forEach((step, stepIndex) => {
+        console.log(`🎯 Creating step details card for parent order ${parentOrder.order_number}, step ${step.step_order}`);
+        
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        const stepCardPosition = {
-          x: parentPosition.x + 400 + (stepIndex * HORIZONTAL_SPACING),
+        // Store step card mapping using parent order ID and step order
+        const stepKey = `${parentOrder.id}-${step.manufacturing_steps?.step_order || step.step_order}`;
+        stepCardMap.set(stepKey, stepCardNodeId);
+        
+        console.log(`🗺️ Storing step mapping: ${stepKey} -> ${stepCardNodeId}`);
+        
+        const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+        const stepPosition = {
+          x: parentPosition.x + 450 + (stepIndex * 450), // Increased spacing
           y: parentPosition.y
         };
         
-        // Check if this step has branching capability
-        const isPartiallyCompleted = step.status === 'partially_completed';
-        const currentStepOrder = step.manufacturing_steps?.step_order;
-        
-        // Check for next step
-        const nextStep = manufacturingSteps.find(s => 
-          s.step_order === currentStepOrder + 1 && 
-          s.is_active && 
-          s.merchant_id === step.merchant_id
-        );
-        
-        const nextOrderStep = nextStep ? parentOrderSteps.find(os => 
-          String(os.manufacturing_step_id) === String(nextStep.id)
-        ) : null;
-        
-        const hasNextStep = nextOrderStep && (nextOrderStep.status === 'in_progress' || nextOrderStep.status === 'completed');
-        
-        // Check for rework order
-        const relatedReworkOrder = childOrders.find(child => 
-          String(child.parent_order_id) === String(parentOrder.id) &&
-          child.rework_from_step === currentStepOrder
-        );
-        
-        const hasReworkOrder = !!relatedReworkOrder;
-        
-        console.log(`📋 Step ${step.manufacturing_steps?.step_name}: partially completed = ${isPartiallyCompleted}, has next = ${hasNextStep}, has rework = ${hasReworkOrder}`);
-        
         const stepDetailsNode = {
           id: stepCardNodeId,
-          type: isPartiallyCompleted ? 'partiallyCompletedStepNode' : 'stepDetailsNode',
-          position: stepCardPosition,
-          data: {
+          type: nodeType,
+          position: stepPosition,
+          data: step.status === 'partially_completed' ? {
             orderStep: step,
             stepFields: stepFields,
             order: parentOrder,
             manufacturingOrders: manufacturingOrders,
-            onViewDetails: () => onViewDetails(parentOrder),
-            canBranch: isPartiallyCompleted,
-            hasNextStep: hasNextStep,
-            hasReworkOrder: hasReworkOrder
+            onViewDetails: () => onViewDetails(parentOrder)
+          } : {
+            orderStep: step,
+            stepFields: stepFields,
+            onViewDetails: () => onViewDetails(parentOrder)
           },
         };
         
+        console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        // Create standard connection from previous node
         const edgeColor = step.status === 'partially_completed' ? '#f97316' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
                          step.status === 'completed' ? 'Completed' : 'In Progress';
         
-        edges.push({
+        const stepEdge = {
           id: `edge-${previousNodeId}-${stepCardNodeId}`,
           source: previousNodeId,
           target: stepCardNodeId,
-          sourceHandle: stepIndex === 0 ? 'order-output' : 'step-output',
-          targetHandle: 'step-input',
+          sourceHandle: stepIndex === 0 ? 'order-output' : 'step-details-output',
+          targetHandle: 'step-details-input',
           type: 'smoothstep',
           animated: step.status === 'in_progress' || step.status === 'partially_completed',
           style: { 
@@ -586,197 +668,190 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             fontWeight: 500,
             fontSize: '11px'
           },
+        };
+        
+        console.log(`Adding step edge from ${previousNodeId} to ${stepCardNodeId}:`, stepEdge);
+        edges.push(stepEdge);
+
+        previousNodeId = stepCardNodeId;
+      });
+
+      const relatedChildOrders = childOrdersMap.get(parentOrder.id) || [];
+
+      relatedChildOrders.forEach((childOrder, childIndex) => {
+        console.log(`🔄 Processing child order: ${childOrder.order_number}`);
+        console.log(`Child order rework_from_step: ${childOrder.rework_from_step}`);
+        
+        const childOrderSteps = orderSteps.filter(step => 
+          String(step.manufacturing_order_id) === String(childOrder.id)
+        );
+        const currentChildStep = childOrderSteps.length > 0 
+          ? childOrderSteps
+              .sort((a, b) => b.step_order - a.step_order)
+              .find(step => step.status === 'in_progress') || 
+            childOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
+          : null;
+
+        console.log(`Current child step for ${childOrder.order_number}:`, currentChildStep);
+
+        const childNodeId = `child-${childOrder.id}`;
+        const childPosition = {
+          x: parentPosition.x + 100,
+          y: parentPosition.y + ((childIndex + 1) * 400) // Increased spacing
+        };
+
+        nodes.push({
+          id: childNodeId,
+          type: 'orderNode',
+          position: childPosition,
+          data: {
+            order: childOrder,
+            step: currentChildStep?.manufacturing_steps ? {
+              ...currentChildStep.manufacturing_steps,
+              status: currentChildStep.status,
+              workers: currentChildStep.workers,
+              started_at: currentChildStep.started_at
+            } : null,
+            isParent: false,
+            isChild: true,
+            parentOrderId: parentOrder.id,
+            childLevel: 1,
+            onViewDetails
+          } as FlowNodeData,
         });
 
-        // PARALLEL BRANCHING LOGIC for partially completed steps
-        if (isPartiallyCompleted) {
-          console.log(`🔀 Creating parallel branches for step ${step.manufacturing_steps?.step_name}`);
+        // Connect rework card to originating step card
+        const originatingStepOrder = childOrder.rework_from_step;
+        if (originatingStepOrder) {
+          console.log(`🔗 Connecting rework order ${childOrder.order_number} to originating step ${originatingStepOrder} from parent order ${parentOrder.id}`);
           
-          // 1. Create next step branch (green edge)
-          if (hasNextStep && nextOrderStep) {
-            const nextStepNodeId = `step-details-${nextOrderStep.id}`;
-            
-            console.log(`✅ Creating next step branch to ${nextStepNodeId}`);
-            
-            edges.push({
-              id: `next-step-${stepCardNodeId}-${nextStepNodeId}`,
-              source: stepCardNodeId,
-              target: nextStepNodeId,
-              sourceHandle: 'next-step-output',
-              targetHandle: 'step-input',
-              type: 'smoothstep',
-              animated: false,
-              style: { 
-                stroke: '#10b981', 
-                strokeWidth: 3,
-                strokeDasharray: 'none'
-              },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: '#10b981',
-              },
-              label: 'Next Step',
-              labelStyle: { 
-                fill: '#10b981', 
-                fontWeight: 600,
-                fontSize: '12px'
-              },
-              labelBgStyle: {
-                fill: 'white',
-                fillOpacity: 0.9
-              }
-            });
-          }
-
-          // 2. Create rework branch (orange edge)
-          if (hasReworkOrder && relatedReworkOrder) {
-            console.log(`🔧 Creating rework branch for order ${relatedReworkOrder.order_number}`);
-            
-            // Position rework order below the current step
-            const reworkPosition = {
-              x: stepCardPosition.x + 50,
-              y: stepCardPosition.y + REWORK_VERTICAL_OFFSET
-            };
-
-            const reworkNodeId = `child-${relatedReworkOrder.id}`;
-            const reworkOrderSteps = orderSteps.filter(s => 
-              String(s.manufacturing_order_id) === String(relatedReworkOrder.id)
-            );
-            
-            const currentReworkStep = reworkOrderSteps.length > 0 
-              ? reworkOrderSteps
-                  .sort((a, b) => b.step_order - a.step_order)
-                  .find(s => s.status === 'in_progress') || 
-                reworkOrderSteps.sort((a, b) => b.step_order - a.step_order)[0]
-              : null;
-
-            // Add rework order node
-            nodes.push({
-              id: reworkNodeId,
-              type: 'orderNode',
-              position: reworkPosition,
-              data: {
-                order: relatedReworkOrder,
-                step: currentReworkStep?.manufacturing_steps ? {
-                  ...currentReworkStep.manufacturing_steps,
-                  status: currentReworkStep.status,
-                  workers: currentReworkStep.workers,
-                  started_at: currentReworkStep.started_at
-                } : null,
-                isParent: false,
-                isChild: true,
-                parentOrderId: parentOrder.id,
-                childLevel: 1,
-                onViewDetails
-              } as FlowNodeData,
-            });
-
-            // Create rework connection edge
-            edges.push({
-              id: `rework-branch-${stepCardNodeId}-${reworkNodeId}`,
-              source: stepCardNodeId,
-              target: reworkNodeId,
-              sourceHandle: 'rework-output',
+          const stepKey = `${parentOrder.id}-${originatingStepOrder}`;
+          const originatingStepCardId = stepCardMap.get(stepKey);
+          
+          console.log(`Step key: ${stepKey}, found step card ID: ${originatingStepCardId}`);
+          console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+          
+          if (originatingStepCardId) {
+            const reworkConnectionEdge = {
+              id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
+              source: originatingStepCardId,
+              target: childNodeId,
+              sourceHandle: 'step-details-output',
               targetHandle: 'order-rework-input',
               type: 'smoothstep',
               animated: true,
               style: { 
-                stroke: '#f59e0b', 
+                stroke: '#f97316', 
                 strokeWidth: 3, 
-                strokeDasharray: '12,6'
+                strokeDasharray: '10,5'
               },
               markerEnd: {
                 type: MarkerType.ArrowClosed,
-                color: '#f59e0b',
+                color: '#f97316',
               },
-              label: 'Rework Branch',
+              label: 'Rework Origin',
               labelStyle: { 
-                fill: '#f59e0b', 
+                fill: '#f97316', 
                 fontWeight: 600,
-                fontSize: '12px'
+                fontSize: '12px',
+                backgroundColor: 'white',
+                padding: '4px 8px',
+                borderRadius: '4px'
               },
               labelBgStyle: {
                 fill: 'white',
-                fillOpacity: 0.9
+                fillOpacity: 0.95,
+                rx: 4,
+                ry: 4
               }
-            });
-
-            // Add rework step cards
-            const reworkStepsToShow = reworkOrderSteps.filter(s => 
-              s.status === 'in_progress' || s.status === 'completed' || s.status === 'partially_completed'
-            ).sort((a, b) => a.step_order - b.step_order);
-
-            let previousReworkNodeId = reworkNodeId;
-
-            reworkStepsToShow.forEach((reworkStep, reworkStepIndex) => {
-              const reworkStepFields = getStepFields(reworkStep.manufacturing_step_id);
-              const reworkStepCardNodeId = `step-details-${reworkStep.id}`;
-              
-              const reworkStepPosition = {
-                x: reworkPosition.x + 400 + (reworkStepIndex * HORIZONTAL_SPACING),
-                y: reworkPosition.y
-              };
-              
-              const reworkStepDetailsNode = {
-                id: reworkStepCardNodeId,
-                type: reworkStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode',
-                position: reworkStepPosition,
-                data: {
-                  orderStep: reworkStep,
-                  stepFields: reworkStepFields,
-                  order: relatedReworkOrder,
-                  manufacturingOrders: manufacturingOrders,
-                  onViewDetails: () => onViewDetails(relatedReworkOrder),
-                  canBranch: reworkStep.status === 'partially_completed',
-                  hasNextStep: false, // For simplicity, not implementing nested rework branching
-                  hasReworkOrder: false
-                },
-              };
-              
-              nodes.push(reworkStepDetailsNode);
-
-              const reworkEdgeColor = reworkStep.status === 'partially_completed' ? '#f97316' : 
-                                     reworkStep.status === 'completed' ? '#10b981' : '#3b82f6';
-              const reworkEdgeLabel = reworkStep.status === 'partially_completed' ? 'Partially Completed' :
-                                     reworkStep.status === 'completed' ? 'Completed' : 'In Progress';
-              
-              edges.push({
-                id: `rework-edge-${previousReworkNodeId}-${reworkStepCardNodeId}`,
-                source: previousReworkNodeId,
-                target: reworkStepCardNodeId,
-                sourceHandle: reworkStepIndex === 0 ? 'order-output' : 'step-output',
-                targetHandle: 'step-input',
-                type: 'smoothstep',
-                animated: reworkStep.status === 'in_progress' || reworkStep.status === 'partially_completed',
-                style: { 
-                  stroke: reworkEdgeColor, 
-                  strokeWidth: 2, 
-                  strokeDasharray: reworkStep.status === 'in_progress' ? '5,5' : 
-                                 reworkStep.status === 'partially_completed' ? '8,4,2,4' : 'none'
-                },
-                markerEnd: {
-                  type: MarkerType.ArrowClosed,
-                  color: reworkEdgeColor,
-                },
-                label: reworkEdgeLabel,
-                labelStyle: { 
-                  fill: reworkEdgeColor, 
-                  fontWeight: 500,
-                  fontSize: '11px'
-                },
-              });
-
-              previousReworkNodeId = reworkStepCardNodeId;
-            });
+            };
+            
+            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}`);
+            edges.push(reworkConnectionEdge);
+          } else {
+            console.log(`❌ Could not find originating step card for step order ${originatingStepOrder} in parent order ${parentOrder.id}`);
           }
         }
 
-        previousNodeId = stepCardNodeId;
+        const childStepsToShow = childOrderSteps.filter(step => 
+          step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
+        ).sort((a, b) => a.step_order - b.step_order);
+
+        let previousChildNodeId = childNodeId;
+
+        childStepsToShow.forEach((childStep, childStepIndex) => {
+          console.log(`🎯 Creating step details card for child order ${childOrder.order_number}, step ${childStep.step_order}`);
+          
+          const stepFields = getStepFields(childStep.manufacturing_step_id);
+          const childStepCardNodeId = `step-details-${childStep.id}`;
+          
+          const nodeType = childStep.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
+          const childStepPosition = {
+            x: childPosition.x + 450 + (childStepIndex * 450), // Increased spacing
+            y: childPosition.y
+          };
+          
+          const childStepDetailsNode = {
+            id: childStepCardNodeId,
+            type: nodeType,
+            position: childStepPosition,
+            data: childStep.status === 'partially_completed' ? {
+              orderStep: childStep,
+              stepFields: stepFields,
+              order: childOrder,
+              manufacturingOrders: manufacturingOrders,
+              onViewDetails: () => onViewDetails(childOrder)
+            } : {
+              orderStep: childStep,
+              stepFields: stepFields,
+              onViewDetails: () => onViewDetails(childOrder)
+            },
+          };
+          
+          console.log(`Adding child step details node:`, childStepDetailsNode);
+          nodes.push(childStepDetailsNode);
+
+          const edgeColor = childStep.status === 'partially_completed' ? '#f97316' : 
+                           childStep.status === 'completed' ? '#10b981' : '#3b82f6';
+          const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
+                           childStep.status === 'completed' ? 'Completed' : 'In Progress';
+          
+          const childStepEdge = {
+            id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
+            source: previousChildNodeId,
+            target: childStepCardNodeId,
+            sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
+            targetHandle: 'step-details-input',
+            type: 'smoothstep',
+            animated: childStep.status === 'in_progress' || childStep.status === 'partially_completed',
+            style: { 
+              stroke: edgeColor, 
+              strokeWidth: 2, 
+              strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 
+                             childStep.status === 'partially_completed' ? '8,4,2,4' : 'none'
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: edgeColor,
+            },
+            label: edgeLabel,
+            labelStyle: { 
+              fill: edgeColor, 
+              fontWeight: 500,
+              fontSize: '11px'
+            },
+          };
+          
+          console.log(`Adding child step edge from ${previousChildNodeId} to ${childStepCardNodeId}:`, childStepEdge);
+          edges.push(childStepEdge);
+
+          previousChildNodeId = childStepCardNodeId;
+        });
       });
     });
 
-    console.log('🎯 Enhanced parallel flow - Nodes:', nodes.length, 'Edges:', edges.length);
-    console.log('🔀 Parallel branches created:', edges.filter(e => e.id.includes('next-step') || e.id.includes('rework-branch')).length);
+    console.log('🔥 Final optimized nodes:', nodes);
+    console.log('🔥 Final optimized edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
   }, [
@@ -787,9 +862,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
   ]);
 
   React.useEffect(() => {
-    console.log('📊 Setting enhanced parallel flow nodes and edges');
-    console.log('Nodes to set:', generatedNodes.length);
-    console.log('Edges to set:', generatedEdges.length);
+    console.log('📊 Setting optimized nodes and edges');
+    console.log('Setting nodes:', generatedNodes.length);
+    console.log('Setting edges:', generatedEdges.length);
     
     setNodes(generatedNodes);
     setEdges(generatedEdges);
