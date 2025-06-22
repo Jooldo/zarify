@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -505,20 +506,36 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     handleViewDetailsRef.current = onViewDetails;
   }, [onViewDetails]);
 
-  // Create stable data fingerprint for dependencies - FIXED VERSION
-  const dataFingerprint = useMemo(() => {
-    // Process all data inside useMemo, not in dependencies
-    const ordersKey = manufacturingOrders?.map(o => `${o.id}-${o.status}-${o.parent_order_id || 'none'}-${o.rework_source_step_id || 'none'}`).sort().join('|') || '';
-    const stepsKey = orderSteps?.map(s => `${s.id}-${s.manufacturing_order_id}-${s.status}-${s.step_order}`).sort().join('|') || '';
-    const manufacturingStepsKey = `${manufacturingSteps.length}`;
+  // Use a more stable approach - stringify the actual data for comparison
+  const stableDataKey = useMemo(() => {
+    console.log('🔍 Creating stable data key...');
     
-    return `${ordersKey}::${stepsKey}::${manufacturingStepsKey}`;
-  }, [
-    // Only pass the raw arrays, not processed data
-    manufacturingOrders,
-    orderSteps,
-    manufacturingSteps
-  ]);
+    // Create a stable key based on the actual data content, not references
+    const ordersData = manufacturingOrders ? JSON.stringify(
+      manufacturingOrders.map(o => ({
+        id: o.id,
+        status: o.status,
+        parent_order_id: o.parent_order_id,
+        rework_source_step_id: o.rework_source_step_id,
+        order_number: o.order_number
+      })).sort((a, b) => a.id.localeCompare(b.id))
+    ) : '';
+    
+    const stepsData = orderSteps ? JSON.stringify(
+      orderSteps.map(s => ({
+        id: s.id,
+        manufacturing_order_id: s.manufacturing_order_id,
+        status: s.status,
+        step_order: s.step_order
+      })).sort((a, b) => a.id.localeCompare(b.id))
+    ) : '';
+    
+    const manufacturingStepsData = JSON.stringify(manufacturingSteps.length);
+    
+    const key = `${ordersData}::${stepsData}::${manufacturingStepsData}`;
+    console.log('🔑 Stable data key created');
+    return key;
+  }, [manufacturingOrders, orderSteps, manufacturingSteps]);
 
   const { generatedNodes, generatedEdges } = useMemo(() => {
     console.log('🔄 Generating optimized nodes and edges...');
@@ -892,7 +909,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     console.log('🔥 Final optimized edges:', edges);
     
     return { generatedNodes: nodes, generatedEdges: edges };
-  }, [dataFingerprint, getStepFields]);
+  }, [stableDataKey, getStepFields]);
 
   React.useEffect(() => {
     console.log('📊 Setting optimized nodes and edges');
