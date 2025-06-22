@@ -143,7 +143,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!parentOrder || !currentStep) {
+    if (!parentOrder || !parentOrderStep) {
       toast({
         title: 'Error',
         description: 'Missing parent order or current step information',
@@ -170,7 +170,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
     setIsCreating(true);
 
     try {
-      // Create rework order with proper step tracking
+      // Create rework order with proper step tracking - use parentOrderStep.id instead of currentStep.id
       const { data: childOrder, error: orderError } = await supabase
         .from('manufacturing_orders')
         .insert({
@@ -183,7 +183,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
           merchant_id: parentOrder.merchant_id,
           parent_order_id: parentOrder.id,
-          rework_source_step_id: currentStep.id, // Store the actual step ID for proper tracking
+          rework_source_step_id: parentOrderStep.id, // Use the manufacturing_order_steps ID, not manufacturing_steps ID
           rework_reason: reworkReason,
           assigned_to_step: assignedToStep
         })
@@ -197,7 +197,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
 
       console.log('✅ Created rework order with proper step tracking:', {
         childOrderId: childOrder.id,
-        rework_source_step_id: currentStep.id,
+        rework_source_step_id: parentOrderStep.id,
         assigned_to_step: assignedToStep
       });
 
