@@ -53,6 +53,15 @@ const CreateChildOrderDialog = ({
   const selectedStep = manufacturingSteps.find(step => step.id === selectedStepId);
   const stepFields = selectedStepId ? getStepFields(selectedStepId) : [];
 
+  // Get current step fields and their values for display
+  const currentStepFields = currentStep ? getStepFields(currentStep.id) : [];
+  const getCurrentStepFieldValue = (fieldId: string) => {
+    if (parentOrderStep) {
+      return getStepValue(parentOrderStep.id, fieldId);
+    }
+    return null;
+  };
+
   // Get worker name from worker ID
   const getWorkerName = (workerId: string) => {
     const worker = workers.find(w => w.id === workerId);
@@ -296,6 +305,49 @@ const CreateChildOrderDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Current Step Information */}
+          <div className="space-y-3 border rounded-lg p-4 bg-amber-50 border-amber-200">
+            <h4 className="font-semibold text-amber-800">Current Step Information</h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-amber-700">Step:</span>
+                <span className="text-sm text-amber-900">{currentStep.step_name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-amber-700">Order:</span>
+                <span className="text-sm text-amber-900">#{currentStep.step_order}</span>
+              </div>
+              
+              {/* Current Step Field Values */}
+              {currentStepFields.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-amber-200">
+                  <span className="text-sm font-medium text-amber-700">Configured Fields:</span>
+                  {currentStepFields.map(field => {
+                    const fieldValue = getCurrentStepFieldValue(field.field_id);
+                    let displayValue = fieldValue || 'Not set';
+                    
+                    // Format worker field value
+                    if (field.field_type === 'worker' && fieldValue) {
+                      displayValue = getWorkerName(fieldValue);
+                    }
+                    
+                    return (
+                      <div key={field.field_id} className="flex items-center justify-between text-xs">
+                        <span className="text-amber-600">
+                          {field.field_label}
+                          {field.field_options?.unit && ` (${field.field_options.unit})`}:
+                        </span>
+                        <span className={`font-medium ${fieldValue ? 'text-amber-900' : 'text-amber-500 italic'}`}>
+                          {displayValue}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="step-select">Reassign to Step</Label>
             <Select value={selectedStepId} onValueChange={handleStepSelection}>
@@ -322,7 +374,7 @@ const CreateChildOrderDialog = ({
             )}
           </div>
 
-          {/* Step Configuration Fields - Only show when step is selected */}
+          {/* Step Configuration Fields */}
           {selectedStepId && stepFields.length > 0 && (
             <div className="space-y-3 border-t pt-4">
               <Label className="text-base font-semibold">Step Configuration Fields</Label>
