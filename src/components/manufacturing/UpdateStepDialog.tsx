@@ -70,7 +70,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       });
       
       setInitialized(true);
-      setShowReworkCTA(currentOrderStep.status === 'partially_completed');
+      setShowReworkCTA(currentOrderStep.status === 'in_progress');
     }
   }, [open, currentOrderStep?.id, stepFields, getStepValue, initialized]);
 
@@ -105,8 +105,10 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       status: newStatus
     }));
     
-    // Hide rework CTA if status changes away from partially_completed
-    if (newStatus !== 'partially_completed') {
+    // Show rework CTA if status is in_progress
+    if (newStatus === 'in_progress') {
+      setShowReworkCTA(true);
+    } else {
       setShowReworkCTA(false);
     }
   };
@@ -118,8 +120,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
     await updateStepData();
     
-    // Show rework CTA if status is partially_completed
-    if (formData.status === 'partially_completed') {
+    // Show rework CTA if status is in_progress
+    if (formData.status === 'in_progress') {
       setShowReworkCTA(true);
     } else {
       onOpenChange(false);
@@ -298,9 +300,9 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       <SelectItem value="partially_completed">Partially Completed (QC Failed)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {formData.status === 'partially_completed' && (
-                    <p className="text-sm text-amber-600 mt-1">
-                      Use this when some quantity fails QC and needs rework
+                  {formData.status === 'in_progress' && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      Step is currently in progress - rework functionality available
                     </p>
                   )}
                 </div>
@@ -328,18 +330,18 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
             {/* Rework CTA */}
             {showReworkCTA && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <h4 className="font-semibold text-amber-800">Quality Control Failed</h4>
+                  <AlertTriangle className="h-5 w-5 text-blue-600" />
+                  <h4 className="font-semibold text-blue-800">Step In Progress</h4>
                 </div>
-                <p className="text-sm text-amber-700">
-                  This step has been marked as partially completed due to QC failure. 
-                  You can now create a rework order to process the failed quantity.
+                <p className="text-sm text-blue-700">
+                  This step is currently in progress. You can create a rework order if needed 
+                  to handle any quality issues or corrections.
                 </p>
                 <Button 
                   onClick={handleSetupRework}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Setup Rework Order
                 </Button>
