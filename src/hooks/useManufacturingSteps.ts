@@ -36,7 +36,11 @@ export const useManufacturingSteps = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_steps')
-        .select('*, manufacturing_steps(*), workers(name)');
+        .select(`
+          *,
+          manufacturing_steps(*),
+          workers(name)
+        `);
       if (error) {
         console.error("Error fetching order steps with manufacturing steps", error);
         throw error;
