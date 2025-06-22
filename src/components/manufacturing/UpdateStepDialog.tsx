@@ -454,8 +454,9 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           isOpen={showReworkDialog}
           onClose={() => setShowReworkDialog(false)}
           parentOrder={manufacturingOrder}
-          sourceStepId={currentOrderStep.id}
-          sourceStepName={currentOrderStep.manufacturing_steps?.step_name}
+          currentStep={currentOrderStep.manufacturing_steps}
+          parentOrderStep={currentOrderStep}
+          onSuccess={handleReworkSuccess}
         />
       )}
     </>

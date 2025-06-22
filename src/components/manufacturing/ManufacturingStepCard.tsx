@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,15 +100,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     step.manufacturing_steps?.step_order === data.stepOrder
   );
 
-  console.log('=== STEP CARD DEBUG ===');
-  console.log('Step Name:', data.stepName);
-  console.log('Step Order:', data.stepOrder);
-  console.log('Order ID:', data.orderId);
-  console.log('Current Order Step Found:', !!currentOrderStep);
-  console.log('Current Order Step ID:', currentOrderStep?.id);
-  console.log('Is Manufacturing Order Card:', data.stepName === 'Manufacturing Order');
-  console.log('=======================');
-
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
@@ -166,7 +158,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         const isImmediateNext = stepOrder === nextStepOrder;
         
         if (isImmediateNext) {
-          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
+          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
         }
         
         return isImmediateNext;
@@ -278,85 +270,26 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
-  // NUCLEAR OPTION: Complete event isolation for manufacturing steps
-  const handleCardClick = (e: React.MouseEvent) => {
-    console.log('🚨🚨🚨 CARD CLICK - NUCLEAR EVENT STOPPING');
-    console.log('Target:', (e.target as HTMLElement).tagName);
-    console.log('Current Target:', (e.currentTarget as HTMLElement).tagName);
-    console.log('Step Name:', data.stepName, 'Step Order:', data.stepOrder);
-    
-    // NUCLEAR OPTION - Stop everything immediately
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    if (e.nativeEvent) {
-      e.nativeEvent.preventDefault();
-      e.nativeEvent.stopPropagation();
-      if (e.nativeEvent.stopImmediatePropagation) {
-        e.nativeEvent.stopImmediatePropagation();
-      }
-    }
-    
-    // Return early if clicking on any interactive element
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.tagName === 'BUTTON') {
-      console.log('🚨 Interactive element clicked - no action');
-      return false;
-    }
-    
-    // FOR MANUFACTURING STEPS ONLY: Open StepDetailsDialog
-    if (data.stepOrder > 0 && currentOrderStep) {
-      console.log('🚨 MANUFACTURING STEP - Opening StepDetailsDialog');
-      console.log('🚨 Current Order Step ID:', currentOrderStep.id);
-      setDetailsDialogOpen(true);
-      return false; // Prevent any further handling
-    }
-    
-    // FOR MANUFACTURING ORDER CARDS: Call parent only if explicitly needed
-    if (data.stepName === 'Manufacturing Order' && onStepClick) {
-      console.log('🚨 MANUFACTURING ORDER - Calling parent handler');
-      onStepClick(data);
-      return false;
-    }
-    
-    console.log('🚨 NO ACTION - but all propagation stopped');
-    return false;
-  };
+  const cardClassName = data.isJhalaiStep 
+    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
+    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
 
   const handleAddStep = (e: React.MouseEvent) => {
-    console.log('🚨 ADD STEP BUTTON CLICKED');
     e.stopPropagation();
-    e.stopImmediatePropagation();
-    e.preventDefault();
     onAddStep?.(data);
-    return false;
+  };
+
+  const handleCardClick = () => {
+    // Open details dialog instead of calling onStepClick
+    setDetailsDialogOpen(true);
   };
 
   const assignedWorkerName = getAssignedWorkerName();
   const configuredFieldValues = getConfiguredFieldValues();
 
-  const cardClassName = data.isJhalaiStep 
-    ? "border-blue-500 bg-blue-50 shadow-lg min-w-[280px] cursor-pointer hover:shadow-xl transition-shadow" 
-    : "border-border bg-card shadow-md min-w-[280px] cursor-pointer hover:shadow-lg transition-shadow";
-
   return (
     <>
-      <Card 
-        className={cardClassName} 
-        onClick={handleCardClick}
-        onMouseDown={(e) => {
-          console.log('🚨 MOUSE DOWN - Also stopping propagation');
-          e.stopPropagation();
-        }}
-        onMouseUp={(e) => {
-          console.log('🚨 MOUSE UP - Also stopping propagation');
-          e.stopPropagation();
-        }}
-        style={{ 
-          zIndex: 10,
-          position: 'relative'
-        }}
-      >
+      <Card className={cardClassName} onClick={handleCardClick}>
         <Handle type="target" position={Position.Left} className="!bg-gray-400" />
         
         <CardHeader className="pb-2 p-4">
@@ -396,15 +329,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
               <Badge className={getStatusColor(currentOrderStep?.status || data.status)}>
                 {(currentOrderStep?.status || data.status).replace('_', ' ').toUpperCase()}
               </Badge>
-            </div>
-          )}
-
-          {/* Enhanced Debug info for troubleshooting */}
-          {data.stepOrder > 0 && (
-            <div className="text-xs text-gray-500 bg-gray-100 p-1 rounded">
-              <div>OrderStep: {currentOrderStep ? '✅ Found' : '❌ Missing'}</div>
-              <div>StepOrder: {data.stepOrder} | OrderID: {data.orderId.slice(-6)}</div>
-              <div>Will Open: {currentOrderStep ? 'StepDetailsDialog' : 'Nothing'}</div>
             </div>
           )}
 
@@ -471,8 +395,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
               size="sm" 
               className={`w-full mt-2 ${data.isJhalaiStep ? 'border-blue-300 hover:bg-blue-100' : ''}`}
               onClick={handleAddStep}
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseUp={(e) => e.stopPropagation()}
             >
               <Plus className="h-3 w-3 mr-1" />
               {getNextStepName()}
@@ -483,18 +405,11 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <Handle type="source" position={Position.Right} className="!bg-gray-400" />
       </Card>
 
-      {/* StepDetailsDialog - Only render for manufacturing steps that exist in database */}
-      {data.stepOrder > 0 && currentOrderStep && (
-        <StepDetailsDialog
-          open={detailsDialogOpen}
-          onOpenChange={(open) => {
-            console.log('🚨 StepDetailsDialog open change:', open, 'for step:', currentOrderStep?.id);
-            setDetailsDialogOpen(open);
-          }}
-          step={currentOrderStep}
-          openInEditMode={true} // Always open in edit mode when clicked from card
-        />    
-      )}
+      <StepDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        step={currentOrderStep || null}
+      />
     </>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -268,8 +269,8 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
           setSelectedStepForChild(null);
         }}
         parentOrder={selectedOrderForChild}
-        sourceStepId={selectedStepForChild?.id}
-        sourceStepName={selectedStepForChild?.step_name}
+        currentStep={selectedStepForChild}
+        onSuccess={handleChildOrderSuccess}
       />
     </div>
   );
