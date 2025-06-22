@@ -43,10 +43,9 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <ErrorDialogProvider>
-              <App />
-              <Toaster />
-            </ErrorDialogProvider>
+            <ErrorDialogProvider />
+            <App />
+            <Toaster />
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

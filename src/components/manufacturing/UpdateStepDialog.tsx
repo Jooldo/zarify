@@ -105,9 +105,21 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       return;
     }
 
-    const progressValue = formData.status === 'completed' ? 100 : 
-                         formData.status === 'in_progress' ? 50 : 
-                         formData.status === 'partially_completed' ? 75 : 0;
+    // Calculate progress value based on status
+    let progressValue = 0;
+    switch (formData.status) {
+      case 'completed':
+        progressValue = 100;
+        break;
+      case 'in_progress':
+        progressValue = 50;
+        break;
+      case 'partially_completed':
+        progressValue = 75;
+        break;
+      default:
+        progressValue = 0;
+    }
 
     updateStep({
       stepId: currentOrderStep.id,
