@@ -28,7 +28,7 @@ interface StartStepDialogProps {
   onClose: () => void;
   order: ManufacturingOrder | null;
   step: ManufacturingStep | null;
-  sourceStepId?: string; // New prop for batch creation
+  sourceStepId?: string;
 }
 
 const StartStepDialog: React.FC<StartStepDialogProps> = ({
@@ -47,23 +47,22 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
   const stepId = step?.id ? String(step.id) : null;
+  const isBatchCreation = Boolean(sourceStepId);
   
-  // Fix the field filtering logic
+  // Get fields for the current step only
   const currentStepFields = stepFields.filter(field => {
     const fieldStepId = String(field.manufacturing_step_id);
     return stepId && fieldStepId === stepId;
   });
 
-  console.log('Step ID:', stepId);
-  console.log('All step fields:', stepFields);
-  console.log('Current step fields:', currentStepFields);
+  console.log('Dialog props:', { stepId, sourceStepId, isBatchCreation });
+  console.log('Current step fields count:', currentStepFields.length);
 
-  // Initialize field values only when dialog opens with a new step
+  // Initialize field values when dialog opens
   useEffect(() => {
-    if (isOpen && stepId && stepId !== initializedStepId) {
+    if (isOpen && currentStepFields.length > 0) {
       console.log('Initializing field values for step:', stepId);
       const initialValues: Record<string, any> = {};
       
@@ -75,14 +74,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         }
       });
       
-      console.log('Initial values:', initialValues);
+      console.log('Initial field values:', initialValues);
       setFieldValues(initialValues);
-      setInitializedStepId(stepId);
     } else if (!isOpen) {
+      // Reset when dialog closes
       setFieldValues({});
-      setInitializedStepId(null);
     }
-  }, [isOpen, stepId, currentStepFields.length, initializedStepId]);
+  }, [isOpen, stepId, currentStepFields.length]);
 
   // Early return with error dialog if no order or step when dialog is open
   if (isOpen && (!order || !step)) {
@@ -128,7 +126,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   };
 
   const handleSelectChange = (fieldId: string) => (value: string) => {
-    console.log('Select change:', fieldId, value);
     handleFieldChange(fieldId, value);
   };
 
@@ -154,11 +151,12 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      console.log('Starting step with values:', fieldValues);
+      console.log('Starting step - isBatchCreation:', isBatchCreation);
+      console.log('Field values:', fieldValues);
       
-      // If sourceStepId is provided, create a new batch instead of updating existing step
-      if (sourceStepId && stepId) {
-        console.log('Creating new batch from source step:', sourceStepId);
+      if (isBatchCreation && sourceStepId && stepId) {
+        // Create a new batch from source step
+        console.log('Creating new batch from source step:', sourceStepId, 'to target step:', stepId);
         await createBatch({
           sourceOrderStepId: sourceStepId,
           targetStepId: stepId,
@@ -166,9 +164,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           merchantId: merchant.id
         });
       } else {
-        // Original logic for regular step creation
+        // Regular step creation/update logic
         let orderStep = orderSteps.find(os => 
-          os.manufacturing_order_id === order.id && 
+          os.manufacturing_order_id === order!.id && 
           os.manufacturing_step_id === stepId
         );
 
@@ -176,7 +174,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
         if (!orderStep) {
           console.log('Creating new order step');
-          // Get the step_order from the manufacturing_steps table
           const { data: stepData, error: stepError } = await supabase
             .from('manufacturing_steps')
             .select('step_order')
@@ -191,7 +188,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           const { data: newOrderStep, error: createError } = await supabase
             .from('manufacturing_order_steps')
             .insert({
-              manufacturing_order_id: order.id,
+              manufacturing_order_id: order!.id,
               manufacturing_step_id: stepId,
               step_order: stepData.step_order,
               status: 'in_progress',
@@ -218,25 +215,28 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             status: 'in_progress',
             progress: 0,
             stepName: step.step_name,
-            orderNumber: order.order_number
+            orderNumber: order!.order_number
           });
         }
       }
 
       toast({
         title: 'Success',
-        description: `${step.step_name} started successfully`,
+        description: isBatchCreation 
+          ? `New ${step.step_name} batch started successfully` 
+          : `${step.step_name} started successfully`,
       });
 
       // Reset form and close dialog
       setFieldValues({});
-      setInitializedStepId(null);
       onClose();
     } catch (error) {
       console.error('Error starting step:', error);
       toast({
         title: 'Error',
-        description: 'Failed to start manufacturing step',
+        description: isBatchCreation 
+          ? 'Failed to start new manufacturing batch'
+          : 'Failed to start manufacturing step',
         variant: 'destructive',
       });
     } finally {
@@ -251,7 +251,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'worker':
         return (
           <Select
-            key={`worker-${field.field_id}`}
             value={value}
             onValueChange={handleSelectChange(field.field_id)}
           >
@@ -260,7 +259,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               {workers.map(worker => (
-                <SelectItem key={`worker-option-${worker.id}`} value={worker.id}>
+                <SelectItem key={worker.id} value={worker.id}>
                   {worker.name}
                 </SelectItem>
               ))}
@@ -270,7 +269,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
       case 'date':
         return (
-          <Popover key={`date-${field.field_id}`}>
+          <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -299,7 +298,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'number':
         return (
           <Input
-            key={`number-${field.field_id}`}
             type="number"
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
@@ -310,7 +308,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'status':
         return (
           <Select
-            key={`status-${field.field_id}`}
             value={value}
             onValueChange={handleSelectChange(field.field_id)}
           >
@@ -319,7 +316,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               {field.field_options?.options?.map((option: string) => (
-                <SelectItem key={`status-option-${option}`} value={option}>
+                <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
               ))}
@@ -330,7 +327,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       case 'text':
         return (
           <Textarea
-            key={`text-${field.field_id}`}
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder="Enter text"
@@ -341,7 +337,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       default:
         return (
           <Input
-            key={`default-${field.field_id}`}
             value={value}
             onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
             placeholder={`Enter ${field.field_label}`}
@@ -368,7 +363,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
-            {sourceStepId ? 'Start New Batch - ' : 'Start '}{step.step_name}
+            {isBatchCreation ? 'Start New Batch - ' : 'Start '}{step.step_name}
             <Badge variant="outline" className="ml-2">
               {order.order_number}
             </Badge>
@@ -404,7 +399,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
                 {step.step_name} Configuration
-                {sourceStepId && (
+                {isBatchCreation && (
                   <Badge variant="secondary" className="ml-2">
                     New Batch
                   </Badge>
@@ -419,7 +414,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               ) : (
                 <div className="space-y-3">
                   {currentStepFields.map(field => (
-                    <div key={`field-container-${field.field_id}`} className="space-y-1">
+                    <div key={field.field_id} className="space-y-1">
                       <Label htmlFor={field.field_id} className="text-sm font-medium">
                         {field.field_label}
                         {field.is_required && (
@@ -449,7 +444,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               disabled={!isFormValid || isProcessing}
               className="bg-primary hover:bg-primary/90"
             >
-              {isProcessing ? 'Starting...' : `Start ${step.step_name}${sourceStepId ? ' Batch' : ''}`}
+              {isProcessing ? 'Starting...' : `Start ${step.step_name}${isBatchCreation ? ' Batch' : ''}`}
             </Button>
           </div>
         </form>
