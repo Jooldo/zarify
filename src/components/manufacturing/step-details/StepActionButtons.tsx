@@ -20,11 +20,12 @@ export const StepActionButtons: React.FC<StepActionButtonsProps> = ({
     <div className="flex gap-3 p-4 bg-gray-50 rounded-lg border">
       <Button
         onClick={() => {
-          console.log('Edit Step Details button clicked');
+          console.log('Edit Step Details button clicked - calling onEditClick');
           onEditClick();
         }}
         className="flex items-center gap-2"
         variant="default"
+        size="sm"
       >
         <Edit3 className="h-4 w-4" />
         Edit Step Details
@@ -36,6 +37,7 @@ export const StepActionButtons: React.FC<StepActionButtonsProps> = ({
         }}
         className="flex items-center gap-2"
         variant="outline"
+        size="sm"
       >
         <Play className="h-4 w-4" />
         Start Next Step

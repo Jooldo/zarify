@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -280,8 +279,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   const handleCardClick = () => {
-    // Open details dialog instead of calling onStepClick
-    setDetailsDialogOpen(true);
+    // Only open details dialog if this is an actual manufacturing step (not Manufacturing Order card)
+    if (data.stepOrder > 0 && currentOrderStep) {
+      console.log('Opening step details dialog for step:', currentOrderStep);
+      setDetailsDialogOpen(true);
+    } else {
+      console.log('Cannot open details - no order step found or is Manufacturing Order card');
+    }
   };
 
   const assignedWorkerName = getAssignedWorkerName();
@@ -405,11 +409,17 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         <Handle type="source" position={Position.Right} className="!bg-gray-400" />
       </Card>
 
-      <StepDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        step={currentOrderStep || null}
-      />
+      {/* Only render dialog if we have a valid order step */}
+      {currentOrderStep && (
+        <StepDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={(open) => {
+            console.log('Dialog open change:', open);
+            setDetailsDialogOpen(open);
+          }}
+          step={currentOrderStep}
+        />
+      )}
     </>
   );
 };

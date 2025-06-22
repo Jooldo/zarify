@@ -50,14 +50,14 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     fieldValues: {} as Record<string, any>
   });
 
-  // Debug logging
-  console.log('StepDetailsDialog rendered with:', {
-    open,
-    stepId: step?.id,
-    isEditMode,
-    hasStep: !!step,
-    hasOrder: !!order
-  });
+  // Enhanced debug logging
+  console.log('=== StepDetailsDialog Debug ===');
+  console.log('Dialog open:', open);
+  console.log('Step:', step);
+  console.log('Order:', order);
+  console.log('IsEditMode:', isEditMode);
+  console.log('CurrentStepFields:', step ? stepFields.filter(field => field.manufacturing_step_id === step.manufacturing_step_id) : []);
+  console.log('================');
 
   // Get current step fields for this step
   const currentStepFields = step ? stepFields.filter(field => 
@@ -191,6 +191,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   };
 
   if (!step || !order) {
+    console.log('No step or order found, not rendering dialog');
     return null;
   }
 
@@ -216,34 +217,43 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         <div className="space-y-6 py-4">
           {/* Debug Info */}
           <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-            Debug: Edit Mode = {isEditMode ? 'TRUE' : 'FALSE'} | Step ID = {step.id}
+            Debug: Edit Mode = {isEditMode ? 'TRUE' : 'FALSE'} | Step ID = {step.id} | Has Fields = {currentStepFields.length}
           </div>
 
-          {/* Action Buttons - Always visible when NOT in edit mode */}
+          {/* ALWAYS show Action Buttons when NOT in edit mode */}
           {!isEditMode && (
-            <StepActionButtons
-              isEditMode={isEditMode}
-              onEditClick={handleEditClick}
-              onStartNextStep={handleStartNextStep}
-            />
+            <div className="bg-yellow-100 border border-yellow-300 p-4 rounded-lg">
+              <h3 className="font-medium text-yellow-800 mb-2">Step Actions</h3>
+              <StepActionButtons
+                isEditMode={isEditMode}
+                onEditClick={handleEditClick}
+                onStartNextStep={handleStartNextStep}
+              />
+            </div>
           )}
 
           {/* Current Step Configuration - Toggle between edit and display */}
           {isEditMode ? (
-            <StepEditForm
-              editFormData={editFormData}
-              currentStepFields={currentStepFields}
-              isUpdating={isUpdating}
-              onFieldValueChange={handleFieldValueChange}
-              onStatusChange={handleStatusChange}
-              onSave={handleSaveChanges}
-              onCancel={handleCancelEdit}
-            />
+            <div className="bg-blue-100 border border-blue-300 p-2 rounded">
+              <p className="text-blue-800 font-medium mb-2">EDIT MODE ACTIVE</p>
+              <StepEditForm
+                editFormData={editFormData}
+                currentStepFields={currentStepFields}
+                isUpdating={isUpdating}
+                onFieldValueChange={handleFieldValueChange}
+                onStatusChange={handleStatusChange}
+                onSave={handleSaveChanges}
+                onCancel={handleCancelEdit}
+              />
+            </div>
           ) : (
-            <StepDisplayCard
-              step={step}
-              currentStepValues={currentStepValues}
-            />
+            <div className="bg-green-100 border border-green-300 p-2 rounded">
+              <p className="text-green-800 font-medium mb-2">DISPLAY MODE ACTIVE</p>
+              <StepDisplayCard
+                step={step}
+                currentStepValues={currentStepValues}
+              />
+            </div>
           )}
 
           {/* Previous Steps Data - Only show when not in edit mode */}
