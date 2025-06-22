@@ -436,7 +436,7 @@ const InProgressStepCard: React.FC<{
           <div className="space-y-1 text-xs border-t pt-2 text-slate-500 border-blue-100">
             {orderStep.started_at && (
               <div className="flex items-center gap-2">
-                <Clock class="h-3 w-3" />
+                <Clock className="h-3 w-3" />
                 <span>Started: {format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</span>
               </div>
             )}
