@@ -151,21 +151,38 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     switch (field.field_type) {
       case 'worker':
         return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleFieldValueChange(field.field_id, val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select worker" />
-            </SelectTrigger>
-            <SelectContent>
-              {workers.map(worker => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Select 
+              value={value} 
+              onValueChange={(val) => handleFieldValueChange(field.field_id, val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select worker" />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Show current worker if assigned */}
+                {value && (
+                  <SelectItem value={value} className="bg-blue-50 border border-blue-200">
+                    <div className="flex items-center justify-between w-full">
+                      <span>{workers.find(w => w.id === value)?.name || 'Unknown Worker'}</span>
+                      <Badge variant="secondary" className="ml-2 text-xs">Current</Badge>
+                    </div>
+                  </SelectItem>
+                )}
+                {/* Show other available workers */}
+                {workers.filter(worker => worker.id !== value).map(worker => (
+                  <SelectItem key={worker.id} value={worker.id}>
+                    {worker.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {value && (
+              <div className="text-xs text-muted-foreground">
+                Currently assigned to: <span className="font-medium">{workers.find(w => w.id === value)?.name}</span>
+              </div>
+            )}
+          </div>
         );
       case 'number':
         return (
