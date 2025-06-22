@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,56 +36,52 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [reworkReason, setReworkReason] = useState('');
   const [assignedToStep, setAssignedToStep] = useState<number>(1);
-  const [selectedStepFields, setSelectedStepFields] = useState<any[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
-  const activeSteps = manufacturingSteps
-    .filter(step => step.is_active)
-    .sort((a, b) => a.step_order - b.step_order);
+  const activeSteps = useMemo(() => 
+    manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order),
+    [manufacturingSteps]
+  );
 
-  // Update selected step fields when assignedToStep changes
-  useEffect(() => {
-    console.log('Effect triggered - assignedToStep:', assignedToStep);
+  const selectedStepFields = useMemo(() => {
     const selectedStep = activeSteps.find(step => step.step_order === assignedToStep);
-    console.log('Selected step:', selectedStep);
-    
     if (selectedStep) {
-      const fields = stepFields.filter(field => field.manufacturing_step_id === selectedStep.id);
-      console.log('Filtered fields for step:', fields);
-      setSelectedStepFields(fields);
-      
-      // Only reset field values if we're switching to a different step
-      // Preserve existing values that might already be entered
+      return stepFields.filter(field => field.manufacturing_step_id === selectedStep.id);
+    }
+    return [];
+  }, [activeSteps, stepFields, assignedToStep]);
+
+  // Initialize field values when selected step fields change
+  useEffect(() => {
+    console.log('Selected step fields changed:', selectedStepFields.length);
+    
+    if (selectedStepFields.length > 0) {
       setFieldValues(prevValues => {
         const newValues: Record<string, string> = {};
-        fields.forEach(field => {
+        selectedStepFields.forEach(field => {
           // Keep existing value if it exists, otherwise set to empty string
           newValues[field.field_id] = prevValues[field.field_id] || '';
         });
-        console.log('Updated field values:', newValues);
+        console.log('Initialized field values:', newValues);
         return newValues;
       });
     } else {
-      setSelectedStepFields([]);
       setFieldValues({});
     }
-  }, [assignedToStep, activeSteps, stepFields]);
+  }, [selectedStepFields]);
 
-  const handleFieldValueChange = (fieldId: string, value: string) => {
-    console.log('Field value change:', fieldId, '=', value);
-    setFieldValues(prev => {
-      const updated = {
-        ...prev,
-        [fieldId]: value
-      };
-      console.log('Updated fieldValues state:', updated);
-      return updated;
-    });
-  };
+  const handleFieldValueChange = useCallback((fieldId: string, value: string) => {
+    console.log('Field value changing:', fieldId, '=', value);
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  }, []);
 
   const renderField = (field: any) => {
     const currentValue = fieldValues[field.field_id] || '';
-    console.log('Rendering field:', field.field_id, 'with value:', currentValue);
 
     switch (field.field_type) {
       case 'worker':
@@ -369,9 +365,6 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
                         {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
                       {renderField(field)}
-                      <div className="text-xs text-gray-500">
-                        Current value: {fieldValues[field.field_id] || '(empty)'}
-                      </div>
                     </div>
                   ))}
                 </div>
