@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -170,7 +171,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
     await createStep({
       manufacturingOrderId: order.id,
-      manufacturingStepId: nextStep.id,
+      manufacturing_step_id: nextStep.id,
       stepOrder: nextStep.step_order,
       status: 'pending'
     });
@@ -235,9 +236,16 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   const getAllConfiguredFields = () => {
     const allFields = new Map();
     
-    previousStepsData.forEach(stepData => {
-      if (stepData.stepFields) {
-        stepData.stepFields.forEach(field => {
+    // Get all previous steps for this order
+    const allOrderStepsForOrder = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
+    
+    allOrderStepsForOrder.forEach(orderStep => {
+      if (orderStep.manufacturing_steps?.id) {
+        const stepFieldsForStep = stepFields.filter(field => 
+          field.manufacturing_step_id === orderStep.manufacturing_steps?.id
+        );
+        
+        stepFieldsForStep.forEach(field => {
           if (!['worker'].includes(field.field_type)) {
             allFields.set(field.field_id, {
               id: field.field_id,
