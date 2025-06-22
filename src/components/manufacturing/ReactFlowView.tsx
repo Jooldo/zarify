@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ReactFlow,
@@ -20,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Package, User, Clock, GitBranch, Eye } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import StepDetailsCard from './StepDetailsCard';
 
 interface ReactFlowViewProps {
   manufacturingOrders: any[];
@@ -153,10 +153,17 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
 
 const nodeTypes = {
   orderNode: OrderNode,
+  stepDetailsNode: ({ data }: { data: any }) => (
+    <StepDetailsCard
+      orderStep={data.orderStep}
+      stepFields={data.stepFields}
+      onViewDetails={data.onViewDetails}
+    />
+  ),
 };
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onViewDetails }) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -177,6 +184,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     let yOffset = 0;
     const nodeSpacing = 400;
     const childOffset = 300;
+    const stepCardOffset = 450; // Offset for step details cards
 
     parentOrders.forEach((parentOrder, parentIndex) => {
       // Get current step for parent order
@@ -207,6 +215,43 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           onViewDetails
         } as FlowNodeData,
       });
+
+      // Add step details card if parent step is in progress
+      if (currentParentStep && currentParentStep.status === 'in_progress') {
+        const stepFields = getStepFields(currentParentStep.manufacturing_step_id);
+        const stepCardNodeId = `step-details-${currentParentStep.id}`;
+        
+        nodes.push({
+          id: stepCardNodeId,
+          type: 'stepDetailsNode',
+          position: { x: stepCardOffset, y: yOffset },
+          data: {
+            orderStep: currentParentStep,
+            stepFields: stepFields,
+            onViewDetails: () => onViewDetails(parentOrder)
+          },
+        });
+
+        // Create edge from parent to step details
+        edges.push({
+          id: `edge-${parentNodeId}-${stepCardNodeId}`,
+          source: parentNodeId,
+          target: stepCardNodeId,
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#3b82f6',
+          },
+          label: 'In Progress',
+          labelStyle: { 
+            fill: '#3b82f6', 
+            fontWeight: 600,
+            fontSize: '12px'
+          },
+        });
+      }
 
       // Create child nodes for this parent
       const relatedChildOrders = childOrders.filter(child => 
@@ -244,6 +289,43 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           } as FlowNodeData,
         });
 
+        // Add step details card if child step is in progress
+        if (currentChildStep && currentChildStep.status === 'in_progress') {
+          const stepFields = getStepFields(currentChildStep.manufacturing_step_id);
+          const childStepCardNodeId = `step-details-${currentChildStep.id}`;
+          
+          nodes.push({
+            id: childStepCardNodeId,
+            type: 'stepDetailsNode',
+            position: { x: 500 + stepCardOffset, y: childYOffset },
+            data: {
+              orderStep: currentChildStep,
+              stepFields: stepFields,
+              onViewDetails: () => onViewDetails(childOrder)
+            },
+          });
+
+          // Create edge from child to step details
+          edges.push({
+            id: `edge-${childNodeId}-${childStepCardNodeId}`,
+            source: childNodeId,
+            target: childStepCardNodeId,
+            type: 'smoothstep',
+            animated: true,
+            style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#3b82f6',
+            },
+            label: 'In Progress',
+            labelStyle: { 
+              fill: '#3b82f6', 
+              fontWeight: 600,
+              fontSize: '12px'
+            },
+          });
+        }
+
         // Create edge from parent to child
         edges.push({
           id: `edge-${parentNodeId}-${childNodeId}`,
@@ -270,7 +352,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     });
 
     return { generatedNodes: nodes, generatedEdges: edges };
-  }, [manufacturingOrders, orderSteps, onViewDetails]);
+  }, [manufacturingOrders, orderSteps, onViewDetails, getStepFields]);
 
   // Update nodes and edges when data changes
   useEffect(() => {
