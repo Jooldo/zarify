@@ -105,17 +105,19 @@ const CreateChildOrderDialog = ({
     setIsCreating(true);
 
     try {
-      // Get next child order number
-      const { data: childOrderNumber, error: orderNumberError } = await supabase
+      // Get next child order number (base number)
+      const { data: baseOrderNumber, error: orderNumberError } = await supabase
         .rpc('get_next_manufacturing_order_number');
 
       if (orderNumberError) throw orderNumberError;
 
-      // Create child manufacturing order
+      // Create child manufacturing order with -R suffix for rework
+      const childOrderNumber = `${baseOrderNumber}-R`;
+
       const { data: childOrder, error: childOrderError } = await supabase
         .from('manufacturing_orders')
         .insert({
-          order_number: `${childOrderNumber}-R`, // R for Rework
+          order_number: childOrderNumber,
           product_name: parentOrder.product_name,
           product_config_id: parentOrder.product_config_id,
           quantity_required: parentOrder.quantity_required,
