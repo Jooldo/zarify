@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -137,6 +138,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
   // Handle starting the next step - now opens dialog instead of direct creation
   const handleStartNextStep = () => {
+    console.log('Opening start step dialog');
     setStartStepDialogOpen(true);
   };
 
@@ -317,15 +319,13 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         previousSteps={[]} // You may need to pass previous steps if required
       />
 
-      {/* Start Step Dialog for Next Step */}
-      {nextStep && (
-        <StartStepDialog
-          isOpen={startStepDialogOpen}
-          onClose={() => setStartStepDialogOpen(false)}
-          order={orderStep.manufacturing_orders}
-          step={nextStep}
-        />
-      )}
+      {/* Start Step Dialog for Next Step - Always render when dialog is open */}
+      <StartStepDialog
+        isOpen={startStepDialogOpen}
+        onClose={() => setStartStepDialogOpen(false)}
+        order={orderStep.manufacturing_orders}
+        step={getNextStepInfo()}
+      />
     </>
   );
 };
