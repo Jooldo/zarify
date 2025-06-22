@@ -12,13 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarIcon, Workflow, Edit3, Save, X, Play } from 'lucide-react';
+import { Edit3, Save, X, Play } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { Tables } from '@/integrations/supabase/types';
 import { useStepDetailsData } from '@/hooks/useStepDetailsData';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -28,7 +25,6 @@ import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import { useWorkers } from '@/hooks/useWorkers';
 import { StepDebugLogger } from './debug/StepDebugLogger';
 import { PreviousStepsDisplay } from './PreviousStepsDisplay';
-import { CurrentStepDisplay } from './CurrentStepDisplay';
 
 interface StepDetailsDialogProps {
   open: boolean;
@@ -53,10 +49,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   const { createStep } = useCreateManufacturingStep();
   const { workers } = useWorkers();
 
-  const [dueDate, setDueDate] = useState<Date | undefined>(
-    order?.due_date ? new Date(order.due_date) : undefined
-  );
-  
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -71,12 +63,14 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
   // Initialize edit form data when dialog opens or step changes
   useEffect(() => {
-    if (open && step && currentStepFields.length > 0) {
+    if (open && step) {
       const initialFieldValues: Record<string, any> = {};
-      currentStepFields.forEach(field => {
-        const savedValue = getStepValue(step.id, field.field_id);
-        initialFieldValues[field.field_id] = savedValue || '';
-      });
+      if (currentStepFields.length > 0) {
+        currentStepFields.forEach(field => {
+          const savedValue = getStepValue(step.id, field.field_id);
+          initialFieldValues[field.field_id] = savedValue || '';
+        });
+      }
 
       setEditFormData({
         status: step.status as StepStatus,
@@ -89,10 +83,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   useEffect(() => {
     if (!open) {
       setIsEditMode(false);
-      setEditFormData({
-        status: 'pending',
-        fieldValues: {}
-      });
     }
   }, [open]);
 
@@ -116,18 +106,13 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   const handleSaveChanges = async () => {
     if (!step) return;
 
-    // Calculate progress value based on status
     const getProgressValue = (status: StepStatus): number => {
       switch (status) {
-        case 'completed':
-          return 100;
-        case 'in_progress':
-          return 50;
-        case 'partially_completed':
-          return 75;
+        case 'completed': return 100;
+        case 'in_progress': return 50;
+        case 'partially_completed': return 75;
         case 'pending':
-        default:
-          return 0;
+        default: return 0;
       }
     };
 
@@ -158,7 +143,6 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
       return;
     }
 
-    // Check if next step already exists for this order
     const existingNextStep = orderSteps.find(os => 
       os.manufacturing_order_id === order.id && 
       os.manufacturing_step_id === nextStep.id
@@ -254,76 +238,77 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl">Step Details: {currentStepDefinition?.step_name}</DialogTitle>
+              <DialogTitle className="text-xl">
+                Step Details: {currentStepDefinition?.step_name || 'Unknown Step'}
+              </DialogTitle>
               <DialogDescription className="text-sm">
                 Order #{order.order_number} - {order.product_name}
               </DialogDescription>
             </div>
-            <div className="flex items-center gap-2">
-              {!isEditMode ? (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditMode(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    Edit Step
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleStartNextStep}
-                    className="flex items-center gap-2"
-                  >
-                    <Play className="h-4 w-4" />
-                    Start Next Step
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveChanges}
-                    disabled={isUpdating}
-                    className="flex items-center gap-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    {isUpdating ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditMode(false)}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                </>
-              )}
-            </div>
+            <Badge className={`${getStepStatusColor(step.status)}`}>
+              {step.status.replace('_', ' ').toUpperCase()}
+            </Badge>
           </div>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Current Step Status and Information */}
+          {/* Action Buttons - Always Visible */}
+          <div className="flex gap-3 p-4 bg-gray-50 rounded-lg border">
+            {!isEditMode ? (
+              <>
+                <Button
+                  onClick={() => setIsEditMode(true)}
+                  className="flex items-center gap-2"
+                  variant="default"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Edit Step Details
+                </Button>
+                <Button
+                  onClick={handleStartNextStep}
+                  className="flex items-center gap-2"
+                  variant="outline"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Next Step
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={handleSaveChanges}
+                  disabled={isUpdating}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditMode(false)}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Current Step Configuration */}
           <Card className="border-2 border-blue-200 bg-blue-50/30">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
+              <CardTitle className="text-lg">
                 Current Step Configuration
-                <Badge className={`${getStepStatusColor(step.status)}`}>
-                  {step.status.replace('_', ' ').toUpperCase()}
-                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditMode ? (
                 <>
                   <div>
-                    <Label>Status</Label>
+                    <Label className="text-sm font-medium">Status</Label>
                     <Select value={editFormData.status} onValueChange={handleStatusChange}>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -337,11 +322,11 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
 
                   {currentStepFields.length > 0 && (
                     <div className="space-y-4">
-                      <h4 className="font-medium">Configure Fields</h4>
+                      <h4 className="font-medium">Configure Step Fields</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {currentStepFields.map(field => (
                           <div key={field.id} className="space-y-2">
-                            <Label>
+                            <Label className="text-sm font-medium">
                               {field.field_label}
                               {field.field_options?.unit && ` (${field.field_options.unit})`}
                               {field.is_required && <span className="text-red-500 ml-1">*</span>}
@@ -355,7 +340,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
                 </>
               ) : (
                 <>
-                  {/* Display current step values */}
+                  {/* Display current step information */}
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm text-muted-foreground">Progress:</span>
@@ -387,7 +372,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
                   {/* Current Step Field Values */}
                   {currentStepValues.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="font-medium">Current Values</h4>
+                      <h4 className="font-medium">Current Field Values</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {currentStepValues.map((value, index) => (
                           <div key={index} className="bg-muted/50 p-3 rounded">
