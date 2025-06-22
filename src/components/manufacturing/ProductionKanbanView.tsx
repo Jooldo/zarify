@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, User, Package, Hash, Play, Clock, Target } from 'lucide-react';
+import { Search, User, Package, Hash, Play, Clock, Target, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import StartStepDialog from './StartStepDialog';
+import CreateReworkOrderDialog from './CreateReworkOrderDialog';
 
 interface KanbanFilters {
   search: string;
@@ -40,6 +41,9 @@ const ProductionKanbanView = () => {
     step: any;
   } | null>(null);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [reworkDialogOpen, setReworkDialogOpen] = useState(false);
+  const [selectedOrderForRework, setSelectedOrderForRework] = useState<any>(null);
+  const [reworkSourceStepId, setReworkSourceStepId] = useState<string | undefined>();
 
   // Get active manufacturing steps sorted by order
   const activeSteps = useMemo(() => {
@@ -150,6 +154,8 @@ const ProductionKanbanView = () => {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'pending_rework':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -199,6 +205,12 @@ const ProductionKanbanView = () => {
     setStartStepDialogOpen(true);
   };
 
+  const handleCreateRework = (order: any, sourceStepId?: string) => {
+    setSelectedOrderForRework(order);
+    setReworkSourceStepId(sourceStepId);
+    setReworkDialogOpen(true);
+  };
+
   const canStartStep = (order: any, step: any) => {
     // Can start if this is the first step and no steps exist yet
     if (!order.currentStep && step.step_order === 1) {
@@ -211,6 +223,10 @@ const ProductionKanbanView = () => {
     }
     
     return false;
+  };
+
+  const isReworkOrder = (order: any) => {
+    return order.parent_order_id !== null && order.parent_order_id !== undefined;
   };
 
   if (isLoading) {
@@ -273,6 +289,7 @@ const ProductionKanbanView = () => {
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="pending_rework">Pending Rework</SelectItem>
             </SelectContent>
           </Select>
 
@@ -327,6 +344,9 @@ const ProductionKanbanView = () => {
                             {/* Enhanced Header */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
+                                {isReworkOrder(order) && (
+                                  <RotateCcw className="h-4 w-4 text-orange-600" />
+                                )}
                                 <Target className="h-4 w-4 text-blue-600" />
                                 <span className="font-bold text-sm text-blue-700">
                                   {order.order_number}
@@ -336,6 +356,19 @@ const ProductionKanbanView = () => {
                                 {order.priority.toUpperCase()}
                               </Badge>
                             </div>
+
+                            {/* Rework indicator */}
+                            {isReworkOrder(order) && (
+                              <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                                <div className="flex items-center gap-1 text-xs text-orange-700">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span className="font-medium">Rework Order</span>
+                                </div>
+                                {order.rework_reason && (
+                                  <p className="text-xs text-orange-600 mt-1">{order.rework_reason}</p>
+                                )}
+                              </div>
+                            )}
 
                             {/* Enhanced Product Info */}
                             <div className="bg-gray-50/80 rounded-lg p-3 space-y-2">
@@ -364,7 +397,8 @@ const ProductionKanbanView = () => {
                             <div className="flex items-center justify-between">
                               <Badge className={`${getStatusColor(order.stepStatus)} border shadow-sm`}>
                                 {order.stepStatus === 'not_started' ? 'Not Started' : 
-                                 order.stepStatus === 'in_progress' ? 'In Progress' : 
+                                 order.stepStatus === 'in_progress' ? 'In Progress' :
+                                 order.stepStatus === 'pending_rework' ? 'Pending Rework' :
                                  order.stepStatus.replace('_', ' ').toUpperCase()}
                               </Badge>
                               
@@ -376,17 +410,33 @@ const ProductionKanbanView = () => {
                               )}
                             </div>
 
-                            {/* Enhanced CTA Button */}
-                            {canStartStep(order, step) && (
-                              <Button
-                                size="sm"
-                                className="w-full mt-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                                onClick={() => handleStartStep(order, step)}
-                              >
-                                <Play className="h-4 w-4 mr-2" />
-                                Start {step.step_name}
-                              </Button>
-                            )}
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              {/* Enhanced CTA Button */}
+                              {canStartStep(order, step) && (
+                                <Button
+                                  size="sm"
+                                  className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                  onClick={() => handleStartStep(order, step)}
+                                >
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Start {step.step_name}
+                                </Button>
+                              )}
+
+                              {/* Rework Button - show for completed steps or failed orders */}
+                              {(order.stepStatus === 'completed' || order.status === 'completed') && !isReworkOrder(order) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                  onClick={() => handleCreateRework(order, step.id)}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-1" />
+                                  Rework
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -418,6 +468,18 @@ const ProductionKanbanView = () => {
         }}
         order={selectedOrderStep?.order || null}
         step={selectedOrderStep?.step || null}
+      />
+
+      {/* Rework Dialog */}
+      <CreateReworkOrderDialog
+        isOpen={reworkDialogOpen}
+        onClose={() => {
+          setReworkDialogOpen(false);
+          setSelectedOrderForRework(null);
+          setReworkSourceStepId(undefined);
+        }}
+        originalOrder={selectedOrderForRework}
+        sourceStepId={reworkSourceStepId}
       />
     </div>
   );
