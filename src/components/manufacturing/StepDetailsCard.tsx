@@ -164,13 +164,25 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     return order || null;
   };
 
-  // Handle starting the next step - now opens dialog instead of direct creation
+  // Handle starting the next step - pass sourceStepId for batch creation from specific steps
   const handleStartNextStep = () => {
     const nextStep = getNextStepInfo();
     const order = getManufacturingOrder();
     console.log('Starting next step:', nextStep);
     console.log('Manufacturing order for dialog:', order);
-    setStartStepDialogOpen(true);
+    
+    // For certain step transitions (like Jhalai to Dhol), we want to create a new batch
+    // instead of updating an existing step
+    const shouldCreateBatch = orderStep.manufacturing_steps?.step_name === 'Jhalai' && 
+                              nextStep?.step_name === 'Dhol';
+    
+    if (shouldCreateBatch) {
+      console.log('Creating new batch from Jhalai to Dhol');
+      // Pass the current order step ID as sourceStepId for batch creation
+      setStartStepDialogOpen(true);
+    } else {
+      setStartStepDialogOpen(true);
+    }
   };
 
   // Handle setup rework
@@ -376,13 +388,19 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         stepFields={stepFields}
         previousSteps={[]} // You may need to pass previous steps if required
       />
-
-      {/* Start Step Dialog for Next Step - Always render when dialog is open */}
+      
+      {/* Start Step Dialog for Next Step - Pass sourceStepId for batch creation */}
       <StartStepDialog
         isOpen={startStepDialogOpen}
         onClose={() => setStartStepDialogOpen(false)}
         order={manufacturingOrder}
         step={nextStep}
+        sourceStepId={
+          orderStep.manufacturing_steps?.step_name === 'Jhalai' && 
+          nextStep?.step_name === 'Dhol' 
+            ? orderStep.id 
+            : undefined
+        }
       />
 
       {/* Rework Dialog */}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,19 +20,22 @@ import { useWorkers } from '@/hooks/useWorkers';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useMerchant } from '@/hooks/useMerchant';
+import { useCreateBatchFromStep } from '@/hooks/useCreateBatchFromStep';
 
 interface StartStepDialogProps {
   isOpen: boolean;
   onClose: () => void;
   order: ManufacturingOrder | null;
   step: ManufacturingStep | null;
+  sourceStepId?: string; // New prop for batch creation
 }
 
 const StartStepDialog: React.FC<StartStepDialogProps> = ({
   isOpen,
   onClose,
   order,
-  step
+  step,
+  sourceStepId
 }) => {
   const { stepFields, orderSteps } = useManufacturingSteps();
   const { updateStep } = useUpdateManufacturingStep();
@@ -109,6 +111,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return null;
   }
 
+  // Import the new batch creation hook
+  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
+
   const handleFieldChange = (fieldId: string, value: any) => {
     console.log('Field change:', fieldId, value);
     setFieldValues(prev => ({
@@ -146,70 +151,82 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     try {
       console.log('Starting step with values:', fieldValues);
       
-      let orderStep = orderSteps.find(os => 
-        os.manufacturing_order_id === order.id && 
-        os.manufacturing_step_id === stepId
-      );
-
-      let stepIdForUpdate = orderStep?.id;
-
-      if (!orderStep) {
-        console.log('Creating new order step');
-        // Get the step_order from the manufacturing_steps table
-        const { data: stepData, error: stepError } = await supabase
-          .from('manufacturing_steps')
-          .select('step_order')
-          .eq('id', stepId)
-          .single();
-
-        if (stepError) {
-          console.error('Error fetching step data:', stepError);
-          throw stepError;
-        }
-
-        const { data: newOrderStep, error: createError } = await supabase
-          .from('manufacturing_order_steps')
-          .insert({
-            manufacturing_order_id: order.id,
-            manufacturing_step_id: stepId,
-            step_order: stepData.step_order,
-            status: 'in_progress',
-            merchant_id: merchant.id,
-            started_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating order step:', createError);
-          throw createError;
-        }
-        
-        stepIdForUpdate = newOrderStep.id;
-        console.log('Created new order step:', stepIdForUpdate);
-      }
-
-      if (stepIdForUpdate) {
-        console.log('Updating step with ID:', stepIdForUpdate);
-        await updateStep({
-          stepId: stepIdForUpdate,
+      // If sourceStepId is provided, create a new batch instead of updating existing step
+      if (sourceStepId && stepId) {
+        console.log('Creating new batch from source step:', sourceStepId);
+        await createBatch({
+          sourceOrderStepId: sourceStepId,
+          targetStepId: stepId,
           fieldValues,
-          status: 'in_progress',
-          progress: 0,
-          stepName: step.step_name,
-          orderNumber: order.order_number
+          merchantId: merchant.id
         });
+      } else {
+        // Original logic for regular step creation
+        let orderStep = orderSteps.find(os => 
+          os.manufacturing_order_id === order.id && 
+          os.manufacturing_step_id === stepId
+        );
 
-        toast({
-          title: 'Success',
-          description: `${step.step_name} started successfully`,
-        });
+        let stepIdForUpdate = orderStep?.id;
 
-        // Reset form and close dialog
-        setFieldValues({});
-        setInitializedStepId(null);
-        onClose();
+        if (!orderStep) {
+          console.log('Creating new order step');
+          // Get the step_order from the manufacturing_steps table
+          const { data: stepData, error: stepError } = await supabase
+            .from('manufacturing_steps')
+            .select('step_order')
+            .eq('id', stepId)
+            .single();
+
+          if (stepError) {
+            console.error('Error fetching step data:', stepError);
+            throw stepError;
+          }
+
+          const { data: newOrderStep, error: createError } = await supabase
+            .from('manufacturing_order_steps')
+            .insert({
+              manufacturing_order_id: order.id,
+              manufacturing_step_id: stepId,
+              step_order: stepData.step_order,
+              status: 'in_progress',
+              merchant_id: merchant.id,
+              started_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating order step:', createError);
+            throw createError;
+          }
+          
+          stepIdForUpdate = newOrderStep.id;
+          console.log('Created new order step:', stepIdForUpdate);
+        }
+
+        if (stepIdForUpdate) {
+          console.log('Updating step with ID:', stepIdForUpdate);
+          await updateStep({
+            stepId: stepIdForUpdate,
+            fieldValues,
+            status: 'in_progress',
+            progress: 0,
+            stepName: step.step_name,
+            orderNumber: order.order_number
+          });
+        }
       }
+
+      toast({
+        title: 'Success',
+        description: `${step.step_name} started successfully`,
+      });
+
+      // Reset form and close dialog
+      setFieldValues({});
+      setInitializedStepId(null);
+      onClose();
     } catch (error) {
       console.error('Error starting step:', error);
       toast({
@@ -329,9 +346,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return value !== undefined && value !== null && value !== '';
   });
 
+  const isProcessing = isSubmitting || isCreatingBatch;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open && !isSubmitting) {
+      if (!open && !isProcessing) {
         onClose();
       }
     }}>
@@ -339,7 +358,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
-            Start {step.step_name}
+            {sourceStepId ? 'Start New Batch - ' : 'Start '}{step.step_name}
             <Badge variant="outline" className="ml-2">
               {order.order_number}
             </Badge>
@@ -375,6 +394,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
                 {step.step_name} Configuration
+                {sourceStepId && (
+                  <Badge variant="secondary" className="ml-2">
+                    New Batch
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -406,16 +430,16 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               type="button" 
               variant="outline" 
               onClick={onClose} 
-              disabled={isSubmitting}
+              disabled={isProcessing}
             >
               Cancel
             </Button>
             <Button 
               type="submit"
-              disabled={!isFormValid || isSubmitting}
+              disabled={!isFormValid || isProcessing}
               className="bg-primary hover:bg-primary/90"
             >
-              {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
+              {isProcessing ? 'Starting...' : `Start ${step.step_name}${sourceStepId ? ' Batch' : ''}`}
             </Button>
           </div>
         </form>
