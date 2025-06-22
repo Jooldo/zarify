@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
@@ -256,6 +257,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
       
       console.log(`Steps to show for ${parentOrder.order_number}:`, stepsToShow);
 
+      // Create sequential connections: Order → Step 1 → Step 2 → Step 3...
+      let previousNodeId = parentNodeId;
+
       stepsToShow.forEach((step, stepIndex) => {
         console.log(`🎯 Creating step details card for parent order ${parentOrder.order_number}, step ${step.step_order}`);
         
@@ -278,12 +282,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        // Create edge from parent to step details with proper handle IDs
+        // Create edge from previous node (order or previous step) to current step
         const stepEdge = {
-          id: `edge-${parentNodeId}-${stepCardNodeId}`,
-          source: parentNodeId,
+          id: `edge-${previousNodeId}-${stepCardNodeId}`,
+          source: previousNodeId,
           target: stepCardNodeId,
-          sourceHandle: 'order-output',
+          sourceHandle: stepIndex === 0 ? 'order-output' : 'step-details-output',
           targetHandle: 'step-details-input',
           type: 'smoothstep',
           animated: step.status === 'in_progress',
@@ -304,8 +308,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           },
         };
         
-        console.log(`Adding step edge:`, stepEdge);
+        console.log(`Adding step edge from ${previousNodeId} to ${stepCardNodeId}:`, stepEdge);
         edges.push(stepEdge);
+
+        // Update previous node ID for next iteration
+        previousNodeId = stepCardNodeId;
       });
 
       // Create child nodes for this parent
@@ -356,6 +363,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           step.status === 'in_progress' || step.status === 'completed'
         ).sort((a, b) => a.step_order - b.step_order);
 
+        // Create sequential connections for child steps: Child Order → Child Step 1 → Child Step 2...
+        let previousChildNodeId = childNodeId;
+
         childStepsToShow.forEach((childStep, childStepIndex) => {
           console.log(`🎯 Creating step details card for child order ${childOrder.order_number}, step ${childStep.step_order}`);
           
@@ -378,12 +388,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
-          // Create edge from child to step details with proper handle IDs
+          // Create edge from previous node (child order or previous child step) to current child step
           const childStepEdge = {
-            id: `edge-${childNodeId}-${childStepCardNodeId}`,
-            source: childNodeId,
+            id: `edge-${previousChildNodeId}-${childStepCardNodeId}`,
+            source: previousChildNodeId,
             target: childStepCardNodeId,
-            sourceHandle: 'order-output',
+            sourceHandle: childStepIndex === 0 ? 'order-output' : 'step-details-output',
             targetHandle: 'step-details-input',
             type: 'smoothstep',
             animated: childStep.status === 'in_progress',
@@ -404,8 +414,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             },
           };
           
-          console.log(`Adding child step edge:`, childStepEdge);
+          console.log(`Adding child step edge from ${previousChildNodeId} to ${childStepCardNodeId}:`, childStepEdge);
           edges.push(childStepEdge);
+
+          // Update previous node ID for next iteration
+          previousChildNodeId = childStepCardNodeId;
         });
 
         // Create edge from parent to child (no handles needed for this connection)

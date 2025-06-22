@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -199,6 +200,13 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         type="target"
         position={Position.Left}
         id="step-details-input"
+        style={{ background: isCompleted ? '#10b981' : '#3b82f6' }}
+      />
+      {/* Add output handle for connecting to next step */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="step-details-output"
         style={{ background: isCompleted ? '#10b981' : '#3b82f6' }}
       />
       <Card 
