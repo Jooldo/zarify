@@ -87,13 +87,25 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
         style={{ background: '#6b7280', border: 'none', width: 8, height: 8 }}
       />
       
-      <Card className={`w-80 shadow-sm border ${isChild ? 'border-l-2 border-l-orange-300 bg-gradient-to-r from-orange-50/50 to-white' : 'bg-white'} hover:shadow-md transition-all duration-200`}>
+      {/* Add target handle for rework connections */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="order-rework-input"
+        style={{ background: '#f97316', border: 'none', width: 8, height: 8 }}
+      />
+      
+      <Card className={`w-72 shadow-sm border transition-all duration-200 ${
+        isChild 
+          ? 'border-l-4 border-l-orange-400 bg-gradient-to-r from-orange-50/20 to-white hover:shadow-md' 
+          : 'bg-white hover:shadow-md'
+      }`}>
         <CardContent className="p-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isChild && <GitBranch className="h-4 w-4 text-orange-500" />}
-                <span className={`font-semibold text-sm ${isChild ? 'text-orange-700' : 'text-slate-700'}`}>
+                <span className={`font-medium text-sm ${isChild ? 'text-orange-700' : 'text-slate-700'}`}>
                   {order.order_number}
                 </span>
                 {isChild && (
@@ -113,7 +125,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
             </div>
 
             {step && (
-              <div className="bg-slate-50 rounded-md p-3 border border-slate-100">
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                 <div className="text-sm font-medium text-slate-700 mb-1">
                   Step {step.step_order}: {step.step_name}
                 </div>
@@ -126,7 +138,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
               </div>
             )}
 
-            <div className="bg-slate-50 rounded-md p-3 border border-slate-100">
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
               <div className="flex items-center gap-2 text-sm mb-1">
                 <Package className="h-4 w-4 text-slate-500" />
                 <span className="font-medium text-slate-700">{order.product_name}</span>
@@ -137,7 +149,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
             </div>
 
             {step?.workers?.name && (
-              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-md p-2 border border-blue-100">
+              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-lg p-2 border border-blue-100">
                 <User className="h-4 w-4 text-blue-500" />
                 <span className="text-slate-600">Worker:</span>
                 <span className="font-medium text-blue-600">{step.workers.name}</span>
@@ -154,7 +166,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
             <Button
               size="sm"
               variant="outline"
-              className="w-full border-slate-200 text-slate-600 hover:bg-slate-50"
+              className="w-full border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
               onClick={() => onViewDetails(order)}
             >
               <Eye className="h-4 w-4 mr-1" />
@@ -534,8 +546,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
     
     console.log('📍 Optimized positions:', optimizedPositions);
 
-    // Store step card IDs for rework connections
-    const stepCardMap = new Map<string, string>(); // Maps "orderId-stepOrder" to stepCardNodeId
+    // Store step card IDs for rework connections - key format: "parentOrderId-stepOrder"
+    const stepCardMap = new Map<string, string>();
 
     parentOrders.forEach((parentOrder, parentIndex) => {
       console.log(`Processing parent order: ${parentOrder.order_number}`);
@@ -590,11 +602,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         const stepFields = getStepFields(step.manufacturing_step_id);
         const stepCardNodeId = `step-details-${step.id}`;
         
-        // Store step card mapping for rework connections
+        // Store step card mapping for rework connections - key format: "parentOrderId-stepOrder"
         const stepKey = `${parentOrder.id}-${step.step_order}`;
         stepCardMap.set(stepKey, stepCardNodeId);
         
-        console.log(`Step fields for ${parentOrder.order_number} step ${step.step_order}:`, stepFields);
+        console.log(`🗺️ Storing step mapping: ${stepKey} -> ${stepCardNodeId}`);
         
         const nodeType = step.status === 'partially_completed' ? 'partiallyCompletedStepNode' : 'stepDetailsNode';
         const stepPosition = calculateStepCardPosition(parentPosition, stepIndex, DEFAULT_LAYOUT_CONFIG);
@@ -660,6 +672,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
 
       relatedChildOrders.forEach((childOrder, childIndex) => {
         console.log(`Processing child order: ${childOrder.order_number}`);
+        console.log(`Child order rework_from_step: ${childOrder.rework_from_step}`);
         
         const childOrderSteps = orderSteps.filter(step => 
           String(step.manufacturing_order_id) === String(childOrder.id)
@@ -695,6 +708,60 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             onViewDetails
           } as FlowNodeData,
         });
+
+        // Connect rework card to originating step card BEFORE processing child steps
+        const originatingStepOrder = childOrder.rework_from_step;
+        if (originatingStepOrder) {
+          console.log(`🔗 Connecting rework order ${childOrder.order_number} to originating step ${originatingStepOrder} from parent order ${parentOrder.id}`);
+          
+          // Look up the step card ID using the parent order ID and step order
+          const stepKey = `${parentOrder.id}-${originatingStepOrder}`;
+          const originatingStepCardId = stepCardMap.get(stepKey);
+          
+          console.log(`Step key: ${stepKey}, found step card ID: ${originatingStepCardId}`);
+          console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
+          
+          if (originatingStepCardId) {
+            // Add connection from originating step (bottom) to rework order (top)
+            const reworkConnectionEdge = {
+              id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
+              source: originatingStepCardId,
+              target: childNodeId,
+              sourceHandle: 'step-details-output', // Bottom of step card
+              targetHandle: 'order-rework-input', // Top of rework card
+              type: 'smoothstep',
+              animated: true,
+              style: { 
+                stroke: '#f97316', 
+                strokeWidth: 3, 
+                strokeDasharray: '10,5'
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: '#f97316',
+              },
+              label: 'Rework Origin',
+              labelStyle: { 
+                fill: '#f97316', 
+                fontWeight: 600,
+                fontSize: '11px',
+                backgroundColor: 'white',
+                padding: '2px 6px',
+                borderRadius: '4px'
+              },
+              labelBgStyle: {
+                fill: 'white',
+                fillOpacity: 0.9
+              }
+            };
+            
+            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}:`, reworkConnectionEdge);
+            edges.push(reworkConnectionEdge);
+          } else {
+            console.log(`❌ Could not find originating step card for step order ${originatingStepOrder} in parent order ${parentOrder.id}`);
+            console.log(`Available mappings:`, Array.from(stepCardMap.entries()));
+          }
+        }
 
         const childStepsToShow = childOrderSteps.filter(step => 
           step.status === 'in_progress' || step.status === 'completed' || step.status === 'partially_completed'
@@ -769,52 +836,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
 
           previousChildNodeId = childStepCardNodeId;
         });
-
-        // Connect rework card to originating step card using stepCardMap
-        const originatingStepOrder = childOrder.rework_from_step;
-        if (originatingStepOrder) {
-          console.log(`🔗 Connecting rework order ${childOrder.order_number} to originating step ${originatingStepOrder} from parent order ${parentOrder.id}`);
-          
-          // Look up the step card ID using the parent order ID and step order
-          const stepKey = `${parentOrder.id}-${originatingStepOrder}`;
-          const originatingStepCardId = stepCardMap.get(stepKey);
-          
-          console.log(`Step key: ${stepKey}, found step card ID: ${originatingStepCardId}`);
-          console.log('Available step card mappings:', Array.from(stepCardMap.entries()));
-          
-          if (originatingStepCardId) {
-            // Add connection from originating step to rework order
-            const reworkConnectionEdge = {
-              id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
-              source: originatingStepCardId,
-              target: childNodeId,
-              sourceHandle: 'step-details-output',
-              targetHandle: null, // Connect to the card itself, not a specific handle
-              type: 'smoothstep',
-              animated: true,
-              style: { 
-                stroke: '#f97316', 
-                strokeWidth: 2, 
-                strokeDasharray: '10,5'
-              },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: '#f97316',
-              },
-              label: 'Rework Origin',
-              labelStyle: { 
-                fill: '#f97316', 
-                fontWeight: 600,
-                fontSize: '10px'
-              },
-            };
-            
-            console.log(`✅ Adding rework connection from ${originatingStepCardId} to ${childNodeId}:`, reworkConnectionEdge);
-            edges.push(reworkConnectionEdge);
-          } else {
-            console.log(`❌ Could not find originating step card for step order ${originatingStepOrder} in parent order ${parentOrder.id}`);
-          }
-        }
 
         // Keep the existing parent-to-child connection edge (but make it less prominent)
         edges.push({
