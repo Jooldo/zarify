@@ -1,13 +1,15 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Factory, Search, Kanban, Workflow, X } from 'lucide-react';
+import { Factory, Search, Kanban, Workflow, X, GitBranch } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionFlowView from './ProductionFlowView';
 import ProductionKanbanView from './ProductionKanbanView';
+import ReactFlowView from './ReactFlowView';
 import ProductionQueueFilter from './ProductionQueueFilter';
 import { Badge } from '@/components/ui/badge';
 
@@ -162,6 +164,15 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
               Flow View
             </Button>
             <Button
+              variant={activeView === 'reactflow' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('reactflow')}
+              className="h-8 px-3"
+            >
+              <GitBranch className="h-4 w-4 mr-1" />
+              ReactFlow View
+            </Button>
+            <Button
               variant={activeView === 'kanban' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveView('kanban')}
@@ -174,7 +185,7 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
         </div>
 
         {/* Search and Filter Controls - Only show for flow view and when not filtered by order */}
-        {activeView === 'flow' && !isOrderFiltered && (
+        {(activeView === 'flow' || activeView === 'reactflow') && !isOrderFiltered && (
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -185,7 +196,7 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
                 className="pl-10 h-8"
               />
             </div>
-            <ProductionQueueFilter onFiltersChange={setFilters} />
+            {activeView === 'flow' && <ProductionQueueFilter onFiltersChange={setFilters} />}
           </div>
         )}
       </div>
@@ -201,6 +212,11 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
         <div>
           {activeView === 'flow' ? (
             <ProductionFlowView
+              manufacturingOrders={filteredOrders}
+              onViewDetails={handleViewDetails}
+            />
+          ) : activeView === 'reactflow' ? (
+            <ReactFlowView
               manufacturingOrders={filteredOrders}
               onViewDetails={handleViewDetails}
             />
