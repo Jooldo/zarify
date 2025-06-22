@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { StepCardData } from './ManufacturingStepCard';
 import { ManufacturingStepField, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
+import CreateChildOrderDialog from './CreateChildOrderDialog';
 
 interface UpdateStepDialogProps {
   open: boolean;
@@ -21,7 +23,7 @@ interface UpdateStepDialogProps {
   previousSteps: ManufacturingOrderStep[];
 }
 
-type StepStatus = 'pending' | 'in_progress' | 'completed';
+type StepStatus = 'pending' | 'in_progress' | 'completed' | 'partially_completed';
 
 const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   open,
@@ -41,6 +43,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     fieldValues: {} as Record<string, any>,
     status: 'pending' as StepStatus,
   });
+  const [showReworkDialog, setShowReworkDialog] = useState(false);
 
   // Initialize form data only once when dialog opens and we have all required data
   useEffect(() => {
@@ -70,6 +73,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         fieldValues: {},
         status: 'pending' as StepStatus,
       });
+      setShowReworkDialog(false);
     }
   }, [open]);
 
@@ -96,13 +100,34 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
     console.log('Submitting form data:', formData);
 
+    // Check if partially completed status is selected to show rework option
+    if (formData.status === 'partially_completed') {
+      setShowReworkDialog(true);
+      return;
+    }
+
     updateStep({
       stepId: currentOrderStep.id,
       fieldValues: formData.fieldValues,
       status: formData.status,
-      progress: formData.status === 'completed' ? 100 : formData.status === 'in_progress' ? 50 : 0
+      progress: formData.status === 'completed' ? 100 : 
+                formData.status === 'in_progress' ? 50 : 
+                formData.status === 'partially_completed' ? 75 : 0
     });
 
+    onOpenChange(false);
+  };
+
+  const handleReworkSuccess = () => {
+    // Update the step as partially completed after creating rework order
+    updateStep({
+      stepId: currentOrderStep!.id,
+      fieldValues: formData.fieldValues,
+      status: 'partially_completed',
+      progress: 75
+    });
+
+    setShowReworkDialog(false);
     onOpenChange(false);
   };
 
@@ -195,153 +220,174 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Update {stepData.stepName} - {stepData.orderNumber}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Update {stepData.stepName} - {stepData.orderNumber}</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Current Step Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Current Step Details</h3>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label>Status</Label>
-                <Select value={formData.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="space-y-6">
+            {/* Current Step Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Current Step Details</h3>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>Status</Label>
+                  <Select value={formData.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="partially_completed">Partially Completed (QC Failed)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.status === 'partially_completed' && (
+                    <p className="text-sm text-amber-600 mt-1">
+                      Select this when some quantity fails QC and needs rework
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {/* Step Fields */}
+              {stepFields.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-medium">Step Configuration</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {stepFields.map(field => (
+                      <div key={field.id} className="space-y-2">
+                        <Label>
+                          {field.field_label}
+                          {field.field_options?.unit && ` (${field.field_options.unit})`}
+                          {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                        </Label>
+                        {renderField(field)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Step Fields */}
-            {stepFields.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-medium">Step Configuration</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {stepFields.map(field => (
-                    <div key={field.id} className="space-y-2">
-                      <Label>
-                        {field.field_label}
-                        {field.field_options?.unit && ` (${field.field_options.unit})`}
-                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      {renderField(field)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Previous Steps */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">
-              Previous Steps 
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({previousSteps.length} step{previousSteps.length !== 1 ? 's' : ''})
-              </span>
-            </h3>
-            
-            {previousSteps.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Step</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Worker</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead>Completed</TableHead>
-                        {/* Dynamic columns for configured fields */}
-                        {allConfiguredFields.map(field => (
-                          <TableHead key={field.id}>
-                            {field.label}
-                            {field.unit && ` (${field.unit})`}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {previousSteps.map(step => (
-                        <TableRow key={step.id}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div className="font-medium">
-                                {step.manufacturing_steps?.step_name || 'Unknown Step'}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Order #{step.manufacturing_steps?.step_order || 'N/A'}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              step.status === 'completed' ? 'default' :
-                              step.status === 'in_progress' ? 'secondary' : 'outline'
-                            }>
-                              {step.status.replace('_', ' ').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {step.workers?.name || 
-                               (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
-                            </div>
-                          </TableCell>
-                          {/* Dynamic field values */}
+            {/* Previous Steps */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">
+                Previous Steps 
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({previousSteps.length} step{previousSteps.length !== 1 ? 's' : ''})
+                </span>
+              </h3>
+              
+              {previousSteps.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Step</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Worker</TableHead>
+                          <TableHead>Started</TableHead>
+                          <TableHead>Completed</TableHead>
+                          {/* Dynamic columns for configured fields */}
                           {allConfiguredFields.map(field => (
-                            <TableCell key={field.id}>
-                              <div className="text-sm">
-                                {getFieldValueForStep(step.id, field.id)}
-                              </div>
-                            </TableCell>
+                            <TableHead key={field.id}>
+                              {field.label}
+                              {field.unit && ` (${field.unit})`}
+                            </TableHead>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {previousSteps.map(step => (
+                          <TableRow key={step.id}>
+                            <TableCell className="font-medium">
+                              <div>
+                                <div className="font-medium">
+                                  {step.manufacturing_steps?.step_name || 'Unknown Step'}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Order #{step.manufacturing_steps?.step_order || 'N/A'}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                step.status === 'completed' ? 'default' :
+                                step.status === 'in_progress' ? 'secondary' : 
+                                step.status === 'partially_completed' ? 'destructive' : 'outline'
+                              }>
+                                {step.status.replace('_', ' ').toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {step.workers?.name || 
+                                 (step.assigned_worker_id ? `Worker ID: ${step.assigned_worker_id}` : 'Not assigned')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {step.started_at ? new Date(step.started_at).toLocaleDateString() : '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {step.completed_at ? new Date(step.completed_at).toLocaleDateString() : '-'}
+                              </div>
+                            </TableCell>
+                            {/* Dynamic field values */}
+                            {allConfiguredFields.map(field => (
+                              <TableCell key={field.id}>
+                                <div className="text-sm">
+                                  {getFieldValueForStep(step.id, field.id)}
+                                </div>
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/30">
-                <p>No previous steps found for this manufacturing order.</p>
-                <p className="text-sm mt-1">This appears to be the first step in the process.</p>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/30">
+                  <p>No previous steps found for this manufacturing order.</p>
+                  <p className="text-sm mt-1">This appears to be the first step in the process.</p>
+                </div>
+              )}
+            </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 justify-end border-t pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isUpdating}>
-              {isUpdating ? 'Updating...' : 'Update Step'}
-            </Button>
+            {/* Actions */}
+            <div className="flex gap-2 justify-end border-t pt-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isUpdating}>
+                {isUpdating ? 'Updating...' : 
+                 formData.status === 'partially_completed' ? 'Update & Setup Rework' : 'Update Step'}
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rework Dialog */}
+      {showReworkDialog && stepData && currentOrderStep && (
+        <CreateChildOrderDialog
+          isOpen={showReworkDialog}
+          onClose={() => setShowReworkDialog(false)}
+          parentOrder={stepData}
+          currentStep={currentOrderStep.manufacturing_steps}
+          onSuccess={handleReworkSuccess}
+        />
+      )}
+    </>
   );
 };
 

@@ -8,7 +8,7 @@ import { useMerchant } from '@/hooks/useMerchant';
 interface UpdateStepData {
   stepId: string;
   updates: {
-    status?: 'pending' | 'in_progress' | 'completed';
+    status?: 'pending' | 'in_progress' | 'completed' | 'partially_completed';
     progress_percentage?: number;
     assigned_worker_id?: string;
     notes?: string;
@@ -23,7 +23,7 @@ interface UpdateStepData {
 interface UpdateStepParams {
   stepId: string;
   fieldValues?: Record<string, any>;
-  status?: 'pending' | 'in_progress' | 'completed';
+  status?: 'pending' | 'in_progress' | 'completed' | 'partially_completed';
   progress?: number;
   assignedWorkerId?: string;
   notes?: string;
@@ -64,6 +64,10 @@ export const useUpdateManufacturingStep = () => {
 
       if (updates.status === 'completed' && updates.completed_at) {
         await logStepComplete(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber);
+      }
+
+      if (updates.status === 'partially_completed') {
+        await logStepProgress(stepId, data.manufacturing_order_id, currentStepName, currentOrderNumber, updates.progress_percentage || 0);
       }
 
       if (updates.progress_percentage !== undefined) {
@@ -124,6 +128,8 @@ export const useUpdateManufacturingStep = () => {
       if (params.status === 'in_progress') {
         updates.started_at = new Date().toISOString();
       } else if (params.status === 'completed') {
+        updates.completed_at = new Date().toISOString();
+      } else if (params.status === 'partially_completed') {
         updates.completed_at = new Date().toISOString();
       }
     }
