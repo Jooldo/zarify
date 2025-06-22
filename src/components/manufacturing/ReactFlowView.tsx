@@ -15,10 +15,10 @@ import {
   Handle,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, User, Clock, GitBranch, Eye, AlertTriangle, Wrench, Play, Weight, Hash, Type, Calendar } from 'lucide-react';
+import { Package, User, Clock, GitBranch, Eye, Calendar, CheckCircle2, Weight, Hash, Type, Play, Wrench } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -166,7 +166,7 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   );
 };
 
-// Updated PartiallyCompletedStepCard with more subtle styling
+// Updated PartiallyCompletedStepCard with StepDetailsCard layout but orange colors
 const PartiallyCompletedStepCard: React.FC<{ 
   data: {
     orderStep: any;
@@ -200,37 +200,14 @@ const PartiallyCompletedStepCard: React.FC<{
     return nextStep;
   };
 
-  // Get field icon based on type and name
-  const getFieldIcon = (fieldName: string, fieldType: string) => {
-    if (fieldName.toLowerCase().includes('weight')) {
-      return <Weight className="h-3 w-3 text-amber-600" />;
-    }
-    if (fieldName.toLowerCase().includes('quantity')) {
-      return <Hash className="h-3 w-3 text-amber-600" />;
-    }
-    if (fieldType === 'date') {
-      return <Calendar className="h-3 w-3 text-amber-600" />;
-    }
-    if (fieldType === 'number') {
-      return <Hash className="h-3 w-3 text-amber-600" />;
-    }
-    return <Type className="h-3 w-3 text-amber-600" />;
-  };
-
-  // Get worker name from worker ID
-  const getWorkerName = (workerId: string) => {
-    const worker = workers.find(w => w.id === workerId);
-    return worker ? worker.name : 'Unknown Worker';
-  };
-
-  // Get configured field values for display
+  // Get configured field values for display - only required fields
   const getConfiguredFieldValues = () => {
     if (!stepFields || stepFields.length === 0) {
       return [];
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker') // Exclude worker fields, show separately
+      .filter(field => field.field_type !== 'worker' && field.is_required)
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
@@ -241,12 +218,6 @@ const PartiallyCompletedStepCard: React.FC<{
           value = savedValue;
           displayValue = savedValue;
           
-          // Format worker field value
-          if (field.field_type === 'worker') {
-            displayValue = getWorkerName(savedValue);
-          }
-          
-          // Add unit information
           if (field.field_options?.unit) {
             displayValue = `${value} ${field.field_options.unit}`;
           }
@@ -262,6 +233,23 @@ const PartiallyCompletedStepCard: React.FC<{
       });
     
     return fieldValues;
+  };
+
+  // Get icon for field type
+  const getFieldIcon = (fieldName: string, fieldType: string) => {
+    if (fieldName.toLowerCase().includes('weight')) {
+      return <Weight className="h-3 w-3 text-muted-foreground" />;
+    }
+    if (fieldName.toLowerCase().includes('quantity')) {
+      return <Hash className="h-3 w-3 text-muted-foreground" />;
+    }
+    if (fieldType === 'date') {
+      return <Calendar className="h-3 w-3 text-muted-foreground" />;
+    }
+    if (fieldType === 'number') {
+      return <Hash className="h-3 w-3 text-muted-foreground" />;
+    }
+    return <Type className="h-3 w-3 text-muted-foreground" />;
   };
 
   // Get assigned worker name
@@ -319,99 +307,138 @@ const PartiallyCompletedStepCard: React.FC<{
         type="target"
         position={Position.Left}
         id="step-details-input"
-        style={{ background: '#f59e0b' }}
+        style={{ background: '#f97316' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="step-details-output"
-        style={{ background: '#f59e0b' }}
+        style={{ background: '#f97316' }}
       />
       
-      {/* More subtle styling - changed from yellow to amber tones */}
       <Card 
-        className="w-80 bg-amber-50/50 border-amber-200 border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        className="w-80 border-l-4 border-l-orange-500 bg-orange-50/30 hover:shadow-lg transition-shadow cursor-pointer"
         onClick={handleCardClick}
       >
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            {/* Header - more subtle alert icon */}
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <div className="flex-1">
-                <div className="font-semibold text-amber-800 text-sm">
-                  Step {orderStep.manufacturing_steps?.step_order}: {orderStep.manufacturing_steps?.step_name}
-                </div>
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs mt-1">
-                  Partially Completed
-                </Badge>
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold text-orange-800">
+                Partially Completed: {orderStep.manufacturing_steps?.step_name}
+                {orderStep.manufacturing_steps?.qc_required && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    QC
+                  </Badge>
+                )}
+              </CardTitle>
+              <p className="text-xs text-orange-600">
+                Step {orderStep.manufacturing_steps?.step_order}
+              </p>
+            </div>
+            <Badge className="text-xs bg-orange-100 text-orange-800">
+              PARTIALLY COMPLETED
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-2">
+          
+          {/* Progress */}
+          {orderStep.progress_percentage > 0 && (
+            <div className="mb-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="font-medium text-orange-700">Progress</span>
+                <span className="font-semibold text-orange-800">{orderStep.progress_percentage}%</span>
+              </div>
+              <div className="w-full rounded-full h-2 bg-orange-100">
+                <div 
+                  className="h-2 rounded-full transition-all duration-300 bg-orange-500"
+                  style={{ width: `${orderStep.progress_percentage}%` }}
+                ></div>
               </div>
             </div>
+          )}
 
-            {/* Worker Info */}
-            {assignedWorkerName && (
-              <div className="flex items-center gap-2 text-sm bg-amber-100/50 rounded-lg p-2">
-                <User className="h-4 w-4 text-amber-600" />
-                <span className="text-amber-700">Worker:</span>
-                <span className="font-semibold text-amber-800">{assignedWorkerName}</span>
-              </div>
-            )}
-
-            {/* Merchant-Configured Fields */}
-            {configuredFieldValues.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-amber-800">Step Fields:</div>
-                {configuredFieldValues.map((field, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm bg-amber-100/30 rounded-lg p-2">
-                    {getFieldIcon(field.fieldName, field.type)}
-                    <span className="text-amber-700 font-medium">{field.label}:</span>
-                    <span className={`font-semibold flex-1 ${
-                      field.isEmpty ? 'text-amber-500 italic' : 'text-amber-800'
-                    }`}>
-                      {field.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Action Buttons - more subtle styling */}
-            <div className="space-y-2 pt-2 border-t border-amber-200/50">
-              {!hasReworkOrder && (
-                <Button
-                  size="sm"
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSetupRework();
-                  }}
-                >
-                  <Wrench className="h-4 w-4 mr-1" />
-                  Rework
-                </Button>
-              )}
-              
-              {nextStep && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStartNextStep();
-                  }}
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Start Next Step ({nextStep.step_name})
-                </Button>
-              )}
-              
-              {hasReworkOrder && (
-                <div className="text-xs text-amber-600 text-center p-2 bg-amber-100/30 rounded">
-                  Rework order already created
-                </div>
-              )}
+          {/* Worker Assignment */}
+          {assignedWorkerName && (
+            <div className="flex items-center gap-2 text-xs p-2 rounded bg-orange-100">
+              <User className="h-3 w-3 text-orange-600" />
+              <span className="text-orange-600">Assigned to:</span>
+              <span className="font-medium text-orange-800">{assignedWorkerName}</span>
             </div>
+          )}
+
+          {/* Configured Field Values */}
+          {configuredFieldValues.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium mb-1 text-orange-700">Field Values:</div>
+              {configuredFieldValues.map((field, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded border border-orange-200">
+                  {getFieldIcon(field.fieldName, field.type)}
+                  <span className="font-medium text-orange-600">{field.label}:</span>
+                  <span className={`font-semibold flex-1 ${
+                    field.isEmpty ? 'text-gray-400 italic' : 'text-orange-800'
+                  }`}>
+                    {field.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-2 pt-2 border-t border-orange-200">
+            {!hasReworkOrder && (
+              <Button
+                size="sm"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetupRework();
+                }}
+              >
+                <Wrench className="h-3 w-3 mr-1" />
+                Rework
+              </Button>
+            )}
+            
+            {nextStep && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartNextStep();
+                }}
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Start Next Step ({nextStep.step_name})
+              </Button>
+            )}
+            
+            {hasReworkOrder && (
+              <div className="text-xs text-orange-600 text-center p-2 bg-orange-100/30 rounded">
+                Rework order already created
+              </div>
+            )}
+          </div>
+
+          {/* Timestamps */}
+          <div className="space-y-1 text-xs border-t pt-2 text-orange-600 border-orange-200">
+            {orderStep.started_at && (
+              <div className="flex items-center gap-2">
+                <Clock className="h-3 w-3" />
+                <span>Started: {format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</span>
+              </div>
+            )}
+            {orderStep.completed_at && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                <span>Completed: {format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -584,7 +611,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
         console.log(`Adding step details node:`, stepDetailsNode);
         nodes.push(stepDetailsNode);
 
-        const edgeColor = step.status === 'partially_completed' ? '#f59e0b' : 
+        const edgeColor = step.status === 'partially_completed' ? '#f97316' : 
                          step.status === 'completed' ? '#10b981' : '#3b82f6';
         const edgeLabel = step.status === 'partially_completed' ? 'Partially Completed' :
                          step.status === 'completed' ? 'Completed' : 'In Progress';
@@ -698,7 +725,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           console.log(`Adding child step details node:`, childStepDetailsNode);
           nodes.push(childStepDetailsNode);
 
-          const edgeColor = childStep.status === 'partially_completed' ? '#f59e0b' : 
+          const edgeColor = childStep.status === 'partially_completed' ? '#f97316' : 
                            childStep.status === 'completed' ? '#10b981' : '#3b82f6';
           const edgeLabel = childStep.status === 'partially_completed' ? 'Partially Completed' :
                            childStep.status === 'completed' ? 'Completed' : 'In Progress';
@@ -715,7 +742,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
               stroke: edgeColor, 
               strokeWidth: 2, 
               strokeDasharray: childStep.status === 'in_progress' ? '5,5' : 
-                             childStep.status === 'partially_completed' ? '8,4,2,4' : 'none'
+                             childStep.status ===  'partially_completed' ? '8,4,2,4' : 'none'
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -735,6 +762,49 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           previousChildNodeId = childStepCardNodeId;
         });
 
+        // Connect rework card to originating step card
+        const originatingStepOrder = childOrder.rework_from_step;
+        if (originatingStepOrder) {
+          // Find the step card from the parent order that corresponds to the rework origin
+          const originatingStepFromParent = stepsToShow.find(step => 
+            step.step_order === originatingStepOrder
+          );
+          
+          if (originatingStepFromParent) {
+            const originatingStepCardId = `step-details-${originatingStepFromParent.id}`;
+            
+            // Add connection from originating step to rework order
+            const reworkConnectionEdge = {
+              id: `rework-edge-${originatingStepCardId}-${childNodeId}`,
+              source: originatingStepCardId,
+              target: childNodeId,
+              sourceHandle: 'step-details-output',
+              targetHandle: 'order-output',
+              type: 'smoothstep',
+              animated: true,
+              style: { 
+                stroke: '#f97316', 
+                strokeWidth: 3, 
+                strokeDasharray: '10,5'
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: '#f97316',
+              },
+              label: 'Rework Origin',
+              labelStyle: { 
+                fill: '#f97316', 
+                fontWeight: 700,
+                fontSize: '11px'
+              },
+            };
+            
+            console.log(`Adding rework connection from ${originatingStepCardId} to ${childNodeId}:`, reworkConnectionEdge);
+            edges.push(reworkConnectionEdge);
+          }
+        }
+
+        // Keep the existing parent-to-child connection edge
         edges.push({
           id: `edge-${parentNodeId}-${childNodeId}`,
           source: parentNodeId,
