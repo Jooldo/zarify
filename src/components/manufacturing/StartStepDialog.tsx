@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Play, Package2, User, CalendarIcon } from 'lucide-react';
+import { Play, Package2, User, CalendarIcon, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
@@ -74,7 +74,38 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     }
   }, [isOpen, stepId, currentStepFields.length, initializedStepId]);
 
-  if (!order || !step) {
+  // Early return with error dialog if no order or step when dialog is open
+  if (isOpen && (!order || !step)) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open && !isSubmitting) {
+          onClose();
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              No Next Step Available
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              {!order ? 'Order information is not available.' : 'There is no next step available for this manufacturing order.'}
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={onClose} variant="outline">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Don't render anything if dialog is closed
+  if (!isOpen) {
     return null;
   }
 
