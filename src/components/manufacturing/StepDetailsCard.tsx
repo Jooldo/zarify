@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, User, Clock, CheckCircle2, Weight, Hash, Type } from 'lucide-react';
@@ -120,89 +120,97 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   };
 
   return (
-    <Card 
-      className="w-80 border-l-4 border-l-blue-500 bg-blue-50/30 hover:shadow-lg transition-shadow cursor-pointer" 
-      onClick={handleCardClick}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-sm font-semibold text-blue-800">
-              Step Details: {orderStep.manufacturing_steps?.step_name}
-              {orderStep.manufacturing_steps?.qc_required && (
-                <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  QC
-                </Badge>
-              )}
-            </CardTitle>
-            <p className="text-xs text-blue-600">Step {orderStep.manufacturing_steps?.step_order}</p>
-          </div>
-          <Badge className={`text-xs ${getStatusColor(orderStep.status)}`}>
-            {orderStep.status.replace('_', ' ').toUpperCase()}
-          </Badge>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2">
-        {/* Progress */}
-        {orderStep.progress_percentage > 0 && (
-          <div className="mb-2">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-blue-700 font-medium">Progress</span>
-              <span className="text-blue-800 font-semibold">{orderStep.progress_percentage}%</span>
+    <>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="step-details-input"
+        style={{ background: '#3b82f6' }}
+      />
+      <Card 
+        className="w-80 border-l-4 border-l-blue-500 bg-blue-50/30 hover:shadow-lg transition-shadow cursor-pointer" 
+        onClick={handleCardClick}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold text-blue-800">
+                Step Details: {orderStep.manufacturing_steps?.step_name}
+                {orderStep.manufacturing_steps?.qc_required && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    QC
+                  </Badge>
+                )}
+              </CardTitle>
+              <p className="text-xs text-blue-600">Step {orderStep.manufacturing_steps?.step_order}</p>
             </div>
-            <div className="w-full bg-blue-100 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${orderStep.progress_percentage}%` }}
-              ></div>
-            </div>
+            <Badge className={`text-xs ${getStatusColor(orderStep.status)}`}>
+              {orderStep.status.replace('_', ' ').toUpperCase()}
+            </Badge>
           </div>
-        )}
+        </CardHeader>
 
-        {/* Worker Assignment */}
-        {assignedWorkerName && (
-          <div className="flex items-center gap-2 text-xs bg-blue-100 p-2 rounded">
-            <User className="h-3 w-3 text-blue-600" />
-            <span className="text-blue-600">Assigned to:</span>
-            <span className="font-medium text-blue-800">{assignedWorkerName}</span>
-          </div>
-        )}
-
-        {/* Configured Field Values */}
-        {configuredFieldValues.length > 0 && (
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-700 mb-1">Field Values:</div>
-            {configuredFieldValues.map((field, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded border border-blue-200">
-                {getFieldIcon(field.fieldName, field.type)}
-                <span className="text-blue-600 font-medium">{field.label}:</span>
-                <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-gray-400 italic' : 'text-blue-800'}`}>
-                  {field.value}
-                </span>
+        <CardContent className="space-y-2">
+          {/* Progress */}
+          {orderStep.progress_percentage > 0 && (
+            <div className="mb-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-blue-700 font-medium">Progress</span>
+                <span className="text-blue-800 font-semibold">{orderStep.progress_percentage}%</span>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="w-full bg-blue-100 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${orderStep.progress_percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
 
-        {/* Timestamps */}
-        <div className="space-y-1 text-xs text-blue-600 border-t border-blue-200 pt-2">
-          {orderStep.started_at && (
-            <div className="flex items-center gap-2">
-              <Clock className="h-3 w-3" />
-              <span>Started: {format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</span>
+          {/* Worker Assignment */}
+          {assignedWorkerName && (
+            <div className="flex items-center gap-2 text-xs bg-blue-100 p-2 rounded">
+              <User className="h-3 w-3 text-blue-600" />
+              <span className="text-blue-600">Assigned to:</span>
+              <span className="font-medium text-blue-800">{assignedWorkerName}</span>
             </div>
           )}
-          {orderStep.completed_at && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3 w-3" />
-              <span>Completed: {format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</span>
+
+          {/* Configured Field Values */}
+          {configuredFieldValues.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-blue-700 mb-1">Field Values:</div>
+              {configuredFieldValues.map((field, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs bg-white p-2 rounded border border-blue-200">
+                  {getFieldIcon(field.fieldName, field.type)}
+                  <span className="text-blue-600 font-medium">{field.label}:</span>
+                  <span className={`font-semibold flex-1 ${field.isEmpty ? 'text-gray-400 italic' : 'text-blue-800'}`}>
+                    {field.value}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Timestamps */}
+          <div className="space-y-1 text-xs text-blue-600 border-t border-blue-200 pt-2">
+            {orderStep.started_at && (
+              <div className="flex items-center gap-2">
+                <Clock className="h-3 w-3" />
+                <span>Started: {format(new Date(orderStep.started_at), 'MMM dd, HH:mm')}</span>
+              </div>
+            )}
+            {orderStep.completed_at && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                <span>Completed: {format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 

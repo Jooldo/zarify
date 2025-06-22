@@ -12,6 +12,7 @@ import {
   Node,
   Position,
   MarkerType,
+  Handle,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,88 +67,98 @@ const OrderNode: React.FC<{ data: FlowNodeData }> = ({ data }) => {
   };
 
   return (
-    <Card className={`w-80 ${isChild ? 'border-l-4 border-l-orange-400 bg-orange-50/30' : 'bg-white'} shadow-sm hover:shadow-md transition-all duration-200`}>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isChild && <GitBranch className="h-4 w-4 text-orange-600" />}
-              <span className={`font-bold text-sm ${isChild ? 'text-orange-700' : 'text-blue-700'}`}>
-                {order.order_number}
-              </span>
-              {isChild && (
-                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
-                  Rework
-                </Badge>
-              )}
-              {isParent && (
-                <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
-                  Parent
-                </Badge>
-              )}
-            </div>
-            <Badge className={`${getPriorityColor(order.priority)} shadow-sm text-xs`}>
-              {order.priority?.toUpperCase() || 'MEDIUM'}
-            </Badge>
-          </div>
-
-          {/* Step Info */}
-          {step && (
-            <div className="bg-gray-50 rounded-lg p-2">
-              <div className="text-sm font-medium text-gray-800">
-                Step {step.step_order}: {step.step_name}
+    <>
+      {/* Add output handle for connecting to step details */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="order-output"
+        style={{ background: '#3b82f6' }}
+      />
+      
+      <Card className={`w-80 ${isChild ? 'border-l-4 border-l-orange-400 bg-orange-50/30' : 'bg-white'} shadow-sm hover:shadow-md transition-all duration-200`}>
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isChild && <GitBranch className="h-4 w-4 text-orange-600" />}
+                <span className={`font-bold text-sm ${isChild ? 'text-orange-700' : 'text-blue-700'}`}>
+                  {order.order_number}
+                </span>
+                {isChild && (
+                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                    Rework
+                  </Badge>
+                )}
+                {isParent && (
+                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                    Parent
+                  </Badge>
+                )}
               </div>
-              <Badge className={`${getStatusColor(step.status)} border text-xs mt-1`}>
-                {step.status === 'not_started' ? 'Not Started' : 
-                 step.status === 'in_progress' ? 'In Progress' : 
-                 step.status === 'partially_completed' ? 'Partial (QC Failed)' :
-                 step.status?.replace('_', ' ').toUpperCase()}
+              <Badge className={`${getPriorityColor(order.priority)} shadow-sm text-xs`}>
+                {order.priority?.toUpperCase() || 'MEDIUM'}
               </Badge>
             </div>
-          )}
 
-          {/* Product Info */}
-          <div className="bg-gray-50 rounded-lg p-2 space-y-1">
-            <div className="flex items-center gap-2 text-sm">
-              <Package className="h-4 w-4 text-emerald-600" />
-              <span className="font-semibold text-gray-800">{order.product_name}</span>
+            {/* Step Info */}
+            {step && (
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-sm font-medium text-gray-800">
+                  Step {step.step_order}: {step.step_name}
+                </div>
+                <Badge className={`${getStatusColor(step.status)} border text-xs mt-1`}>
+                  {step.status === 'not_started' ? 'Not Started' : 
+                   step.status === 'in_progress' ? 'In Progress' : 
+                   step.status === 'partially_completed' ? 'Partial (QC Failed)' :
+                   step.status?.replace('_', ' ').toUpperCase()}
+                </Badge>
+              </div>
+            )}
+
+            {/* Product Info */}
+            <div className="bg-gray-50 rounded-lg p-2 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <Package className="h-4 w-4 text-emerald-600" />
+                <span className="font-semibold text-gray-800">{order.product_name}</span>
+              </div>
+              <div className="text-xs text-gray-600">
+                Quantity: {order.quantity_required}
+              </div>
             </div>
-            <div className="text-xs text-gray-600">
-              Quantity: {order.quantity_required}
-            </div>
+
+            {/* Worker Assignment */}
+            {step?.workers?.name && (
+              <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-lg p-2">
+                <User className="h-4 w-4 text-blue-600" />
+                <span className="text-gray-600">Worker:</span>
+                <span className="font-semibold text-blue-700">{step.workers.name}</span>
+              </div>
+            )}
+
+            {/* Timeline */}
+            {step?.started_at && (
+              <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 rounded px-2 py-1">
+                <Clock className="h-3 w-3" />
+                Started: {new Date(step.started_at).toLocaleDateString()}
+              </div>
+            )}
+
+            {/* Action Button */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => onViewDetails(order)}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View Details
+            </Button>
           </div>
-
-          {/* Worker Assignment */}
-          {step?.workers?.name && (
-            <div className="flex items-center gap-2 text-sm bg-blue-50 rounded-lg p-2">
-              <User className="h-4 w-4 text-blue-600" />
-              <span className="text-gray-600">Worker:</span>
-              <span className="font-semibold text-blue-700">{step.workers.name}</span>
-            </div>
-          )}
-
-          {/* Timeline */}
-          {step?.started_at && (
-            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 rounded px-2 py-1">
-              <Clock className="h-3 w-3" />
-              Started: {new Date(step.started_at).toLocaleDateString()}
-            </div>
-          )}
-
-          {/* Action Button */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            onClick={() => onViewDetails(order)}
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            View Details
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 
@@ -232,11 +243,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           },
         });
 
-        // Create edge from parent to step details
+        // Create edge from parent to step details with proper handle IDs
         edges.push({
           id: `edge-${parentNodeId}-${stepCardNodeId}`,
           source: parentNodeId,
           target: stepCardNodeId,
+          sourceHandle: 'order-output',
+          targetHandle: 'step-details-input',
           type: 'smoothstep',
           animated: true,
           style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
@@ -305,11 +318,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
             },
           });
 
-          // Create edge from child to step details
+          // Create edge from child to step details with proper handle IDs
           edges.push({
             id: `edge-${childNodeId}-${childStepCardNodeId}`,
             source: childNodeId,
             target: childStepCardNodeId,
+            sourceHandle: 'order-output',
+            targetHandle: 'step-details-input',
             type: 'smoothstep',
             animated: true,
             style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
@@ -326,7 +341,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({ manufacturingOrders, onVi
           });
         }
 
-        // Create edge from parent to child
+        // Create edge from parent to child (no handles needed for this connection)
         edges.push({
           id: `edge-${parentNodeId}-${childNodeId}`,
           source: parentNodeId,
