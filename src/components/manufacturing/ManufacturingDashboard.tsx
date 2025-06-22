@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -320,16 +321,25 @@ const ManufacturingDashboard = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="table" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+          <TabsTrigger 
+            value="table" 
+            className="flex items-center gap-2 px-6 py-3 rounded-md text-sm font-medium transition-all data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-900"
+          >
             <Table className="h-4 w-4" />
             Table View
           </TabsTrigger>
-          <TabsTrigger value="reactflow" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="reactflow" 
+            className="flex items-center gap-2 px-6 py-3 rounded-md text-sm font-medium transition-all data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-900"
+          >
             <GitBranch className="h-4 w-4" />
-            React Flow View
+            ReactFlow View
           </TabsTrigger>
-          <TabsTrigger value="kanban" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="kanban" 
+            className="flex items-center gap-2 px-6 py-3 rounded-md text-sm font-medium transition-all data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-900"
+          >
             <Kanban className="h-4 w-4" />
             Kanban View
           </TabsTrigger>
