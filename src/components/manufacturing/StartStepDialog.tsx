@@ -46,11 +46,14 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
+  // Move the batch creation hook to the top level
+  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
+
   const stepId = step?.id ? String(step.id) : null;
   
   const currentStepFields = stepFields.filter(field => {
     const fieldStepId = String(field.manufacturing_step_id);
-    return stepId && fieldStepId === stepId;
+    return stepId && fieldStepId === fieldStepId;
   });
 
   // Initialize field values only when dialog opens with a new step
@@ -110,9 +113,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   if (!isOpen) {
     return null;
   }
-
-  // Import the new batch creation hook
-  const { createBatch, isCreating: isCreatingBatch } = useCreateBatchFromStep();
 
   const handleFieldChange = (fieldId: string, value: any) => {
     console.log('Field change:', fieldId, value);
