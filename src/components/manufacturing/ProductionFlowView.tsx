@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -288,6 +289,7 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
                               Details
                             </Button>
                             
+                            {/* Allow rework for any parent order that's in progress - no restriction on existing child orders */}
                             {!order.isChildOrder && order.stepStatus === 'in_progress' && (
                               <Button
                                 size="sm"
