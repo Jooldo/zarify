@@ -111,7 +111,7 @@ const CreateChildOrderDialog = ({
 
       if (orderNumberError) throw orderNumberError;
 
-      // Create child manufacturing order - use correct column names that exist in database
+      // Create child manufacturing order
       const { data: childOrder, error: childOrderError } = await supabase
         .from('manufacturing_orders')
         .insert({
@@ -133,7 +133,7 @@ const CreateChildOrderDialog = ({
       if (childOrderError) throw childOrderError;
 
       // Create the manufacturing order step for the selected step
-      const { error: stepError } = await supabase
+      const { data: createdStep, error: stepError } = await supabase
         .from('manufacturing_order_steps')
         .insert({
           manufacturing_order_id: childOrder.id,
@@ -141,14 +141,16 @@ const CreateChildOrderDialog = ({
           step_order: selectedStep?.step_order || 1,
           status: 'pending',
           merchant_id: parentOrder.merchant_id
-        });
+        })
+        .select()
+        .single();
 
       if (stepError) throw stepError;
 
-      // Save field values if any
+      // Save field values if any - use the created step's ID
       if (Object.keys(fieldValues).length > 0) {
         const stepValueInserts = Object.entries(fieldValues).map(([fieldId, value]) => ({
-          manufacturing_order_step_id: childOrder.id,
+          manufacturing_order_step_id: createdStep.id, // Use the created step ID, not the order ID
           field_id: fieldId,
           field_value: value,
           merchant_id: parentOrder.merchant_id
