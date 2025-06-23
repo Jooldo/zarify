@@ -60,7 +60,7 @@ const ManufacturingWorkflowConfig = () => {
       return;
     }
 
-    const nextOrder = Math.max(...steps.map(s => s.step_order), 0) + 1;
+    const nextOrder = Math.max(...(Array.isArray(steps) ? steps.map(s => s.step_order) : []), 0) + 1;
     
     createStep({
       step_name: newStepName.trim(),
@@ -111,17 +111,19 @@ const ManufacturingWorkflowConfig = () => {
     const allFieldUpdates: FieldConfigUpdate[] = [];
 
     // Add all existing field configurations that haven't been modified
-    fieldConfigs.forEach(config => {
-      const key = `${config.step_name}-${config.field_key}`;
-      if (!pendingChanges.has(key)) {
-        allFieldUpdates.push({
-          step_name: config.step_name,
-          field_key: config.field_key,
-          is_visible: config.is_visible,
-          unit: config.unit,
-        });
-      }
-    });
+    if (Array.isArray(fieldConfigs)) {
+      fieldConfigs.forEach(config => {
+        const key = `${config.step_name}-${config.field_key}`;
+        if (!pendingChanges.has(key)) {
+          allFieldUpdates.push({
+            step_name: config.step_name,
+            field_key: config.field_key,
+            is_visible: config.is_visible,
+            unit: config.unit,
+          });
+        }
+      });
+    }
 
     // Add all pending changes
     pendingChanges.forEach(update => {
@@ -129,23 +131,27 @@ const ManufacturingWorkflowConfig = () => {
     });
 
     // Also add visible fields that don't have existing configs
-    steps.forEach(step => {
-      masterFields.forEach(field => {
-        const key = `${step.step_name}-${field.field_key}`;
-        const existingConfig = fieldConfigs.find(c => c.step_name === step.step_name && c.field_key === field.field_key);
-        const pendingChange = pendingChanges.get(key);
-        
-        if (!existingConfig && !pendingChange) {
-          // This field is visible by default but has no config, add it as not visible
-          allFieldUpdates.push({
-            step_name: step.step_name,
-            field_key: field.field_key,
-            is_visible: false,
-            unit: '',
-          });
-        }
+    if (Array.isArray(steps) && Array.isArray(masterFields)) {
+      steps.forEach(step => {
+        masterFields.forEach(field => {
+          const key = `${step.step_name}-${field.field_key}`;
+          const existingConfig = Array.isArray(fieldConfigs) ? 
+            fieldConfigs.find(c => c.step_name === step.step_name && c.field_key === field.field_key) : 
+            undefined;
+          const pendingChange = pendingChanges.get(key);
+          
+          if (!existingConfig && !pendingChange) {
+            // This field is visible by default but has no config, add it as not visible
+            allFieldUpdates.push({
+              step_name: step.step_name,
+              field_key: field.field_key,
+              is_visible: false,
+              unit: '',
+            });
+          }
+        });
       });
-    });
+    }
 
     saveAllFieldConfigs(allFieldUpdates);
     setPendingChanges(new Map());
@@ -180,6 +186,9 @@ const ManufacturingWorkflowConfig = () => {
   };
 
   const hasUnsavedChanges = pendingChanges.size > 0;
+  const stepsArray = Array.isArray(steps) ? steps : [];
+  const fieldConfigsArray = Array.isArray(fieldConfigs) ? fieldConfigs : [];
+  const masterFieldsArray = Array.isArray(masterFields) ? masterFields : [];
 
   if (isLoading) {
     return (
@@ -259,7 +268,7 @@ const ManufacturingWorkflowConfig = () => {
           </Dialog>
         </CardHeader>
         <CardContent>
-          {steps.length === 0 ? (
+          {stepsArray.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No manufacturing steps configured yet.</p>
@@ -267,7 +276,7 @@ const ManufacturingWorkflowConfig = () => {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {steps.map((step, index) => (
+              {stepsArray.map((step, index) => (
                 <Card key={step.id} className="relative">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -288,8 +297,8 @@ const ManufacturingWorkflowConfig = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="text-sm text-muted-foreground">
-                      {fieldConfigs.filter(c => c.step_name === step.step_name && c.is_visible).length} 
-                      /{masterFields.length} fields visible
+                      {fieldConfigsArray.filter(c => c.step_name === step.step_name && c.is_visible).length} 
+                      /{masterFieldsArray.length} fields visible
                     </div>
                   </CardContent>
                 </Card>
@@ -300,7 +309,7 @@ const ManufacturingWorkflowConfig = () => {
       </Card>
 
       {/* Field Configuration */}
-      {steps.length > 0 && (
+      {stepsArray.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Field Configuration</CardTitle>
@@ -309,27 +318,27 @@ const ManufacturingWorkflowConfig = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedStep || steps[0]?.step_name} onValueChange={setSelectedStep}>
+            <Tabs value={selectedStep || stepsArray[0]?.step_name} onValueChange={setSelectedStep}>
               <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 w-full">
-                {steps.map((step) => (
+                {stepsArray.map((step) => (
                   <TabsTrigger key={step.id} value={step.step_name} className="text-xs">
                     {step.step_name}
                   </TabsTrigger>
                 ))}
               </TabsList>
               
-              {steps.map((step) => (
+              {stepsArray.map((step) => (
                 <TabsContent key={step.id} value={step.step_name} className="mt-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">Fields for {step.step_name}</h3>
                       <Badge variant="outline">
-                        {fieldConfigs.filter(c => c.step_name === step.step_name && c.is_visible).length} visible
+                        {fieldConfigsArray.filter(c => c.step_name === step.step_name && c.is_visible).length} visible
                       </Badge>
                     </div>
                     
                     <div className="grid gap-4">
-                      {masterFields.map((field) => {
+                      {masterFieldsArray.map((field) => {
                         const effectiveUnit = getEffectiveFieldUnit(step.step_name, field.field_key);
                         const effectiveVisibility = getEffectiveFieldVisibility(step.step_name, field.field_key);
                         

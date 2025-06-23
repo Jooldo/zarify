@@ -6,15 +6,16 @@ export interface MasterField {
   id: string;
   field_key: string;
   label: string;
-  data_type: 'number' | 'decimal' | 'text' | 'date' | 'boolean' | 'worker';
+  data_type: 'number' | 'boolean' | 'worker' | 'text' | 'date' | 'decimal';
   description?: string;
   is_active: boolean;
-  unit?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useMasterFields = () => {
-  const { data: masterFields = [], isLoading, error } = useQuery<MasterField[]>({
-    queryKey: ['master-fields'],
+  const { data: masterFields = [], isLoading } = useQuery<MasterField[]>({
+    queryKey: ['master_field_list'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('master_field_list')
@@ -23,14 +24,16 @@ export const useMasterFields = () => {
         .order('field_key');
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface, ensuring data_type is properly typed
+      const transformedData: MasterField[] = (data || []).map(field => ({
+        ...field,
+        data_type: field.data_type as MasterField['data_type']
+      }));
+      
+      return transformedData;
     },
-    staleTime: 5 * 60 * 1000,
   });
 
-  return {
-    masterFields,
-    isLoading,
-    error,
-  };
+  return { masterFields, isLoading };
 };

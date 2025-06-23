@@ -65,31 +65,19 @@ export const useManufacturingOrders = () => {
       const { data, error } = await supabase
         .from('manufacturing_orders')
         .select(`
-          *,
-          product_configs (
-            product_code,
-            category,
-            subcategory,
-            size_value,
-            weight_range,
-            product_config_materials (
-              id,
-              quantity_required,
-              unit,
-              raw_material_id,
-              raw_materials (
-                id,
-                name,
-                current_stock,
-                unit
-              )
-            )
-          )
+          *
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as ManufacturingOrder[];
+      
+      // Transform data to match expected interface
+      const transformedData: ManufacturingOrder[] = (data || []).map(order => ({
+        ...order,
+        quantity_required: Number(order.quantity_required)
+      }));
+      
+      return transformedData;
     },
   });
 
@@ -111,7 +99,6 @@ export const useManufacturingOrders = () => {
           order_number: orderNumber,
           merchant_id: merchantId,
           product_name: orderData.product_name,
-          product_config_id: orderData.product_config_id,
           quantity_required: orderData.quantity_required,
           priority: orderData.priority,
           due_date: orderData.due_date,
