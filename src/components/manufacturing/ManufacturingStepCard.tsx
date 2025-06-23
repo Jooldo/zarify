@@ -1,3 +1,4 @@
+
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, User, Package, Calendar, Play, Factory, Cog } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWorkers } from '@/hooks/useWorkers';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 export interface StepCardData {
   stepName: string;
@@ -34,8 +36,18 @@ export interface StepCardData {
   [key: string]: any;
 }
 
+interface StepSummary {
+  stepName: string;
+  stepOrder: number;
+  totalActiveInstances: number;
+  weightAssigned: number;
+  weightReceived: number;
+  completionPercentage: number;
+}
+
 const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) => {
   const { workers } = useWorkers();
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   
   console.log('ManufacturingStepCard render:', {
     stepName: data.stepName,
@@ -71,6 +83,56 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     }
     
     return null;
+  };
+
+  // Calculate step summaries for order cards
+  const getStepSummaries = (): StepSummary[] => {
+    if (!data.orderId || !Array.isArray(orderSteps) || !Array.isArray(manufacturingSteps)) {
+      return [];
+    }
+
+    // Get order steps for this specific order
+    const thisOrderSteps = orderSteps.filter(step => step.order_id === data.orderId);
+
+    // Get active manufacturing steps in order
+    const activeSteps = manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order);
+
+    return activeSteps.map(step => {
+      // Find all instances of this step for this order
+      const stepInstances = thisOrderSteps.filter(orderStep => 
+        orderStep.step_name === step.step_name
+      );
+
+      // Calculate metrics
+      const totalActiveInstances = stepInstances.filter(instance => 
+        instance.status === 'in_progress' || instance.status === 'pending'
+      ).length;
+
+      const weightAssigned = stepInstances.reduce((sum, instance) => 
+        sum + (instance.weight_assigned || 0), 0
+      );
+
+      const weightReceived = stepInstances.reduce((sum, instance) => 
+        sum + (instance.weight_received || 0), 0
+      );
+
+      // Calculate completion percentage
+      let completionPercentage = 0;
+      if (weightAssigned > 0) {
+        completionPercentage = Math.round((weightReceived / weightAssigned) * 100 * 100) / 100;
+      }
+
+      return {
+        stepName: step.step_name,
+        stepOrder: step.step_order,
+        totalActiveInstances,
+        weightAssigned,
+        weightReceived,
+        completionPercentage
+      };
+    });
   };
 
   // Get field values in consistent order with corrected weight display (no conversion)
@@ -169,6 +231,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   const isOrderCard = data.stepName === 'Manufacturing Order';
   const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
   const orderedFieldValues = getOrderedFieldValues();
+  const stepSummaries = isOrderCard ? getStepSummaries() : [];
   
   // Format step name with instance number for display
   const displayStepName = isOrderCard 
@@ -226,7 +289,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     <div 
       className="relative cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
       onClick={handleClick}
-      style={{ width: '380px', height: 'auto', minHeight: '200px' }}
+      style={{ width: '420px', height: 'auto', minHeight: '200px' }}
     >
       <Card className={`w-full h-full ${cardStyling.borderClass} ${cardStyling.bgClass} backdrop-blur-sm`}>
         <CardHeader className={`pb-3 px-4 pt-3 ${cardStyling.headerClass} rounded-t-lg`}>
@@ -274,6 +337,38 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               </div>
             )}
           </div>
+
+          {/* Step Summary Table for Order Cards */}
+          {isOrderCard && stepSummaries.length > 0 && (
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50">
+              <div className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <Factory className="h-3 w-3" />
+                Manufacturing Progress
+              </div>
+              <div className="space-y-2">
+                {stepSummaries.map((summary) => (
+                  <div key={summary.stepName} className="grid grid-cols-4 gap-2 text-xs">
+                    <div className="font-medium text-gray-900 truncate">{summary.stepName}</div>
+                    <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                      {summary.totalActiveInstances || 0}
+                    </div>
+                    <div className="text-right bg-purple-50 px-2 py-1 rounded text-purple-700">
+                      {summary.weightAssigned > 0 ? `${summary.weightAssigned.toFixed(1)}kg` : '—'}
+                    </div>
+                    <div className="text-right bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                      {summary.completionPercentage > 0 ? `${summary.completionPercentage.toFixed(1)}%` : '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
+                <div>Step</div>
+                <div className="text-center">Active</div>
+                <div className="text-right">Assigned</div>
+                <div className="text-right">Complete</div>
+              </div>
+            </div>
+          )}
 
           {/* Step Details Section - Only for non-order cards */}
           {!isOrderCard && data.orderStepData && (
