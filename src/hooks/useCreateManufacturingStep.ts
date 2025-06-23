@@ -46,6 +46,7 @@ export const useCreateManufacturingStep = () => {
           order_id: data.manufacturingOrderId,
           step_name: data.stepName,
           instance_number: nextInstanceNumber,
+          parent_instance_id: data.fieldValues.parent_instance_id || null, // Use the parent instance ID
           status: 'in_progress' as const,
           assigned_worker: data.fieldValues.worker || null,
           quantity_assigned: 0,

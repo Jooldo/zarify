@@ -553,6 +553,7 @@ export type Database = {
           merchant_id: string
           notes: string | null
           order_id: string
+          parent_instance_id: string | null
           purity: number | null
           quantity_assigned: number | null
           quantity_received: number | null
@@ -575,6 +576,7 @@ export type Database = {
           merchant_id: string
           notes?: string | null
           order_id: string
+          parent_instance_id?: string | null
           purity?: number | null
           quantity_assigned?: number | null
           quantity_received?: number | null
@@ -597,6 +599,7 @@ export type Database = {
           merchant_id?: string
           notes?: string | null
           order_id?: string
+          parent_instance_id?: string | null
           purity?: number | null
           quantity_assigned?: number | null
           quantity_received?: number | null
@@ -635,6 +638,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_step_data_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_step_data"
             referencedColumns: ["id"]
           },
         ]
