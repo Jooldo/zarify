@@ -50,12 +50,38 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   // Initialize form values when step changes
   useEffect(() => {
     if (step && open) {
-      // Initialize field values
+      console.log('Initializing form with step:', step);
+      
+      // Initialize field values with current database values
       const initialValues: Record<string, any> = {};
       
       currentStepFields.forEach(field => {
-        initialValues[field.field_key] = '';
+        // Check if the step has the field value directly from database
+        switch (field.field_key) {
+          case 'quantity_assigned':
+            initialValues[field.field_key] = step.quantity_assigned || '';
+            break;
+          case 'quantity_received':
+            initialValues[field.field_key] = step.quantity_received || '';
+            break;
+          case 'weight_assigned':
+            initialValues[field.field_key] = step.weight_assigned || '';
+            break;
+          case 'weight_received':
+            initialValues[field.field_key] = step.weight_received || '';
+            break;
+          case 'purity':
+            initialValues[field.field_key] = step.purity || '';
+            break;
+          case 'wastage':
+            initialValues[field.field_key] = step.wastage || '';
+            break;
+          default:
+            initialValues[field.field_key] = '';
+        }
       });
+      
+      console.log('Initial field values:', initialValues);
       
       setFieldValues(initialValues);
       setStatus(step.status || '');
@@ -66,6 +92,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   }, [step, open, currentStepFields.length]);
 
   const handleFieldChange = (fieldKey: string, value: any) => {
+    console.log('Field changed:', fieldKey, '=', value);
     setFieldValues(prev => ({
       ...prev,
       [fieldKey]: value
@@ -80,6 +107,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     setIsSubmitting(true);
 
     try {
+      console.log('Submitting update with field values:', fieldValues);
+      
       await updateStep({
         stepId: step.id,
         fieldValues,
@@ -99,6 +128,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       onStepUpdate?.();
       onOpenChange(false);
     } catch (error) {
+      console.error('Error updating step:', error);
       toast({
         title: 'Error',
         description: 'Failed to update step',
@@ -118,6 +148,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         value={value}
         onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
         placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+        type={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? 'number' : 'text'}
+        step={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? '0.01' : undefined}
       />
     );
   };

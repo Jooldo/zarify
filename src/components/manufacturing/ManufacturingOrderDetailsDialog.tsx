@@ -75,6 +75,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   };
 
   const handleStepClick = (orderStep: any) => {
+    console.log('Step clicked:', orderStep);
     setSelectedOrderStep(orderStep);
     setUpdateStepDialogOpen(true);
   };
@@ -86,26 +87,66 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   // Get all order steps for this order with their field data
   const getOrderStepsWithFieldData = () => {
+    console.log('Getting order steps with field data for order:', order.id);
+    console.log('Available orderSteps:', orderSteps);
+    console.log('Available stepFields:', stepFields);
+    
     const currentOrderSteps = Array.isArray(orderSteps)
       ? orderSteps
-          .filter(step => step.order_id === order.id)
+          .filter(step => {
+            console.log('Checking step:', step.order_id, 'against order:', order.id);
+            return String(step.order_id) === String(order.id);
+          })
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       : [];
+
+    console.log('Filtered currentOrderSteps:', currentOrderSteps);
 
     return currentOrderSteps.map(orderStep => {
       const stepStepFields = Array.isArray(stepFields) 
         ? stepFields.filter(field => field.step_name === orderStep.step_name && field.is_visible)
         : [];
 
-      // Get field values for this step
+      console.log('Step fields for', orderStep.step_name, ':', stepStepFields);
+
+      // Get field values for this step - including database values
       const fieldValues = stepStepFields.map(field => {
-        const value = getStepValue(orderStep.id, field.field_key);
+        let value = getStepValue(orderStep.id, field.field_key);
+        
+        // If no custom value, check the orderStep direct properties
+        if (!value || value === 'Not set') {
+          switch (field.field_key) {
+            case 'quantity_assigned':
+              value = orderStep.quantity_assigned || 0;
+              break;
+            case 'quantity_received':
+              value = orderStep.quantity_received || 0;
+              break;
+            case 'weight_assigned':
+              value = orderStep.weight_assigned || 0;
+              break;
+            case 'weight_received':
+              value = orderStep.weight_received || 0;
+              break;
+            case 'purity':
+              value = orderStep.purity || 0;
+              break;
+            case 'wastage':
+              value = orderStep.wastage || 0;
+              break;
+            default:
+              value = value || '-';
+          }
+        }
+        
         return {
           fieldKey: field.field_key,
           value: value || '-',
           unit: field.unit || ''
         };
       });
+
+      console.log('Field values for step', orderStep.step_name, ':', fieldValues);
 
       return {
         ...orderStep,
@@ -116,6 +157,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   };
 
   const orderStepsWithData = getOrderStepsWithFieldData();
+  console.log('Final orderStepsWithData:', orderStepsWithData);
 
   const getStepStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -269,7 +311,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Workflow className="h-4 w-4" />
-                    Manufacturing Steps Progress
+                    Manufacturing Steps Progress ({orderStepsWithData.length} steps)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
@@ -315,10 +357,10 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                             <p className="font-medium">{format(new Date(orderStep.due_date), 'MMM dd, yyyy')}</p>
                           </div>
                         )}
-                        {orderStep.assigned_worker && getWorkerName(orderStep.assigned_worker) && (
+                        {orderStep.assigned_worker && (
                           <div>
                             <span className="text-muted-foreground">Assigned Worker:</span>
-                            <p className="font-medium">{getWorkerName(orderStep.assigned_worker)}</p>
+                            <p className="font-medium">{getWorkerName(orderStep.assigned_worker) || 'Unknown Worker'}</p>
                           </div>
                         )}
                       </div>
@@ -339,6 +381,21 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                       )}
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Show a message if no steps are found */}
+            {orderStepsWithData.length === 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Workflow className="h-4 w-4" />
+                    Manufacturing Steps Progress
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-muted-foreground text-sm">No manufacturing steps have been started for this order yet.</p>
                 </CardContent>
               </Card>
             )}
