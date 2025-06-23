@@ -90,11 +90,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Dynamic layout constants
+    // Dynamic layout constants with increased spacing for Jhalai
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const BASE_PARALLEL_INSTANCE_SPACING = 450;
-    const CHILD_SPACING_MULTIPLIER = 1.5; // Increase spacing when children exist
+    const BASE_PARALLEL_INSTANCE_SPACING = 600; // Increased from 450
+    const JHALAI_INSTANCE_SPACING = 800; // Extra spacing for Jhalai instances
+    const CHILD_SPACING_MULTIPLIER = 1.5;
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -167,12 +168,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // Calculate dynamic spacing based on child steps
+        // Calculate dynamic spacing based on child steps and step type
         const childCount = stepChildCounts.get(step.step_name) || 0;
         const hasChildren = childCount > 0;
+        const isFirstStep = stepIndex === 0; // Usually Jhalai
+        
+        // Use extra spacing for Jhalai (first step) to prevent connector overlap
+        let baseSpacing = isFirstStep ? JHALAI_INSTANCE_SPACING : BASE_PARALLEL_INSTANCE_SPACING;
         const dynamicSpacing = hasChildren 
-          ? BASE_PARALLEL_INSTANCE_SPACING * CHILD_SPACING_MULTIPLIER
-          : BASE_PARALLEL_INSTANCE_SPACING;
+          ? baseSpacing * CHILD_SPACING_MULTIPLIER
+          : baseSpacing;
 
         // Enhanced ordering logic for instances
         let orderedInstances;
