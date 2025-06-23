@@ -99,22 +99,22 @@ const Index = () => {
       <NavigationProvider>
         <div className="min-h-screen flex w-full">
           <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-          <main className="flex-1">
+          <main className="flex-1 bg-gray-50">
             <Routes>
-              <Route index element={<UnifiedDashboard />} />
+              <Route index element={<div className="p-6"><UnifiedDashboard /></div>} />
               <Route path="orders" element={<OrdersTab />} />
-              <Route path="inventory" element={<InventoryTab />} />
-              <Route path="inventory/finished-goods" element={<FinishedGoodsInventory />} />
-              <Route path="inventory/raw-materials" element={<RawMaterialInventory />} />
-              <Route path="manufacturing" element={<FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} />} />
-              <Route path="procurement" element={<ProcurementRequestsSection />} />
-              <Route path="config" element={<ProductConfigTab />} />
-              <Route path="users" element={<UsersTab activeTab="customers" onTabChange={() => {}} />} />
-              <Route path="activity" element={<ActivityLogsTab />} />
-              <Route path="settings/merchant" element={<MerchantConfigurations />} />
-              <Route path="settings/general" element={<GeneralSettings />} />
-              <Route path="catalogue" element={<CatalogueManagement />} />
-              <Route path="dev" element={<DevelopmentDashboard />} />
+              <Route path="inventory" element={<div className="p-6"><InventoryTab /></div>} />
+              <Route path="inventory/finished-goods" element={<div className="p-6"><FinishedGoodsInventory /></div>} />
+              <Route path="inventory/raw-materials" element={<div className="p-6"><RawMaterialInventory /></div>} />
+              <Route path="manufacturing" element={<div className="p-6"><FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} /></div>} />
+              <Route path="procurement" element={<div className="p-6"><ProcurementRequestsSection /></div>} />
+              <Route path="config" element={<div className="p-6"><ProductConfigTab /></div>} />
+              <Route path="users" element={<div className="p-6"><UsersTab activeTab="customers" onTabChange={() => {}} /></div>} />
+              <Route path="activity" element={<div className="p-6"><ActivityLogsTab /></div>} />
+              <Route path="settings/merchant" element={<div className="p-6"><MerchantConfigurations /></div>} />
+              <Route path="settings/general" element={<div className="p-6"><GeneralSettings /></div>} />
+              <Route path="catalogue" element={<div className="p-6"><CatalogueManagement /></div>} />
+              <Route path="dev" element={<div className="p-6"><DevelopmentDashboard /></div>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
