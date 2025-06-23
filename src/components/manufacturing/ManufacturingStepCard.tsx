@@ -36,6 +36,12 @@ export interface StepCardData {
 const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) => {
   const { workers } = useWorkers();
   
+  console.log('ManufacturingStepCard render:', {
+    stepName: data.stepName,
+    orderId: data.orderId,
+    hasOnStartNextStep: !!data.onStartNextStep
+  });
+  
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending': return 'bg-gray-100 text-gray-800';
@@ -85,7 +91,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   };
 
   const isOrderCard = data.stepName === 'Manufacturing Order';
-  const nextStepName = !isOrderCard ? getNextStepName(data.stepName) : 'Jhalai';
+  const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
+  
+  console.log('Button visibility check:', {
+    isOrderCard,
+    nextStepName,
+    hasCallback: !!data.onStartNextStep,
+    shouldShowButton: !!nextStepName && !!data.onStartNextStep
+  });
   
   return (
     <div 
@@ -220,7 +233,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             </div>
           )}
 
-          {/* Start Next Step button - show for both order cards and step cards */}
+          {/* Start Next Step button - show when there's a next step and callback */}
           {nextStepName && data.onStartNextStep && (
             <div className="pt-2">
               <Button 

@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -17,7 +18,7 @@ const nodeTypes = {
 interface ReactFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails?: (order: ManufacturingOrder) => void;
-  onStartNextStep?: (orderId: string) => void; // Add this prop
+  onStartNextStep?: (orderId: string) => void;
 }
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ 
@@ -30,6 +31,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
+
+  console.log('ReactFlowView props:', {
+    ordersCount: manufacturingOrders.length,
+    hasOnStartNextStep: !!onStartNextStep
+  });
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
@@ -190,6 +196,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
   // Update node data with callbacks
   const nodesWithCallbacks = useMemo(() => {
+    console.log('Creating nodes with callbacks, onStartNextStep available:', !!onStartNextStep);
+    
     return nodes.map(node => ({
       ...node,
       data: {
@@ -198,7 +206,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         orderSteps,
         onStepClick,
         onOrderClick,
-        onStartNextStep, // Pass the callback to step cards
+        onStartNextStep,
       },
     }));
   }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, onStartNextStep]);
