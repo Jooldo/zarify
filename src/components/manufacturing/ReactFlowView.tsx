@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -18,11 +17,13 @@ const nodeTypes = {
 interface ReactFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails?: (order: ManufacturingOrder) => void;
+  onStartNextStep?: (orderId: string) => void; // Add this prop
 }
 
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ 
   manufacturingOrders,
-  onViewDetails 
+  onViewDetails,
+  onStartNextStep 
 }) => {
   const { manufacturingSteps, orderSteps, refetch: refetchSteps } = useManufacturingSteps();
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
@@ -30,7 +31,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
 
-  // Create nodes and edges from manufacturing orders
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -198,9 +198,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         orderSteps,
         onStepClick,
         onOrderClick,
+        onStartNextStep, // Pass the callback to step cards
       },
     }));
-  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick]);
+  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, onStartNextStep]);
 
   if (manufacturingOrders.length === 0) {
     return (

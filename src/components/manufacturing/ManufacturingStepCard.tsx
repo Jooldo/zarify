@@ -3,7 +3,8 @@ import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, User, Package, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, User, Package, Calendar, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWorkers } from '@/hooks/useWorkers';
 
@@ -25,10 +26,11 @@ export interface StepCardData {
   orderSteps?: any[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
-  onOrderClick?: (orderId: string) => void; // Add this for manufacturing order cards
-  orderStepData?: any; // The actual step data from manufacturing_order_step_data
-  rawMaterials?: any[]; // Add this property
-  [key: string]: any; // Add index signature for compatibility
+  onOrderClick?: (orderId: string) => void;
+  onStartNextStep?: (orderId: string) => void; // Add this for step cards
+  orderStepData?: any;
+  rawMaterials?: any[];
+  [key: string]: any;
 }
 
 const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) => {
@@ -51,6 +53,18 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     return worker ? worker.name : null;
   };
 
+  // Get the next step name based on current step
+  const getNextStepName = (currentStepName: string) => {
+    const stepSequence = ['Jhalai', 'Dhol', 'Casting']; // Add more steps as needed
+    const currentIndex = stepSequence.indexOf(currentStepName);
+    
+    if (currentIndex >= 0 && currentIndex < stepSequence.length - 1) {
+      return stepSequence[currentIndex + 1];
+    }
+    
+    return null; // No next step (e.g., Casting is the last step)
+  };
+
   const handleClick = () => {
     console.log('Card clicked:', data);
     const isOrderCard = data.stepName === 'Manufacturing Order';
@@ -64,7 +78,15 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     }
   };
 
+  const handleStartNextStep = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.onStartNextStep) {
+      data.onStartNextStep(data.orderId);
+    }
+  };
+
   const isOrderCard = data.stepName === 'Manufacturing Order';
+  const nextStepName = !isOrderCard ? getNextStepName(data.stepName) : null;
   
   return (
     <div 
@@ -196,6 +218,21 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${data.progress}%` }}
               />
+            </div>
+          )}
+
+          {/* Start Next Step button for step cards */}
+          {!isOrderCard && nextStepName && data.onStartNextStep && (
+            <div className="pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleStartNextStep}
+                className="w-full flex items-center gap-1"
+              >
+                <Play className="h-3 w-3" />
+                Start {nextStepName}
+              </Button>
             </div>
           )}
         </CardContent>

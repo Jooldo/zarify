@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,42 +39,13 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     .filter(step => step.status === 'in_progress')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-  // Get next step to start - improved logic
+  // Simplified: Manufacturing Order cards always show "Start Jhalai" (first step)
   const getNextStep = () => {
-    if (thisOrderSteps.length === 0) {
-      // No steps exist, get the first manufacturing step
-      return manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)[0];
-    }
-    
-    // Find the next pending step
-    const nextPendingStep = thisOrderSteps
-      .filter(step => step.status === 'pending')
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-    
-    if (nextPendingStep) {
-      return manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name);
-    }
-    
-    // If no pending steps, check if we need to create the next step in sequence
-    const completedStepNames = thisOrderSteps
-      .filter(step => step.status === 'completed')
-      .map(step => step.step_name);
-    
-    const allSteps = manufacturingSteps
+    const firstStep = manufacturingSteps
       .filter(step => step.is_active)
-      .sort((a, b) => a.step_order - b.step_order);
+      .sort((a, b) => a.step_order - b.step_order)[0];
     
-    // Find the next step that hasn't been started yet
-    for (const step of allSteps) {
-      const hasBeenStarted = thisOrderSteps.some(orderStep => orderStep.step_name === step.step_name);
-      if (!hasBeenStarted) {
-        return step;
-      }
-    }
-    
-    return null;
+    return firstStep;
   };
 
   const nextStep = getNextStep();
@@ -155,7 +125,6 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Progress bar */}
           {totalSteps > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -177,7 +146,6 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
             </div>
           )}
 
-          {/* Order details */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-gray-400" />
@@ -198,7 +166,6 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
             )}
           </div>
 
-          {/* Special instructions */}
           {order.special_instructions && (
             <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
               <p className="text-sm text-amber-800">
