@@ -1,78 +1,93 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Boxes, Workflow, Settings } from 'lucide-react';
-import RawMaterialsConfig from '@/components/config/RawMaterialsConfig';
-import FinishedGoodsConfig from '@/components/config/FinishedGoodsConfig';
-import ManufacturingConfigPanel from '@/components/manufacturing/config/ManufacturingConfigPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Truck, Package2, Settings } from 'lucide-react';
 
 const MerchantConfigurations = () => {
-  const [activeTab, setActiveTab] = useState('raw-materials');
+  const [activeTab, setActiveTab] = useState('general');
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Merchant Configurations</h1>
         <p className="text-muted-foreground">
-          Configure your business settings, materials, products, and manufacturing workflows.
+          Configure your business settings and operational parameters.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="raw-materials" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Raw Materials
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            General
           </TabsTrigger>
-          <TabsTrigger value="finished-goods" className="flex items-center gap-2">
-            <Boxes className="h-4 w-4" />
-            Finished Goods
+          <TabsTrigger value="suppliers" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Suppliers
           </TabsTrigger>
-          <TabsTrigger value="manufacturing" className="flex items-center gap-2">
-            <Workflow className="h-4 w-4" />
-            Manufacturing
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package2 className="h-4 w-4" />
+            Inventory
           </TabsTrigger>
-          <TabsTrigger value="workers" className="flex items-center gap-2">
+          <TabsTrigger value="system" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            Workers & Quality
+            System
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="raw-materials" className="space-y-6">
-          <RawMaterialsConfig />
-        </TabsContent>
-
-        <TabsContent value="finished-goods" className="space-y-6">
-          <FinishedGoodsConfig />
-        </TabsContent>
-
-        <TabsContent value="manufacturing" className="space-y-6">
-          <ManufacturingConfigPanel />
-        </TabsContent>
-
-        <TabsContent value="workers" className="space-y-6">
+        <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Worker Configuration</CardTitle>
+              <CardTitle>Business Information</CardTitle>
               <CardDescription>
-                Manage worker roles, skills, and assignments for manufacturing steps.
+                Configure your business details and contact information.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Worker configuration coming soon...</p>
+              <p className="text-muted-foreground">Business configuration coming soon...</p>
             </CardContent>
           </Card>
+        </TabsContent>
 
+        <TabsContent value="suppliers" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quality Control Settings</CardTitle>
+              <CardTitle>Supplier Management</CardTitle>
               <CardDescription>
-                Configure quality control checkpoints and approval workflows.
+                Configure supplier settings and procurement preferences.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Quality control settings coming soon...</p>
+              <p className="text-muted-foreground">Supplier configuration coming soon...</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inventory" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Settings</CardTitle>
+              <CardDescription>
+                Configure inventory thresholds and stock management settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Inventory configuration coming soon...</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Configuration</CardTitle>
+              <CardDescription>
+                Configure system-wide settings and preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">System configuration coming soon...</p>
             </CardContent>
           </Card>
         </TabsContent>
