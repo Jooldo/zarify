@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,8 +44,27 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     .filter(step => step.status === 'in_progress')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-  // Check if there are any rework steps for this order
-  const hasReworkSteps = thisOrderSteps.some(step => step.is_rework === true);
+  // Check if there are any steps with rework tags (origin_step_id exists and should show rework)
+  const hasReworkSteps = thisOrderSteps.some(step => {
+    if (!step.origin_step_id || !Array.isArray(manufacturingSteps)) {
+      return false;
+    }
+
+    // Get current step order
+    const currentStepConfig = manufacturingSteps.find(ms => ms.step_name === step.step_name);
+    if (!currentStepConfig) return false;
+
+    // Get origin step details
+    const originStep = thisOrderSteps.find(os => os.id === step.origin_step_id);
+    if (!originStep) return false;
+
+    // Get origin step order
+    const originStepConfig = manufacturingSteps.find(ms => ms.step_name === originStep.step_name);
+    if (!originStepConfig) return false;
+
+    // Show rework tag if current step order <= origin step order
+    return currentStepConfig.step_order <= originStepConfig.step_order;
+  });
 
   // Simplified: Manufacturing Order cards always show "Start Jhalai" (first step)
   const getNextStep = () => {

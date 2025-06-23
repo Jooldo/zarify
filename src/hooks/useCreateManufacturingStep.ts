@@ -40,6 +40,51 @@ export const useCreateManufacturingStep = () => {
           console.log(`This step originates from instance #${data.fieldValues.sourceInstanceNumber}`);
         }
 
+        // Get manufacturing steps to determine step order
+        const { data: manufacturingSteps, error: stepsError } = await supabase
+          .from('merchant_step_config')
+          .select('step_name, step_order')
+          .eq('merchant_id', merchantId)
+          .eq('is_active', true);
+
+        if (stepsError) throw stepsError;
+
+        // Determine origin_step_id propagation
+        let originStepId = data.fieldValues.origin_step_id || null;
+        
+        // If parent has origin_step_id, check if we should propagate it
+        if (data.fieldValues.parent_instance_id && !originStepId) {
+          // Get parent step data
+          const { data: parentStep, error: parentError } = await supabase
+            .from('manufacturing_order_step_data')
+            .select('origin_step_id, step_name')
+            .eq('id', data.fieldValues.parent_instance_id)
+            .single();
+
+          if (!parentError && parentStep?.origin_step_id) {
+            // Get origin step details to determine step order
+            const { data: originStep, error: originError } = await supabase
+              .from('manufacturing_order_step_data')
+              .select('step_name')
+              .eq('id', parentStep.origin_step_id)
+              .single();
+
+            if (!originError && originStep) {
+              const currentStepConfig = manufacturingSteps.find(s => s.step_name === data.stepName);
+              const originStepConfig = manufacturingSteps.find(s => s.step_name === originStep.step_name);
+              
+              // Only propagate origin_step_id if current step order <= origin step order
+              if (currentStepConfig && originStepConfig && 
+                  currentStepConfig.step_order <= originStepConfig.step_order) {
+                originStepId = parentStep.origin_step_id;
+                console.log(`Propagating origin_step_i ${originStepId} to ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
+              } else {
+                console.log(`Not propagating origin_step_id - ${data.stepName} has progressed beyond origin step`);
+              }
+            }
+          }
+        }
+
         // Create the manufacturing order step data with instance tracking
         const stepToInsert = {
           merchant_id: merchantId,
@@ -56,7 +101,7 @@ export const useCreateManufacturingStep = () => {
           purity: 0,
           wastage: 0,
           is_rework: data.fieldValues.is_rework || false,
-          origin_step_id: data.fieldValues.origin_step_id || null,
+          origin_step_id: originStepId,
           // Store source instance information if provided
           notes: data.fieldValues.sourceInstanceNumber 
             ? `Created from instance #${data.fieldValues.sourceInstanceNumber}` 

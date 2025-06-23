@@ -1,3 +1,4 @@
+
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,28 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       quantity: remainingQuantity,
     };
   }, [data.orderStepData, data.stepName, data.instanceNumber, orderSteps]);
+
+  // Check if this should show rework tag based on step order comparison
+  const shouldShowReworkTag = useMemo(() => {
+    if (!data.orderStepData?.origin_step_id || !Array.isArray(orderSteps) || !Array.isArray(manufacturingSteps)) {
+      return false;
+    }
+
+    // Get current step order
+    const currentStepConfig = manufacturingSteps.find(step => step.step_name === data.stepName);
+    if (!currentStepConfig) return false;
+
+    // Get origin step details
+    const originStep = orderSteps.find(step => step.id === data.orderStepData.origin_step_id);
+    if (!originStep) return false;
+
+    // Get origin step order
+    const originStepConfig = manufacturingSteps.find(step => step.step_name === originStep.step_name);
+    if (!originStepConfig) return false;
+
+    // Show rework tag if current step order <= origin step order
+    return currentStepConfig.step_order <= originStepConfig.step_order;
+  }, [data.orderStepData, data.stepName, orderSteps, manufacturingSteps]);
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -277,9 +300,6 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       ? `${data.stepName} #${data.instanceNumber}`
       : data.stepName;
 
-  // Check if this is a rework instance
-  const isReworkInstance = data.orderStepData?.is_rework === true;
-
   // Get card styling based on type and status
   const getCardStyling = () => {
     if (isOrderCard) {
@@ -346,7 +366,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               )}
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {isReworkInstance && (
+              {shouldShowReworkTag && (
                 <Badge className="text-xs px-2 py-1 bg-orange-100 text-orange-800 border border-orange-300 font-medium">
                   Rework
                 </Badge>

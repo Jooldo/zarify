@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,28 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [isReworkMode, setIsReworkMode] = useState(false);
   const [reworkQuantity, setReworkQuantity] = useState('');
   const [reworkWeight, setReworkWeight] = useState('');
+
+  // Check if this step should show rework tag based on step order comparison
+  const shouldShowReworkTag = useMemo(() => {
+    if (!step?.origin_step_id || !Array.isArray(orderSteps) || !Array.isArray(manufacturingSteps)) {
+      return false;
+    }
+
+    // Get current step order
+    const currentStepConfig = manufacturingSteps.find(ms => ms.step_name === step.step_name);
+    if (!currentStepConfig) return false;
+
+    // Get origin step details
+    const originStep = orderSteps.find(os => os.id === step.origin_step_id);
+    if (!originStep) return false;
+
+    // Get origin step order
+    const originStepConfig = manufacturingSteps.find(ms => ms.step_name === originStep.step_name);
+    if (!originStepConfig) return false;
+
+    // Show rework tag if current step order <= origin step order
+    return currentStepConfig.step_order <= originStepConfig.step_order;
+  }, [step, orderSteps, manufacturingSteps]);
 
   // Get parent step details
   const parentStepDetails = useMemo(() => {
@@ -527,7 +550,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               Update Step
             </DialogTitle>
             <div className="flex items-center gap-2">
-              {step.is_rework && (
+              {shouldShowReworkTag && (
                 <Badge className="text-xs bg-orange-100 text-orange-800">
                   Rework
                 </Badge>
