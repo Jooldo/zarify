@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +55,9 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     stepName: data.stepName,
     orderId: data.orderId,
     instanceNumber: data.instanceNumber,
-    hasOnStartNextStep: !!data.onStartNextStep
+    hasOnStartNextStep: !!data.onStartNextStep,
+    isRework: data.orderStepData?.is_rework,
+    orderStepData: data.orderStepData
   });
 
   // Calculate remaining quantities for parent steps
@@ -276,6 +277,9 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       ? `${data.stepName} #${data.instanceNumber}`
       : data.stepName;
 
+  // Check if this is a rework instance
+  const isReworkInstance = data.orderStepData?.is_rework === true;
+
   // Get card styling based on type and status
   const getCardStyling = () => {
     if (isOrderCard) {
@@ -341,9 +345,16 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 </div>
               )}
             </div>
-            <Badge className={`text-xs px-3 py-1 flex-shrink-0 font-medium border ${getStatusColor(data.status)}`}>
-              {data.status.replace('_', ' ').toUpperCase()}
-            </Badge>
+            <div className="flex gap-2 flex-shrink-0">
+              {isReworkInstance && (
+                <Badge className="text-xs px-2 py-1 bg-orange-100 text-orange-800 border border-orange-300 font-medium">
+                  Rework
+                </Badge>
+              )}
+              <Badge className={`text-xs px-3 py-1 flex-shrink-0 font-medium border ${getStatusColor(data.status)}`}>
+                {data.status.replace('_', ' ').toUpperCase()}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         

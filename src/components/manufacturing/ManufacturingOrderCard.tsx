@@ -43,6 +43,9 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     .filter(step => step.status === 'in_progress')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
+  // Check if there are any rework steps for this order
+  const hasReworkSteps = thisOrderSteps.some(step => step.is_rework === true);
+
   // Simplified: Manufacturing Order cards always show "Start Jhalai" (first step)
   const getNextStep = () => {
     const firstStep = manufacturingSteps
@@ -115,6 +118,11 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
               <p className="text-sm text-gray-500">Qty: {order.quantity_required}</p>
             </div>
             <div className="flex gap-2">
+              {hasReworkSteps && (
+                <Badge className="bg-orange-100 text-orange-800 border border-orange-300">
+                  Has Rework
+                </Badge>
+              )}
               <Badge className={getPriorityColor(order.priority)}>
                 {order.priority}
               </Badge>
