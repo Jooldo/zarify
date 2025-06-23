@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { findWorkerName } from '@/utils/weightCalculations';
+import { findWorkerName, calculateRemainingWeight, calculateRemainingQuantity } from '@/utils/weightCalculations';
 
 interface UpdateStepDialogProps {
   step: ManufacturingOrderStep | null;
@@ -66,6 +66,47 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       fields: parentStepFields
     };
   }, [step, orderSteps, manufacturingSteps, stepFields]);
+
+  // Calculate remaining quantities
+  const remainingQuantities = useMemo(() => {
+    if (!step || !parentStepDetails) {
+      return null;
+    }
+
+    const currentStepName = step.step_name;
+    const parentInstanceNumber = parentStepDetails.step.instance_number || 1;
+
+    // Calculate remaining weight (excluding current step's assignment)
+    const otherChildSteps = orderSteps.filter(orderStep => 
+      orderStep.parent_instance_id === step.parent_instance_id && 
+      orderStep.id !== step.id
+    );
+
+    const remainingWeight = calculateRemainingWeight(
+      parentStepDetails.step,
+      otherChildSteps,
+      currentStepName,
+      parentInstanceNumber
+    );
+
+    const remainingQuantity = calculateRemainingQuantity(
+      parentStepDetails.step,
+      otherChildSteps,
+      currentStepName,
+      parentInstanceNumber
+    );
+
+    // Add back current step's assignments to show total available
+    const totalAvailableWeight = remainingWeight + (step.weight_assigned || 0);
+    const totalAvailableQuantity = remainingQuantity + (step.quantity_assigned || 0);
+
+    return {
+      weight: totalAvailableWeight,
+      quantity: totalAvailableQuantity,
+      parentWeightReceived: parentStepDetails.step.weight_received || 0,
+      parentQuantityReceived: parentStepDetails.step.quantity_received || 0
+    };
+  }, [step, parentStepDetails, orderSteps]);
 
   // Get current step fields that match this step in consistent order
   const currentStepFields = stepFields.filter(field => {
@@ -355,7 +396,10 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       );
     }
 
-    // Handle regular fields
+    // Handle regular fields with remaining quantity info
+    const showRemainingInfo = remainingQuantities && 
+      (field.field_key === 'quantity_assigned' || field.field_key === 'weight_assigned');
+
     return (
       <div key={field.id} className="space-y-1">
         <Label htmlFor={field.field_key} className="text-xs font-medium text-gray-600">
@@ -372,6 +416,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           step={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? '0.01' : undefined}
           className="h-8 text-sm"
         />
+        {showRemainingInfo && (
+          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            Available: {field.field_key === 'quantity_assigned' 
+              ? `${remainingQuantities.quantity} pieces` 
+              : `${remainingQuantities.weight.toFixed(2)} kg`}
+          </div>
+        )}
       </div>
     );
   };
@@ -397,6 +449,34 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Remaining Quantities Alert */}
+          {remainingQuantities && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-medium text-blue-900">Available from Parent Step</h4>
+                    <div className="grid grid-cols-2 gap-4 text-xs text-blue-700">
+                      <div>
+                        <span className="font-medium">Quantity:</span> {remainingQuantities.quantity} pieces
+                        <div className="text-blue-600">
+                          (Parent received: {remainingQuantities.parentQuantityReceived})
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Weight:</span> {remainingQuantities.weight.toFixed(2)} kg
+                        <div className="text-blue-600">
+                          (Parent received: {remainingQuantities.parentWeightReceived.toFixed(2)} kg)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Parent Step Details */}
           {parentStepDetails && (
             <Card>
