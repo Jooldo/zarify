@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -74,7 +73,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     return null;
   };
 
-  // Get field values in consistent order with improved display
+  // Get field values in consistent order with corrected weight display (no conversion)
   const getOrderedFieldValues = () => {
     if (!data.orderStepData) return [];
     
@@ -108,14 +107,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             break;
           case 'weight_assigned':
             label = 'Weight Assigned';
-            unit = 'kg'; // Fixed unit display
-            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
+            unit = 'kg'; // Keep as kg, no conversion
+            displayValue = value.toFixed(2);
             colorClass = 'bg-purple-50 text-purple-700 border-purple-200';
             break;
           case 'weight_received':
             label = 'Weight Received';
-            unit = 'kg'; // Fixed unit display
-            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
+            unit = 'kg'; // Keep as kg, no conversion
+            displayValue = value.toFixed(2);
             colorClass = 'bg-teal-50 text-teal-700 border-teal-200';
             break;
           case 'purity':
@@ -125,8 +124,8 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             break;
           case 'wastage':
             label = 'Wastage';
-            unit = 'kg'; // Fixed unit display
-            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
+            unit = 'kg'; // Keep as kg, no conversion
+            displayValue = value.toFixed(2);
             colorClass = 'bg-red-50 text-red-700 border-red-200';
             break;
         }

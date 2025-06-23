@@ -19,7 +19,7 @@ import { useWorkers } from '@/hooks/useWorkers';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useMerchant } from '@/hooks/useMerchant';
-import { calculateRemainingWeight } from '@/utils/weightCalculations';
+import { calculateRemainingWeight, calculateRemainingQuantity } from '@/utils/weightCalculations';
 
 interface StartStepDialogProps {
   isOpen: boolean;
@@ -73,8 +73,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return indexA - indexB;
   });
 
-  // Calculate remaining weight for child steps
-  const remainingWeightInfo = React.useMemo(() => {
+  // Calculate remaining weight and quantity for child steps
+  const remainingAllocationInfo = React.useMemo(() => {
     if (!order || !step || !orderSteps.length) return null;
 
     // Check if this is a child step (not the first step)
@@ -95,21 +95,31 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       String(orderStep.order_id) === String(order.id)
     );
 
-    if (!parentStepInstance || !parentStepInstance.weight_received) return null;
+    if (!parentStepInstance) return null;
 
-    // Calculate remaining weight
-    const remainingWeight = calculateRemainingWeight(
+    // Calculate remaining weight and quantity
+    const remainingWeight = parentStepInstance.weight_received ? calculateRemainingWeight(
       parentStepInstance,
       orderSteps,
       parentStep.step_name,
       parentStepInstance.instance_number || 1
-    );
+    ) : 0;
+
+    const remainingQuantity = parentStepInstance.quantity_received ? calculateRemainingQuantity(
+      parentStepInstance,
+      orderSteps,
+      parentStep.step_name,
+      parentStepInstance.instance_number || 1
+    ) : 0;
 
     return {
       parentStepName: parentStep.step_name,
-      parentWeightReceived: parentStepInstance.weight_received,
+      parentWeightReceived: parentStepInstance.weight_received || 0,
+      parentQuantityReceived: parentStepInstance.quantity_received || 0,
       remainingWeight,
-      hasRemainingWeight: remainingWeight > 0
+      remainingQuantity,
+      hasRemainingWeight: remainingWeight > 0,
+      hasRemainingQuantity: remainingQuantity > 0
     };
   }, [order, step, orderSteps, manufacturingSteps]);
 
@@ -322,9 +332,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     }
 
     // Handle weight fields - show validation for weight_assigned
-    if (field.field_key === 'weight_assigned' && remainingWeightInfo) {
+    if (field.field_key === 'weight_assigned' && remainingAllocationInfo) {
       const weightValue = parseFloat(value) || 0;
-      const isOverAllocated = weightValue > remainingWeightInfo.remainingWeight;
+      const isOverAlloc = weightValue > remainingAllocationInfo.remainingWeight;
       
       return (
         <div className="space-y-2">
@@ -334,12 +344,37 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             placeholder="Enter weight in kg"
             type="number"
             step="0.01"
-            className={isOverAllocated ? 'border-red-500' : ''}
+            className={isOverAlloc ? 'border-red-500' : ''}
           />
-          {isOverAllocated && (
+          {isOverAlloc && (
             <div className="flex items-center gap-1 text-sm text-red-600">
               <AlertCircle className="h-3 w-3" />
-              Exceeds available weight ({remainingWeightInfo.remainingWeight} kg)
+              Exceeds available weight ({remainingAllocationInfo.remainingWeight} kg)
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Handle quantity fields - show validation for quantity_assigned
+    if (field.field_key === 'quantity_assigned' && remainingAllocationInfo) {
+      const quantityValue = parseFloat(value) || 0;
+      const isOverAlloc = quantityValue > remainingAllocationInfo.remainingQuantity;
+      
+      return (
+        <div className="space-y-2">
+          <Input
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+            placeholder="Enter quantity"
+            type="number"
+            step="0.01"
+            className={isOverAlloc ? 'border-red-500' : ''}
+          />
+          {isOverAlloc && (
+            <div className="flex items-center gap-1 text-sm text-red-600">
+              <AlertCircle className="h-3 w-3" />
+              Exceeds available quantity ({remainingAllocationInfo.remainingQuantity})
             </div>
           )}
         </div>
@@ -368,7 +403,10 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const isFormValid = requiredFields.every(field => {
     const value = fieldValues[field.field_key];
     return value !== undefined && value !== null && value !== '';
-  }) && (!remainingWeightInfo || !fieldValues['weight_assigned'] || parseFloat(fieldValues['weight_assigned']) <= remainingWeightInfo.remainingWeight);
+  }) && (!remainingAllocationInfo || 
+    (!fieldValues['weight_assigned'] || parseFloat(fieldValues['weight_assigned']) <= remainingAllocationInfo.remainingWeight) &&
+    (!fieldValues['quantity_assigned'] || parseFloat(fieldValues['quantity_assigned']) <= remainingAllocationInfo.remainingQuantity)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -414,30 +452,58 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             </Card>
           )}
 
-          {/* Remaining Weight Information */}
-          {remainingWeightInfo && (
+          {/* Remaining Allocation Information */}
+          {remainingAllocationInfo && (
             <Card className="border-blue-200 bg-blue-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Info className="h-4 w-4 text-blue-600" />
-                  Weight Allocation Info
+                  Allocation Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Parent Step ({remainingWeightInfo.parentStepName}):</span>
-                    <span className="font-medium">{remainingWeightInfo.parentWeightReceived} kg received</span>
+                <div className="space-y-3 text-sm">
+                  <div className="text-muted-foreground font-medium">
+                    Parent Step: {remainingAllocationInfo.parentStepName}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Available for assignment:</span>
-                    <span className={`font-medium ${remainingWeightInfo.hasRemainingWeight ? 'text-green-600' : 'text-red-600'}`}>
-                      {remainingWeightInfo.remainingWeight} kg
-                    </span>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {remainingAllocationInfo.parentWeightReceived > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">Weight Available</div>
+                        <div className="flex justify-between">
+                          <span className="text-xs">Received:</span>
+                          <span className="font-medium">{remainingAllocationInfo.parentWeightReceived} kg</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs">Remaining:</span>
+                          <span className={`font-medium ${remainingAllocationInfo.hasRemainingWeight ? 'text-green-600' : 'text-red-600'}`}>
+                            {remainingAllocationInfo.remainingWeight} kg
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {remainingAllocationInfo.parentQuantityReceived > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">Quantity Available</div>
+                        <div className="flex justify-between">
+                          <span className="text-xs">Received:</span>
+                          <span className="font-medium">{remainingAllocationInfo.parentQuantityReceived}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs">Remaining:</span>
+                          <span className={`font-medium ${remainingAllocationInfo.hasRemainingQuantity ? 'text-green-600' : 'text-red-600'}`}>
+                            {remainingAllocationInfo.remainingQuantity}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {!remainingWeightInfo.hasRemainingWeight && (
+                  
+                  {(!remainingAllocationInfo.hasRemainingWeight && !remainingAllocationInfo.hasRemainingQuantity) && (
                     <div className="text-red-600 text-xs">
-                      No weight available for assignment
+                      No material available for assignment
                     </div>
                   )}
                 </div>
