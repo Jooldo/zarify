@@ -14,6 +14,8 @@ export type ManufacturingOrderStep = Tables<'manufacturing_order_step_data'> & {
   manufacturing_steps?: ManufacturingStep | null;
   manufacturing_order_id: string;
   manufacturing_step_id: string;
+  step_order?: number;
+  progress_percentage?: number;
 };
 
 export type ManufacturingStepValue = {

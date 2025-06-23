@@ -3,188 +3,178 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, Calendar, Calculator, Play } from 'lucide-react';
+import { Calendar, Package, AlertTriangle, CheckCircle2, Clock, User, Factory } from 'lucide-react';
 import { format } from 'date-fns';
-import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import StartStepDialog from './StartStepDialog';
-import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
+import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 
 interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
-  onViewDetails: (order: ManufacturingOrder) => void;
+  onStatusUpdate?: (orderId: string, status: ManufacturingOrder['status']) => void;
+  onDelete?: (orderId: string) => void;
 }
 
-const ManufacturingOrderCard = ({ order, getPriorityColor, getStatusColor, onViewDetails }: ManufacturingOrderCardProps) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
+const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
+  order,
+  onStatusUpdate,
+  onDelete
+}) => {
+  const { orderSteps } = useManufacturingSteps();
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // Get the first step from merchant's configuration
-  const getFirstStep = () => {
-    return manufacturingSteps
-      .filter(step => step.is_active)
-      .sort((a, b) => a.step_order - b.step_order)[0];
-  };
+  // Get order steps for this specific order
+  const thisOrderSteps = Array.isArray(orderSteps) 
+    ? orderSteps.filter(step => step.manufacturing_order_id === order.id)
+    : [];
 
-  // Check if any order steps exist for this order
-  const hasAnyOrderSteps = orderSteps.some(step => step.manufacturing_order_id === order.id);
-  
-  const firstStep = getFirstStep();
-  const shouldShowStartButton = !hasAnyOrderSteps && firstStep;
+  // Calculate progress
+  const completedSteps = thisOrderSteps.filter(step => step.status === 'completed').length;
+  const totalSteps = thisOrderSteps.length;
+  const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when button is clicked
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
+  // Get current step
+  const currentStep = thisOrderSteps
+    .filter(step => step.status === 'in_progress')
+    .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))[0];
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800 border-red-300';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'low': return 'bg-blue-100 text-blue-800 border-blue-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
-    setDetailsDialogOpen(true);
   };
 
-  const handleStartStep = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (firstStep) {
-      // Ensure we have a clean step object with proper ID
-      const stepToPass = {
-        ...firstStep,
-        id: String(firstStep.id) // Ensure ID is always a string
-      };
-      
-      setSelectedStep(stepToPass);
-      setStartStepDialogOpen(true);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'on_hold': return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'tagged_in': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle2 className="h-4 w-4" />;
+      case 'in_progress': return <Factory className="h-4 w-4" />;
+      case 'on_hold': return <Clock className="h-4 w-4" />;
+      case 'cancelled': return <AlertTriangle className="h-4 w-4" />;
+      default: return <Package className="h-4 w-4" />;
     }
   };
 
   return (
     <>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
+      <Card 
+        className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500"
+        onClick={() => setDetailsOpen(true)}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">{order.product_name}</CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                {order.product_name}
+              </CardTitle>
               <p className="text-sm text-gray-600 font-mono">{order.order_number}</p>
-              {order.product_type && (
-                <p className="text-xs text-gray-500">{order.product_type}</p>
-              )}
             </div>
-            <div className="flex flex-col gap-1">
-              <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
+            <div className="flex gap-2">
+              <Badge className={getPriorityColor(order.priority)}>
                 {order.priority}
               </Badge>
-              <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                {order.status.replace('_', ' ')}
+              <Badge className={getStatusColor(order.status)}>
+                <div className="flex items-center gap-1">
+                  {getStatusIcon(order.status)}
+                  {order.status.replace('_', ' ')}
+                </div>
               </Badge>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Package2 className="h-4 w-4 text-gray-500" />
-              <span className="text-sm">Quantity: <span className="font-semibold">{order.quantity_required}</span></span>
+          {/* Progress bar */}
+          {totalSteps > 0 && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Progress</span>
+                <span className="font-medium">{progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>{completedSteps} of {totalSteps} steps completed</span>
+                {currentStep && (
+                  <span>Current: {currentStep.step_name}</span>
+                )}
+              </div>
             </div>
-            
+          )}
+
+          {/* Order details */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-gray-400" />
+              <div>
+                <p className="text-gray-600">Quantity</p>
+                <p className="font-semibold">{order.quantity_required}</p>
+              </div>
+            </div>
+
             {order.due_date && (
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">Due: {format(new Date(order.due_date), 'MMM dd, yyyy')}</span>
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-gray-600">Due Date</p>
+                  <p className="font-semibold">{format(new Date(order.due_date), 'MMM dd, yyyy')}</p>
+                </div>
               </div>
             )}
-            
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-sm">Created: {format(new Date(order.created_at), 'MMM dd, yyyy')}</span>
-            </div>
           </div>
 
-          {/* Product Configuration Info */}
-          {order.product_configs && (
-            <div className="p-2 bg-blue-50 rounded border border-blue-200">
-              <div className="flex items-center gap-1 mb-1">
-                <Calculator className="h-3 w-3 text-blue-600" />
-                <span className="text-xs font-medium text-blue-700">Product Config</span>
-              </div>
-              <p className="text-xs text-blue-600 font-mono">{order.product_configs.product_code}</p>
-              <p className="text-xs text-blue-600">{order.product_configs.category} - {order.product_configs.subcategory}</p>
+          {/* Special instructions */}
+          {order.special_instructions && (
+            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-800">
+                <span className="font-medium">Instructions:</span> {order.special_instructions}
+              </p>
             </div>
           )}
 
-          {/* Raw Material Requirements - Show first 3 only */}
-          {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Package2 className="h-3 w-3 text-gray-600" />
-                <span className="text-xs font-medium">Material Requirements</span>
-              </div>
-              <div className="border rounded overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs p-2">Material</TableHead>
-                      <TableHead className="text-xs p-2 text-center">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.product_configs.product_config_materials.slice(0, 2).map((material, index) => {
-                      const totalRequired = material.quantity_required * order.quantity_required;
-                      
-                      return (
-                        <TableRow key={material.id || index}>
-                          <TableCell className="text-xs p-2">
-                            {material.raw_materials?.name || `Material #${material.raw_material_id.slice(-6)}`}
-                          </TableCell>
-                          <TableCell className="text-xs p-2 text-center font-medium">
-                            {totalRequired.toFixed(1)} {material.unit}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {order.product_configs.product_config_materials.length > 2 && (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-xs p-2 text-center text-gray-500">
-                          +{order.product_configs.product_config_materials.length - 2} more materials
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {/* Start First Step Button */}
-          {shouldShowStartButton && (
-            <div className="pt-2 border-t">
-              <Button 
-                onClick={handleStartStep}
-                className="w-full text-sm bg-primary hover:bg-primary/90"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Start {firstStep.step_name}
-              </Button>
-            </div>
-          )}
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setDetailsOpen(true);
+              }}
+              className="flex-1"
+            >
+              View Details
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <StartStepDialog
-        isOpen={startStepDialogOpen}
-        onClose={() => setStartStepDialogOpen(false)}
-        order={order}
-        step={selectedStep}
-      />
-
       <ManufacturingOrderDetailsDialog
         order={order}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
         getPriorityColor={getPriorityColor}
         getStatusColor={getStatusColor}
+        onStatusUpdate={onStatusUpdate}
       />
     </>
   );

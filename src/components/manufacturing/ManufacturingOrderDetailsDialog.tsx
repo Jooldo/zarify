@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircle2, Workflow, ArrowUp } from 'lucide-react';
 import { format } from 'date-fns';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -39,7 +40,9 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   if (!order) return null;
 
   const getNextStep = () => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+    const currentOrderSteps = Array.isArray(orderSteps) 
+      ? orderSteps.filter(step => step.manufacturing_order_id === order.id)
+      : [];
     
     if (currentOrderSteps.length === 0) {
       // No steps exist, get the first manufacturing step
@@ -57,7 +60,8 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   };
 
   const nextStep = getNextStep();
-  const hasStarted = orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+  const hasStarted = Array.isArray(orderSteps) && 
+    orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
   const isCompleted = order.status === 'completed';
   const isTaggedIn = order.status === 'tagged_in';
 
@@ -75,9 +79,11 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   // Get all order steps for this order with their field data
   const getOrderStepsWithFieldData = () => {
-    const currentOrderSteps = orderSteps
-      .filter(step => step.manufacturing_order_id === order.id)
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+    const currentOrderSteps = Array.isArray(orderSteps)
+      ? orderSteps
+          .filter(step => step.manufacturing_order_id === order.id)
+          .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))
+      : [];
 
     return currentOrderSteps.map(orderStep => {
       const stepStepFields = stepFields.filter(field => 
@@ -211,10 +217,10 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
-                            {orderStep.manufacturing_steps?.step_order}
+                            {orderStep.manufacturing_steps?.step_order || index + 1}
                           </div>
                           <div>
-                            <h4 className="font-medium text-sm">{orderStep.manufacturing_steps?.step_name}</h4>
+                            <h4 className="font-medium text-sm">{orderStep.manufacturing_steps?.step_name || orderStep.step_name}</h4>
                             {orderStep.manufacturing_steps?.description && (
                               <p className="text-xs text-muted-foreground">{orderStep.manufacturing_steps.description}</p>
                             )}
