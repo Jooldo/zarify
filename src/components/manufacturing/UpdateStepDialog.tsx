@@ -150,13 +150,20 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
   };
 
+  const formatFieldLabel = (fieldKey: string) => {
+    return fieldKey
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const renderField = (field: any) => {
     const value = fieldValues[field.field_key] || '';
 
     return (
       <div key={field.id} className="space-y-1">
         <Label htmlFor={field.field_key} className="text-xs font-medium text-gray-600">
-          {field.field_key.replace('_', ' ')}
+          {formatFieldLabel(field.field_key)}
           {field.is_visible && <span className="text-red-500 ml-1">*</span>}
           {field.unit && <span className="text-gray-400 ml-1">({field.unit})</span>}
         </Label>
@@ -164,7 +171,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           id={field.field_key}
           value={value}
           onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-          placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+          placeholder={`Enter ${formatFieldLabel(field.field_key)}`}
           type={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? 'number' : 'text'}
           step={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? '0.01' : undefined}
           className="h-8 text-sm"
