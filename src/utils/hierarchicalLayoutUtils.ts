@@ -16,21 +16,21 @@ export interface HierarchicalNode {
 export interface LayoutConfig {
   nodeWidth: number;
   nodeHeight: number;
-  horizontalGap: number;
-  verticalGap: number;
+  horizontalSpacing: number;
+  verticalSpacing: number;
   rootX: number;
   rootY: number;
-  minSiblingGap: number;
+  minNodeSpacing: number;
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   nodeWidth: 380,
   nodeHeight: 240,
-  horizontalGap: 60,      // Minimal gap between sibling nodes
-  verticalGap: 80,        // Minimal gap between levels
-  rootX: 200,
+  horizontalSpacing: 150, // Increased for better spacing
+  verticalSpacing: 350,
+  rootX: 400,
   rootY: 50,
-  minSiblingGap: 40,      // Absolute minimum space between siblings
+  minNodeSpacing: 50, // Minimum space between nodes
 };
 
 // Build hierarchy tree from nodes and edges
@@ -75,104 +75,69 @@ export const buildHierarchy = (nodes: Node[], edges: Edge[]): HierarchicalNode[]
   return rootNodes;
 };
 
-// Calculate subtree width bottom-up (compact approach)
+// Calculate subtree width using bottom-up approach
 const calculateSubtreeWidth = (node: HierarchicalNode, config: LayoutConfig): number => {
   if (node.children.length === 0) {
-    // Leaf node: width is just the node width
+    // Leaf node - width is just the node width
     node.subtreeWidth = node.width;
     return node.subtreeWidth;
   }
 
-  // Calculate subtree widths for all children first
+  // Calculate width for all children first (bottom-up)
   const childSubtreeWidths = node.children.map(child => 
     calculateSubtreeWidth(child, config)
   );
 
-  // Calculate total width needed for all children with minimal gaps
-  let totalChildrenWidth = 0;
-  for (let i = 0; i < childSubtreeWidths.length; i++) {
-    totalChildrenWidth += childSubtreeWidths[i];
-    if (i < childSubtreeWidths.length - 1) {
-      // Add adaptive gap based on subtree complexity
-      const adaptiveGap = Math.max(
-        config.minSiblingGap,
-        Math.min(config.horizontalGap, childSubtreeWidths[i] * 0.1)
-      );
-      totalChildrenWidth += adaptiveGap;
-    }
-  }
+  // Total width needed for all children including spacing
+  const totalChildrenWidth = childSubtreeWidths.reduce((sum, width, index) => {
+    return sum + width + (index > 0 ? config.horizontalSpacing : 0);
+  }, 0);
 
   // Subtree width is the maximum of node width and children total width
   node.subtreeWidth = Math.max(node.width, totalChildrenWidth);
   return node.subtreeWidth;
 };
 
-// Position nodes with compact spacing (bottom-up)
+// Position nodes using bottom-up recursive approach
 const positionNodeAndChildren = (
   node: HierarchicalNode,
-  leftX: number,
+  centerX: number,
   y: number,
   config: LayoutConfig
-): number => {
-  if (node.children.length === 0) {
-    // Leaf node: position at leftX
-    node.x = leftX;
-    node.y = y;
-    return leftX + node.width;
-  }
-
-  // Position children first (bottom-up)
-  const childY = y + node.height + config.verticalGap;
-  let currentChildX = leftX;
-  
-  // If children span is less than node width, center children under node
-  const childrenSpan = node.subtreeWidth!;
-  const nodeSpan = node.width;
-  
-  if (childrenSpan < nodeSpan) {
-    // Children are narrower than parent - center them
-    currentChildX = leftX + (nodeSpan - childrenSpan) / 2;
-  }
-
-  // Position all children
-  const childPositions: number[] = [];
-  for (let i = 0; i < node.children.length; i++) {
-    const child = node.children[i];
-    const childWidth = child.subtreeWidth!;
-    
-    childPositions.push(currentChildX);
-    currentChildX = positionNodeAndChildren(child, currentChildX, childY, config);
-    
-    // Add adaptive gap for next child
-    if (i < node.children.length - 1) {
-      const adaptiveGap = Math.max(
-        config.minSiblingGap,
-        Math.min(config.horizontalGap, childWidth * 0.1)
-      );
-      currentChildX += adaptiveGap;
-    }
-  }
-
-  // Position parent node
-  if (childrenSpan >= nodeSpan) {
-    // Children are wider - center parent above children
-    const childrenLeftmost = childPositions[0];
-    const childrenRightmost = currentChildX - (node.children.length > 1 ? 
-      Math.max(config.minSiblingGap, Math.min(config.horizontalGap, node.children[node.children.length - 1].subtreeWidth! * 0.1)) : 0);
-    const childrenCenter = (childrenLeftmost + childrenRightmost) / 2;
-    node.x = childrenCenter - node.width / 2;
-  } else {
-    // Children are narrower - position parent at leftX
-    node.x = leftX;
-  }
-  
+): void => {
+  // Position current node at center
+  node.x = centerX - node.width / 2;
   node.y = y;
 
-  // Return the rightmost edge of this subtree
-  return Math.max(leftX + nodeSpan, currentChildX);
+  if (node.children.length === 0) {
+    return;
+  }
+
+  // Calculate positions for children
+  const childY = y + config.verticalSpacing;
+  
+  // Calculate total width needed for all children
+  const childSubtreeWidths = node.children.map(child => child.subtreeWidth || 0);
+  const totalChildrenWidth = childSubtreeWidths.reduce((sum, width, index) => {
+    return sum + width + (index > 0 ? config.horizontalSpacing : 0);
+  }, 0);
+
+  // Start positioning children from the left edge of their total span
+  let currentX = centerX - totalChildrenWidth / 2;
+
+  node.children.forEach((child, index) => {
+    const childSubtreeWidth = childSubtreeWidths[index];
+    const childCenterX = currentX + childSubtreeWidth / 2;
+    
+    // Recursively position child and its subtree
+    positionNodeAndChildren(child, childCenterX, childY, config);
+    
+    // Move to next child position
+    currentX += childSubtreeWidth + config.horizontalSpacing;
+  });
 };
 
-// Calculate compact hierarchical layout
+// Calculate layout for hierarchical nodes
 export const calculateHierarchicalLayout = (
   nodes: Node[], 
   edges: Edge[], 
@@ -189,16 +154,26 @@ export const calculateHierarchicalLayout = (
     calculateSubtreeWidth(rootNode, config);
   });
 
-  // Position each root tree with compact spacing
-  let currentX = config.rootX;
+  // Position each root tree
+  let currentRootCenterX = config.rootX;
   
   hierarchy.forEach((rootNode, index) => {
-    // Position this root tree
-    const rightEdge = positionNodeAndChildren(rootNode, currentX, config.rootY, config);
+    if (index > 0) {
+      // Add spacing between different root trees
+      const previousRootWidth = hierarchy[index - 1].subtreeWidth || 0;
+      const currentRootWidth = rootNode.subtreeWidth || 0;
+      currentRootCenterX += (previousRootWidth + currentRootWidth) / 2 + config.horizontalSpacing * 2;
+    } else {
+      // First root - position at center of its subtree
+      currentRootCenterX += (rootNode.subtreeWidth || 0) / 2;
+    }
     
-    // Update position for next root tree with minimal gap
+    // Position this root tree
+    positionNodeAndChildren(rootNode, currentRootCenterX, config.rootY, config);
+    
+    // Update position for next root tree
     if (index < hierarchy.length - 1) {
-      currentX = rightEdge + config.horizontalGap * 2; // Double gap between separate trees
+      currentRootCenterX += (rootNode.subtreeWidth || 0) / 2;
     }
   });
 

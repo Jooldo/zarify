@@ -209,7 +209,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges with hierarchical relationships and L-shaped connectors
+          // Create edges with hierarchical relationships
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -240,7 +240,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Create edge with L-shaped/step styling
+          // Create edge with step-coherent styling
           const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
           const isAnimated = orderStep?.status === 'in_progress';
           
@@ -274,7 +274,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             id: edgeId,
             source: sourceNodeId,
             target: stepNodeId,
-            type: 'smoothstep', // L-shaped/elbow connectors
+            type: 'straight', // Changed to straight for cleaner vertical lines
             animated: isAnimated,
             style: {
               stroke: strokeColor,
@@ -292,12 +292,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
     console.log('Generated nodes before layout:', nodes.length, 'edges:', edges.length);
     
-    // Apply compact hierarchical layout with minimal spacing
+    // Apply improved hierarchical layout with better spacing
     const layoutResult = calculateHierarchicalLayout(nodes, edges, {
       ...DEFAULT_LAYOUT_CONFIG,
-      horizontalGap: 50,      // Compact horizontal gap
-      verticalGap: 70,        // Compact vertical gap
-      minSiblingGap: 30,      // Minimal sibling spacing
+      horizontalSpacing: 200, // Increased for better separation
+      verticalSpacing: 400,   // Increased for better vertical separation
+      rootX: 100,             // Start further right to accommodate larger trees
+      rootY: 50,
+      minNodeSpacing: 50,     // Minimum space between nodes
     });
 
     console.log('Generated nodes after layout:', layoutResult.nodes.length, 'edges:', layoutResult.edges.length);
