@@ -87,8 +87,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const edges: Edge[] = [];
     
     let yOffset = 0;
-    const VERTICAL_SPACING = 300; // Increased spacing for parallel instances
-    const HORIZONTAL_SPACING = 350;
+    const VERTICAL_SPACING = 400; // Increased for better spacing
+    const HORIZONTAL_SPACING = 400;
+    const PARALLEL_INSTANCE_SPACING = 100; // Vertical spacing between parallel instances
+    const INSTANCE_HORIZONTAL_OFFSET = 50; // Small horizontal offset for instances
 
     manufacturingOrders.forEach((order, orderIndex) => {
       const orderY = yOffset + (orderIndex * VERTICAL_SPACING);
@@ -135,74 +137,115 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       // Create step nodes for each configured manufacturing step and their instances
       let currentX = 50 + HORIZONTAL_SPACING;
       
-      manufacturingSteps
+      const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order)
-        .forEach((step, stepIndex) => {
-          const stepInstances = stepsByName[step.step_name] || [];
+        .sort((a, b) => a.step_order - b.step_order);
+
+      activeSteps.forEach((step, stepIndex) => {
+        const stepInstances = stepsByName[step.step_name] || [];
+        
+        if (stepInstances.length === 0) {
+          // No instances of this step exist yet - skip
+          return;
+        }
+
+        // Sort instances by instance_number
+        stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
+
+        // Calculate center position for this step's instances
+        const instanceCount = stepInstances.length;
+        const totalInstanceHeight = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
+        const centerY = orderY - (totalInstanceHeight / 2);
+
+        stepInstances.forEach((orderStep, instanceIndex) => {
+          const instanceY = centerY + (instanceIndex * PARALLEL_INSTANCE_SPACING);
+          const instanceX = currentX + (instanceIndex * INSTANCE_HORIZONTAL_OFFSET);
           
-          if (stepInstances.length === 0) {
-            // No instances of this step exist yet - create a placeholder or skip
-            return;
+          const stepNodeData: StepCardData = {
+            stepName: step.step_name,
+            stepOrder: step.step_order,
+            orderId: order.id,
+            orderNumber: order.order_number,
+            productName: order.product_name,
+            status: orderStep?.status as any || 'pending',
+            progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
+            assignedWorker: orderStep?.assigned_worker || undefined,
+            productCode: order.product_configs?.product_code,
+            quantityRequired: order.quantity_required,
+            priority: order.priority,
+            dueDate: orderStep?.due_date || order.due_date,
+            isJhalaiStep: false,
+            instanceNumber: orderStep?.instance_number || 1,
+            // Add order step data for display
+            orderStepData: orderStep,
+          };
+
+          const stepNode: Node = {
+            id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
+            type: 'manufacturingStep',
+            position: { x: instanceX, y: instanceY },
+            data: stepNodeData,
+          };
+
+          nodes.push(stepNode);
+
+          // Create edges from previous step to current step instances
+          let sourceNodeId: string;
+          
+          if (stepIndex === 0) {
+            // First step connects to manufacturing order
+            sourceNodeId = `order-${order.id}`;
+          } else {
+            // Find the most recent completed instance of the previous step
+            const previousStep = activeSteps[stepIndex - 1];
+            const previousInstances = stepsByName[previousStep.step_name] || [];
+            
+            if (previousInstances.length > 0) {
+              // Sort by completion time or instance number
+              const sortedPreviousInstances = previousInstances
+                .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
+                .sort((a, b) => {
+                  // Prefer completed instances, then by completion time, then by instance number
+                  if (a.status === 'completed' && b.status !== 'completed') return -1;
+                  if (b.status === 'completed' && a.status !== 'completed') return 1;
+                  if (a.completed_at && b.completed_at) {
+                    return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
+                  }
+                  return (b.instance_number || 1) - (a.instance_number || 1);
+                });
+              
+              const sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
+              sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance.instance_number || 1}`;
+            } else {
+              // Fallback to order if no previous instances found
+              sourceNodeId = `order-${order.id}`;
+            }
           }
 
-          // Sort instances by instance_number
-          stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
+          // Create edge with appropriate styling
+          const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
+          const isAnimated = orderStep?.status === 'in_progress';
+          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
+                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
 
-          stepInstances.forEach((orderStep, instanceIndex) => {
-            const stepY = orderY + (instanceIndex * 80); // Stack parallel instances vertically
-            
-            const stepNodeData: StepCardData = {
-              stepName: step.step_name,
-              stepOrder: step.step_order,
-              orderId: order.id,
-              orderNumber: order.order_number,
-              productName: order.product_name,
-              status: orderStep?.status as any || 'pending',
-              progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
-              assignedWorker: orderStep?.assigned_worker || undefined,
-              productCode: order.product_configs?.product_code,
-              quantityRequired: order.quantity_required,
-              priority: order.priority,
-              dueDate: orderStep?.due_date || order.due_date,
-              isJhalaiStep: false,
-              instanceNumber: orderStep?.instance_number || 1,
-              // Add order step data for display
-              orderStepData: orderStep,
-            };
-
-            const stepNode: Node = {
-              id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
-              type: 'manufacturingStep',
-              position: { x: currentX, y: stepY },
-              data: stepNodeData,
-            };
-
-            nodes.push(stepNode);
-
-            // Create edge from previous node (only for first instance of each step type)
-            if (instanceIndex === 0) {
-              const previousNodeId = stepIndex === 0 
-                ? `order-${order.id}` 
-                : `step-${order.id}-${manufacturingSteps[stepIndex - 1].id}-1`; // Connect to first instance of previous step
-
-              edges.push({
-                id: `edge-${previousNodeId}-${stepNode.id}`,
-                source: previousNodeId,
-                target: stepNode.id,
-                type: 'smoothstep',
-                animated: orderStep?.status === 'in_progress',
-                style: {
-                  stroke: orderStep?.status === 'completed' ? '#10b981' : 
-                         orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af',
-                  strokeWidth: 2,
-                },
-              });
-            }
+          edges.push({
+            id: edgeId,
+            source: sourceNodeId,
+            target: stepNode.id,
+            type: 'smoothstep',
+            animated: isAnimated,
+            style: {
+              stroke: strokeColor,
+              strokeWidth: 2,
+            },
+            // Use different source/target handles for parallel instances to avoid overlap
+            sourceHandle: instanceIndex > 0 ? `source-${instanceIndex}` : undefined,
+            targetHandle: instanceIndex > 0 ? `target-${instanceIndex}` : undefined,
           });
-
-          currentX += HORIZONTAL_SPACING;
         });
+
+        currentX += HORIZONTAL_SPACING;
+      });
     });
 
     return { nodes, edges };
