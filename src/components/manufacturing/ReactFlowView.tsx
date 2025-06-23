@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -90,16 +91,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Increased spacing to prevent overlap completely
-    const ORDER_SPACING = 1000; // Much larger spacing between orders
-    const VERTICAL_SPACING = 250; // Spacing between step levels
-    const PARALLEL_INSTANCE_SPACING = 550; // Horizontal spacing for parallel instances
+    // Updated spacing for better layout
+    const ORDER_SPACING = 1200; // Increased spacing between orders to prevent overlap
+    const VERTICAL_SPACING = 300; // Increased vertical spacing between step levels
+    const PARALLEL_INSTANCE_SPACING = 650; // Increased horizontal spacing for parallel instances
     const CARD_WIDTH = 500; // Wide cards
-    const CARD_HEIGHT = 140; // Shorter height with optimized content
+    const CARD_HEIGHT = 200; // Increased height for better content layout
     const START_Y = 80; // Starting Y position
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Calculate order position with much larger spacing
+      // Calculate order position with increased spacing
       const orderY = START_Y + (orderIndex * ORDER_SPACING);
       
       // Get order steps for this order
@@ -142,7 +143,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with better spacing
+      // Create step nodes with better spacing and proper source tracking
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -197,30 +198,41 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges connecting all instances to their source
+          // Enhanced edge creation with proper source tracking
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
             // First step connects to manufacturing order
             sourceNodeId = `order-${order.id}`;
           } else {
-            // Connect to the most recent completed instance of the previous step
+            // Connect to the specific source instance based on notes or fallback logic
             const previousStep = activeSteps[stepIndex - 1];
             const previousInstances = stepsByName[previousStep.step_name] || [];
             
             if (previousInstances.length > 0) {
-              const sortedPreviousInstances = previousInstances
-                .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
-                .sort((a, b) => {
-                  if (a.status === 'completed' && b.status !== 'completed') return -1;
-                  if (b.status === 'completed' && a.status !== 'completed') return 1;
-                  if (a.completed_at && b.completed_at) {
-                    return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
-                  }
-                  return (b.instance_number || 1) - (a.instance_number || 1);
-                });
+              // Try to find the source instance from notes
+              let sourceInstance = null;
+              if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
+                const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
+                sourceInstance = previousInstances.find(inst => inst.instance_number === sourceInstanceNumber);
+              }
               
-              const sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
+              // Fallback to most recent completed instance if no specific source found
+              if (!sourceInstance) {
+                const sortedPreviousInstances = previousInstances
+                  .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
+                  .sort((a, b) => {
+                    if (a.status === 'completed' && b.status !== 'completed') return -1;
+                    if (b.status === 'completed' && a.status !== 'completed') return 1;
+                    if (a.completed_at && b.completed_at) {
+                      return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
+                    }
+                    return (b.instance_number || 1) - (a.instance_number || 1);
+                  });
+                
+                sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
+              }
+              
               sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance.instance_number || 1}`;
             } else {
               sourceNodeId = `order-${order.id}`;
