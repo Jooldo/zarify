@@ -50,6 +50,29 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return stepId && field.step_name === step?.step_name;
   });
 
+  // Define field order for display
+  const fieldOrder = [
+    'assigned_worker',
+    'due_date', 
+    'weight_assigned',
+    'quantity_assigned',
+    'weight_received',
+    'quantity_received'
+  ];
+
+  // Sort fields based on the defined order
+  const sortedFields = currentStepFields.sort((a, b) => {
+    const indexA = fieldOrder.indexOf(a.field_key);
+    const indexB = fieldOrder.indexOf(b.field_key);
+    
+    // If field is not in order array, put it at the end
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    
+    return indexA - indexB;
+  });
+
   // Initialize field values only when dialog opens with a new step
   useEffect(() => {
     if (isOpen && stepId && stepId !== initializedStepId) {
@@ -268,7 +291,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     );
   };
 
-  const requiredFields = currentStepFields.filter(field => field.is_visible);
+  const requiredFields = sortedFields.filter(field => field.is_visible);
   const isFormValid = requiredFields.every(field => {
     const value = fieldValues[field.field_key];
     return value !== undefined && value !== null && value !== '';
@@ -323,13 +346,13 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              {currentStepFields.length === 0 ? (
+              {sortedFields.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground text-sm">
                   No configuration required for this step
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {currentStepFields.map(field => (
+                  {sortedFields.map(field => (
                     <div key={field.id} className="space-y-1">
                       <Label htmlFor={field.field_key} className="text-sm font-medium">
                         {field.field_key.replace('_', ' ')}

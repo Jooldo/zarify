@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,10 @@ import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircl
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StartStepDialog from './StartStepDialog';
+import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingTagInDialog from './ManufacturingTagInDialog';
 
 interface ManufacturingOrderDetailsDialogProps {
@@ -30,10 +31,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   getStatusColor
 }) => {
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
+  const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
+  const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
   const [tagInDialogOpen, setTagInDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<any>(null);
+  const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
 
   if (!order) return null;
 
@@ -69,6 +73,11 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     }
   };
 
+  const handleStepClick = (orderStep: any) => {
+    setSelectedOrderStep(orderStep);
+    setUpdateStepDialogOpen(true);
+  };
+
   const handleTagInComplete = () => {
     // Close the dialog to trigger a refresh in the parent component
     onOpenChange(false);
@@ -84,13 +93,23 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
     return currentOrderSteps.map(orderStep => {
       const stepStepFields = Array.isArray(stepFields) 
-        ? stepFields.filter(field => field.step_name === orderStep.step_name)
+        ? stepFields.filter(field => field.step_name === orderStep.step_name && field.is_visible)
         : [];
+
+      // Get field values for this step
+      const fieldValues = stepStepFields.map(field => {
+        const value = getStepValue(orderStep.id, field.field_key);
+        return {
+          fieldKey: field.field_key,
+          value: value || '-',
+          unit: field.unit || ''
+        };
+      });
 
       return {
         ...orderStep,
         fields: stepStepFields,
-        values: []
+        fieldValues
       };
     });
   };
@@ -112,6 +131,67 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     if (!workerId) return 'Unknown Worker';
     const worker = workers.find(w => w.id === workerId);
     return worker ? worker.name : 'Unknown Worker';
+  };
+
+  const renderFieldValues = (fieldValues: any[]) => {
+    if (fieldValues.length === 0) return null;
+
+    // Group weight and quantity fields for compact display
+    const weightAssigned = fieldValues.find(f => f.fieldKey === 'weight_assigned');
+    const weightReceived = fieldValues.find(f => f.fieldKey === 'weight_received');
+    const quantityAssigned = fieldValues.find(f => f.fieldKey === 'quantity_assigned');
+    const quantityReceived = fieldValues.find(f => f.fieldKey === 'quantity_received');
+    const otherFields = fieldValues.filter(f => 
+      !['weight_assigned', 'weight_received', 'quantity_assigned', 'quantity_received'].includes(f.fieldKey)
+    );
+
+    return (
+      <div className="space-y-2 text-xs">
+        {/* Weight fields side by side */}
+        {(weightAssigned || weightReceived) && (
+          <div className="grid grid-cols-2 gap-2">
+            {weightAssigned && (
+              <div className="bg-blue-50 p-2 rounded">
+                <span className="text-muted-foreground">Weight Assigned:</span>
+                <div className="font-medium">{weightAssigned.value} {weightAssigned.unit}</div>
+              </div>
+            )}
+            {weightReceived && (
+              <div className="bg-green-50 p-2 rounded">
+                <span className="text-muted-foreground">Weight Received:</span>
+                <div className="font-medium">{weightReceived.value} {weightReceived.unit}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quantity fields side by side */}
+        {(quantityAssigned || quantityReceived) && (
+          <div className="grid grid-cols-2 gap-2">
+            {quantityAssigned && (
+              <div className="bg-blue-50 p-2 rounded">
+                <span className="text-muted-foreground">Qty Assigned:</span>
+                <div className="font-medium">{quantityAssigned.value} {quantityAssigned.unit}</div>
+              </div>
+            )}
+            {quantityReceived && (
+              <div className="bg-green-50 p-2 rounded">
+                <span className="text-muted-foreground">Qty Received:</span>
+                <div className="font-medium">{quantityReceived.value} {quantityReceived.unit}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Other fields */}
+        {otherFields.map((field, index) => (
+          <div key={index} className="bg-gray-50 p-2 rounded">
+            <span className="text-muted-foreground">{field.fieldKey.replace('_', ' ')}:</span>
+            <div className="font-medium">{field.value} {field.unit}</div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -193,7 +273,11 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
                   {orderStepsWithData.map((orderStep, index) => (
-                    <div key={orderStep.id} className="border rounded-lg p-3">
+                    <div 
+                      key={orderStep.id} 
+                      className="border rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleStepClick(orderStep)}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
@@ -210,7 +294,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         </div>
                       </div>
 
-                      {/* Step timing info */}
+                      {/* Step timing and worker info */}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2 text-xs">
                         {orderStep.started_at && (
                           <div>
@@ -231,6 +315,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                           </div>
                         )}
                       </div>
+
+                      {/* Configured field values */}
+                      {orderStep.fieldValues && orderStep.fieldValues.length > 0 && (
+                        <div className="mt-3 pt-2 border-t">
+                          {renderFieldValues(orderStep.fieldValues)}
+                        </div>
+                      )}
 
                       {/* Notes */}
                       {orderStep.notes && (
@@ -340,6 +431,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
         onClose={() => setStartStepDialogOpen(false)}
         order={order}
         step={selectedStep}
+      />
+
+      <UpdateStepDialog
+        step={selectedOrderStep}
+        open={updateStepDialogOpen}
+        onOpenChange={setUpdateStepDialogOpen}
+        onStepUpdate={() => {}}
       />
 
       <ManufacturingTagInDialog

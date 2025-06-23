@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +24,7 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   stepFields = [],
   onViewDetails
 }) => {
-  const { getStepValue } = useManufacturingStepValues();
+  const { getStepValue, stepFields: allStepFields } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const { manufacturingOrders } = useManufacturingOrders();
@@ -43,37 +42,41 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     }
   };
 
-  // Get configured field values for display - only required fields
+  // Get configured field values for display - only visible fields
   const getConfiguredFieldValues = () => {
-    if (!stepFields || stepFields.length === 0) {
+    // Get the visible fields for this step from allStepFields
+    const visibleFields = allStepFields.filter(field => 
+      field.step_name === orderStep.step_name && field.is_visible
+    );
+    
+    if (!visibleFields || visibleFields.length === 0) {
       return [];
     }
     
-    const fieldValues = stepFields
-      .filter(field => field.is_visible)
-      .map(field => {
-        let value = 'Not set';
-        let displayValue = 'Not set';
+    const fieldValues = visibleFields.map(field => {
+      let value = 'Not set';
+      let displayValue = 'Not set';
+      
+      const savedValue = getStepValue(orderStep.id, field.field_key);
+      
+      if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
+        value = savedValue;
+        displayValue = savedValue;
         
-        const savedValue = getStepValue(orderStep.id, field.id);
-        
-        if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-          value = savedValue;
-          displayValue = savedValue;
-          
-          if (field.unit) {
-            displayValue = `${value} ${field.unit}`;
-          }
+        if (field.unit) {
+          displayValue = `${value} ${field.unit}`;
         }
-        
-        return {
-          label: field.field_key,
-          value: displayValue,
-          type: 'text',
-          isEmpty: value === 'Not set',
-          fieldName: field.field_key
-        };
-      });
+      }
+      
+      return {
+        label: field.field_key,
+        value: displayValue,
+        type: 'text',
+        isEmpty: value === 'Not set',
+        fieldName: field.field_key,
+        unit: field.unit || ''
+      };
+    });
     
     return fieldValues;
   };
@@ -152,6 +155,15 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     setUpdateDialogOpen(true);
   };
 
+  // Group weight and quantity fields for compact display
+  const weightAssigned = configuredFieldValues.find(f => f.fieldName === 'weight_assigned');
+  const weightReceived = configuredFieldValues.find(f => f.fieldName === 'weight_received');
+  const quantityAssigned = configuredFieldValues.find(f => f.fieldName === 'quantity_assigned');
+  const quantityReceived = configuredFieldValues.find(f => f.fieldName === 'quantity_received');
+  const otherFields = configuredFieldValues.filter(f => 
+    !['weight_assigned', 'weight_received', 'quantity_assigned', 'quantity_received'].includes(f.fieldName)
+  );
+
   return (
     <>
       <Handle
@@ -205,11 +217,87 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
             </div>
           )}
 
-          {/* Configured Field Values */}
+          {/* Configured Field Values - Compact Display */}
           {configuredFieldValues.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-slate-600">Field Values:</div>
-              {configuredFieldValues.map((field, index) => (
+              
+              {/* Weight fields side by side */}
+              {(weightAssigned || weightReceived) && (
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {weightAssigned && (
+                    <div className={`bg-white p-2 rounded-md border ${
+                      isCompleted ? 'border-emerald-100' : 'border-blue-100'
+                    }`}>
+                      <div className="flex items-center gap-1">
+                        {getFieldIcon(weightAssigned.fieldName, weightAssigned.type)}
+                        <span className="font-medium text-slate-600 text-xs">Wt Assigned:</span>
+                      </div>
+                      <span className={`font-medium ${
+                        weightAssigned.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
+                      }`}>
+                        {weightAssigned.value}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {weightReceived && (
+                    <div className={`bg-white p-2 rounded-md border ${
+                      isCompleted ? 'border-emerald-100' : 'border-blue-100'
+                    }`}>
+                      <div className="flex items-center gap-1">
+                        {getFieldIcon(weightReceived.fieldName, weightReceived.type)}
+                        <span className="font-medium text-slate-600 text-xs">Wt Received:</span>
+                      </div>
+                      <span className={`font-medium ${
+                        weightReceived.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
+                      }`}>
+                        {weightReceived.value}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Quantity fields side by side */}
+              {(quantityAssigned || quantityReceived) && (
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {quantityAssigned && (
+                    <div className={`bg-white p-2 rounded-md border ${
+                      isCompleted ? 'border-emerald-100' : 'border-blue-100'
+                    }`}>
+                      <div className="flex items-center gap-1">
+                        {getFieldIcon(quantityAssigned.fieldName, quantityAssigned.type)}
+                        <span className="font-medium text-slate-600 text-xs">Qty Assigned:</span>
+                      </div>
+                      <span className={`font-medium ${
+                        quantityAssigned.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
+                      }`}>
+                        {quantityAssigned.value}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {quantityReceived && (
+                    <div className={`bg-white p-2 rounded-md border ${
+                      isCompleted ? 'border-emerald-100' : 'border-blue-100'
+                    }`}>
+                      <div className="flex items-center gap-1">
+                        {getFieldIcon(quantityReceived.fieldName, quantityReceived.type)}
+                        <span className="font-medium text-slate-600 text-xs">Qty Received:</span>
+                      </div>
+                      <span className={`font-medium ${
+                        quantityReceived.isEmpty ? 'text-slate-400 italic' : 'text-slate-700'
+                      }`}>
+                        {quantityReceived.value}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Other fields */}
+              {otherFields.map((field, index) => (
                 <div key={index} className={`flex items-center gap-2 text-xs bg-white p-2 rounded-md border ${
                   isCompleted ? 'border-emerald-100' : 'border-blue-100'
                 }`}>
