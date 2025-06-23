@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -9,7 +8,8 @@ import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Factory, Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Factory, Package, Maximize, Minimize } from 'lucide-react';
 
 // Custom node types
 const nodeTypes = {
@@ -33,6 +33,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   console.log('ReactFlowView props:', {
     ordersCount: manufacturingOrders.length,
@@ -87,15 +88,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    let xOffset = 0;
-    const HORIZONTAL_SPACING = 600; // Space between different orders
-    const VERTICAL_SPACING = 250; // Space between step levels (vertical layout)
-    const PARALLEL_INSTANCE_SPACING = 350; // Horizontal spacing between parallel instances
-    const CARD_WIDTH = 400; // Wider cards
-    const CARD_HEIGHT = 180; // Shorter cards
+    // Optimized spacing for no overlap and wider cards
+    const ORDER_SPACING = 800; // Increased spacing between orders
+    const VERTICAL_SPACING = 300; // Increased vertical spacing between step levels
+    const PARALLEL_INSTANCE_SPACING = 450; // Increased horizontal spacing for parallel instances
+    const CARD_WIDTH = 500; // Much wider cards for better space utilization
+    const CARD_HEIGHT = 160; // Shorter height to fit more content vertically
+    const START_Y = 80; // Starting Y position
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      const orderX = xOffset + (orderIndex * HORIZONTAL_SPACING);
+      // Calculate order position with proper spacing to prevent overlap
+      const orderY = START_Y + (orderIndex * ORDER_SPACING);
       
       // Get order steps for this order
       const thisOrderSteps = Array.isArray(orderSteps) 
@@ -111,7 +114,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Create manufacturing order node at top
+      // Create manufacturing order node
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -130,15 +133,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: orderX, y: 50 },
+        position: { x: 100, y: orderY },
         data: orderNodeData,
         style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
-      // Create step nodes for each configured manufacturing step and their instances
-      let currentY = 50 + VERTICAL_SPACING;
+      // Create step nodes with better spacing to prevent overlap
+      let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
@@ -148,21 +151,21 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         const stepInstances = stepsByName[step.step_name] || [];
         
         if (stepInstances.length === 0) {
-          // No instances of this step exist yet - skip
           return;
         }
 
         // Sort instances by instance_number
         stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-        // Calculate center position for this step's instances
+        // Calculate positions for parallel instances with no overlap
         const instanceCount = stepInstances.length;
-        const totalInstanceWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
-        const centerX = orderX - (totalInstanceWidth / 2);
+        const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
+        
+        // Center the instances around the main flow
+        const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
 
         stepInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = centerX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
-          const instanceY = currentY;
+          const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -179,37 +182,34 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             dueDate: orderStep?.due_date || order.due_date,
             isJhalaiStep: false,
             instanceNumber: orderStep?.instance_number || 1,
-            // Add order step data for display
             orderStepData: orderStep,
           };
 
           const stepNode: Node = {
             id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
             type: 'manufacturingStep',
-            position: { x: instanceX, y: instanceY },
+            position: { x: instanceX, y: currentY },
             data: stepNodeData,
             style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Create edges from source to current step instances
+          // Create edges connecting all instances to their source
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
             // First step connects to manufacturing order
             sourceNodeId = `order-${order.id}`;
           } else {
-            // Find the most recent completed instance of the previous step
+            // Connect to the most recent completed instance of the previous step
             const previousStep = activeSteps[stepIndex - 1];
             const previousInstances = stepsByName[previousStep.step_name] || [];
             
             if (previousInstances.length > 0) {
-              // Sort by completion time or instance number and pick the best source
               const sortedPreviousInstances = previousInstances
                 .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
                 .sort((a, b) => {
-                  // Prefer completed instances, then by completion time, then by instance number
                   if (a.status === 'completed' && b.status !== 'completed') return -1;
                   if (b.status === 'completed' && a.status !== 'completed') return 1;
                   if (a.completed_at && b.completed_at) {
@@ -221,12 +221,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               const sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
               sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance.instance_number || 1}`;
             } else {
-              // Fallback to order if no previous instances found
               sourceNodeId = `order-${order.id}`;
             }
           }
 
-          // Create edge with appropriate styling
+          // Create edge with proper styling
           const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
           const isAnimated = orderStep?.status === 'in_progress';
           const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
@@ -264,7 +263,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const onStepClick = useCallback((stepData: StepCardData) => {
     console.log('Step clicked in ReactFlow:', stepData);
     
-    // Only handle clicks for actual manufacturing steps (not order cards)
     if (stepData.stepName !== 'Manufacturing Order' && stepData.orderStepData) {
       setSelectedOrderStep(stepData.orderStepData);
       setUpdateStepDialogOpen(true);
@@ -274,7 +272,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const onOrderClick = useCallback((orderId: string) => {
     console.log('Order clicked in ReactFlow:', orderId);
     
-    // Find the order and open the details dialog
     const order = manufacturingOrders.find(o => o.id === orderId);
     if (order) {
       setSelectedOrder(order);
@@ -283,9 +280,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   }, [manufacturingOrders]);
 
   const handleStepUpdate = async () => {
-    // Refresh the steps data to show updated information
     await refetchSteps();
     setUpdateStepDialogOpen(false);
+  };
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -320,7 +320,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         orderSteps,
         onStepClick,
         onOrderClick,
-        onStartNextStep: combinedStartNextStep, // Use the combined callback
+        onStartNextStep: combinedStartNextStep,
       },
     }));
   }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, combinedStartNextStep]);
@@ -339,22 +339,59 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     );
   }
 
+  const containerClass = isFullScreen 
+    ? "fixed inset-0 z-50 bg-white" 
+    : "relative";
+  const flowHeight = isFullScreen ? "100vh" : "800px";
+
   return (
     <>
-      <div className="h-[800px] w-full border rounded-lg bg-gray-50">
-        <ReactFlow
-          nodes={nodesWithCallbacks}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-        >
-          <Background />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+      <div className={containerClass}>
+        {/* Full screen header */}
+        {isFullScreen && (
+          <div className="absolute top-4 right-4 z-10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullScreen}
+              className="bg-white shadow-md"
+            >
+              <Minimize className="h-4 w-4 mr-2" />
+              Exit Full Screen
+            </Button>
+          </div>
+        )}
+        
+        {/* Normal view header */}
+        {!isFullScreen && (
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Production Flow</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullScreen}
+            >
+              <Maximize className="h-4 w-4 mr-2" />
+              Full Screen
+            </Button>
+          </div>
+        )}
+
+        <div className={`w-full border rounded-lg bg-gray-50 ${isFullScreen ? 'h-full' : ''}`} style={{ height: flowHeight }}>
+          <ReactFlow
+            nodes={nodesWithCallbacks}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            fitView
+            attributionPosition="bottom-left"
+          >
+            <Background />
+            <Controls />
+            <MiniMap />
+          </ReactFlow>
+        </div>
       </div>
 
       <UpdateStepDialog

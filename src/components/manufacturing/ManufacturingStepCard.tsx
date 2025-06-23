@@ -70,7 +70,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       return stepSequence[currentIndex + 1];
     }
     
-    return null; // No next step
+    return null;
   };
 
   const handleClick = () => {
@@ -135,83 +135,87 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
           )}
         </CardHeader>
         
-        <CardContent className="pt-0 space-y-2 h-full">
-          {/* Order Information */}
-          <div className="text-xs space-y-1">
-            <div className="flex items-center gap-1">
-              <Package className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium truncate">{data.orderNumber}</span>
+        <CardContent className="pt-0 space-y-2">
+          {/* Optimized layout for wider cards */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Left column - Order Information */}
+            <div className="space-y-2">
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-1">
+                  <Package className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium truncate">{data.orderNumber}</span>
+                </div>
+                <div className="text-muted-foreground font-semibold truncate">{data.productCode || data.productName}</div>
+                {isOrderCard && data.quantityRequired && (
+                  <div className="text-muted-foreground">Qty: {data.quantityRequired}</div>
+                )}
+              </div>
+
+              {/* Progress bar for non-order cards */}
+              {!isOrderCard && (
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${data.progress}%` }}
+                  />
+                </div>
+              )}
             </div>
-            <div className="text-muted-foreground font-semibold truncate">{data.productCode || data.productName}</div>
-            {/* Show quantity for manufacturing order cards */}
-            {isOrderCard && data.quantityRequired && (
-              <div className="text-muted-foreground">Qty: {data.quantityRequired}</div>
+
+            {/* Right column - Step-specific information */}
+            {!isOrderCard && data.orderStepData && (
+              <div className="space-y-2 text-xs">
+                {/* Assigned Worker */}
+                {data.orderStepData.assigned_worker && (
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
+                  </div>
+                )}
+
+                {/* Due Date */}
+                {data.orderStepData.due_date && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{format(new Date(data.orderStepData.due_date), 'MMM dd')}</span>
+                  </div>
+                )}
+
+                {/* Field Values - Horizontal layout for wider cards */}
+                <div className="flex gap-2 flex-wrap">
+                  {data.orderStepData.quantity_assigned > 0 && (
+                    <div className="bg-blue-50 px-2 py-1 rounded text-xs">
+                      <span className="text-muted-foreground">Qty:</span>
+                      <span className="font-medium ml-1">{data.orderStepData.quantity_assigned}</span>
+                    </div>
+                  )}
+                  
+                  {data.orderStepData.weight_assigned > 0 && (
+                    <div className="bg-purple-50 px-2 py-1 rounded text-xs">
+                      <span className="text-muted-foreground">Wt:</span>
+                      <span className="font-medium ml-1">{data.orderStepData.weight_assigned}g</span>
+                    </div>
+                  )}
+                  
+                  {data.orderStepData.purity > 0 && (
+                    <div className="bg-gray-50 px-2 py-1 rounded text-xs">
+                      <span className="text-muted-foreground">Purity:</span>
+                      <span className="font-medium ml-1">{data.orderStepData.purity}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Step-specific information - Compact layout */}
-          {!isOrderCard && data.orderStepData && (
-            <div className="space-y-1 text-xs border-t pt-2">
-              {/* Assigned Worker */}
-              {data.orderStepData.assigned_worker && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <span className="truncate">{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
-                </div>
-              )}
-
-              {/* Due Date */}
-              {data.orderStepData.due_date && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <span className="truncate">{format(new Date(data.orderStepData.due_date), 'MMM dd, yyyy')}</span>
-                </div>
-              )}
-
-              {/* Field Values - Compact grid */}
-              <div className="grid grid-cols-3 gap-1 text-xs">
-                {data.orderStepData.quantity_assigned > 0 && (
-                  <div className="bg-blue-50 p-1 rounded">
-                    <div className="text-muted-foreground text-xs">Qty:</div>
-                    <div className="font-medium">{data.orderStepData.quantity_assigned}</div>
-                  </div>
-                )}
-                
-                {data.orderStepData.weight_assigned > 0 && (
-                  <div className="bg-purple-50 p-1 rounded">
-                    <div className="text-muted-foreground text-xs">Wt:</div>
-                    <div className="font-medium">{data.orderStepData.weight_assigned}g</div>
-                  </div>
-                )}
-                
-                {data.orderStepData.purity > 0 && (
-                  <div className="bg-gray-50 p-1 rounded">
-                    <div className="text-muted-foreground text-xs">Purity:</div>
-                    <div className="font-medium">{data.orderStepData.purity}%</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Progress bar for non-order cards */}
-          {!isOrderCard && (
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div 
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${data.progress}%` }}
-              />
-            </div>
-          )}
-
-          {/* Start Next Step button - compact */}
+          {/* Start Next Step button - full width for better visibility */}
           {nextStepName && data.onStartNextStep && (
-            <div className="pt-1">
+            <div className="pt-2 border-t">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNextStep}
-                className="w-full flex items-center gap-1 h-7 text-xs"
+                className="w-full flex items-center justify-center gap-1 h-8 text-xs"
               >
                 <Play className="h-3 w-3" />
                 Start {nextStepName}
