@@ -23,7 +23,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   const { orderSteps } = useManufacturingSteps();
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // Get order steps for this specific order
+  // Get order steps for this specific order using order_id
   const thisOrderSteps = Array.isArray(orderSteps) 
     ? orderSteps.filter(step => step.order_id === order.id)
     : [];
@@ -33,10 +33,10 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   const totalSteps = thisOrderSteps.length;
   const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
-  // Get current step
+  // Get current step (latest created step that's in progress)
   const currentStep = thisOrderSteps
     .filter(step => step.status === 'in_progress')
-    .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))[0];
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -53,9 +53,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
       case 'pending': return 'bg-gray-100 text-gray-800';
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
-      case 'on_hold': return 'bg-yellow-100 text-yellow-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'tagged_in': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -64,7 +62,6 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     switch (status) {
       case 'completed': return <CheckCircle2 className="h-4 w-4" />;
       case 'in_progress': return <Factory className="h-4 w-4" />;
-      case 'on_hold': return <Clock className="h-4 w-4" />;
       case 'cancelled': return <AlertTriangle className="h-4 w-4" />;
       default: return <Package className="h-4 w-4" />;
     }

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     // Find the next pending step
     const nextPendingStep = currentOrderSteps
       .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))[0];
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
     
     return nextPendingStep ? manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name) : null;
   };
@@ -78,7 +79,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     const currentOrderSteps = Array.isArray(orderSteps)
       ? orderSteps
           .filter(step => step.order_id === order.id)
-          .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       : [];
 
     return currentOrderSteps.map(orderStep => {
@@ -196,7 +197,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
-                            {orderStep.step_order || index + 1}
+                            {index + 1}
                           </div>
                           <div>
                             <h4 className="font-medium text-sm">{orderStep.step_name}</h4>

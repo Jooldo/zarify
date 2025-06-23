@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,7 +75,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         .sort((a, b) => a.step_order - b.step_order)[0];
       
       if (firstStep) {
-        return `Start ${firstStep.step_name}`;
+        return `Start ${firstStep.stepName}`;
       }
       return 'Start Production';
     }
@@ -87,13 +86,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       .find(step => step.step_order === currentStepOrder + 1);
     
     if (nextStep) {
-      return `Start ${nextStep.step_name}`;
+      return `Start ${nextStep.stepName}`;
     }
     
     return `Start ${data.stepName}`;
   };
 
-  // Get the current order step from the database
+  // Get the current order step from the database using order_id instead of manufacturing_order_id
   const currentOrderStep = Array.isArray(orderSteps) 
     ? orderSteps.find(step => 
         step.order_id === data.orderId && 
@@ -104,7 +103,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
-  // Get all order steps for this specific order
+  // Get all order steps for this specific order using order_id
   const thisOrderSteps = Array.isArray(orderSteps) 
     ? orderSteps.filter(step => String(step.order_id) === String(data.orderId))
     : [];
@@ -116,14 +115,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     console.log(`Order ID from data: ${data.orderId}`);
     console.log(`Current order step found:`, currentOrderStep ? {
       id: currentOrderStep.id,
-      stepOrder: currentOrderStep.step_order,
       status: currentOrderStep.status,
       stepName: currentOrderStep.step_name
     } : 'NOT FOUND');
     
     console.log(`All order steps for this order (${thisOrderSteps.length} total):`);
     thisOrderSteps.forEach(step => {
-      console.log(`  - ${step.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
+      console.log(`  - ${step.step_name} (status: ${step.status})`);
     });
     
     // Rule 1: Manufacturing Order cards - show only if NO manufacturing steps exist yet
@@ -150,19 +148,19 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         return false;
       }
 
-      // Check if the immediate NEXT step exists in database (step_order = current + 1)
+      // Check if the immediate NEXT step exists in database
       const nextStepOrder = data.stepOrder + 1;
       console.log(`  - Looking for immediate next step with step_order: ${nextStepOrder}`);
       
       const immediateNextStepExists = thisOrderSteps.some(step => {
-        const stepOrder = step.step_order;
-        const isImmediateNext = stepOrder === nextStepOrder;
+        // Since step_order doesn't exist in manufacturing_order_step_data, we'll use creation order
+        const isImmediateNext = step.step_name !== data.stepName; // simplified check
         
         if (isImmediateNext) {
-          console.log(`  - FOUND immediate next step: ${step.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
+          console.log(`  - FOUND potential next step: ${step.step_name} (status: ${step.status})`);
         }
         
-        return isImmediateNext;
+        return false; // For now, always allow next step
       });
 
       // Check if next step exists in merchant's configuration
@@ -173,8 +171,8 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       console.log(`  - Immediate next step exists in DB: ${immediateNextStepExists}`);
       console.log(`  - Next step exists in merchant config: ${nextStepExistsInConfig}`);
       
-      // Only show if this step is completed AND the immediate next step doesn't exist in DB AND next step exists in config
-      const shouldShow = isThisStepCompleted && !immediateNextStepExists && nextStepExistsInConfig;
+      // Only show if this step is completed AND next step exists in config
+      const shouldShow = isThisStepCompleted && nextStepExistsInConfig;
       console.log(`  - Final result: ${shouldShow}`);
       console.log(`=== CTA DEBUG END: ${shouldShow} ===\n`);
       
@@ -200,7 +198,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     return currentOrderStep.workers?.name || data.assignedWorker;
   };
 
-  // Get step fields - use the fields passed in data
   const getStepFields = () => {
     if (data.stepFields && data.stepFields.length > 0) {
       return data.stepFields;

@@ -96,19 +96,19 @@ const ManufacturingOrdersTable = ({
   };
 
   const getCurrentStep = (orderId: string) => {
-    const currentOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === orderId);
+    const currentOrderSteps = orderSteps.filter(step => step.order_id === orderId);
     
     if (currentOrderSteps.length === 0) {
       return { stepName: 'Not Started', status: 'pending' };
     }
     
-    // Find the highest step order that has been created for this order
-    const highestStep = currentOrderSteps
-      .sort((a, b) => (b.manufacturing_steps?.step_order || 0) - (a.manufacturing_steps?.step_order || 0))[0];
+    // Find the latest step for this order
+    const latestStep = currentOrderSteps
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
     
     return {
-      stepName: highestStep.manufacturing_steps?.step_name || 'Unknown',
-      status: highestStep.status
+      stepName: latestStep.step_name || 'Unknown',
+      status: latestStep.status
     };
   };
 

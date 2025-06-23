@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +10,7 @@ export interface ManufacturingOrder {
   product_name: string;
   quantity_required: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold' | 'tagged_in';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   due_date?: string;
   special_instructions?: string;
   created_by?: string;
