@@ -1,3 +1,4 @@
+
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -410,31 +411,6 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             </div>
           )}
 
-          {/* Available for Assignment to Next Step - For Parent Steps */}
-          {!isOrderCard && remainingQuantities && (
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
-              <div className="text-xs font-semibold text-purple-900 mb-2 uppercase tracking-wide">
-                Available for Assignment to Next Step
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-blue-600" />
-                  <div>
-                    <div className="font-semibold text-blue-900">{remainingQuantities.quantity} pieces</div>
-                    <div className="text-xs text-blue-600">Quantity Available</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Scale className="h-4 w-4 text-purple-600" />
-                  <div>
-                    <div className="font-semibold text-purple-900">{remainingQuantities.weight.toFixed(2)} kg</div>
-                    <div className="text-xs text-purple-600">Weight Available</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Step Details Section - Only for non-order cards */}
           {!isOrderCard && data.orderStepData && (
             <div className="space-y-3">
@@ -481,6 +457,31 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Available for Assignment to Next Step - For Parent Steps - Now positioned above CTA */}
+          {!isOrderCard && remainingQuantities && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
+              <div className="text-xs font-semibold text-purple-900 mb-2 uppercase tracking-wide">
+                Available for Assignment to Next Step
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <div className="font-semibold text-blue-900">{remainingQuantities.quantity} pieces</div>
+                    <div className="text-xs text-blue-600">Quantity Available</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Scale className="h-4 w-4 text-purple-600" />
+                  <div>
+                    <div className="font-semibold text-purple-900">{remainingQuantities.weight.toFixed(2)} kg</div>
+                    <div className="text-xs text-purple-600">Weight Available</div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
