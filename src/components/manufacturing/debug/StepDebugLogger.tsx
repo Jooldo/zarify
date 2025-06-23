@@ -1,94 +1,78 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-import { Tables } from '@/integrations/supabase/types';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 
 interface StepDebugLoggerProps {
   open: boolean;
   order: ManufacturingOrder | null;
-  step: Tables<'manufacturing_order_steps'> | null;
+  step: ManufacturingOrderStep | null;
 }
 
 export const StepDebugLogger: React.FC<StepDebugLoggerProps> = ({ open, order, step }) => {
-  const { manufacturingSteps, orderSteps, getStepFields } = useManufacturingSteps();
-  const { getStepValue } = useManufacturingStepValues();
+  const { manufacturingSteps, stepFields } = useManufacturingSteps();
+  const { stepValues } = useManufacturingStepValues();
 
-  // Debug logging for MO000004
-  React.useEffect(() => {
-    if (open && order && order.order_number === "MO000004") {
-      const relevantOrderSteps = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
-      console.log("[DEBUG/MO000004] All order steps for this order:", relevantOrderSteps);
+  useEffect(() => {
+    if (!open || !step || !order) return;
 
-      const dholDef = manufacturingSteps.find(d => (d.step_name || '').toLowerCase() === 'dhol');
-      if (!dholDef) {
-        console.warn('[DEBUG/MO000004] No manufacturing step definition named "Dhol" found');
-      } else {
-        const dholOrderStep = relevantOrderSteps.find(os => String(os.manufacturing_step_id) === String(dholDef.id));
-        if (!dholOrderStep) {
-          console.warn('[DEBUG/MO000004] No order step found for "Dhol" for this order');
-        } else {
-          console.log('[DEBUG/MO000004] Found order step for "Dhol":', dholOrderStep);
-          const dholFields = getStepFields(dholDef.id);
-          dholFields.forEach(field => {
-            const value = getStepValue(dholOrderStep.id, field.field_id);
-            console.log(`[DEBUG/MO000004] Dhol field "${field.field_label}":`, value ?? "(empty/null)");
-          });
-        }
-      }
-    }
-  }, [open, order, orderSteps, manufacturingSteps, getStepFields, getStepValue]);
+    console.log('=== STEP DEBUG LOGGER ===');
+    console.log('Step:', step);
+    console.log('Order:', order);
+    
+    // Debug step configuration
+    console.log('Step Configuration:');
+    console.log('- Step Name:', step.step_name);
+    console.log('- Order ID:', step.order_id);
+    console.log('- Status:', step.status);
+    
+    // Debug step fields
+    const currentStepFields = stepFields.filter(field => 
+      field.step_name === step.step_name
+    );
+    
+    console.log('Step Fields Configuration:');
+    currentStepFields.forEach(field => {
+      console.log(`- Field: ${field.field_key}`);
+      console.log(`  - ID: ${field.id}`);
+    });
 
-  // Debug logging for MO000005
-  React.useEffect(() => {
-    if (open && order && order.order_number === "MO000005") {
-      console.log("[DEBUG/MO000005] === MANUFACTURING DATA FOR MO000005 ===");
-      console.log("[DEBUG/MO000005] Order details:", order);
-      console.log("[DEBUG/MO000005] All manufacturing steps for merchant:", manufacturingSteps);
-      
-      const relevantOrderSteps = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
-      console.log("[DEBUG/MO000005] All order steps for this order:", relevantOrderSteps);
+    // Debug manufacturing steps config
+    console.log('Manufacturing Steps Config:');
+    manufacturingSteps.forEach(configStep => {
+      console.log(`- Step: ${configStep.step_name} (Order: ${configStep.step_order})`);
+    });
 
-      if (relevantOrderSteps.length === 0) {
-        console.warn("[DEBUG/MO000005] No order steps found for MO000005");
-        return;
-      }
+    // Debug step values  
+    const currentStepValues = stepValues.filter(value => 
+      value.step_id === step.id
+    );
+    
+    console.log('Step Values:');
+    currentStepValues.forEach(value => {
+      console.log(`- Field ${value.field_key}: ${value.field_value}`);
+    });
 
-      relevantOrderSteps.forEach(os => {
-        const stepDefinition = manufacturingSteps.find(d => String(d.id) === String(os.manufacturing_step_id));
-        console.log(`[DEBUG/MO000005] === STEP: ${stepDefinition?.step_name || 'Unknown'} ===`);
-        console.log(`[DEBUG/MO000005] Order Step ID: ${os.id}`);
-        console.log(`[DEBUG/MO000005] Manufacturing Step ID: ${os.manufacturing_step_id}`);
-        console.log(`[DEBUG/MO000005] Status: ${os.status}`);
-        console.log(`[DEBUG/MO000005] Progress: ${os.progress_percentage}%`);
-        console.log(`[DEBUG/MO000005] Started At: ${os.started_at || 'Not started'}`);
-        console.log(`[DEBUG/MO000005] Completed At: ${os.completed_at || 'Not completed'}`);
-        console.log(`[DEBUG/MO000005] Notes: ${os.notes || 'No notes'}`);
-        console.log(`[DEBUG/MO000005] Assigned Worker: ${os.assigned_worker_id || 'Not assigned'}`);
+    // Debug order information
+    console.log('Order Information:');
+    console.log('- Order Number:', order.order_number);
+    console.log('- Product Name:', order.product_name);
+    console.log('- Status:', order.status);
+    console.log('- Assigned Worker:', step.assigned_worker);
 
-        if (stepDefinition) {
-          const stepFields = getStepFields(stepDefinition.id);
-          console.log(`[DEBUG/MO000005] Fields configured for ${stepDefinition.step_name}:`, stepFields.length);
-          
-          if (stepFields.length > 0) {
-            stepFields.forEach(field => {
-              const value = getStepValue(os.id, field.field_id);
-              console.log(`[DEBUG/MO000005]   "${field.field_label}" (${field.field_type}): ${value ?? "(empty/null)"}`);
-              if (field.field_options) {
-                console.log(`[DEBUG/MO000005]     Options:`, field.field_options);
-              }
-            });
-          } else {
-            console.log(`[DEBUG/MO000005] No fields configured for step: ${stepDefinition.step_name}`);
-          }
-        }
-        console.log(`[DEBUG/MO000005] === END STEP ===`);
-      });
+    // Debug field configuration details
+    console.log('Field Configuration Details:');
+    currentStepFields.forEach(field => {
+      console.log(`- ${field.field_key}:`);
+      console.log(`  - ID: ${field.id}`);
+      console.log(`  - Unit: ${field.unit || 'N/A'}`);
+      console.log(`  - Visible: ${field.is_visible}`);
+    });
 
-      console.log("[DEBUG/MO000005] === END MANUFACTURING DATA ===");
-    }
-  }, [open, order, orderSteps, manufacturingSteps, getStepFields, getStepValue]);
+    console.log('=== END STEP DEBUG ===');
+  }, [open, step, order, manufacturingSteps, stepFields, stepValues]);
 
   return null;
 };

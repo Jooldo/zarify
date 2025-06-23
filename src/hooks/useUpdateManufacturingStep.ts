@@ -11,7 +11,10 @@ interface UpdateStepParams {
   progress?: number;
   stepName?: string;
   orderNumber?: string;
-  updates?: Partial<Tables<'manufacturing_order_steps'>>;
+  assigned_worker?: string;
+  dueDate?: string;
+  notes?: string;
+  updates?: Partial<Tables<'manufacturing_order_step_data'>>;
 }
 
 export const useUpdateManufacturingStep = () => {
@@ -19,14 +22,14 @@ export const useUpdateManufacturingStep = () => {
   const queryClient = useQueryClient();
 
   const updateStepMutation = useMutation({
-    mutationFn: async ({ stepId, fieldValues, status, progress, updates, stepName, orderNumber }: UpdateStepParams) => {
+    mutationFn: async ({ stepId, fieldValues, status, progress, assigned_worker, dueDate, notes, updates, stepName, orderNumber }: UpdateStepParams) => {
       console.log('Updating step with ID:', stepId);
       console.log('Field values:', fieldValues);
       console.log('Status:', status);
       console.log('Progress:', progress);
       
       // Prepare the updates object
-      const stepUpdates: Partial<Tables<'manufacturing_order_steps'>> = {
+      const stepUpdates: Partial<Tables<'manufacturing_order_step_data'>> = {
         ...updates,
         updated_at: new Date().toISOString()
       };
@@ -35,8 +38,16 @@ export const useUpdateManufacturingStep = () => {
         stepUpdates.status = status;
       }
 
-      if (progress !== undefined) {
-        stepUpdates.progress_percentage = progress;
+      if (assigned_worker) {
+        stepUpdates.assigned_worker = assigned_worker;
+      }
+
+      if (dueDate) {
+        stepUpdates.due_date = dueDate;
+      }
+
+      if (notes) {
+        stepUpdates.notes = notes;
       }
 
       if (status === 'completed') {
@@ -49,7 +60,7 @@ export const useUpdateManufacturingStep = () => {
 
       // Update the manufacturing order step
       const { data, error } = await supabase
-        .from('manufacturing_order_steps')
+        .from('manufacturing_order_step_data')
         .update(stepUpdates)
         .eq('id', stepId)
         .select('*')
@@ -60,53 +71,13 @@ export const useUpdateManufacturingStep = () => {
         throw error;
       }
 
-      // Save field values if provided
-      if (fieldValues && Object.keys(fieldValues).length > 0) {
-        console.log('Saving field values:', fieldValues);
-        
-        // Get merchant ID
-        const { data: merchantId, error: merchantError } = await supabase
-          .rpc('get_user_merchant_id');
-
-        if (merchantError) {
-          console.error('Error getting merchant ID:', merchantError);
-          throw merchantError;
-        }
-
-        // Delete existing field values for this step
-        await supabase
-          .from('manufacturing_order_step_values')
-          .delete()
-          .eq('manufacturing_order_step_id', stepId);
-
-        // Insert new field values
-        const fieldValueInserts = Object.entries(fieldValues).map(([fieldId, value]) => ({
-          manufacturing_order_step_id: stepId,
-          field_id: fieldId,
-          field_value: String(value),
-          merchant_id: merchantId
-        }));
-
-        if (fieldValueInserts.length > 0) {
-          const { error: fieldError } = await supabase
-            .from('manufacturing_order_step_values')
-            .insert(fieldValueInserts);
-
-          if (fieldError) {
-            console.error('Error saving field values:', fieldError);
-            throw fieldError;
-          }
-        }
-      }
-
       return data;
     },
     onSuccess: (data, variables) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
+      queryClient.invalidateQueries({ queryKey: ['manufacturing_order_step_data'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing_steps'] });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
+      queryClient.invalidateQueries({ queryKey: ['merchant_step_config'] });
 
       // Show success toast
       const { stepName, orderNumber } = variables;
