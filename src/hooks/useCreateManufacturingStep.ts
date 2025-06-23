@@ -63,6 +63,8 @@ export const useCreateManufacturingStep = () => {
             : (data.fieldValues.is_rework ? 'Created as rework instance' : null),
         };
 
+        console.log('Step data to insert:', stepToInsert);
+
         const { data: step, error: insertError } = await supabase
           .from('manufacturing_order_step_data')
           .insert(stepToInsert)
