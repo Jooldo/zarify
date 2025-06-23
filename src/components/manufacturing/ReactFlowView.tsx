@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -90,10 +91,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Tree layout constants for dynamic positioning
+    // Tree layout constants for dynamic positioning - Increased spacing
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const INSTANCE_HORIZONTAL_SPACING = 600; // Base spacing between instances
+    const INSTANCE_HORIZONTAL_SPACING = 800; // Increased from 600 to prevent connector overlap
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -182,7 +183,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
         // Calculate positions for this step's instances
         const instanceCount = orderedInstances.length;
-        const totalWidth = (instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING;
         
         // For tree-like layout, we'll calculate the center position based on children
         let centerX: number;
