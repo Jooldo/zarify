@@ -6,6 +6,10 @@ import { NavigationProvider } from '@/contexts/NavigationContext';
 import UnifiedDashboard from '@/components/dashboard/UnifiedDashboard';
 import OrdersTab from '@/components/OrdersTab';
 import InventoryTab from '@/components/InventoryTab';
+import FinishedGoodsInventory from '@/components/FinishedGoodsInventory';
+import RawMaterialInventory from '@/components/RawMaterialInventory';
+import FinishedGoodManagement from '@/components/FinishedGoodManagement';
+import ProcurementRequestsSection from '@/components/ProcurementRequestsSection';
 import ProductConfigTab from '@/components/ProductConfigTab';
 import UsersTab from '@/components/UsersTab';
 import ActivityLogsTab from '@/components/ActivityLogsTab';
@@ -24,6 +28,10 @@ const Index = () => {
     if (pathname === '/app' || pathname === '/app/') return 'dashboard';
     if (pathname === '/app/orders') return 'orders';
     if (pathname === '/app/inventory') return 'fg-inventory';
+    if (pathname === '/app/inventory/finished-goods') return 'fg-inventory';
+    if (pathname === '/app/inventory/raw-materials') return 'rm-inventory';
+    if (pathname === '/app/manufacturing') return 'fg-manufacturing';
+    if (pathname === '/app/procurement') return 'rm-procurement';
     if (pathname === '/app/config') return 'config';
     if (pathname === '/app/users') return 'customers';
     if (pathname === '/app/activity') return 'activity';
@@ -44,8 +52,16 @@ const Index = () => {
         navigate('/app/orders');
         break;
       case 'fg-inventory':
+        navigate('/app/inventory/finished-goods');
+        break;
       case 'rm-inventory':
-        navigate('/app/inventory');
+        navigate('/app/inventory/raw-materials');
+        break;
+      case 'fg-manufacturing':
+        navigate('/app/manufacturing');
+        break;
+      case 'rm-procurement':
+        navigate('/app/procurement');
         break;
       case 'config':
         navigate('/app/config');
@@ -88,6 +104,10 @@ const Index = () => {
               <Route path="/" element={<UnifiedDashboard />} />
               <Route path="/orders" element={<OrdersTab />} />
               <Route path="/inventory" element={<InventoryTab />} />
+              <Route path="/inventory/finished-goods" element={<FinishedGoodsInventory />} />
+              <Route path="/inventory/raw-materials" element={<RawMaterialInventory />} />
+              <Route path="/manufacturing" element={<FinishedGoodManagement />} />
+              <Route path="/procurement" element={<ProcurementRequestsSection />} />
               <Route path="/config" element={<ProductConfigTab />} />
               <Route path="/users" element={<UsersTab activeTab="customers" onTabChange={() => {}} />} />
               <Route path="/activity" element={<ActivityLogsTab />} />
