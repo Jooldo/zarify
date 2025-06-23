@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -119,14 +120,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Fixed layout constants for consistent positioning
-    const CARD_WIDTH = 350;
-    const CARD_HEIGHT = 200;
-    const ORDER_Y_SPACING = 600;
+    // Improved layout constants for better alignment
+    const CARD_WIDTH = 380;
+    const CARD_HEIGHT = 220;
+    const ORDER_Y_SPACING = 700;
     const STEP_Y_SPACING = 300;
-    const INSTANCE_X_SPACING = 400;
-    const START_X = 50;
-    const START_Y = 50;
+    const INSTANCE_X_SPACING = 420;
+    const START_X = 100;
+    const START_Y = 100;
 
     const activeSteps = manufacturingSteps
       .filter(step => step.is_active)
@@ -139,7 +140,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
 
-      // Create manufacturing order node
+      // Create manufacturing order node with improved styling
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -153,6 +154,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         priority: order.priority,
         dueDate: order.due_date,
         isJhalaiStep: false,
+        cardType: 'order',
       };
 
       const orderNode: Node = {
@@ -165,7 +167,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Process each step type
+      // Process each step type with improved positioning
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = thisOrderSteps.filter(orderStep => orderStep.step_name === step.step_name);
         
@@ -178,7 +180,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
         const stepY = orderY + ((stepIndex + 1) * STEP_Y_SPACING);
 
-        // Position instances horizontally
+        // Position instances horizontally with better spacing
         stepInstances.forEach((orderStep, instanceIndex) => {
           const instanceX = START_X + (instanceIndex * INSTANCE_X_SPACING);
           
@@ -198,6 +200,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             isJhalaiStep: false,
             instanceNumber: orderStep?.instance_number || 1,
             orderStepData: orderStep,
+            cardType: 'step',
           };
 
           const stepNodeId = `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`;
@@ -212,14 +215,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges
+          // Create edges with improved styling
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
             // First step connects to order
             sourceNodeId = `order-${order.id}`;
           } else {
-            // Find parent step instance
+            // Find parent step instance using parent_instance_id
             const previousStep = activeSteps[stepIndex - 1];
             let parentInstance = null;
             
@@ -228,20 +231,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               parentInstance = thisOrderSteps.find(inst => inst.id === orderStep.parent_instance_id);
             }
             
-            // Fallback to notes-based or first available instance
+            // Fallback to first available instance of previous step
             if (!parentInstance) {
               const previousStepInstances = thisOrderSteps.filter(inst => inst.step_name === previousStep.step_name);
               if (previousStepInstances.length > 0) {
-                // Try to match by notes
-                if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
-                  const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
-                  parentInstance = previousStepInstances.find(inst => inst.instance_number === sourceInstanceNumber);
-                }
-                
-                // Final fallback to first instance
-                if (!parentInstance) {
-                  parentInstance = previousStepInstances[0];
-                }
+                parentInstance = previousStepInstances[0];
               }
             }
             
@@ -252,27 +246,51 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Only create edge if source node exists
-          const sourceExists = nodes.some(node => node.id === sourceNodeId) || sourceNodeId === `order-${order.id}`;
+          // Create edge with improved styling
+          const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
+          const isAnimated = orderStep?.status === 'in_progress';
           
-          if (sourceExists) {
-            const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
-            const isAnimated = orderStep?.status === 'in_progress';
-            const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
-                               orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
-
-            edges.push({
-              id: edgeId,
-              source: sourceNodeId,
-              target: stepNodeId,
-              type: 'smoothstep',
-              animated: isAnimated,
-              style: {
-                stroke: strokeColor,
-                strokeWidth: 2,
-              },
-            });
+          // Enhanced edge styling based on status
+          let strokeColor = '#9ca3af'; // default gray
+          let strokeWidth = 2;
+          let strokeDasharray = undefined;
+          
+          switch (orderStep?.status) {
+            case 'completed':
+              strokeColor = '#10b981'; // green
+              strokeWidth = 3;
+              break;
+            case 'in_progress':
+              strokeColor = '#3b82f6'; // blue
+              strokeWidth = 3;
+              break;
+            case 'blocked':
+              strokeColor = '#ef4444'; // red
+              strokeWidth = 2;
+              strokeDasharray = '5,5';
+              break;
+            default:
+              strokeColor = '#d1d5db'; // light gray
+              strokeWidth = 2;
+              strokeDasharray = '3,3';
           }
+
+          edges.push({
+            id: edgeId,
+            source: sourceNodeId,
+            target: stepNodeId,
+            type: 'smoothstep',
+            animated: isAnimated,
+            style: {
+              stroke: strokeColor,
+              strokeWidth: strokeWidth,
+              strokeDasharray: strokeDasharray,
+            },
+            markerEnd: {
+              type: 'arrowclosed',
+              color: strokeColor,
+            },
+          });
         });
       });
     });
@@ -407,7 +425,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           </div>
         )}
 
-        <div className={`w-full border rounded-lg bg-gray-50 ${isFullScreen ? 'h-full' : ''}`} style={{ height: flowHeight }}>
+        <div className={`w-full border rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 ${isFullScreen ? 'h-full' : ''}`} style={{ height: flowHeight }}>
           <ReactFlow
             nodes={nodesWithCallbacks}
             edges={edges}
@@ -416,10 +434,22 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
+            proOptions={{ hideAttribution: true }}
           >
-            <Background />
+            <Background color="#e5e7eb" gap={20} />
             <Controls />
-            <MiniMap />
+            <MiniMap 
+              nodeColor={(node) => {
+                if (node.data.cardType === 'order') return '#3b82f6';
+                switch (node.data.status) {
+                  case 'completed': return '#10b981';
+                  case 'in_progress': return '#f59e0b';
+                  case 'blocked': return '#ef4444';
+                  default: return '#9ca3af';
+                }
+              }}
+              maskColor="rgba(255, 255, 255, 0.8)"
+            />
           </ReactFlow>
         </div>
       </div>

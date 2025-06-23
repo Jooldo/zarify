@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Calendar, Play } from 'lucide-react';
+import { Clock, User, Package, Calendar, Play, Factory, Cog } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWorkers } from '@/hooks/useWorkers';
 
@@ -31,6 +31,7 @@ export interface StepCardData {
   orderStepData?: any;
   rawMaterials?: any[];
   instanceNumber?: number;
+  cardType?: 'order' | 'step';
   [key: string]: any;
 }
 
@@ -46,12 +47,12 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      case 'skipped': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'completed': return 'bg-green-100 text-green-800 border-green-300';
+      case 'blocked': return 'bg-red-100 text-red-800 border-red-300';
+      case 'skipped': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -73,7 +74,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     return null;
   };
 
-  // Get field values in consistent order
+  // Get field values in consistent order with improved display
   const getOrderedFieldValues = () => {
     if (!data.orderStepData) return [];
     
@@ -103,17 +104,19 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             break;
           case 'quantity_received':
             label = 'Qty Received';
-            colorClass = 'bg-green-50 text-green-700 border-green-200';
+            colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
             break;
           case 'weight_assigned':
             label = 'Weight Assigned';
-            unit = 'g';
+            unit = 'kg'; // Fixed unit display
+            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
             colorClass = 'bg-purple-50 text-purple-700 border-purple-200';
             break;
           case 'weight_received':
             label = 'Weight Received';
-            unit = 'g';
-            colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            unit = 'kg'; // Fixed unit display
+            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
+            colorClass = 'bg-teal-50 text-teal-700 border-teal-200';
             break;
           case 'purity':
             label = 'Purity';
@@ -122,7 +125,8 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             break;
           case 'wastage':
             label = 'Wastage';
-            unit = 'g';
+            unit = 'kg'; // Fixed unit display
+            displayValue = (value / 1000).toFixed(2); // Convert grams to kg
             colorClass = 'bg-red-50 text-red-700 border-red-200';
             break;
         }
@@ -173,6 +177,44 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     : data.instanceNumber && data.instanceNumber > 1 
       ? `${data.stepName} #${data.instanceNumber}`
       : data.stepName;
+
+  // Get card styling based on type and status
+  const getCardStyling = () => {
+    if (isOrderCard) {
+      return {
+        borderClass: 'border-l-4 border-l-indigo-500 shadow-lg',
+        bgClass: 'bg-gradient-to-br from-indigo-50 to-blue-50',
+        headerClass: 'bg-indigo-100/50'
+      };
+    }
+
+    // Step card styling based on step name
+    const stepStyles = {
+      'Jhalai': {
+        borderClass: 'border-l-4 border-l-orange-500 shadow-md',
+        bgClass: 'bg-gradient-to-br from-orange-50 to-amber-50',
+        headerClass: 'bg-orange-100/50'
+      },
+      'Dhol': {
+        borderClass: 'border-l-4 border-l-purple-500 shadow-md',
+        bgClass: 'bg-gradient-to-br from-purple-50 to-pink-50',
+        headerClass: 'bg-purple-100/50'
+      },
+      'Casting': {
+        borderClass: 'border-l-4 border-l-green-500 shadow-md',
+        bgClass: 'bg-gradient-to-br from-green-50 to-emerald-50',
+        headerClass: 'bg-green-100/50'
+      }
+    };
+
+    return stepStyles[data.stepName as keyof typeof stepStyles] || {
+      borderClass: 'border-l-4 border-l-gray-500 shadow-md',
+      bgClass: 'bg-gradient-to-br from-gray-50 to-slate-50',
+      headerClass: 'bg-gray-100/50'
+    };
+  };
+
+  const cardStyling = getCardStyling();
   
   console.log('Button visibility check:', {
     isOrderCard,
@@ -183,38 +225,41 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   
   return (
     <div 
-      className="relative cursor-pointer hover:shadow-lg transition-shadow"
+      className="relative cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
       onClick={handleClick}
-      style={{ width: '350px', height: 'auto', minHeight: '180px' }}
+      style={{ width: '380px', height: 'auto', minHeight: '200px' }}
     >
-      <Card className="w-full h-full shadow-md border-l-4 border-l-blue-500">
-        <CardHeader className="pb-2 px-3 pt-2">
-          <div className="flex items-start justify-between gap-2">
+      <Card className={`w-full h-full ${cardStyling.borderClass} ${cardStyling.bgClass} backdrop-blur-sm`}>
+        <CardHeader className={`pb-3 px-4 pt-3 ${cardStyling.headerClass} rounded-t-lg`}>
+          <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm font-semibold truncate text-gray-900">{displayStepName}</CardTitle>
+              <CardTitle className="text-base font-bold truncate text-gray-900 flex items-center gap-2">
+                {isOrderCard ? <Factory className="h-4 w-4 text-indigo-600" /> : <Cog className="h-4 w-4 text-gray-600" />}
+                {displayStepName}
+              </CardTitle>
               {!isOrderCard && (
-                <div className="text-xs text-gray-500 mt-0.5">
-                  Step {data.stepOrder}
+                <div className="text-xs text-gray-600 mt-1 font-medium">
+                  Step {data.stepOrder} • Instance {data.instanceNumber || 1}
                 </div>
               )}
             </div>
-            <Badge className={`text-xs px-2 py-0.5 flex-shrink-0 ${getStatusColor(data.status)}`}>
-              {data.status.replace('_', ' ')}
+            <Badge className={`text-xs px-3 py-1 flex-shrink-0 font-medium border ${getStatusColor(data.status)}`}>
+              {data.status.replace('_', ' ').toUpperCase()}
             </Badge>
           </div>
         </CardHeader>
         
-        <CardContent className="px-3 pb-2 pt-0 space-y-2">
+        <CardContent className="px-4 pb-3 pt-2 space-y-3">
           {/* Order Information Section */}
-          <div className="bg-gray-50 rounded-md p-2">
-            <div className="flex items-center gap-2 mb-1">
-              <Package className="h-3 w-3 text-blue-600 flex-shrink-0" />
+          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50">
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="h-4 w-4 text-blue-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-xs text-gray-900 truncate">{data.orderNumber}</div>
+                <div className="font-bold text-sm text-gray-900 truncate">{data.orderNumber}</div>
                 <div className="text-xs text-gray-600 truncate">{data.productCode || data.productName}</div>
               </div>
               {isOrderCard && data.quantityRequired && (
-                <div className="text-xs text-gray-500 flex-shrink-0">
+                <div className="text-sm font-semibold text-gray-700 flex-shrink-0 bg-blue-50 px-2 py-1 rounded">
                   Qty: {data.quantityRequired}
                 </div>
               )}
@@ -222,9 +267,9 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
             {/* Progress bar for non-order cards */}
             {!isOrderCard && (
-              <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
-                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
                   style={{ width: `${data.progress}%` }}
                 />
               </div>
@@ -233,40 +278,48 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
           {/* Step Details Section - Only for non-order cards */}
           {!isOrderCard && data.orderStepData && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {/* Worker and Due Date Row */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-3 text-xs">
                 {data.orderStepData.assigned_worker && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 bg-white/50 rounded-md p-2">
                     <User className="h-3 w-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700 truncate">
+                    <span className="text-gray-700 truncate font-medium">
                       {getWorkerName(data.orderStepData.assigned_worker) || 'Unknown'}
                     </span>
                   </div>
                 )}
 
                 {data.orderStepData.due_date && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 bg-white/50 rounded-md p-2">
                     <Calendar className="h-3 w-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700">
+                    <span className="text-gray-700 font-medium">
                       {format(new Date(data.orderStepData.due_date), 'MMM dd')}
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* Field Values in Consistent Order */}
+              {/* Enhanced Field Values Display */}
               {orderedFieldValues.length > 0 && (
-                <div className="grid grid-cols-2 gap-1">
-                  {orderedFieldValues.map((field, index) => (
-                    <div 
-                      key={`${field.label}-${index}`}
-                      className={`px-2 py-1 rounded text-xs border ${field.colorClass}`}
-                    >
-                      <span className="font-medium">{field.label}:</span>
-                      <span className="ml-1">{field.value}{field.unit}</span>
-                    </div>
-                  ))}
+                <div className="bg-gray-900/5 backdrop-blur-sm rounded-lg p-3 border border-gray-200/30">
+                  <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                    Configuration Values
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {orderedFieldValues.map((field, index) => (
+                      <div 
+                        key={`${field.label}-${index}`}
+                        className={`px-3 py-2 rounded-md border ${field.colorClass}`}
+                      >
+                        <div className="text-xs font-medium text-gray-600 mb-1">{field.label}</div>
+                        <div className="text-base font-bold">
+                          {field.value}
+                          {field.unit && <span className="text-xs font-normal ml-1">{field.unit}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -274,14 +327,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
           {/* Start Next Step Button */}
           {nextStepName && data.onStartNextStep && (
-            <div className="pt-2 border-t border-gray-200">
+            <div className="pt-2 border-t border-gray-200/50">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNextStep}
-                className="w-full h-7 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                className="w-full h-8 text-xs font-semibold hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm"
               >
-                <Play className="h-3 w-3 mr-1" />
+                <Play className="h-3 w-3 mr-2" />
                 Start {nextStepName}
               </Button>
             </div>
@@ -289,16 +342,16 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         </CardContent>
       </Card>
 
-      {/* React Flow Handles */}
+      {/* React Flow Handles with improved styling */}
       <Handle 
         type="target" 
         position={Position.Top} 
-        className="w-3 h-3 bg-gray-400 border-2 border-white" 
+        className="w-4 h-4 bg-white border-2 border-gray-400 shadow-md hover:border-blue-500 transition-colors" 
       />
       <Handle 
         type="source" 
         position={Position.Bottom} 
-        className="w-3 h-3 bg-gray-400 border-2 border-white"
+        className="w-4 h-4 bg-white border-2 border-gray-400 shadow-md hover:border-blue-500 transition-colors"
       />
     </div>
   );
