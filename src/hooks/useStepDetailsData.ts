@@ -25,17 +25,23 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_step_data'>
   const currentStepFields = useMemo(() => {
     if (!currentStepDefinition) return [];
     const fields = getStepFields(currentStepDefinition.id);
-    return fields;
+    // Map field_key to field_id for compatibility
+    return fields.map(field => ({
+      ...field,
+      field_id: field.field_key,
+      field_label: field.field_key,
+      field_options: { unit: field.unit }
+    }));
   }, [currentStepDefinition, getStepFields]);
 
   const currentStepValues = useMemo(() => {
     if (!step || currentStepFields.length === 0) return [];
     const values = currentStepFields.map(field => {
-      const value = getStepValue(step.id, field.field_id);
+      const value = getStepValue(step.id, field.field_key);
       return {
-        label: field.field_label,
+        label: field.field_key,
         value: value || '-',
-        unit: field.field_options?.unit,
+        unit: field.unit,
       };
     });
     return values;
@@ -72,14 +78,19 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_step_data'>
         };
       }
 
-      const fields = getStepFields(prevStepDef.id);
+      const fields = getStepFields(prevStepDef.id).map(field => ({
+        ...field,
+        field_id: field.field_key,
+        field_label: field.field_key,
+        field_options: { unit: field.unit }
+      }));
 
       const values = fields.map(field => {
-        const value = getStepValue(orderStep.id, field.field_id);
+        const value = getStepValue(orderStep.id, field.field_key);
         return {
-          label: field.field_label,
+          label: field.field_key,
           value: value || '-',
-          unit: field.field_options?.unit,
+          unit: field.unit,
         };
       });
 

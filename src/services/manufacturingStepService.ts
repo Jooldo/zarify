@@ -52,7 +52,11 @@ export const createManufacturingOrderStep = async (stepData: CreateStepData): Pr
     .single();
 
   if (error) throw error;
-  return data;
+  
+  return {
+    ...data,
+    status: data.status as ManufacturingOrderStepData['status']
+  };
 };
 
 export const updateManufacturingOrderStep = async (stepId: string, updates: Partial<ManufacturingOrderStepData>): Promise<ManufacturingOrderStepData> => {
@@ -64,7 +68,11 @@ export const updateManufacturingOrderStep = async (stepId: string, updates: Part
     .single();
 
   if (error) throw error;
-  return data;
+  
+  return {
+    ...data,
+    status: data.status as ManufacturingOrderStepData['status']
+  };
 };
 
 export const fetchManufacturingOrderSteps = async (orderId: string): Promise<ManufacturingOrderStepData[]> => {
@@ -75,5 +83,9 @@ export const fetchManufacturingOrderSteps = async (orderId: string): Promise<Man
     .order('created_at');
 
   if (error) throw error;
-  return data || [];
+  
+  return (data || []).map(step => ({
+    ...step,
+    status: step.status as ManufacturingOrderStepData['status']
+  }));
 };

@@ -75,7 +75,7 @@ export const useFinishedGoods = () => {
         .from('manufacturing_orders')
         .select(`
           quantity_required,
-          product_configs!inner(product_code)
+          product_name
         `)
         .eq('merchant_id', merchantId)
         .in('status', ['pending', 'in_progress', 'completed']);
@@ -84,9 +84,9 @@ export const useFinishedGoods = () => {
         console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
       }
 
-      // Calculate in_manufacturing quantities by product code
+      // Calculate in_manufacturing quantities by product code (using product_name as fallback)
       const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
-        const productCode = order.product_configs?.product_code;
+        const productCode = order.product_name; // Use product_name as identifier
         if (productCode) {
           acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
         }

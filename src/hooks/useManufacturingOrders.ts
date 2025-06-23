@@ -71,10 +71,12 @@ export const useManufacturingOrders = () => {
 
       if (error) throw error;
       
-      // Transform data to match expected interface
+      // Transform data to match expected interface with proper type casting
       const transformedData: ManufacturingOrder[] = (data || []).map(order => ({
         ...order,
-        quantity_required: Number(order.quantity_required)
+        quantity_required: Number(order.quantity_required),
+        priority: order.priority as ManufacturingOrder['priority'],
+        status: order.status as ManufacturingOrder['status']
       }));
       
       return transformedData;

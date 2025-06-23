@@ -33,7 +33,13 @@ export const fetchManufacturingOrders = async (): Promise<ManufacturingOrder[]> 
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return orders || [];
+  
+  // Transform data with proper type casting
+  return (orders || []).map(order => ({
+    ...order,
+    priority: order.priority as ManufacturingOrder['priority'],
+    status: order.status as ManufacturingOrder['status']
+  }));
 };
 
 export const createManufacturingOrder = async (data: CreateManufacturingOrderData): Promise<ManufacturingOrder> => {
@@ -62,7 +68,12 @@ export const createManufacturingOrder = async (data: CreateManufacturingOrderDat
     .single();
 
   if (error) throw error;
-  return order;
+  
+  return {
+    ...order,
+    priority: order.priority as ManufacturingOrder['priority'],
+    status: order.status as ManufacturingOrder['status']
+  };
 };
 
 export const updateManufacturingOrder = async (orderId: string, updates: Partial<ManufacturingOrder>): Promise<ManufacturingOrder> => {
@@ -74,7 +85,12 @@ export const updateManufacturingOrder = async (orderId: string, updates: Partial
     .single();
 
   if (error) throw error;
-  return data;
+  
+  return {
+    ...data,
+    priority: data.priority as ManufacturingOrder['priority'],
+    status: data.status as ManufacturingOrder['status']
+  };
 };
 
 export const deleteManufacturingOrder = async (orderId: string): Promise<void> => {
