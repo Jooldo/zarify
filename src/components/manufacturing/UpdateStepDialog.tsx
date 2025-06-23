@@ -188,7 +188,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 <SelectValue placeholder="Select worker" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {workers.map(worker => (
                   <SelectItem key={worker.id} value={worker.id}>
                     {worker.name}

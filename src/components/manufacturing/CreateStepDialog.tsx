@@ -127,7 +127,7 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
           productCode: manufacturingOrderData.productCode,
           priority: manufacturingOrderData.priority,
           quantityRequired: manufacturingOrderData.quantityRequired,
-          rawMaterials: manufacturingOrderData.rawMaterials,
+          // Remove rawMaterials reference since it doesn't exist in StepCardData
         }
       };
 

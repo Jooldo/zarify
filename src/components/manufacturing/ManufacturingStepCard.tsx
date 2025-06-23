@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +25,8 @@ export interface StepCardData {
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
   orderStepData?: any; // The actual step data from manufacturing_order_step_data
+  rawMaterials?: any[]; // Add this property
+  [key: string]: any; // Add index signature for compatibility
 }
 
 const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) => {
