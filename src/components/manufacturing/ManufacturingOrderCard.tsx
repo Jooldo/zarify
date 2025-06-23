@@ -95,11 +95,15 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     }
   };
 
+  const handleCardClick = () => {
+    setDetailsOpen(true);
+  };
+
   return (
     <>
       <Card 
         className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500"
-        onClick={() => setDetailsOpen(true)}
+        onClick={handleCardClick}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -108,6 +112,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
                 {order.product_configs?.product_code || order.product_name}
               </CardTitle>
               <p className="text-sm text-gray-600 font-mono">{order.order_number}</p>
+              <p className="text-sm text-gray-500">Qty: {order.quantity_required}</p>
             </div>
             <div className="flex gap-2">
               <Badge className={getPriorityColor(order.priority)}>
