@@ -27,7 +27,7 @@ export interface StepCardData {
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
   onOrderClick?: (orderId: string) => void;
-  onStartNextStep?: (orderId: string) => void; // Add this for step cards
+  onStartNextStep?: (orderId: string) => void;
   orderStepData?: any;
   rawMaterials?: any[];
   [key: string]: any;
@@ -55,14 +55,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
   // Get the next step name based on current step
   const getNextStepName = (currentStepName: string) => {
-    const stepSequence = ['Jhalai', 'Dhol', 'Casting']; // Add more steps as needed
+    const stepSequence = ['Jhalai', 'Dhol', 'Casting'];
     const currentIndex = stepSequence.indexOf(currentStepName);
     
     if (currentIndex >= 0 && currentIndex < stepSequence.length - 1) {
       return stepSequence[currentIndex + 1];
     }
     
-    return null; // No next step (e.g., Casting is the last step)
+    return null; // No next step
   };
 
   const handleClick = () => {
@@ -70,23 +70,22 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     const isOrderCard = data.stepName === 'Manufacturing Order';
     
     if (isOrderCard && data.onOrderClick) {
-      // Handle manufacturing order card click
       data.onOrderClick(data.orderId);
     } else if (!isOrderCard && data.onStepClick) {
-      // Handle manufacturing step card click
       data.onStepClick(data);
     }
   };
 
   const handleStartNextStep = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('Start next step clicked for order:', data.orderId);
     if (data.onStartNextStep) {
       data.onStartNextStep(data.orderId);
     }
   };
 
   const isOrderCard = data.stepName === 'Manufacturing Order';
-  const nextStepName = !isOrderCard ? getNextStepName(data.stepName) : null;
+  const nextStepName = !isOrderCard ? getNextStepName(data.stepName) : 'Jhalai';
   
   return (
     <div 
@@ -221,8 +220,8 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             </div>
           )}
 
-          {/* Start Next Step button for step cards */}
-          {!isOrderCard && nextStepName && data.onStartNextStep && (
+          {/* Start Next Step button - show for both order cards and step cards */}
+          {nextStepName && data.onStartNextStep && (
             <div className="pt-2">
               <Button 
                 variant="outline" 
