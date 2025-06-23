@@ -176,73 +176,65 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     });
   };
 
-  // Get field values in consistent order with corrected weight display (no conversion)
-  const getOrderedFieldValues = () => {
+  // Get step progress data for the clean table
+  const getStepProgressData = () => {
+    if (!data.orderStepData) return null;
+    
+    const quantityAssigned = data.orderStepData.quantity_assigned || 0;
+    const quantityReceived = data.orderStepData.quantity_received || 0;
+    const weightAssigned = data.orderStepData.weight_assigned || 0;
+    const weightReceived = data.orderStepData.weight_received || 0;
+    
+    // Calculate completion percentages
+    const quantityCompletion = quantityAssigned > 0 
+      ? Math.round((quantityReceived / quantityAssigned) * 100 * 100) / 100
+      : 0;
+    
+    const weightCompletion = weightAssigned > 0 
+      ? Math.round((weightReceived / weightAssigned) * 100 * 100) / 100
+      : 0;
+    
+    return {
+      quantity: {
+        assigned: quantityAssigned,
+        received: quantityReceived,
+        completion: quantityCompletion
+      },
+      weight: {
+        assigned: weightAssigned,
+        received: weightReceived,
+        completion: weightCompletion
+      }
+    };
+  };
+
+  // Get additional field values (purity, wastage, etc.) that don't fit in the main table
+  const getAdditionalFieldValues = () => {
     if (!data.orderStepData) return [];
     
-    const fieldOrder = [
-      'quantity_assigned',
-      'quantity_received',
-      'weight_assigned',
-      'weight_received',
-      'purity',
-      'wastage'
-    ];
+    const additionalFields = [];
     
-    const fieldValues = [];
-    
-    for (const fieldKey of fieldOrder) {
-      const value = data.orderStepData[fieldKey];
-      if (value && value > 0) {
-        let displayValue = value;
-        let unit = '';
-        let label = '';
-        let colorClass = '';
-        
-        switch (fieldKey) {
-          case 'quantity_assigned':
-            label = 'Qty Assigned';
-            colorClass = 'bg-blue-50 text-blue-700 border-blue-200';
-            break;
-          case 'quantity_received':
-            label = 'Qty Received';
-            colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-            break;
-          case 'weight_assigned':
-            label = 'Weight Assigned';
-            unit = 'kg'; // Keep as kg, no conversion
-            displayValue = value.toFixed(2);
-            colorClass = 'bg-purple-50 text-purple-700 border-purple-200';
-            break;
-          case 'weight_received':
-            label = 'Weight Received';
-            unit = 'kg'; // Keep as kg, no conversion
-            displayValue = value.toFixed(2);
-            colorClass = 'bg-teal-50 text-teal-700 border-teal-200';
-            break;
-          case 'purity':
-            label = 'Purity';
-            unit = '%';
-            colorClass = 'bg-amber-50 text-amber-700 border-amber-200';
-            break;
-          case 'wastage':
-            label = 'Wastage';
-            unit = 'kg'; // Keep as kg, no conversion
-            displayValue = value.toFixed(2);
-            colorClass = 'bg-red-50 text-red-700 border-red-200';
-            break;
-        }
-        
-        fieldValues.push({
-          label,
-          value: displayValue,
-          unit,
-          colorClass
-        });
-      }
+    // Add purity if it exists
+    if (data.orderStepData.purity && data.orderStepData.purity > 0) {
+      additionalFields.push({
+        label: 'Purity',
+        value: data.orderStepData.purity,
+        unit: '%',
+        colorClass: 'bg-amber-50 text-amber-700 border-amber-200'
+      });
     }
     
-    return fieldValues;
+    // Add wastage if it exists
+    if (data.orderStepData.wastage && data.orderStepData.wastage > 0) {
+      additionalFields.push({
+        label: 'Wastage',
+        value: data.orderStepData.wastage.toFixed(2),
+        unit: 'kg',
+        colorClass: 'bg-red-50 text-red-700 border-red-200'
+      });
+    }
+    
+    return additionalFields;
   };
 
   const handleClick = () => {
@@ -271,8 +263,9 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
   const isOrderCard = data.stepName === 'Manufacturing Order';
   const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
-  const orderedFieldValues = getOrderedFieldValues();
   const stepSummaries = isOrderCard ? getStepSummaries() : [];
+  const stepProgressData = getStepProgressData();
+  const additionalFields = getAdditionalFieldValues();
   
   // Format step name with instance number for display
   const displayStepName = isOrderCard 
@@ -435,26 +428,76 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 )}
               </div>
 
-              {/* Enhanced Field Values Display */}
-              {orderedFieldValues.length > 0 && (
+              {/* Step Progress Table */}
+              {stepProgressData && (stepProgressData.quantity.assigned > 0 || stepProgressData.weight.assigned > 0) && (
                 <div className="bg-gray-900/5 backdrop-blur-sm rounded-lg p-3 border border-gray-200/30">
-                  <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                    Configuration Values
+                  <div className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide flex items-center gap-2">
+                    <Package className="h-3 w-3" />
+                    Step Progress
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {orderedFieldValues.map((field, index) => (
-                      <div 
-                        key={`${field.label}-${index}`}
-                        className={`px-3 py-2 rounded-md border ${field.colorClass}`}
-                      >
-                        <div className="text-xs font-medium text-gray-600 mb-1">{field.label}</div>
-                        <div className="text-base font-bold">
-                          {field.value}
-                          {field.unit && <span className="text-xs font-normal ml-1">{field.unit}</span>}
+                  <div className="space-y-2">
+                    {/* Quantity Row */}
+                    {stepProgressData.quantity.assigned > 0 && (
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <div className="font-medium text-gray-900 flex items-center gap-1">
+                          <Hash className="h-3 w-3 text-blue-600" />
+                          Quantity
+                        </div>
+                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                          {stepProgressData.quantity.assigned}
+                        </div>
+                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700">
+                          {stepProgressData.quantity.received}
+                        </div>
+                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                          {stepProgressData.quantity.completion > 0 ? `${stepProgressData.quantity.completion.toFixed(1)}%` : '—'}
                         </div>
                       </div>
-                    ))}
+                    )}
+                    
+                    {/* Weight Row */}
+                    {stepProgressData.weight.assigned > 0 && (
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <div className="font-medium text-gray-900 flex items-center gap-1">
+                          <Scale className="h-3 w-3 text-purple-600" />
+                          Weight (Kg)
+                        </div>
+                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                          {stepProgressData.weight.assigned.toFixed(2)}
+                        </div>
+                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700">
+                          {stepProgressData.weight.received.toFixed(2)}
+                        </div>
+                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                          {stepProgressData.weight.completion > 0 ? `${stepProgressData.weight.completion.toFixed(1)}%` : '—'}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  <div className="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
+                    <div>Metric</div>
+                    <div className="text-center">Assigned</div>
+                    <div className="text-center">Received</div>
+                    <div className="text-center">% Complete</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Fields (Purity, Wastage) */}
+              {additionalFields.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {additionalFields.map((field, index) => (
+                    <div 
+                      key={`${field.label}-${index}`}
+                      className={`px-3 py-2 rounded-md border ${field.colorClass}`}
+                    >
+                      <div className="text-xs font-medium text-gray-600 mb-1">{field.label}</div>
+                      <div className="text-base font-bold">
+                        {field.value}
+                        {field.unit && <span className="text-xs font-normal ml-1">{field.unit}</span>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
