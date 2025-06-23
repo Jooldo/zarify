@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Package, AlertTriangle, CheckCircle2, Clock, User, Factory } from 'lucide-react';
+import { Calendar, Package, AlertTriangle, CheckCircle2, Clock, User, Factory, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -13,12 +13,14 @@ interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
   onStatusUpdate?: (orderId: string, status: ManufacturingOrder['status']) => void;
   onDelete?: (orderId: string) => void;
+  onStartNextStep?: (orderId: string) => void;
 }
 
 const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   order,
   onStatusUpdate,
-  onDelete
+  onDelete,
+  onStartNextStep
 }) => {
   const { orderSteps } = useManufacturingSteps();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -67,6 +69,13 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     }
   };
 
+  const handleStartNextStep = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onStartNextStep) {
+      onStartNextStep(order.id);
+    }
+  };
+
   return (
     <>
       <Card 
@@ -77,9 +86,10 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <CardTitle className="text-lg font-semibold text-gray-900">
-                {order.product_name}
+                {order.product_configs?.product_code || order.product_name}
               </CardTitle>
               <p className="text-sm text-gray-600 font-mono">{order.order_number}</p>
+              <p className="text-sm text-gray-500">{order.product_name}</p>
             </div>
             <div className="flex gap-2">
               <Badge className={getPriorityColor(order.priority)}>
@@ -160,6 +170,15 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
               className="flex-1"
             >
               View Details
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleStartNextStep}
+              className="flex items-center gap-1"
+            >
+              <Play className="h-3 w-3" />
+              Start Next Step
             </Button>
           </div>
         </CardContent>

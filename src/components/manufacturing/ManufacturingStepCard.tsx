@@ -1,3 +1,4 @@
+
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -85,9 +86,9 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               <Package className="h-3 w-3 text-muted-foreground" />
               <span className="font-medium">{data.orderNumber}</span>
             </div>
-            <div className="text-muted-foreground">{data.productName}</div>
+            <div className="text-muted-foreground font-semibold">{data.productCode || data.productName}</div>
             {data.productCode && (
-              <div className="text-muted-foreground font-mono">{data.productCode}</div>
+              <div className="text-muted-foreground text-xs">{data.productName}</div>
             )}
           </div>
 
