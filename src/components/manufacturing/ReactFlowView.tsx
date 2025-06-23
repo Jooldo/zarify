@@ -296,7 +296,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const layoutResult = calculateHierarchicalLayout(nodes, edges, {
       ...DEFAULT_LAYOUT_CONFIG,
       horizontalSpacing: 60,    // Compact horizontal spacing
-      verticalSpacing: 200,     // Further increased vertical spacing between levels
+      verticalSpacing: 280,     // Increased vertical spacing between levels from 200 to 280
       rootX: 50,                // Start close to left edge
       rootY: 50,                // Start close to top
       minNodeSpacing: 40,       // Minimum space between nodes
