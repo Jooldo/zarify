@@ -1,40 +1,22 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Factory, AlertTriangle, Settings, Users } from 'lucide-react';
-import FinishedGoodsManufacturingDistribution from './FinishedGoodsManufacturingDistribution';
-import WorkerAssignmentsDisplay from './WorkerAssignmentsDisplay';
+import { TrendingUp, TrendingDown, Factory, AlertTriangle } from 'lucide-react';
 
 interface FinishedGoodsSectionProps {
   finishedGoods: any[];
-  manufacturingOrders: any[];
   loading: boolean;
 }
 
-interface StepData {
-  step: string;
-  count: number;
-  color: string;
-}
-
-const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: FinishedGoodsSectionProps) => {
-  const getStepColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'in_progress': return '#3b82f6';
-      case 'completed': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
-
+const FinishedGoodsSection = ({ finishedGoods, loading }: FinishedGoodsSectionProps) => {
   const finishedGoodsMetrics = useMemo(() => {
     if (!finishedGoods.length) return {
       stockDistribution: [],
       readyByCategory: [],
-      inProcessByStep: [],
       topPerformers: [],
       bottomPerformers: [],
-      toBeManufactured: []
+      toBeRestocked: []
     };
 
     // Stock Volume Distribution
@@ -48,7 +30,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
       { name: 'Critical Stock', value: criticalStock, color: '#ef4444' }
     ].filter(item => item.value > 0);
 
-    // Ready Orders by Product Category (mock data - would need order items with ready status)
+    // Ready Orders by Product Category
     const categoryData = finishedGoods.reduce((acc, item) => {
       const category = item.product_configs?.category || 'Unknown';
       if (!acc[category]) {
@@ -59,18 +41,6 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
     }, {} as Record<string, any>);
 
     const readyByCategory = Object.values(categoryData).slice(0, 6);
-
-    // In-Process SKUs by Step (mock data - would need manufacturing order steps)
-    const stepData = manufacturingOrders.reduce((acc, order) => {
-      const status = order.status || 'pending';
-      if (!acc[status]) {
-        acc[status] = { step: status, count: 0, color: getStepColor(status) };
-      }
-      acc[status].count += 1;
-      return acc;
-    }, {} as Record<string, StepData>);
-
-    const inProcessByStep = Object.values(stepData) as StepData[];
 
     // Top and Bottom Performers (by stock levels)
     const performers = finishedGoods
@@ -83,8 +53,8 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
     const topPerformers = performers.slice(0, 5);
     const bottomPerformers = performers.slice(-5).reverse();
 
-    // SKUs to be manufactured (low stock items)
-    const toBeManufactured = finishedGoods
+    // SKUs to be restocked (low stock items)
+    const toBeRestocked = finishedGoods
       .filter(item => item.current_stock < item.threshold)
       .sort((a, b) => (a.current_stock / a.threshold) - (b.current_stock / b.threshold))
       .slice(0, 10);
@@ -92,12 +62,11 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
     return {
       stockDistribution,
       readyByCategory,
-      inProcessByStep,
       topPerformers,
       bottomPerformers,
-      toBeManufactured
+      toBeRestocked
     };
-  }, [finishedGoods, manufacturingOrders]);
+  }, [finishedGoods]);
 
   if (loading) {
     return (
@@ -118,37 +87,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
 
   return (
     <div className="space-y-6">
-      {/* Manufacturing Distribution - Full Width */}
-      <div className="w-full">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Settings className="h-5 w-5 text-indigo-600" />
-            Manufacturing Step Distribution
-          </h3>
-          <p className="text-sm text-gray-600">Real-time view of quantity and weight at each manufacturing step</p>
-        </div>
-        <FinishedGoodsManufacturingDistribution 
-          manufacturingOrders={manufacturingOrders} 
-          loading={loading} 
-        />
-      </div>
-
-      {/* Worker Assignments - Full Width */}
-      <div className="w-full">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
-            Current Worker Assignments
-          </h3>
-          <p className="text-sm text-gray-600">Workers currently handling materials and orders at each manufacturing step</p>
-        </div>
-        <WorkerAssignmentsDisplay 
-          manufacturingOrders={manufacturingOrders} 
-          loading={loading} 
-        />
-      </div>
-
-      {/* Other Metrics */}
+      {/* Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Top Performers */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -204,17 +143,17 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
           </CardContent>
         </Card>
 
-        {/* SKUs to be Manufactured */}
+        {/* SKUs to be Restocked */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Factory className="h-5 w-5 text-orange-600" />
-              To Be Manufactured
+              To Be Restocked
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {finishedGoodsMetrics.toBeManufactured.map((item, index) => (
+              {finishedGoodsMetrics.toBeRestocked.map((item, index) => (
                 <div key={item.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-800">{item.product_code}</p>
@@ -222,7 +161,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-orange-700">
-                      {item.required_quantity - item.current_stock}
+                      {Math.max(0, item.threshold - item.current_stock)}
                     </p>
                     <p className="text-xs text-gray-500">needed</p>
                   </div>

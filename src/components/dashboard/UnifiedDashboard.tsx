@@ -4,14 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOrders } from '@/hooks/useOrders';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
-import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { format } from 'date-fns';
 import { 
   Package, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
   TrendingUp,
   Factory,
   Boxes,
@@ -30,7 +26,6 @@ const UnifiedDashboard = () => {
   const { orders, loading: ordersLoading } = useOrders();
   const { rawMaterials, loading: rawLoading } = useRawMaterials();
   const { finishedGoods, loading: finishedLoading } = useFinishedGoods();
-  const { manufacturingOrders, isLoading: manufacturingLoading } = useManufacturingOrders();
   const { logs, loading: logsLoading } = useActivityLog();
 
   const today = new Date();
@@ -44,7 +39,7 @@ const UnifiedDashboard = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-2">
             Zarify Dashboard
           </h1>
-          <p className="text-lg text-gray-600">Real-time manufacturing & inventory insights</p>
+          <p className="text-lg text-gray-600">Real-time inventory & order insights</p>
           <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-3 rounded-full"></div>
         </div>
 
@@ -97,8 +92,7 @@ const UnifiedDashboard = () => {
           
           <FinishedGoodsSection 
             finishedGoods={finishedGoods}
-            manufacturingOrders={manufacturingOrders}
-            loading={finishedLoading || manufacturingLoading}
+            loading={finishedLoading}
           />
         </section>
 
