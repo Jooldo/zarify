@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp, AlertCircle, Scale, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -396,9 +395,19 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       );
     }
 
-    // Handle regular fields with remaining quantity info
+    // Handle regular fields with enhanced remaining quantity info
     const showRemainingInfo = remainingQuantities && 
       (field.field_key === 'quantity_assigned' || field.field_key === 'weight_assigned');
+
+    const getFieldIcon = (fieldKey: string) => {
+      if (fieldKey === 'quantity_assigned' || fieldKey === 'quantity_received') {
+        return <Hash className="h-3 w-3 text-blue-600" />;
+      }
+      if (fieldKey === 'weight_assigned' || fieldKey === 'weight_received') {
+        return <Scale className="h-3 w-3 text-purple-600" />;
+      }
+      return null;
+    };
 
     return (
       <div key={field.id} className="space-y-1">
@@ -417,11 +426,20 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           className="h-8 text-sm"
         />
         {showRemainingInfo && (
-          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
-            Available: {field.field_key === 'quantity_assigned' 
-              ? `${remainingQuantities.quantity} pieces` 
-              : `${remainingQuantities.weight.toFixed(2)} kg`}
+          <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-md mt-1">
+            {getFieldIcon(field.field_key)}
+            <div className="flex-1">
+              <div className="text-xs font-medium text-emerald-800">
+                Available from parent: {field.field_key === 'quantity_assigned' 
+                  ? `${remainingQuantities.quantity} pieces` 
+                  : `${remainingQuantities.weight.toFixed(2)} kg`}
+              </div>
+              <div className="text-xs text-emerald-600">
+                Parent received: {field.field_key === 'quantity_assigned'
+                  ? `${remainingQuantities.parentQuantityReceived} pieces`
+                  : `${remainingQuantities.parentWeightReceived.toFixed(2)} kg`}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -449,35 +467,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Remaining Quantities Alert */}
-          {remainingQuantities && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="pt-3 pb-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-medium text-blue-900">Available from Parent Step</h4>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-blue-700">
-                      <div>
-                        <span className="font-medium">Quantity:</span> {remainingQuantities.quantity} pieces
-                        <div className="text-blue-600">
-                          (Parent received: {remainingQuantities.parentQuantityReceived})
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-medium">Weight:</span> {remainingQuantities.weight.toFixed(2)} kg
-                        <div className="text-blue-600">
-                          (Parent received: {remainingQuantities.parentWeightReceived.toFixed(2)} kg)
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Parent Step Details */}
+          {/* Parent Step Details with Remaining Weight */}
           {parentStepDetails && (
             <Card>
               <Collapsible open={showParentDetails} onOpenChange={setShowParentDetails}>
@@ -491,10 +481,46 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                       </div>
                       {showParentDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </CardTitle>
+                    {/* Show remaining weight in the collapsed header */}
+                    {!showParentDetails && remainingQuantities && (
+                      <div className="text-xs text-purple-600 font-medium flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Hash className="h-3 w-3" />
+                          Available: {remainingQuantities.quantity} pieces
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Scale className="h-3 w-3" />
+                          Available: {remainingQuantities.weight.toFixed(2)} kg
+                        </span>
+                      </div>
+                    )}
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0">
+                    {/* Remaining quantities summary */}
+                    {remainingQuantities && (
+                      <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                        <div className="text-sm font-medium text-purple-900 mb-2">Available for Assignment</div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <div className="font-semibold text-blue-900">{remainingQuantities.quantity} pieces</div>
+                              <div className="text-xs text-blue-600">Quantity Available</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Scale className="h-4 w-4 text-purple-600" />
+                            <div>
+                              <div className="font-semibold text-purple-900">{remainingQuantities.weight.toFixed(2)} kg</div>
+                              <div className="text-xs text-purple-600">Weight Available</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         {parentStepDetails.fields.map(field => {
