@@ -12,6 +12,7 @@ import ActivityLogsTab from '@/components/ActivityLogsTab';
 import MerchantConfigurations from '@/components/settings/MerchantConfigurations';
 import GeneralSettings from '@/components/settings/GeneralSettings';
 import CatalogueManagement from '@/components/catalogue/CatalogueManagement';
+import DevelopmentDashboard from '@/components/development/DevelopmentDashboard';
 import NotFound from '@/pages/NotFound';
 
 const Index = () => {
@@ -29,6 +30,7 @@ const Index = () => {
     if (pathname === '/app/settings/merchant') return 'merchant-configurations';
     if (pathname === '/app/settings/general') return 'general-settings';
     if (pathname === '/app/catalogue') return 'catalogue-management';
+    if (pathname === '/app/dev') return 'development';
     return 'dashboard';
   };
 
@@ -66,6 +68,9 @@ const Index = () => {
       case 'catalogue-management':
         navigate('/app/catalogue');
         break;
+      case 'development':
+        navigate('/app/dev');
+        break;
       default:
         navigate('/app');
     }
@@ -89,6 +94,7 @@ const Index = () => {
               <Route path="/settings/merchant" element={<MerchantConfigurations />} />
               <Route path="/settings/general" element={<GeneralSettings />} />
               <Route path="/catalogue" element={<CatalogueManagement />} />
+              <Route path="/dev" element={<DevelopmentDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
