@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,7 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
   open,
   onOpenChange
 }) => {
-  const { getStepValues } = useManufacturingStepValues();
+  const { stepValues } = useManufacturingStepValues();
   const { workers } = useWorkers();
 
   if (!order) return null;
@@ -45,9 +46,9 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
     }
   };
 
-  // Sort steps by step order
+  // Sort steps by created_at since step_order doesn't exist in manufacturing_order_step_data
   const sortedSteps = [...orderSteps].sort((a, b) => 
-    (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0)
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 
   return (
@@ -67,9 +68,8 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
 
         <div className="space-y-4">
           {sortedSteps.map((step, index) => {
-            const stepValues = getStepValues(step.id);
             const assignedWorker = step.workers?.name || 
-              (step.assigned_worker_id ? workers.find(w => w.id === step.assigned_worker_id)?.name : null);
+              (step.assigned_worker ? workers.find(w => w.id === step.assigned_worker)?.name : null);
 
             return (
               <Card key={step.id} className="relative">
@@ -84,9 +84,9 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
                       <div className="relative z-10 bg-white">
                         {getStatusIcon(step.status)}
                       </div>
-                      <span>{step.manufacturing_steps?.step_name || 'Unknown Step'}</span>
+                      <span>{step.step_name || 'Unknown Step'}</span>
                       <Badge variant="outline" className="text-xs">
-                        Step {step.manufacturing_steps?.step_order || index + 1}
+                        Step {index + 1}
                       </Badge>
                     </CardTitle>
                     <Badge className={`${getStatusColor(step.status)}`}>
@@ -105,16 +105,6 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
                           <span className="text-sm text-muted-foreground">Assigned Worker</span>
                         </div>
                         <span className="font-medium">{assignedWorker}</span>
-                      </div>
-                    )}
-                    
-                    {step.progress_percentage > 0 && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Progress</span>
-                        </div>
-                        <span className="font-medium">{step.progress_percentage}%</span>
                       </div>
                     )}
 
@@ -138,26 +128,6 @@ const StepProgressDialog: React.FC<StepProgressDialogProps> = ({
                       </div>
                     )}
                   </div>
-
-                  {/* Step Field Values */}
-                  {stepValues.length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-medium mb-2">Step Details</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {stepValues.map((value) => (
-                            <div key={value.id} className="space-y-1">
-                              <span className="text-sm text-muted-foreground capitalize">
-                                {value.field_id.replace('_', ' ')}:
-                              </span>
-                              <div className="font-medium text-sm">{value.field_value}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
 
                   {/* Notes */}
                   {step.notes && (

@@ -28,7 +28,7 @@ import { CurrentStepDisplay } from './CurrentStepDisplay';
 interface StepDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  step: Tables<'manufacturing_order_steps'> | null;
+  step: Tables<'manufacturing_order_step_data'> | null;
 }
 
 const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChange, step }) => {
@@ -59,16 +59,16 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   // Get all order steps for this order with their field data
   const getOrderStepsWithFieldData = () => {
     const currentOrderSteps = orderSteps
-      .filter(orderStep => orderStep.manufacturing_order_id === order.id)
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0));
+      .filter(orderStep => orderStep.order_id === order.id)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return currentOrderSteps.map(orderStep => {
       const stepStepFields = stepFields.filter(field => 
-        field.manufacturing_step_id === orderStep.manufacturing_step_id
+        field.step_name === orderStep.step_name
       );
       
       const stepStepValues = stepValues.filter(value => 
-        value.manufacturing_order_step_id === orderStep.id
+        value.step_id === orderStep.id
       );
 
       return {
@@ -92,8 +92,8 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     }
   };
 
-  const getFieldValue = (fieldId: string, values: any[]) => {
-    const value = values.find(v => v.field_id === fieldId);
+  const getFieldValue = (fieldKey: string, values: any[]) => {
+    const value = values.find(v => v.field_key === fieldKey);
     return value?.field_value || '-';
   };
 
@@ -103,9 +103,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
   };
 
   const getDisplayValue = (field: any, fieldValue: string) => {
-    if (field.field_type === 'worker' && fieldValue && fieldValue !== '-') {
-      return getWorkerName(fieldValue);
-    }
+    // Simple display since we don't have field_type
     return fieldValue;
   };
 
@@ -113,7 +111,7 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-lg">Step Details: {currentStepDefinition?.step_name}</DialogTitle>
+          <DialogTitle className="text-lg">Step Details: {step.step_name}</DialogTitle>
           <DialogDescription className="text-sm">
             Order #{order.order_number} - {order.product_name}
           </DialogDescription>
@@ -178,22 +176,16 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
-                          {orderStep.manufacturing_steps?.step_order}
+                          {index + 1}
                         </div>
                         <div>
-                          <h4 className="font-medium text-sm">{orderStep.manufacturing_steps?.step_name}</h4>
-                          {orderStep.manufacturing_steps?.description && (
-                            <p className="text-xs text-muted-foreground">{orderStep.manufacturing_steps.description}</p>
-                          )}
+                          <h4 className="font-medium text-sm">{orderStep.step_name}</h4>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className={`text-xs ${getStepStatusColor(orderStep.status)}`}>
                           {orderStep.status.replace('_', ' ')}
                         </Badge>
-                        {orderStep.progress_percentage !== null && (
-                          <span className="text-xs font-medium">{orderStep.progress_percentage}%</span>
-                        )}
                       </div>
                     </div>
 
@@ -211,10 +203,10 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
                           <p className="font-medium">{format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</p>
                         </div>
                       )}
-                      {orderStep.assigned_worker_id && (
+                      {orderStep.assigned_worker && (
                         <div>
                           <span className="text-muted-foreground">Assigned Worker:</span>
-                          <p className="font-medium">{getWorkerName(orderStep.assigned_worker_id)}</p>
+                          <p className="font-medium">{getWorkerName(orderStep.assigned_worker)}</p>
                         </div>
                       )}
                     </div>
@@ -225,12 +217,12 @@ const StepDetailsDialog: React.FC<StepDetailsDialogProps> = ({ open, onOpenChang
                         <h5 className="font-medium mb-1 text-xs">Step Data:</h5>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                           {orderStep.fields.map((field) => {
-                            const fieldValue = getFieldValue(field.field_id, orderStep.values);
+                            const fieldValue = getFieldValue(field.field_key, orderStep.values);
                             const displayValue = getDisplayValue(field, fieldValue);
                             
                             return (
                               <div key={field.id} className="bg-muted/50 p-2 rounded text-xs">
-                                <span className="text-muted-foreground block">{field.field_label}:</span>
+                                <span className="text-muted-foreground block">{field.field_key}:</span>
                                 <span className="font-medium">
                                   {displayValue}
                                 </span>

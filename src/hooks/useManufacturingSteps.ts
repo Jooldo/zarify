@@ -7,6 +7,10 @@ import { Tables } from '@/integrations/supabase/types';
 export type ManufacturingStep = Tables<'merchant_step_config'>;
 export type ManufacturingStepField = Tables<'merchant_step_field_config'>;
 
+// Add these type exports that were missing
+export type MerchantStepConfig = Tables<'merchant_step_config'>;
+export type MerchantStepFieldConfig = Tables<'merchant_step_field_config'>;
+
 export type ManufacturingOrderStep = Tables<'manufacturing_order_step_data'> & {
   workers?: { name: string | null } | null;
 };
