@@ -1,26 +1,79 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export const createNextManufacturingStep = async (
-  manufacturingOrderId: string,
-  currentStepOrder: number
-) => {
-  try {
-    // Use the existing database function to create the next step
-    const { data, error } = await supabase
-      .rpc('create_next_manufacturing_step', {
-        p_manufacturing_order_id: manufacturingOrderId,
-        p_current_step_order: currentStepOrder
-      });
+export interface ManufacturingOrderStepData {
+  id: string;
+  merchant_id: string;
+  order_id: string;
+  step_name: string;
+  quantity_assigned?: number;
+  quantity_received?: number;
+  weight_assigned?: number;
+  weight_received?: number;
+  purity?: number;
+  wastage?: number;
+  assigned_worker?: string;
+  due_date?: string;
+  notes?: string;
+  instructions?: string;
+  temperature?: number;
+  pressure?: number;
+  quality_grade?: string;
+  batch_number?: string;
+  machine_used?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'rejected' | 'rework';
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-    if (error) {
-      console.error('Error creating next manufacturing step:', error);
-      throw error;
-    }
+export interface CreateStepData {
+  order_id: string;
+  step_name: string;
+  [key: string]: any; // For dynamic field values
+}
 
-    return data;
-  } catch (error) {
-    console.error('Error in createNextManufacturingStep service:', error);
-    throw error;
-  }
+export const createManufacturingOrderStep = async (stepData: CreateStepData): Promise<ManufacturingOrderStepData> => {
+  const { data: merchantId, error: merchantError } = await supabase
+    .rpc('get_user_merchant_id');
+
+  if (merchantError) throw merchantError;
+
+  const { data, error } = await supabase
+    .from('manufacturing_order_step_data')
+    .insert({
+      merchant_id: merchantId,
+      order_id: stepData.order_id,
+      step_name: stepData.step_name,
+      ...stepData, // Spread all other field values
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const updateManufacturingOrderStep = async (stepId: string, updates: Partial<ManufacturingOrderStepData>): Promise<ManufacturingOrderStepData> => {
+  const { data, error } = await supabase
+    .from('manufacturing_order_step_data')
+    .update(updates)
+    .eq('id', stepId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const fetchManufacturingOrderSteps = async (orderId: string): Promise<ManufacturingOrderStepData[]> => {
+  const { data, error } = await supabase
+    .from('manufacturing_order_step_data')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('created_at');
+
+  if (error) throw error;
+  return data || [];
 };
