@@ -160,6 +160,68 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const renderField = (field: any) => {
     const value = fieldValues[field.field_key] || '';
 
+    // Handle assigned worker field
+    if (field.field_key === 'assigned_worker') {
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label className="text-xs font-medium text-gray-600">
+            <User className="h-3 w-3 inline mr-1" />
+            Assigned Worker
+            {field.is_visible && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          <Select value={assignedWorker} onValueChange={setAssignedWorker}>
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="Select worker" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {workers.map(worker => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    // Handle due date field
+    if (field.field_key === 'due_date') {
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label className="text-xs font-medium text-gray-600">
+            <Clock className="h-3 w-3 inline mr-1" />
+            Due Date
+            {field.is_visible && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal h-8 text-sm",
+                  !dueDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-3 w-3" />
+                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dueDate}
+                onSelect={setDueDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      );
+    }
+
+    // Handle regular fields
     return (
       <div key={field.id} className="space-y-1">
         <Label htmlFor={field.field_key} className="text-xs font-medium text-gray-600">
@@ -207,74 +269,20 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Main Controls in a compact grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Status */}
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-600">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assigned Worker */}
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-600">
-                <User className="h-3 w-3 inline mr-1" />
-                Assigned Worker
-              </Label>
-              <Select value={assignedWorker} onValueChange={setAssignedWorker}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select worker" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {workers.map(worker => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Due Date */}
+          {/* Status Only */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-600">
-              <Clock className="h-3 w-3 inline mr-1" />
-              Due Date
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal h-8 text-sm",
-                    !dueDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-3 w-3" />
-                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dueDate}
-                  onSelect={setDueDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label className="text-xs font-medium text-gray-600">Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Step Configuration Fields in 2x2 Grid */}
