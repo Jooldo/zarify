@@ -618,7 +618,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 <Checkbox 
                   id="rework-mode" 
                   checked={isReworkMode}
-                  onCheckedChange={setIsReworkMode}
+                  onCheckedChange={(checked) => setIsReworkMode(checked === true)}
                 />
                 <Label htmlFor="rework-mode" className="text-sm text-gray-700">
                   Create rework instance for this step
