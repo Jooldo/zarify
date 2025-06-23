@@ -90,11 +90,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants remain the same
+    // Layout constants - optimized for new card size
     const ORDER_SPACING = 1200;
     const VERTICAL_SPACING = 300;
-    const PARALLEL_INSTANCE_SPACING = 650;
-    const CARD_WIDTH = 500;
+    const PARALLEL_INSTANCE_SPACING = 400; // Reduced from 1000 to fit new card width
+    const CARD_WIDTH = 350; // Reduced from 500 to match new card design
     const CARD_HEIGHT = 200;
     const START_Y = 80;
 

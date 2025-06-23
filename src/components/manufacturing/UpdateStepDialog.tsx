@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -40,9 +41,37 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get current step fields that match this step
+  // Get current step fields that match this step in consistent order
   const currentStepFields = stepFields.filter(field => {
     return step && field.step_name === step.step_name;
+  }).sort((a, b) => {
+    // Define consistent field order
+    const fieldOrder = [
+      'quantity_assigned',
+      'quantity_received', 
+      'weight_assigned',
+      'weight_received',
+      'purity',
+      'wastage',
+      'assigned_worker',
+      'due_date',
+      'notes'
+    ];
+    
+    const aIndex = fieldOrder.indexOf(a.field_key);
+    const bIndex = fieldOrder.indexOf(b.field_key);
+    
+    // If both fields are in the order array, sort by that order
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex;
+    }
+    
+    // If only one is in the order array, prioritize it
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    
+    // If neither is in the order array, sort alphabetically
+    return a.field_key.localeCompare(b.field_key);
   });
 
   // Create a unique key that changes when step data changes
@@ -99,7 +128,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setFieldValues(initialValues);
       setStatus(step.status || '');
     }
-  }, [step, open, currentStepFields.length, stepDataKey]); // Added stepDataKey as dependency
+  }, [step, open, currentStepFields.length, stepDataKey]);
 
   const handleFieldChange = (fieldKey: string, value: any) => {
     console.log('Field changed:', fieldKey, '=', value);
@@ -135,7 +164,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         fieldValues: processedFieldValues,
         status: status as any,
         stepName: step.step_name,
-        orderNumber: 'Unknown' // This would need to be passed in properly
+        orderNumber: 'Unknown'
       });
 
       toast({
@@ -174,7 +203,19 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   };
 
   const formatFieldLabel = (fieldKey: string) => {
-    return fieldKey
+    const fieldLabels: Record<string, string> = {
+      'quantity_assigned': 'Quantity Assigned',
+      'quantity_received': 'Quantity Received',
+      'weight_assigned': 'Weight Assigned',
+      'weight_received': 'Weight Received',
+      'purity': 'Purity',
+      'wastage': 'Wastage',
+      'assigned_worker': 'Assigned Worker',
+      'due_date': 'Due Date',
+      'notes': 'Notes'
+    };
+    
+    return fieldLabels[fieldKey] || fieldKey
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
