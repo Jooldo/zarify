@@ -31,7 +31,7 @@ export const useManufacturingSteps = () => {
     },
   });
 
-  const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery<ManufacturingOrderStep[]>({
+  const { data: orderSteps = [], isLoading: isLoadingOrderSteps, refetch: refetchOrderSteps } = useQuery<ManufacturingOrderStep[]>({
     queryKey: ['manufacturing_order_step_data'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -124,5 +124,24 @@ export const useManufacturingSteps = () => {
     await queryClient.invalidateQueries({ queryKey: ['merchant_step_config'] });
   };
 
-  return { manufacturingSteps, orderSteps, stepFields, isLoading, getStepFields, updateStep, saveStepFields };
+  // Create a refetch function that invalidates all related queries
+  const refetch = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['merchant_step_config'] }),
+      queryClient.invalidateQueries({ queryKey: ['manufacturing_order_step_data'] }),
+      queryClient.invalidateQueries({ queryKey: ['merchant_step_field_config'] }),
+      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] })
+    ]);
+  };
+
+  return { 
+    manufacturingSteps, 
+    orderSteps, 
+    stepFields, 
+    isLoading, 
+    getStepFields, 
+    updateStep, 
+    saveStepFields, 
+    refetch 
+  };
 };
