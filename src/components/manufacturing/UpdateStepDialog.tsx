@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp, AlertCircle, Scale, Hash } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp, AlertCircle, Scale, Hash, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -47,6 +47,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showParentDetails, setShowParentDetails] = useState(false);
+  
+  // Rework states
+  const [isReworkMode, setIsReworkMode] = useState(false);
+  const [reworkQuantity, setReworkQuantity] = useState('');
+  const [reworkWeight, setReworkWeight] = useState('');
 
   // Get parent step details
   const parentStepDetails = useMemo(() => {
@@ -194,6 +199,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       
       setFieldValues(initialValues);
       setStatus(step.status || '');
+      
+      // Reset rework states
+      setIsReworkMode(false);
+      setReworkQuantity('');
+      setReworkWeight('');
     }
   }, [step, open, currentStepFields.length, stepDataKey]);
 
@@ -205,10 +215,65 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }));
   };
 
+  const handleReworkSubmit = async () => {
+    if (!step || !reworkQuantity || !reworkWeight) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in both quantity and weight for rework',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Create a new Jhalai step instance with rework data
+      const reworkData = {
+        orderId: step.order_id,
+        stepName: 'Jhalai',
+        isRework: true,
+        originStepId: step.id,
+        quantityAssigned: parseFloat(reworkQuantity),
+        weightAssigned: parseFloat(reworkWeight),
+        status: 'pending'
+      };
+
+      // You'll need to implement this endpoint or use existing step creation logic
+      console.log('Creating rework step:', reworkData);
+      
+      toast({
+        title: 'Success',
+        description: `Rework instance created for ${reworkQuantity} pieces (${reworkWeight}kg)`,
+      });
+      
+      // Reset rework mode
+      setIsReworkMode(false);
+      setReworkQuantity('');
+      setReworkWeight('');
+      
+      if (onStepUpdate) {
+        onStepUpdate();
+      }
+      
+    } catch (error) {
+      console.error('Error creating rework step:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create rework instance',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!step) return;
+    
+    // If in rework mode, handle rework submission
+    if (isReworkMode) {
+      await handleReworkSubmit();
+      return;
+    }
     
     setIsSubmitting(true);
 
@@ -540,44 +605,102 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             </Card>
           )}
 
-          {/* Status Only */}
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-600">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Step Configuration Fields in 2x2 Grid */}
-          {currentStepFields.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Package className="h-4 w-4 text-blue-600" />
-                  Step Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 gap-3">
-                  {currentStepFields.map(field => {
-                    // Update field labels to show kg for weight fields
-                    const updatedField = { ...field };
-                    if (field.field_key.includes('weight')) {
-                      updatedField.unit = 'kg';
-                    }
-                    return renderField(updatedField);
-                  })}
+          {/* Rework Section */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <RotateCcw className="h-4 w-4 text-orange-600" />
+                Rework Option
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center space-x-2 mb-3">
+                <Checkbox 
+                  id="rework-mode" 
+                  checked={isReworkMode}
+                  onCheckedChange={setIsReworkMode}
+                />
+                <Label htmlFor="rework-mode" className="text-sm text-gray-700">
+                  Create rework instance for this step
+                </Label>
+              </div>
+              
+              {isReworkMode && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-600">
+                      Quantity (required)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={reworkQuantity}
+                      onChange={(e) => setReworkQuantity(e.target.value)}
+                      placeholder="Enter quantity"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-600">
+                      Weight (Kg, required)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={reworkWeight}
+                      onChange={(e) => setReworkWeight(e.target.value)}
+                      placeholder="Enter weight"
+                      className="h-8 text-sm"
+                    />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Only show regular fields if not in rework mode */}
+          {!isReworkMode && (
+            <>
+              {/* Status Only */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-600">Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Step Configuration Fields in 2x2 Grid */}
+              {currentStepFields.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Package className="h-4 w-4 text-blue-600" />
+                      Step Configuration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-3">
+                      {currentStepFields.map(field => {
+                        // Update field labels to show kg for weight fields
+                        const updatedField = { ...field };
+                        if (field.field_key.includes('weight')) {
+                          updatedField.unit = 'kg';
+                        }
+                        return renderField(updatedField);
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
           {/* Action Buttons */}
@@ -593,10 +716,10 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             </Button>
             <Button 
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isReworkMode && (!reworkQuantity || !reworkWeight))}
               className="h-8 px-4 text-sm"
             >
-              {isSubmitting ? 'Updating...' : 'Update Step'}
+              {isSubmitting ? 'Processing...' : (isReworkMode ? 'Create Rework' : 'Update Step')}
             </Button>
           </div>
         </form>
