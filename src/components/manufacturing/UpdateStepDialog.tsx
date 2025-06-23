@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, User, Clock, Package, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -16,6 +16,8 @@ import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface UpdateStepDialogProps {
   step: ManufacturingOrderStep | null;
@@ -139,78 +141,121 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'blocked': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const renderField = (field: any) => {
     const value = fieldValues[field.field_key] || '';
 
-    // Render as simple text input since we don't have field_type
     return (
-      <Input
-        value={value}
-        onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-        placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
-        type={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? 'number' : 'text'}
-        step={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? '0.01' : undefined}
-      />
+      <div key={field.id} className="space-y-1">
+        <Label htmlFor={field.field_key} className="text-xs font-medium text-gray-600">
+          {field.field_key.replace('_', ' ')}
+          {field.is_visible && <span className="text-red-500 ml-1">*</span>}
+          {field.unit && <span className="text-gray-400 ml-1">({field.unit})</span>}
+        </Label>
+        <Input
+          id={field.field_key}
+          value={value}
+          onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+          placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+          type={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? 'number' : 'text'}
+          step={field.field_key.includes('quantity') || field.field_key.includes('weight') || field.field_key.includes('purity') || field.field_key.includes('wastage') ? '0.01' : undefined}
+          className="h-8 text-sm"
+        />
+      </div>
     );
   };
 
   if (!step) return null;
 
+  const getWorkerName = (workerId: string | null) => {
+    if (!workerId || workerId === 'unassigned') return 'Unassigned';
+    const worker = workers.find(w => w.id === workerId);
+    return worker ? worker.name : 'Unknown Worker';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Update Step: {step.step_name}</DialogTitle>
+        <DialogHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Settings className="h-5 w-5 text-blue-600" />
+              Update Step
+            </DialogTitle>
+            <Badge className={`text-xs ${getStatusColor(step.status)}`}>
+              {step.status?.replace('_', ' ')}
+            </Badge>
+          </div>
+          <div className="text-sm text-gray-600">
+            {step.step_name}
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Main Controls in a compact grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Status */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-gray-600">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="blocked">Blocked</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Assigned Worker */}
-          <div className="space-y-2">
-            <Label htmlFor="assignedWorker">Assigned Worker</Label>
-            <Select value={assignedWorker} onValueChange={setAssignedWorker}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select worker" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {workers.map(worker => (
-                  <SelectItem key={worker.id} value={worker.id}>
-                    {worker.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Assigned Worker */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-gray-600">
+                <User className="h-3 w-3 inline mr-1" />
+                Assigned Worker
+              </Label>
+              <Select value={assignedWorker} onValueChange={setAssignedWorker}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select worker" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {workers.map(worker => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Due Date */}
-          <div className="space-y-2">
-            <Label>Due Date</Label>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-600">
+              <Clock className="h-3 w-3 inline mr-1" />
+              Due Date
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "w-full justify-start text-left font-normal h-8 text-sm",
                     !dueDate && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-3 w-3" />
                   {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
@@ -225,52 +270,51 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             </Popover>
           </div>
 
-          {/* Step Fields */}
+          {/* Step Configuration Fields in 2x2 Grid */}
           {currentStepFields.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="font-medium">Step Configuration</h4>
-              {currentStepFields.map(field => (
-                <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.field_key}>
-                    {field.field_key.replace('_', ' ')}
-                    {field.is_visible && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
-                    {field.unit && (
-                      <span className="text-muted-foreground text-sm ml-1">({field.unit})</span>
-                    )}
-                  </Label>
-                  {renderField(field)}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Package className="h-4 w-4 text-blue-600" />
+                  Step Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 gap-3">
+                  {currentStepFields.map(field => renderField(field))}
                 </div>
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+          <div className="space-y-1">
+            <Label htmlFor="notes" className="text-xs font-medium text-gray-600">Notes</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes about this step..."
-              rows={3}
+              rows={2}
+              className="text-sm resize-none"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-2 border-t">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="h-8 px-4 text-sm"
             >
               Cancel
             </Button>
             <Button 
               type="submit"
               disabled={isSubmitting}
+              className="h-8 px-4 text-sm"
             >
               {isSubmitting ? 'Updating...' : 'Update Step'}
             </Button>
