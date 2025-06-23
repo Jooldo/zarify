@@ -548,6 +548,8 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          instance_id: string | null
+          instance_number: number
           merchant_id: string
           notes: string | null
           order_id: string
@@ -568,6 +570,8 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          instance_id?: string | null
+          instance_number?: number
           merchant_id: string
           notes?: string | null
           order_id: string
@@ -588,6 +592,8 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          instance_id?: string | null
+          instance_number?: number
           merchant_id?: string
           notes?: string | null
           order_id?: string
@@ -1621,6 +1627,10 @@ export type Database = {
       get_next_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_next_step_instance_number: {
+        Args: { p_order_id: string; p_step_name: string }
+        Returns: number
       }
       get_next_suborder_id: {
         Args: { order_number: string; item_index: number }

@@ -6,6 +6,8 @@ export interface ManufacturingOrderStepData {
   merchant_id: string;
   order_id: string;
   step_name: string;
+  instance_id?: string;
+  instance_number?: number;
   quantity_assigned?: number;
   quantity_received?: number;
   weight_assigned?: number;
@@ -31,6 +33,7 @@ export interface ManufacturingOrderStepData {
 export interface CreateStepData {
   order_id: string;
   step_name: string;
+  instance_number?: number;
   [key: string]: any;
 }
 
@@ -40,12 +43,26 @@ export const createManufacturingOrderStep = async (stepData: CreateStepData): Pr
 
   if (merchantError) throw merchantError;
 
+  // Get next instance number if not provided
+  let instanceNumber = stepData.instance_number;
+  if (!instanceNumber) {
+    const { data: nextInstance, error: instanceError } = await supabase
+      .rpc('get_next_step_instance_number', {
+        p_order_id: stepData.order_id,
+        p_step_name: stepData.step_name
+      });
+
+    if (instanceError) throw instanceError;
+    instanceNumber = nextInstance;
+  }
+
   const { data, error } = await supabase
     .from('manufacturing_order_step_data')
     .insert({
       merchant_id: merchantId,
       order_id: stepData.order_id,
       step_name: stepData.step_name,
+      instance_number: instanceNumber,
       ...stepData,
     })
     .select()
@@ -80,7 +97,8 @@ export const fetchManufacturingOrderSteps = async (orderId: string): Promise<Man
     .from('manufacturing_order_step_data')
     .select('*')
     .eq('order_id', orderId)
-    .order('created_at');
+    .order('step_name')
+    .order('instance_number');
 
   if (error) throw error;
   

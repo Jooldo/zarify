@@ -30,6 +30,7 @@ export interface StepCardData {
   onStartNextStep?: (orderId: string, stepName?: string) => void;
   orderStepData?: any;
   rawMaterials?: any[];
+  instanceNumber?: number;
   [key: string]: any;
 }
 
@@ -39,6 +40,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   console.log('ManufacturingStepCard render:', {
     stepName: data.stepName,
     orderId: data.orderId,
+    instanceNumber: data.instanceNumber,
     hasOnStartNextStep: !!data.onStartNextStep
   });
   
@@ -98,6 +100,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   const isOrderCard = data.stepName === 'Manufacturing Order';
   const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
   
+  // Format step name with instance number for display
+  const displayStepName = isOrderCard 
+    ? data.stepName 
+    : data.instanceNumber && data.instanceNumber > 1 
+      ? `${data.stepName} #${data.instanceNumber}`
+      : data.stepName;
+  
   console.log('Button visibility check:', {
     isOrderCard,
     nextStepName,
@@ -113,7 +122,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       <Card className="w-64 shadow-md">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">{data.stepName}</CardTitle>
+            <CardTitle className="text-sm font-medium">{displayStepName}</CardTitle>
             <Badge className={`text-xs ${getStatusColor(data.status)}`}>
               {data.status.replace('_', ' ')}
             </Badge>

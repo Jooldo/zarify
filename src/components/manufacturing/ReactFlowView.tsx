@@ -87,7 +87,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const edges: Edge[] = [];
     
     let yOffset = 0;
-    const VERTICAL_SPACING = 250;
+    const VERTICAL_SPACING = 300; // Increased spacing for parallel instances
     const HORIZONTAL_SPACING = 350;
 
     manufacturingOrders.forEach((order, orderIndex) => {
@@ -97,6 +97,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
+
+      // Group order steps by step name and instance number
+      const stepsByName = thisOrderSteps.reduce((acc, step) => {
+        if (!acc[step.step_name]) {
+          acc[step.step_name] = [];
+        }
+        acc[step.step_name].push(step);
+        return acc;
+      }, {} as Record<string, any[]>);
 
       // Create manufacturing order node
       const orderNodeData: StepCardData = {
@@ -123,60 +132,76 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes for each configured manufacturing step
+      // Create step nodes for each configured manufacturing step and their instances
+      let currentX = 50 + HORIZONTAL_SPACING;
+      
       manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order)
         .forEach((step, stepIndex) => {
-          const stepX = 50 + ((stepIndex + 1) * HORIZONTAL_SPACING);
+          const stepInstances = stepsByName[step.step_name] || [];
           
-          // Find matching order step from manufacturing_order_step_data
-          const orderStep = thisOrderSteps.find(os => os.step_name === step.step_name);
-          
-          const stepNodeData: StepCardData = {
-            stepName: step.step_name,
-            stepOrder: step.step_order,
-            orderId: order.id,
-            orderNumber: order.order_number,
-            productName: order.product_name,
-            status: orderStep?.status as any || 'pending',
-            progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
-            assignedWorker: orderStep?.assigned_worker || undefined,
-            productCode: order.product_configs?.product_code,
-            quantityRequired: order.quantity_required,
-            priority: order.priority,
-            dueDate: orderStep?.due_date || order.due_date,
-            isJhalaiStep: false,
-            // Add order step data for display
-            orderStepData: orderStep,
-          };
+          if (stepInstances.length === 0) {
+            // No instances of this step exist yet - create a placeholder or skip
+            return;
+          }
 
-          const stepNode: Node = {
-            id: `step-${order.id}-${step.id}`,
-            type: 'manufacturingStep',
-            position: { x: stepX, y: orderY },
-            data: stepNodeData,
-          };
+          // Sort instances by instance_number
+          stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-          nodes.push(stepNode);
+          stepInstances.forEach((orderStep, instanceIndex) => {
+            const stepY = orderY + (instanceIndex * 80); // Stack parallel instances vertically
+            
+            const stepNodeData: StepCardData = {
+              stepName: step.step_name,
+              stepOrder: step.step_order,
+              orderId: order.id,
+              orderNumber: order.order_number,
+              productName: order.product_name,
+              status: orderStep?.status as any || 'pending',
+              progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
+              assignedWorker: orderStep?.assigned_worker || undefined,
+              productCode: order.product_configs?.product_code,
+              quantityRequired: order.quantity_required,
+              priority: order.priority,
+              dueDate: orderStep?.due_date || order.due_date,
+              isJhalaiStep: false,
+              instanceNumber: orderStep?.instance_number || 1,
+              // Add order step data for display
+              orderStepData: orderStep,
+            };
 
-          // Create edge from previous node
-          const previousNodeId = stepIndex === 0 
-            ? `order-${order.id}` 
-            : `step-${order.id}-${manufacturingSteps[stepIndex - 1].id}`;
+            const stepNode: Node = {
+              id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
+              type: 'manufacturingStep',
+              position: { x: currentX, y: stepY },
+              data: stepNodeData,
+            };
 
-          edges.push({
-            id: `edge-${previousNodeId}-${stepNode.id}`,
-            source: previousNodeId,
-            target: stepNode.id,
-            type: 'smoothstep',
-            animated: orderStep?.status === 'in_progress',
-            style: {
-              stroke: orderStep?.status === 'completed' ? '#10b981' : 
-                     orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af',
-              strokeWidth: 2,
-            },
+            nodes.push(stepNode);
+
+            // Create edge from previous node (only for first instance of each step type)
+            if (instanceIndex === 0) {
+              const previousNodeId = stepIndex === 0 
+                ? `order-${order.id}` 
+                : `step-${order.id}-${manufacturingSteps[stepIndex - 1].id}-1`; // Connect to first instance of previous step
+
+              edges.push({
+                id: `edge-${previousNodeId}-${stepNode.id}`,
+                source: previousNodeId,
+                target: stepNode.id,
+                type: 'smoothstep',
+                animated: orderStep?.status === 'in_progress',
+                style: {
+                  stroke: orderStep?.status === 'completed' ? '#10b981' : 
+                         orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af',
+                  strokeWidth: 2,
+                },
+              });
+            }
           });
+
+          currentX += HORIZONTAL_SPACING;
         });
     });
 
