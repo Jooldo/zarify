@@ -25,6 +25,9 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  console.log('ManufacturingOrderCard - Order:', order);
+  console.log('ManufacturingOrderCard - Order Steps:', orderSteps);
+
   // Get order steps for this specific order using order_id
   const thisOrderSteps = Array.isArray(orderSteps) 
     ? orderSteps.filter(step => step.order_id === order.id)
@@ -175,7 +178,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
             </div>
           )}
 
-          {/* Step Summary Table */}
+          {/* Step Summary Table - This should always render */}
           <StepSummaryTable order={order} />
 
           {/* Action buttons */}

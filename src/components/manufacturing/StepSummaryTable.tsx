@@ -3,7 +3,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Factory } from 'lucide-react';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 
 interface StepSummaryTableProps {
@@ -22,10 +22,16 @@ interface StepSummary {
 const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ order }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
 
+  console.log('StepSummaryTable - Order ID:', order.id);
+  console.log('StepSummaryTable - Manufacturing Steps:', manufacturingSteps);
+  console.log('StepSummaryTable - Order Steps:', orderSteps);
+
   // Get order steps for this specific order
   const thisOrderSteps = Array.isArray(orderSteps) 
     ? orderSteps.filter(step => step.order_id === order.id)
     : [];
+
+  console.log('StepSummaryTable - This Order Steps:', thisOrderSteps);
 
   // Calculate step summaries
   const stepSummaries: StepSummary[] = React.useMemo(() => {
@@ -34,11 +40,15 @@ const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ order }) => {
       .filter(step => step.is_active)
       .sort((a, b) => a.step_order - b.step_order);
 
+    console.log('StepSummaryTable - Active Steps:', activeSteps);
+
     return activeSteps.map(step => {
       // Find all instances of this step for this order
       const stepInstances = thisOrderSteps.filter(orderStep => 
         orderStep.step_name === step.step_name
       );
+
+      console.log(`StepSummaryTable - Step ${step.step_name} instances:`, stepInstances);
 
       // Calculate metrics
       const totalActiveInstances = stepInstances.filter(instance => 
@@ -59,7 +69,7 @@ const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ order }) => {
         completionPercentage = Math.round((weightReceived / weightAssigned) * 100 * 100) / 100; // Round to 2 decimal places
       }
 
-      return {
+      const summary = {
         stepName: step.step_name,
         stepOrder: step.step_order,
         totalActiveInstances,
@@ -67,6 +77,10 @@ const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ order }) => {
         weightReceived,
         completionPercentage
       };
+
+      console.log(`StepSummaryTable - Step ${step.step_name} summary:`, summary);
+
+      return summary;
     });
   }, [manufacturingSteps, thisOrderSteps]);
 
@@ -77,6 +91,8 @@ const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ order }) => {
   const formatPercentage = (percentage: number) => {
     return percentage > 0 ? `${percentage.toFixed(2)}%` : '—';
   };
+
+  console.log('StepSummaryTable - Final Step Summaries:', stepSummaries);
 
   return (
     <Card className="mt-4">
