@@ -19,6 +19,7 @@ export interface MerchantStepFieldConfig {
   step_name: string;
   field_key: string;
   is_visible: boolean;
+  unit?: string;
   created_at: string;
   updated_at: string;
 }
@@ -32,13 +33,13 @@ export interface UpdateFieldVisibilityData {
   step_name: string;
   field_key: string;
   is_visible: boolean;
+  unit?: string;
 }
 
 export const useMerchantStepConfig = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch merchant's step configuration
   const { data: steps = [], isLoading: stepsLoading } = useQuery<MerchantStep[]>({
     queryKey: ['merchant-step-config'],
     queryFn: async () => {
@@ -52,7 +53,6 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  // Fetch field visibility configuration
   const { data: fieldConfigs = [], isLoading: fieldConfigsLoading } = useQuery<MerchantStepFieldConfig[]>({
     queryKey: ['merchant-step-field-config'],
     queryFn: async () => {
@@ -66,7 +66,6 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  // Create a new manufacturing step
   const createStepMutation = useMutation({
     mutationFn: async (stepData: CreateStepData) => {
       const { data: merchantId, error: merchantError } = await supabase
@@ -103,7 +102,6 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  // Update field visibility
   const updateFieldVisibilityMutation = useMutation({
     mutationFn: async (updateData: UpdateFieldVisibilityData) => {
       const { data: merchantId, error: merchantError } = await supabase
@@ -118,6 +116,7 @@ export const useMerchantStepConfig = () => {
           step_name: updateData.step_name,
           field_key: updateData.field_key,
           is_visible: updateData.is_visible,
+          unit: updateData.unit,
         })
         .select()
         .single();
@@ -137,7 +136,6 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  // Delete a manufacturing step
   const deleteStepMutation = useMutation({
     mutationFn: async (stepId: string) => {
       const { error } = await supabase
@@ -164,19 +162,24 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  // Helper function to get visible fields for a step
   const getVisibleFieldsForStep = (stepName: string) => {
     return fieldConfigs
       .filter(config => config.step_name === stepName && config.is_visible)
       .map(config => config.field_key);
   };
 
-  // Helper function to check if a field is visible for a step
   const isFieldVisible = (stepName: string, fieldKey: string) => {
     const config = fieldConfigs.find(
       c => c.step_name === stepName && c.field_key === fieldKey
     );
     return config?.is_visible || false;
+  };
+
+  const getFieldUnit = (stepName: string, fieldKey: string) => {
+    const config = fieldConfigs.find(
+      c => c.step_name === stepName && c.field_key === fieldKey
+    );
+    return config?.unit || '';
   };
 
   return {
@@ -188,6 +191,7 @@ export const useMerchantStepConfig = () => {
     deleteStep: deleteStepMutation.mutate,
     getVisibleFieldsForStep,
     isFieldVisible,
+    getFieldUnit,
     isCreatingStep: createStepMutation.isPending,
     isUpdatingField: updateFieldVisibilityMutation.isPending,
     isDeletingStep: deleteStepMutation.isPending,

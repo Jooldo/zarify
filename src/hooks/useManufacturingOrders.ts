@@ -47,13 +47,11 @@ export const useManufacturingOrders = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: CreateManufacturingOrderData) => {
-      // Get next order number
       const { data: orderNumber, error: orderNumberError } = await supabase
         .rpc('get_next_manufacturing_order_number');
 
       if (orderNumberError) throw orderNumberError;
 
-      // Get current merchant ID
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
@@ -109,7 +107,9 @@ export const useManufacturingOrders = () => {
         title: 'Success',
         description: 'Manufacturing order updated successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      queryClient.invalidateQueries({
+        queryKey: ['manufacturing-orders']
+      });
     },
     onError: (error: any) => {
       toast({

@@ -9,6 +9,7 @@ export interface MasterField {
   data_type: 'number' | 'decimal' | 'text' | 'date' | 'boolean' | 'worker';
   description?: string;
   is_active: boolean;
+  unit?: string;
 }
 
 export const useMasterFields = () => {
@@ -24,7 +25,7 @@ export const useMasterFields = () => {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes since this rarely changes
+    staleTime: 5 * 60 * 1000,
   });
 
   return {

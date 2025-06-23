@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Settings, Trash2, GripVertical } from 'lucide-react';
 import { useMasterFields } from '@/hooks/useMasterFields';
 import { useMerchantStepConfig } from '@/hooks/useMerchantStepConfig';
@@ -24,12 +25,28 @@ const ManufacturingWorkflowConfig = () => {
     updateFieldVisibility,
     deleteStep,
     isFieldVisible,
+    getFieldUnit,
     isCreatingStep,
   } = useMerchantStepConfig();
 
   const [newStepName, setNewStepName] = useState('');
   const [isAddStepDialogOpen, setIsAddStepDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<string>('');
+
+  // Unit options for fields
+  const unitOptions = [
+    { value: 'grams', label: 'Grams' },
+    { value: 'kilograms', label: 'Kilograms' },
+    { value: 'pieces', label: 'Pieces' },
+    { value: 'carats', label: 'Carats' },
+    { value: 'millimeters', label: 'Millimeters' },
+    { value: 'centimeters', label: 'Centimeters' },
+    { value: 'hours', label: 'Hours' },
+    { value: 'minutes', label: 'Minutes' },
+    { value: 'percent', label: 'Percent' },
+    { value: 'celsius', label: 'Celsius' },
+    { value: 'fahrenheit', label: 'Fahrenheit' },
+  ];
 
   const handleCreateStep = () => {
     if (!newStepName.trim()) {
@@ -52,11 +69,22 @@ const ManufacturingWorkflowConfig = () => {
     setIsAddStepDialogOpen(false);
   };
 
-  const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean) => {
+  const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean, unit?: string) => {
     updateFieldVisibility({
       step_name: stepName,
       field_key: fieldKey,
       is_visible: isVisible,
+      unit: unit,
+    });
+  };
+
+  const handleUnitChange = (stepName: string, fieldKey: string, unit: string) => {
+    const isVisible = isFieldVisible(stepName, fieldKey);
+    updateFieldVisibility({
+      step_name: stepName,
+      field_key: fieldKey,
+      is_visible: isVisible,
+      unit: unit,
     });
   };
 
@@ -64,6 +92,10 @@ const ManufacturingWorkflowConfig = () => {
     if (confirm(`Are you sure you want to delete the "${stepName}" step? This will also remove all field configurations for this step.`)) {
       deleteStep(stepId);
     }
+  };
+
+  const shouldShowUnitSelector = (dataType: string) => {
+    return ['number', 'decimal'].includes(dataType);
   };
 
   if (isLoading) {
@@ -177,7 +209,7 @@ const ManufacturingWorkflowConfig = () => {
           <CardHeader>
             <CardTitle>Field Configuration</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Choose which Zerify fields to show for each manufacturing step
+              Choose which Zerify fields to show for each manufacturing step and configure their units
             </p>
           </CardHeader>
           <CardContent>
@@ -200,11 +232,11 @@ const ManufacturingWorkflowConfig = () => {
                       </Badge>
                     </div>
                     
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4">
                       {masterFields.map((field) => (
                         <div key={field.field_key} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mb-2">
                               <Label htmlFor={`${step.step_name}-${field.field_key}`} className="font-medium">
                                 {field.label}
                               </Label>
@@ -213,16 +245,36 @@ const ManufacturingWorkflowConfig = () => {
                               </Badge>
                             </div>
                             {field.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-sm text-muted-foreground mb-2">
                                 {field.description}
                               </p>
+                            )}
+                            {shouldShowUnitSelector(field.data_type) && isFieldVisible(step.step_name, field.field_key) && (
+                              <div className="mt-2">
+                                <Label className="text-xs text-muted-foreground">Unit</Label>
+                                <Select
+                                  value={getFieldUnit(step.step_name, field.field_key)}
+                                  onValueChange={(unit) => handleUnitChange(step.step_name, field.field_key, unit)}
+                                >
+                                  <SelectTrigger className="w-[180px] h-8">
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {unitOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                           </div>
                           <Switch
                             id={`${step.step_name}-${field.field_key}`}
                             checked={isFieldVisible(step.step_name, field.field_key)}
                             onCheckedChange={(checked) => 
-                              handleFieldVisibilityToggle(step.step_name, field.field_key, checked)
+                              handleFieldVisibilityToggle(step.step_name, field.field_key, checked, getFieldUnit(step.step_name, field.field_key))
                             }
                           />
                         </div>

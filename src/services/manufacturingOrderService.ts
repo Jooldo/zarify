@@ -1,6 +1,30 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { CreateManufacturingOrderData, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
+
+export interface ManufacturingOrder {
+  id: string;
+  order_number: string;
+  merchant_id: string;
+  product_name: string;
+  quantity_required: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
+  due_date?: string;
+  special_instructions?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface CreateManufacturingOrderData {
+  product_name: string;
+  quantity_required: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string;
+  special_instructions?: string;
+}
 
 export const fetchManufacturingOrders = async (): Promise<ManufacturingOrder[]> => {
   const { data: orders, error } = await supabase
@@ -13,13 +37,11 @@ export const fetchManufacturingOrders = async (): Promise<ManufacturingOrder[]> 
 };
 
 export const createManufacturingOrder = async (data: CreateManufacturingOrderData): Promise<ManufacturingOrder> => {
-  // Get next order number
   const { data: orderNumber, error: orderNumberError } = await supabase
     .rpc('get_next_manufacturing_order_number');
 
   if (orderNumberError) throw orderNumberError;
 
-  // Get current merchant ID
   const { data: merchantId, error: merchantError } = await supabase
     .rpc('get_user_merchant_id');
 

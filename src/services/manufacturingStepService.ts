@@ -31,7 +31,7 @@ export interface ManufacturingOrderStepData {
 export interface CreateStepData {
   order_id: string;
   step_name: string;
-  [key: string]: any; // For dynamic field values
+  [key: string]: any;
 }
 
 export const createManufacturingOrderStep = async (stepData: CreateStepData): Promise<ManufacturingOrderStepData> => {
@@ -46,7 +46,7 @@ export const createManufacturingOrderStep = async (stepData: CreateStepData): Pr
       merchant_id: merchantId,
       order_id: stepData.order_id,
       step_name: stepData.step_name,
-      ...stepData, // Spread all other field values
+      ...stepData,
     })
     .select()
     .single();
