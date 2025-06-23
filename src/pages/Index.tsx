@@ -101,20 +101,20 @@ const Index = () => {
           <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
           <main className="flex-1">
             <Routes>
-              <Route path="" element={<UnifiedDashboard />} />
-              <Route path="orders" element={<OrdersTab />} />
-              <Route path="inventory" element={<InventoryTab />} />
-              <Route path="inventory/finished-goods" element={<FinishedGoodsInventory />} />
-              <Route path="inventory/raw-materials" element={<RawMaterialInventory />} />
-              <Route path="manufacturing" element={<FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} />} />
-              <Route path="procurement" element={<ProcurementRequestsSection />} />
-              <Route path="config" element={<ProductConfigTab />} />
-              <Route path="users" element={<UsersTab activeTab="customers" onTabChange={() => {}} />} />
-              <Route path="activity" element={<ActivityLogsTab />} />
-              <Route path="settings/merchant" element={<MerchantConfigurations />} />
-              <Route path="settings/general" element={<GeneralSettings />} />
-              <Route path="catalogue" element={<CatalogueManagement />} />
-              <Route path="dev" element={<DevelopmentDashboard />} />
+              <Route path="/" element={<UnifiedDashboard />} />
+              <Route path="/orders" element={<OrdersTab />} />
+              <Route path="/inventory" element={<InventoryTab />} />
+              <Route path="/inventory/finished-goods" element={<FinishedGoodsInventory />} />
+              <Route path="/inventory/raw-materials" element={<RawMaterialInventory />} />
+              <Route path="/manufacturing" element={<FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} />} />
+              <Route path="/procurement" element={<ProcurementRequestsSection />} />
+              <Route path="/config" element={<ProductConfigTab />} />
+              <Route path="/users" element={<UsersTab activeTab="customers" onTabChange={() => {}} />} />
+              <Route path="/activity" element={<ActivityLogsTab />} />
+              <Route path="/settings/merchant" element={<MerchantConfigurations />} />
+              <Route path="/settings/general" element={<GeneralSettings />} />
+              <Route path="/catalogue" element={<CatalogueManagement />} />
+              <Route path="/dev" element={<DevelopmentDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
