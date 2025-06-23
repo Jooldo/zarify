@@ -41,6 +41,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const { merchant } = useMerchant();
   const { toast } = useToast();
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [assignedWorker, setAssignedWorker] = useState<string>('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initializedStepId, setInitializedStepId] = useState<string | null>(null);
 
@@ -66,6 +68,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       setInitializedStepId(stepId);
     } else if (!isOpen) {
       setFieldValues({});
+      setAssignedWorker('');
+      setDueDate(undefined);
       setInitializedStepId(null);
     }
   }, [isOpen, stepId, currentStepFields.length, initializedStepId]);
@@ -113,17 +117,6 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     }));
   };
 
-  const handleSelectChange = (fieldKey: string) => (value: string) => {
-    console.log('Select change:', fieldKey, value);
-    handleFieldChange(fieldKey, value);
-  };
-
-  const handleDateSelect = (fieldKey: string) => (date: Date | undefined) => {
-    if (date) {
-      handleFieldChange(fieldKey, format(date, 'yyyy-MM-dd'));
-    }
-  };
-
   const handleStartStep = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -159,7 +152,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
             step_name: step.step_name,
             status: 'in_progress',
             merchant_id: merchant.id,
-            started_at: new Date().toISOString()
+            started_at: new Date().toISOString(),
+            assigned_worker: assignedWorker || undefined,
+            due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           })
           .select()
           .single();
@@ -181,7 +176,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
           status: 'in_progress',
           progress: 0,
           stepName: step.step_name,
-          orderNumber: order.order_number
+          orderNumber: order.order_number,
+          assigned_worker: assignedWorker || undefined,
+          dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         });
 
         toast({
@@ -191,6 +188,8 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
         // Reset form and close dialog
         setFieldValues({});
+        setAssignedWorker('');
+        setDueDate(undefined);
         setInitializedStepId(null);
         onClose();
       }
@@ -261,6 +260,65 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
                   <span className="text-muted-foreground">Quantity:</span>
                   <div className="font-medium">{order.quantity_required}</div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Assignment Section */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Assignment</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-3">
+              {/* Worker Assignment */}
+              <div className="space-y-2">
+                <Label htmlFor="assigned-worker">Assigned Worker</Label>
+                <Select value={assignedWorker} onValueChange={setAssignedWorker}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a worker" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workers.map(worker => (
+                      <SelectItem key={worker.id} value={worker.id}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <span>{worker.name}</span>
+                          {worker.role && (
+                            <span className="text-xs text-muted-foreground">({worker.role})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Due Date */}
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </CardContent>
           </Card>
