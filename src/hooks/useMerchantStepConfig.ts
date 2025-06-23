@@ -109,46 +109,24 @@ export const useMerchantStepConfig = () => {
 
       if (merchantError) throw merchantError;
 
-      // Check if record already exists
-      const { data: existingRecord } = await supabase
+      // Use proper upsert with the correct conflict resolution
+      const { data, error } = await supabase
         .from('merchant_step_field_config')
-        .select('id')
-        .eq('merchant_id', merchantId)
-        .eq('step_name', updateData.step_name)
-        .eq('field_key', updateData.field_key)
-        .maybeSingle();
+        .upsert({
+          merchant_id: merchantId,
+          step_name: updateData.step_name,
+          field_key: updateData.field_key,
+          is_visible: updateData.is_visible,
+          unit: updateData.unit,
+        }, {
+          onConflict: 'merchant_id,step_name,field_key',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
 
-      if (existingRecord) {
-        // Update existing record
-        const { data, error } = await supabase
-          .from('merchant_step_field_config')
-          .update({
-            is_visible: updateData.is_visible,
-            unit: updateData.unit,
-          })
-          .eq('id', existingRecord.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      } else {
-        // Insert new record
-        const { data, error } = await supabase
-          .from('merchant_step_field_config')
-          .insert({
-            merchant_id: merchantId,
-            step_name: updateData.step_name,
-            field_key: updateData.field_key,
-            is_visible: updateData.is_visible,
-            unit: updateData.unit,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      }
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchant-step-field-config'] });

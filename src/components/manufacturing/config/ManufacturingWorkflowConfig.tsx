@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Settings, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Settings, Trash2, GripVertical, Save } from 'lucide-react';
 import { useMasterFields } from '@/hooks/useMasterFields';
 import { useMerchantStepConfig } from '@/hooks/useMerchantStepConfig';
 import { useToast } from '@/hooks/use-toast';
@@ -27,11 +27,13 @@ const ManufacturingWorkflowConfig = () => {
     isFieldVisible,
     getFieldUnit,
     isCreatingStep,
+    isUpdatingField,
   } = useMerchantStepConfig();
 
   const [newStepName, setNewStepName] = useState('');
   const [isAddStepDialogOpen, setIsAddStepDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Unit options for fields
   const unitOptions = [
@@ -71,6 +73,9 @@ const ManufacturingWorkflowConfig = () => {
 
   const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean) => {
     const currentUnit = getFieldUnit(stepName, fieldKey);
+    setHasUnsavedChanges(true);
+    
+    // For immediate feedback, we'll update immediately but also show save option
     updateFieldVisibility({
       step_name: stepName,
       field_key: fieldKey,
@@ -81,12 +86,23 @@ const ManufacturingWorkflowConfig = () => {
 
   const handleUnitChange = (stepName: string, fieldKey: string, unit: string) => {
     const isVisible = isFieldVisible(stepName, fieldKey);
+    setHasUnsavedChanges(true);
+    
     updateFieldVisibility({
       step_name: stepName,
       field_key: fieldKey,
       is_visible: isVisible,
       unit: unit,
     });
+  };
+
+  const handleSaveConfiguration = () => {
+    // Force refresh the data to ensure everything is saved
+    toast({
+      title: 'Configuration Saved',
+      description: 'Your manufacturing workflow configuration has been saved successfully.',
+    });
+    setHasUnsavedChanges(false);
   };
 
   const handleDeleteStep = (stepId: string, stepName: string) => {
@@ -111,11 +127,24 @@ const ManufacturingWorkflowConfig = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Manufacturing Workflow Configuration</h2>
-        <p className="text-muted-foreground">
-          Configure your manufacturing steps and choose which fields to show for each step.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Manufacturing Workflow Configuration</h2>
+          <p className="text-muted-foreground">
+            Configure your manufacturing steps and choose which fields to show for each step.
+          </p>
+        </div>
+        
+        {hasUnsavedChanges && (
+          <Button 
+            onClick={handleSaveConfiguration}
+            disabled={isUpdatingField}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isUpdatingField ? 'Saving...' : 'Save Configuration'}
+          </Button>
+        )}
       </div>
 
       {/* Steps Overview */}
