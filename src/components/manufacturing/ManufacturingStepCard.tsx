@@ -87,9 +87,6 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               <span className="font-medium">{data.orderNumber}</span>
             </div>
             <div className="text-muted-foreground font-semibold">{data.productCode || data.productName}</div>
-            {data.productCode && (
-              <div className="text-muted-foreground text-xs">{data.productName}</div>
-            )}
           </div>
 
           {/* Step-specific information */}

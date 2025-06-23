@@ -22,7 +22,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   onDelete,
   onStartNextStep
 }) => {
-  const { orderSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Get order steps for this specific order using order_id
@@ -39,6 +39,25 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   const currentStep = thisOrderSteps
     .filter(step => step.status === 'in_progress')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+  // Get next step to start
+  const getNextStep = () => {
+    if (thisOrderSteps.length === 0) {
+      // No steps exist, get the first manufacturing step
+      return manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+    }
+    
+    // Find the next pending step
+    const nextPendingStep = thisOrderSteps
+      .filter(step => step.status === 'pending')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+    
+    return nextPendingStep ? manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name) : null;
+  };
+
+  const nextStep = getNextStep();
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -89,7 +108,6 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
                 {order.product_configs?.product_code || order.product_name}
               </CardTitle>
               <p className="text-sm text-gray-600 font-mono">{order.order_number}</p>
-              <p className="text-sm text-gray-500">{order.product_name}</p>
             </div>
             <div className="flex gap-2">
               <Badge className={getPriorityColor(order.priority)}>
@@ -171,15 +189,17 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
             >
               View Details
             </Button>
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={handleStartNextStep}
-              className="flex items-center gap-1"
-            >
-              <Play className="h-3 w-3" />
-              Start Next Step
-            </Button>
+            {nextStep && (
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleStartNextStep}
+                className="flex items-center gap-1"
+              >
+                <Play className="h-3 w-3" />
+                Start {nextStep.step_name}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
