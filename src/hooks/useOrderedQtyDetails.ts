@@ -84,30 +84,7 @@ export const useOrderedQtyDetails = () => {
       const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
       if (merchantError) throw merchantError;
 
-      // CRITICAL FIX: Get manufacturing orders to calculate in_manufacturing quantities
-      const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
-        .from('manufacturing_orders')
-        .select(`
-          quantity_required,
-          product_configs!inner(product_code)
-        `)
-        .eq('merchant_id', merchantId)
-        .in('status', ['pending', 'in_progress', 'completed']);
-
-      if (manufacturingOrdersError) {
-        console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
-      }
-
-      // Calculate in_manufacturing quantities by product code
-      const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
-        const productCode = order.product_configs?.product_code;
-        if (productCode) {
-          acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
-        }
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      // FIXED QUERY: Get finished goods that use this raw material with correct relationship
+      // Get finished goods that use this raw material with correct relationship
       const { data: finishedGoodsUsingMaterial, error: finishedGoodsError } = await supabase
         .from('product_config_materials')
         .select(`
@@ -145,22 +122,20 @@ export const useOrderedQtyDetails = () => {
           return;
         }
         
-        // FIXED CALCULATION: Use proper shortfall calculation including manufacturing
+        // Calculate shortfall without manufacturing considerations
         const liveOrderDemand = finishedGood.required_quantity || 0;
-        const inManufacturing = inManufacturingByProduct[productCode] || 0;
         
         console.log(`🔍 Finished good ${productCode}:`);
         console.log(`   Live order demand: ${liveOrderDemand}`);
         console.log(`   Current stock: ${finishedGood.current_stock}`);
-        console.log(`   In manufacturing: ${inManufacturing}`);
         console.log(`   Threshold: ${finishedGood.threshold}`);
         
         const totalDemand = liveOrderDemand + finishedGood.threshold;
-        const available = finishedGood.current_stock + inManufacturing;
+        const available = finishedGood.current_stock; // No manufacturing to add
         const shortfall = Math.max(0, totalDemand - available);
 
         console.log(`   Total demand: ${totalDemand}`);
-        console.log(`   Available (stock + manufacturing): ${available}`);
+        console.log(`   Available stock: ${available}`);
         console.log(`   Shortfall: ${shortfall}`);
 
         // Only include products that have a shortfall
