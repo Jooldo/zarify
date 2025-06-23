@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -90,10 +91,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Tree layout constants for dynamic positioning - Increased spacing to prevent overlap
+    // Tree layout constants for dynamic positioning - Further increased spacing
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const INSTANCE_HORIZONTAL_SPACING = 1000; // Increased further to prevent child overlap
+    const INSTANCE_HORIZONTAL_SPACING = 1200; // Further increased to prevent overlap
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -118,8 +119,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
-      // First pass: Calculate positions for all step instances with improved spacing
-      const stepPositions = new Map<string, { instances: any[], centerX: number, y: number, totalWidth: number }>();
+      // First pass: Calculate child positions and determine parent positions
+      const stepPositions = new Map<string, { instances: any[], positions: number[], centerX: number, y: number }>();
       
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = stepsByName[step.step_name] || [];
@@ -180,76 +181,93 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate total width needed for this step's instances
+        // Calculate positions for child instances first
+        const instancePositions: number[] = [];
         const instanceCount = orderedInstances.length;
-        const totalWidth = Math.max(0, (instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING);
-        
-        // For tree-like layout, calculate center position
-        let centerX: number;
         
         if (stepIndex === 0) {
-          // First step positions based on order card center
-          centerX = 100 + (CARD_WIDTH / 2);
+          // First step: position relative to order card
+          const orderCenterX = 100 + (CARD_WIDTH / 2);
+          const startX = orderCenterX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
+          
+          orderedInstances.forEach((_, instanceIndex) => {
+            instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
+          });
         } else {
-          // For subsequent steps, calculate center based on parent positions and total width needed
+          // For subsequent steps: position based on parent-child relationships
           const previousStep = activeSteps[stepIndex - 1];
           const previousPositions = stepPositions.get(previousStep.step_name);
           
           if (previousPositions) {
-            // Calculate the center based on the span of parent instances that have children
-            const parentInstancesWithChildren = previousPositions.instances.filter(parentInstance => {
-              return orderedInstances.some(childInstance => {
-                if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
-                  const sourceInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '0');
-                  return sourceInstanceNumber === (parentInstance.instance_number || 1);
-                }
-                return false;
-              });
+            const previousInstances = stepsByName[previousStep.step_name] || [];
+            
+            // Group children by their parent
+            const childrenByParent = new Map<number, any[]>();
+            
+            orderedInstances.forEach(childInstance => {
+              let parentInstanceNumber = 1; // default
+              
+              if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
+                parentInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
+              }
+              
+              if (!childrenByParent.has(parentInstanceNumber)) {
+                childrenByParent.set(parentInstanceNumber, []);
+              }
+              childrenByParent.get(parentInstanceNumber)!.push(childInstance);
             });
-
-            if (parentInstancesWithChildren.length > 0) {
-              // Calculate positions of parent instances with children
-              const parentTotalWidth = Math.max(0, (previousPositions.instances.length - 1) * INSTANCE_HORIZONTAL_SPACING);
-              const parentStartX = previousPositions.centerX - (parentTotalWidth / 2);
+            
+            // Position children under their respective parents
+            orderedInstances.forEach((childInstance, index) => {
+              let parentInstanceNumber = 1; // default
               
-              const parentWithChildrenPositions = parentInstancesWithChildren.map(parent => {
-                const parentIndex = previousPositions.instances.findIndex(p => p.id === parent.id);
-                return parentStartX + (parentIndex * INSTANCE_HORIZONTAL_SPACING);
-              });
+              if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
+                parentInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
+              }
               
-              const minParentX = Math.min(...parentWithChildrenPositions);
-              const maxParentX = Math.max(...parentWithChildrenPositions);
-              centerX = (minParentX + maxParentX) / 2;
-            } else {
-              centerX = previousPositions.centerX;
-            }
+              // Find parent position
+              const parentIndex = previousInstances.findIndex(p => (p.instance_number || 1) === parentInstanceNumber);
+              const parentX = parentIndex >= 0 ? previousPositions.positions[parentIndex] : previousPositions.positions[0];
+              
+              // Get siblings for this parent
+              const siblings = childrenByParent.get(parentInstanceNumber) || [];
+              const siblingIndex = siblings.findIndex(s => s.id === childInstance.id);
+              
+              // Center children under parent
+              if (siblings.length === 1) {
+                instancePositions.push(parentX);
+              } else {
+                const siblingSpacing = INSTANCE_HORIZONTAL_SPACING;
+                const totalSiblingWidth = (siblings.length - 1) * siblingSpacing;
+                const startX = parentX - (totalSiblingWidth / 2);
+                instancePositions.push(startX + (siblingIndex * siblingSpacing));
+              }
+            });
           } else {
-            centerX = 100 + (CARD_WIDTH / 2);
-          }
-          
-          // Ensure adequate spacing from siblings at the same level
-          const currentY = orderY + BASE_VERTICAL_SPACING + (stepIndex * BASE_VERTICAL_SPACING);
-          const existingStepsAtLevel = Array.from(stepPositions.values()).filter(pos => pos.y === currentY);
-          
-          if (existingStepsAtLevel.length > 0) {
-            // Find the rightmost position and ensure adequate spacing
-            const rightmostX = Math.max(...existingStepsAtLevel.map(pos => pos.centerX + pos.totalWidth / 2));
-            const minRequiredX = rightmostX + INSTANCE_HORIZONTAL_SPACING + totalWidth / 2;
-            centerX = Math.max(centerX, minRequiredX);
+            // Fallback positioning
+            const startX = 100 + (CARD_WIDTH / 2) - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
+            orderedInstances.forEach((_, instanceIndex) => {
+              instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
+            });
           }
         }
+
+        // Calculate center position for parent positioning
+        const minX = Math.min(...instancePositions);
+        const maxX = Math.max(...instancePositions);
+        const centerX = (minX + maxX) / 2;
 
         const currentY = orderY + BASE_VERTICAL_SPACING + (stepIndex * BASE_VERTICAL_SPACING);
         
         stepPositions.set(step.step_name, {
           instances: orderedInstances,
+          positions: instancePositions,
           centerX,
-          y: currentY,
-          totalWidth
+          y: currentY
         });
       });
 
-      // Create order node (positioned to align with first step)
+      // Now position the order card based on the first step's center
       const firstStepData = stepPositions.get(activeSteps[0]?.step_name);
       const orderX = firstStepData ? firstStepData.centerX - (CARD_WIDTH / 2) : 100;
 
@@ -278,17 +296,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes using calculated positions with improved spacing
+      // Create step nodes using calculated positions
       activeSteps.forEach((step, stepIndex) => {
         const stepData = stepPositions.get(step.step_name);
         
         if (!stepData) return;
 
-        const instanceCount = stepData.instances.length;
-        const startX = stepData.centerX - (stepData.totalWidth / 2);
-
         stepData.instances.forEach((orderStep, instanceIndex) => {
-          const instanceX = startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING);
+          const instanceX = stepData.positions[instanceIndex];
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
