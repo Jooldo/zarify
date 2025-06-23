@@ -1,10 +1,11 @@
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
+import UpdateStepDialog from './UpdateStepDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Factory, Package } from 'lucide-react';
 
@@ -23,6 +24,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   onViewDetails 
 }) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
+  const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
 
   // Create nodes and edges from manufacturing orders
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
@@ -36,6 +39,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     manufacturingOrders.forEach((order, orderIndex) => {
       const orderY = yOffset + (orderIndex * VERTICAL_SPACING);
       
+      // Get order steps for this order
+      const thisOrderSteps = Array.isArray(orderSteps) 
+        ? orderSteps.filter(step => String(step.order_id) === String(order.id))
+        : [];
+
       // Create manufacturing order node
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
@@ -61,11 +69,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Get order steps for this order
-      const thisOrderSteps = Array.isArray(orderSteps) 
-        ? orderSteps.filter(step => step.order_id === order.id)
-        : [];
-
       // Create step nodes for each configured manufacturing step
       manufacturingSteps
         .filter(step => step.is_active)
@@ -73,7 +76,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         .forEach((step, stepIndex) => {
           const stepX = 50 + ((stepIndex + 1) * HORIZONTAL_SPACING);
           
-          // Find matching order step
+          // Find matching order step from manufacturing_order_step_data
           const orderStep = thisOrderSteps.find(os => os.step_name === step.step_name);
           
           const stepNodeData: StepCardData = {
@@ -88,8 +91,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             productCode: order.product_configs?.product_code,
             quantityRequired: order.quantity_required,
             priority: order.priority,
-            dueDate: order.due_date,
+            dueDate: orderStep?.due_date || order.due_date,
             isJhalaiStep: false,
+            // Add order step data for display
+            orderStepData: orderStep,
           };
 
           const stepNode: Node = {
@@ -127,14 +132,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const onAddStep = useCallback((stepData: StepCardData) => {
-    console.log('Add step clicked for:', stepData);
-    // Handle step creation logic here
-  }, []);
-
   const onStepClick = useCallback((stepData: StepCardData) => {
-    console.log('Step clicked:', stepData);
-    // Handle step click logic here
+    console.log('Step clicked in ReactFlow:', stepData);
+    
+    // Only handle clicks for actual manufacturing steps (not order cards)
+    if (stepData.stepName !== 'Manufacturing Order' && stepData.orderStepData) {
+      setSelectedOrderStep(stepData.orderStepData);
+      setUpdateStepDialogOpen(true);
+    }
   }, []);
 
   // Update node data with callbacks
@@ -145,11 +150,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         ...node.data,
         manufacturingSteps,
         orderSteps,
-        onAddStep,
         onStepClick,
       },
     }));
-  }, [nodes, manufacturingSteps, orderSteps, onAddStep, onStepClick]);
+  }, [nodes, manufacturingSteps, orderSteps, onStepClick]);
 
   if (manufacturingOrders.length === 0) {
     return (
@@ -166,21 +170,33 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   }
 
   return (
-    <div className="h-[600px] w-full border rounded-lg bg-gray-50">
-      <ReactFlow
-        nodes={nodesWithCallbacks}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-      >
-        <Background />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
-    </div>
+    <>
+      <div className="h-[600px] w-full border rounded-lg bg-gray-50">
+        <ReactFlow
+          nodes={nodesWithCallbacks}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="bottom-left"
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
+
+      <UpdateStepDialog
+        step={selectedOrderStep}
+        open={updateStepDialogOpen}
+        onOpenChange={setUpdateStepDialogOpen}
+        onStepUpdate={() => {
+          // Refresh data after update
+          setUpdateStepDialogOpen(false);
+        }}
+      />
+    </>
   );
 };
 
