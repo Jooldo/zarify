@@ -1,13 +1,16 @@
+
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Calendar, Play, Factory, Cog, Hash, Scale } from 'lucide-react';
-import { format } from 'date-fns';
+import { Factory, Cog } from 'lucide-react';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { calculateRemainingWeight, calculateRemainingQuantity } from '@/utils/weightCalculations';
+import OrderSummarySection from './card-components/OrderSummarySection';
+import StepSummaryTable from './card-components/StepSummaryTable';
+import StepProgressSection from './card-components/StepProgressSection';
+import ActionButtonsSection from './card-components/ActionButtonsSection';
 
 export interface StepCardData {
   stepName: string;
@@ -346,201 +349,28 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         
         <CardContent className="px-4 pb-3 pt-2 space-y-3">
           {/* Order Information Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="h-4 w-4 text-blue-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-gray-900 truncate">{data.orderNumber}</div>
-                <div className="text-xs text-gray-600 truncate">{data.productCode || data.productName}</div>
-              </div>
-              {isOrderCard && data.quantityRequired && (
-                <div className="text-sm font-semibold text-gray-700 flex-shrink-0 bg-blue-50 px-2 py-1 rounded">
-                  Qty: {data.quantityRequired}
-                </div>
-              )}
-            </div>
-
-            {/* Progress bar for non-order cards */}
-            {!isOrderCard && (
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${data.progress}%` }}
-                />
-              </div>
-            )}
-          </div>
+          <OrderSummarySection data={data} isOrderCard={isOrderCard} />
 
           {/* Step Summary Table for Order Cards */}
-          {isOrderCard && stepSummaries.length > 0 && (
-            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50">
-              <div className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide flex items-center gap-2">
-                <Factory className="h-3 w-3" />
-                Manufacturing Progress
-              </div>
-              <div className="space-y-2">
-                {stepSummaries.map((summary) => (
-                  <div key={summary.stepName} className="grid grid-cols-4 gap-2 text-xs">
-                    <div className="font-medium text-gray-900 truncate">{summary.stepName}</div>
-                    <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
-                      {summary.totalActiveInstances || 0}
-                    </div>
-                    <div className="text-right bg-purple-50 px-2 py-1 rounded text-purple-700 text-sm font-semibold">
-                      {summary.weightAssigned > 0 ? `${summary.weightAssigned.toFixed(1)}kg` : '—'}
-                    </div>
-                    <div className="text-right bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
-                      {summary.completionPercentage > 0 ? `${summary.completionPercentage.toFixed(1)}%` : '—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
-                <div>Step</div>
-                <div className="text-center">Active</div>
-                <div className="text-right">Assigned</div>
-                <div className="text-right">Complete</div>
-              </div>
-            </div>
-          )}
+          <StepSummaryTable stepSummaries={stepSummaries} />
 
           {/* Step Details Section - Only for non-order cards */}
-          {!isOrderCard && data.orderStepData && (
-            <div className="space-y-3">
-              {/* Worker and Due Date Row */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                {data.orderStepData.assigned_worker && (
-                  <div className="flex items-center gap-2 bg-white/50 rounded-md p-2">
-                    <User className="h-3 w-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700 truncate font-medium">
-                      {getWorkerName(data.orderStepData.assigned_worker) || 'Unknown'}
-                    </span>
-                  </div>
-                )}
-
-                {data.orderStepData.due_date && (
-                  <div className="flex items-center gap-2 bg-white/50 rounded-md p-2">
-                    <Calendar className="h-3 w-3 text-gray-500 flex-shrink-0" />
-                    <span className="text-gray-700 font-medium">
-                      {format(new Date(data.orderStepData.due_date), 'MMM dd')}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Step Progress Table */}
-              {stepProgressData && (stepProgressData.quantity.assigned > 0 || stepProgressData.weight.assigned > 0) && (
-                <div className="bg-gray-900/5 backdrop-blur-sm rounded-lg p-3 border border-gray-200/30">
-                  <div className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide flex items-center gap-2">
-                    <Package className="h-3 w-3" />
-                    Step Progress
-                  </div>
-                  <div className="space-y-2">
-                    {/* Quantity Row */}
-                    {stepProgressData.quantity.assigned > 0 && (
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <div className="font-medium text-gray-900 flex items-center gap-1">
-                          <Hash className="h-3 w-3 text-blue-600" />
-                          Quantity
-                        </div>
-                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
-                          {stepProgressData.quantity.assigned}
-                        </div>
-                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
-                          {stepProgressData.quantity.received}
-                        </div>
-                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
-                          {stepProgressData.quantity.completion > 0 ? `${stepProgressData.quantity.completion.toFixed(1)}%` : '—'}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Weight Row */}
-                    {stepProgressData.weight.assigned > 0 && (
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <div className="font-medium text-gray-900 flex items-center gap-1">
-                          <Scale className="h-3 w-3 text-purple-600" />
-                          Weight (Kg)
-                        </div>
-                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
-                          {stepProgressData.weight.assigned.toFixed(2)}
-                        </div>
-                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
-                          {stepProgressData.weight.received.toFixed(2)}
-                        </div>
-                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
-                          {stepProgressData.weight.completion > 0 ? `${stepProgressData.weight.completion.toFixed(1)}%` : '—'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
-                    <div>Metric</div>
-                    <div className="text-center">Assigned</div>
-                    <div className="text-center">Received</div>
-                    <div className="text-center">% Complete</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Additional Fields (Purity, Wastage) */}
-              {additionalFields.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {additionalFields.map((field, index) => (
-                    <div 
-                      key={`${field.label}-${index}`}
-                      className={`px-3 py-2 rounded-md border ${field.colorClass}`}
-                    >
-                      <div className="text-xs font-medium text-gray-600 mb-1">{field.label}</div>
-                      <div className="text-base font-bold">
-                        {field.value}
-                        {field.unit && <span className="text-xs font-normal ml-1">{field.unit}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Available for Assignment to Next Step - For Parent Steps - Now positioned above CTA */}
-          {!isOrderCard && remainingQuantities && (
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
-              <div className="text-xs font-semibold text-purple-900 mb-2 uppercase tracking-wide">
-                Available for Assignment to Next Step
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-blue-600" />
-                  <div>
-                    <div className="font-semibold text-blue-900">{remainingQuantities.quantity} pieces</div>
-                    <div className="text-xs text-blue-600">Quantity Available</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Scale className="h-4 w-4 text-purple-600" />
-                  <div>
-                    <div className="font-semibold text-purple-900">{remainingQuantities.weight.toFixed(2)} kg</div>
-                    <div className="text-xs text-purple-600">Weight Available</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {!isOrderCard && (
+            <StepProgressSection 
+              data={data}
+              getWorkerName={getWorkerName}
+              stepProgressData={stepProgressData}
+              additionalFields={additionalFields}
+              remainingQuantities={remainingQuantities}
+            />
           )}
 
           {/* Start Next Step Button */}
-          {nextStepName && data.onStartNextStep && (
-            <div className="pt-2 border-t border-gray-200/50">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleStartNextStep}
-                className="w-full h-8 text-xs font-semibold hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm"
-              >
-                <Play className="h-3 w-3 mr-2" />
-                Start {nextStepName}
-              </Button>
-            </div>
-          )}
+          <ActionButtonsSection 
+            data={data}
+            nextStepName={nextStepName}
+            onStartNextStep={handleStartNextStep}
+          />
         </CardContent>
       </Card>
 
