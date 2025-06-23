@@ -1,4 +1,3 @@
-
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
@@ -106,7 +105,7 @@ const Index = () => {
               <Route path="/inventory" element={<InventoryTab />} />
               <Route path="/inventory/finished-goods" element={<FinishedGoodsInventory />} />
               <Route path="/inventory/raw-materials" element={<RawMaterialInventory />} />
-              <Route path="/manufacturing" element={<FinishedGoodManagement />} />
+              <Route path="/manufacturing" element={<FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} />} />
               <Route path="/procurement" element={<ProcurementRequestsSection />} />
               <Route path="/config" element={<ProductConfigTab />} />
               <Route path="/users" element={<UsersTab activeTab="customers" onTabChange={() => {}} />} />
