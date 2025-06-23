@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
+import StepSummaryTable from './StepSummaryTable';
 
 interface ManufacturingOrderCardProps {
   order: ManufacturingOrder;
@@ -173,6 +174,9 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
               </p>
             </div>
           )}
+
+          {/* Step Summary Table */}
+          <StepSummaryTable order={order} />
 
           {/* Action buttons */}
           <div className="flex gap-2 pt-2">
