@@ -809,6 +809,7 @@ export type Database = {
           is_visible: boolean
           merchant_id: string
           step_name: string
+          unit: string | null
           updated_at: string
         }
         Insert: {
@@ -818,6 +819,7 @@ export type Database = {
           is_visible?: boolean
           merchant_id: string
           step_name: string
+          unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -827,6 +829,7 @@ export type Database = {
           is_visible?: boolean
           merchant_id?: string
           step_name?: string
+          unit?: string | null
           updated_at?: string
         }
         Relationships: [

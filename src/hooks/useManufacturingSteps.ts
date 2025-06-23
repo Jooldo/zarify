@@ -8,12 +8,8 @@ export type ManufacturingStep = Tables<'manufacturing_steps'>;
 export type ManufacturingStepField = Omit<Tables<'manufacturing_step_fields'>, 'field_options'> & {
   field_options: { unit?: string; options?: string[] } | null;
 };
-export type ManufacturingOrderStep = Tables<'manufacturing_order_steps'> & {
-  manufacturing_steps: ManufacturingStep | null;
+export type ManufacturingOrderStep = Tables<'manufacturing_order_step_data'> & {
   workers?: { name: string | null } | null;
-};
-export type ManufacturingStepWithOrderStep = ManufacturingStep & {
-    order_step: ManufacturingOrderStep | null;
 };
 
 export const useManufacturingSteps = () => {
@@ -32,17 +28,13 @@ export const useManufacturingSteps = () => {
   });
 
   const { data: orderSteps = [], isLoading: isLoadingOrderSteps } = useQuery<ManufacturingOrderStep[]>({
-    queryKey: ['manufacturing_order_steps_with_steps'],
+    queryKey: ['manufacturing_order_step_data'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('manufacturing_order_steps')
-        .select(`
-          *,
-          manufacturing_steps(*),
-          workers(name)
-        `);
+        .from('manufacturing_order_step_data')
+        .select('*');
       if (error) {
-        console.error("Error fetching order steps with manufacturing steps", error);
+        console.error("Error fetching order step data", error);
         throw error;
       }
       return (data as ManufacturingOrderStep[]) || [];
@@ -60,7 +52,7 @@ export const useManufacturingSteps = () => {
     }
   });
 
-  // Real-time subscription for manufacturing order steps
+  // Real-time subscription for manufacturing order step data
   useEffect(() => {
     const channelName = `manufacturing-steps-realtime-${Date.now()}-${Math.random()}`;
     const channel = supabase
@@ -70,11 +62,11 @@ export const useManufacturingSteps = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'manufacturing_order_steps'
+          table: 'manufacturing_order_step_data'
         },
         (payload) => {
-          console.log('Real-time update for manufacturing_order_steps:', payload);
-          queryClient.invalidateQueries({ queryKey: ['manufacturing_order_steps_with_steps'] });
+          console.log('Real-time update for manufacturing_order_step_data:', payload);
+          queryClient.invalidateQueries({ queryKey: ['manufacturing_order_step_data'] });
           queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
         }
       )

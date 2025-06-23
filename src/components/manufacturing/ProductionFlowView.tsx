@@ -1,12 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Hash, Eye, GitBranch } from 'lucide-react';
+import { Clock, User, Package, Hash, Eye } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import CreateChildOrderDialog from './CreateChildOrderDialog';
-import ReworkOrderDetailsDialog from './ReworkOrderDetailsDialog';
 
 interface ProductionFlowViewProps {
   manufacturingOrders: any[];
@@ -15,11 +13,6 @@ interface ProductionFlowViewProps {
 
 const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFlowViewProps) => {
   const { manufacturingSteps, orderSteps } = useManufacturingSteps();
-  const [selectedOrderForChild, setSelectedOrderForChild] = useState<any>(null);
-  const [selectedStepForChild, setSelectedStepForChild] = useState<any>(null);
-  const [childOrderDialogOpen, setChildOrderDialogOpen] = useState(false);
-  const [reworkOrderDialogOpen, setReworkOrderDialogOpen] = useState(false);
-  const [selectedReworkOrder, setSelectedReworkOrder] = useState<any>(null);
 
   const activeSteps = useMemo(() => {
     return manufacturingSteps
@@ -40,35 +33,15 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
     manufacturingOrders.forEach(order => {
       console.log(`Processing order ${order.order_number}:`, {
         id: order.id,
-        isChild: Boolean(order.parent_order_id),
-        assignedToStep: order.assigned_to_step
+        status: order.status
       });
 
       const orderOrderSteps = orderSteps.filter(step => 
-        String(step.manufacturing_order_id) === String(order.id)
+        String(step.order_id) === String(order.id)
       );
 
       console.log(`Found ${orderOrderSteps.length} order steps for order ${order.order_number}`);
 
-      // Handle child orders (rework orders) differently
-      if (order.parent_order_id && order.assigned_to_step) {
-        // This is a child/rework order - place it in the assigned step
-        const assignedStep = activeSteps.find(step => step.step_order === order.assigned_to_step);
-        if (assignedStep) {
-          console.log(`Placing child order ${order.order_number} in step ${assignedStep.step_name}`);
-          grouped[assignedStep.id].push({
-            ...order,
-            currentStep: null,
-            stepStatus: 'pending',
-            isChildOrder: true,
-            parentOrderNumber: order.special_instructions?.split(' - ')[0]?.replace('Rework from ', ''),
-            reworkFromStep: order.special_instructions?.split(' - Step ')[1]?.split(' ')[0]
-          });
-        }
-        return; // Skip normal processing for child orders
-      }
-
-      // Normal processing for parent orders
       if (orderOrderSteps.length === 0) {
         // No steps created yet - place in first step
         if (activeSteps[0]) {
@@ -77,33 +50,30 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
             ...order,
             currentStep: null,
             stepStatus: 'not_started',
-            isChildOrder: false,
-            parentOrderNumber: null,
-            reworkFromStep: null
+            assignedWorker: null
           });
         }
       } else {
         // Find the latest step for this order
-        const sortedSteps = orderOrderSteps.sort((a, b) => b.step_order - a.step_order);
+        const sortedSteps = orderOrderSteps.sort((a, b) => {
+          const stepA = activeSteps.find(s => s.step_name === a.step_name);
+          const stepB = activeSteps.find(s => s.step_name === b.step_name);
+          return (stepB?.step_order || 0) - (stepA?.step_order || 0);
+        });
         const latestOrderStep = sortedSteps[0];
 
-        if (latestOrderStep && latestOrderStep.manufacturing_step_id) {
-          const stepId = latestOrderStep.manufacturing_step_id;
+        if (latestOrderStep) {
+          const stepDefinition = activeSteps.find(s => s.step_name === latestOrderStep.step_name);
           
-          if (!grouped[stepId]) {
-            grouped[stepId] = [];
+          if (stepDefinition) {
+            console.log(`Placing order ${order.order_number} in step based on latest order step`);
+            grouped[stepDefinition.id].push({
+              ...order,
+              currentStep: latestOrderStep,
+              stepStatus: latestOrderStep.status,
+              assignedWorker: latestOrderStep.assigned_worker
+            });
           }
-          
-          console.log(`Placing order ${order.order_number} in step based on latest order step`);
-          grouped[stepId].push({
-            ...order,
-            currentStep: latestOrderStep,
-            stepStatus: latestOrderStep.status,
-            assignedWorker: latestOrderStep.workers?.name,
-            isChildOrder: false,
-            parentOrderNumber: null,
-            reworkFromStep: null
-          });
         }
       }
     });
@@ -113,7 +83,7 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
       const step = activeSteps.find(s => s.id === stepId);
       console.log(`Step ${step?.step_name}: ${grouped[stepId].length} orders`);
       grouped[stepId].forEach(order => {
-        console.log(`  - ${order.order_number} (${order.isChildOrder ? 'child' : 'parent'})`);
+        console.log(`  - ${order.order_number}`);
       });
     });
 
@@ -146,34 +116,6 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
     }
   };
 
-  const handleCreateChildOrder = (order: any, step: any) => {
-    setSelectedOrderForChild(order);
-    setSelectedStepForChild(step);
-    setChildOrderDialogOpen(true);
-  };
-
-  const handleChildOrderSuccess = () => {
-    setSelectedOrderForChild(null);
-    setSelectedStepForChild(null);
-  };
-
-  const handleViewDetails = (order: any) => {
-    console.log('handleViewDetails called with:', { 
-      orderNumber: order.order_number, 
-      isChild: order.isChildOrder,
-      parentId: order.parent_order_id 
-    });
-    
-    if (order.isChildOrder || order.parent_order_id) {
-      console.log('Opening rework dialog for:', order.order_number);
-      setSelectedReworkOrder(order);
-      setReworkOrderDialogOpen(true);
-    } else {
-      console.log('Opening regular dialog for:', order.order_number);
-      onViewDetails(order);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex gap-6 overflow-x-auto pb-6">
@@ -199,43 +141,19 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
                   {ordersByStep[step.id]?.map((order) => (
                     <Card 
                       key={order.id} 
-                      className={`bg-white shadow-sm hover:shadow-md transition-all duration-200 border ${
-                        order.isChildOrder ? 'border-l-4 border-l-orange-400 bg-orange-50/30' : 'border-gray-200'
-                      }`}
+                      className="bg-white shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200"
                     >
                       <CardContent className="p-4">
                         <div className="space-y-3">
-                          {/* Header with child order indicator */}
+                          {/* Header */}
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {order.isChildOrder && (
-                                <GitBranch className="h-4 w-4 text-orange-600" />
-                              )}
-                              <span className={`font-bold text-sm ${
-                                order.isChildOrder ? 'text-orange-700' : 'text-blue-700'
-                              }`}>
-                                {order.order_number}
-                              </span>
-                              {order.isChildOrder && (
-                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
-                                  Rework
-                                </Badge>
-                              )}
-                            </div>
+                            <span className="font-bold text-sm text-blue-700">
+                              {order.order_number}
+                            </span>
                             <Badge className={`${getPriorityColor(order.priority)} shadow-sm`}>
                               {order.priority.toUpperCase()}
                             </Badge>
                           </div>
-
-                          {/* Child order source info */}
-                          {order.isChildOrder && order.parentOrderNumber && (
-                            <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
-                              <p className="text-xs text-orange-700">
-                                <strong>From:</strong> {order.parentOrderNumber}
-                                {order.reworkFromStep && ` (Step ${order.reworkFromStep})`}
-                              </p>
-                            </div>
-                          )}
 
                           {/* Product Info */}
                           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
@@ -283,24 +201,11 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
                               size="sm"
                               variant="outline"
                               className="flex-1"
-                              onClick={() => handleViewDetails(order)}
+                              onClick={() => onViewDetails(order)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               Details
                             </Button>
-                            
-                            {/* Allow rework for any parent order that's in progress - no restriction on existing child orders */}
-                            {!order.isChildOrder && order.stepStatus === 'in_progress' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 text-orange-600 border-orange-300 hover:bg-orange-50"
-                                onClick={() => handleCreateChildOrder(order, step)}
-                              >
-                                <GitBranch className="h-4 w-4 mr-1" />
-                                Rework
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -322,34 +227,6 @@ const ProductionFlowView = ({ manufacturingOrders, onViewDetails }: ProductionFl
           </div>
         ))}
       </div>
-
-      {/* Create Child Order Dialog */}
-      <CreateChildOrderDialog
-        isOpen={childOrderDialogOpen}
-        onClose={() => {
-          setChildOrderDialogOpen(false);
-          setSelectedOrderForChild(null);
-          setSelectedStepForChild(null);
-        }}
-        parentOrder={selectedOrderForChild}
-        currentStep={selectedStepForChild}
-        onSuccess={handleChildOrderSuccess}
-      />
-
-      {/* Rework Order Details Dialog */}
-      <ReworkOrderDetailsDialog
-        order={selectedReworkOrder}
-        open={reworkOrderDialogOpen}
-        onOpenChange={(open) => {
-          console.log('Rework dialog state change:', open);
-          setReworkOrderDialogOpen(open);
-          if (!open) {
-            setSelectedReworkOrder(null);
-          }
-        }}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
-      />
     </div>
   );
 };

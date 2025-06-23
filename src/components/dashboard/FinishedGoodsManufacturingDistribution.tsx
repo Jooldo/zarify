@@ -1,258 +1,152 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Factory, Package, Weight, Users, TrendingUp } from 'lucide-react';
+import { Package, User, Clock } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
-
-interface StepDistribution {
-  stepId: string;
-  stepName: string;
-  stepOrder: number;
-  totalQuantity: number | null;
-  totalWeight: number | null;
-  orderCount: number;
-  status: 'in_progress';
-  hasQuantityField: boolean;
-  hasWeightField: boolean;
-  quantityUnit: string | null;
-  weightUnit: string | null;
-}
 
 interface FinishedGoodsManufacturingDistributionProps {
   manufacturingOrders: any[];
-  loading: boolean;
 }
 
-const FinishedGoodsManufacturingDistribution = ({ 
-  manufacturingOrders, 
-  loading 
-}: FinishedGoodsManufacturingDistributionProps) => {
-  const { manufacturingSteps, orderSteps, stepFields, getStepFields } = useManufacturingSteps();
-  const { getStepValue, getStepValues } = useManufacturingStepValues();
+const FinishedGoodsManufacturingDistribution = ({ manufacturingOrders }: FinishedGoodsManufacturingDistributionProps) => {
+  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
 
-  const stepDistribution = useMemo(() => {
-    if (!manufacturingOrders.length || !orderSteps.length || !stepFields.length) {
-      return [];
-    }
+  // Calculate step distribution
+  const stepDistribution = React.useMemo(() => {
+    const distribution: Record<string, {
+      stepName: string;
+      stepOrder: number;
+      orderCount: number;
+      totalQuantity: number;
+      inProgress: number;
+      completed: number;
+      pending: number;
+    }> = {};
 
-    // Filter in-progress manufacturing orders only
-    const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
-    
-    // Group order steps by manufacturing step
-    const stepGroups = new Map<string, any[]>();
-    
+    // Initialize all manufacturing steps
+    manufacturingSteps.forEach(step => {
+      distribution[step.step_name] = {
+        stepName: step.step_name,
+        stepOrder: step.step_order,
+        orderCount: 0,
+        totalQuantity: 0,
+        inProgress: 0,
+        completed: 0,
+        pending: 0,
+      };
+    });
+
+    // Process order steps
     orderSteps.forEach(orderStep => {
-      if (orderStep.status === 'in_progress' && orderStep.manufacturing_steps) {
-        const stepId = orderStep.manufacturing_step_id;
-        if (!stepGroups.has(stepId)) {
-          stepGroups.set(stepId, []);
+      const stepName = orderStep.step_name;
+      if (distribution[stepName]) {
+        distribution[stepName].orderCount += 1;
+        distribution[stepName].totalQuantity += orderStep.quantity_assigned || 0;
+        
+        if (orderStep.status === 'in_progress') {
+          distribution[stepName].inProgress += 1;
+        } else if (orderStep.status === 'completed') {
+          distribution[stepName].completed += 1;
+        } else {
+          distribution[stepName].pending += 1;
         }
-        stepGroups.get(stepId)!.push(orderStep);
       }
     });
 
-    // Calculate distribution for each step
-    const distribution: StepDistribution[] = [];
-    
-    stepGroups.forEach((orderStepsInStep, stepId) => {
-      const manufacturingStep = manufacturingSteps.find(step => step.id === stepId);
-      if (!manufacturingStep) return;
+    return Object.values(distribution).sort((a, b) => a.stepOrder - b.stepOrder);
+  }, [manufacturingSteps, orderSteps]);
 
-      const stepFieldsConfig = getStepFields(stepId);
-      const quantityField = stepFieldsConfig.find(field => 
-        ['quantityAssigned', 'quantity_assigned', 'quantity'].includes(field.field_name)
-      );
-      const weightField = stepFieldsConfig.find(field => 
-        ['rawMaterialWeightAssigned', 'weight_assigned', 'weight'].includes(field.field_name)
-      );
+  const getProgressPercentage = (completed: number, total: number) => {
+    return total > 0 ? Math.round((completed / total) * 100) : 0;
+  };
 
-      let totalQuantity: number | null = null;
-      let totalWeight: number | null = null;
-      const hasQuantityField = !!quantityField;
-      const hasWeightField = !!weightField;
-
-      // Get units from field options
-      const quantityUnit = quantityField?.field_options?.unit || null;
-      const weightUnit = weightField?.field_options?.unit || null;
-
-      // Only calculate totals if fields exist
-      if (hasQuantityField) {
-        totalQuantity = 0;
-        orderStepsInStep.forEach(orderStep => {
-          const quantityValue = getStepValue(orderStep.id, quantityField!.field_id);
-          const quantity = parseFloat(quantityValue) || 0;
-          totalQuantity! += quantity;
-        });
-      }
-
-      if (hasWeightField) {
-        totalWeight = 0;
-        orderStepsInStep.forEach(orderStep => {
-          const weightValue = getStepValue(orderStep.id, weightField!.field_id);
-          const weight = parseFloat(weightValue) || 0;
-          totalWeight! += weight;
-        });
-      }
-
-      distribution.push({
-        stepId,
-        stepName: manufacturingStep.step_name,
-        stepOrder: manufacturingStep.step_order,
-        totalQuantity,
-        totalWeight,
-        orderCount: orderStepsInStep.length,
-        status: 'in_progress',
-        hasQuantityField,
-        hasWeightField,
-        quantityUnit,
-        weightUnit
-      });
-    });
-
-    // Sort by step order
-    return distribution.sort((a, b) => a.stepOrder - b.stepOrder);
-  }, [manufacturingOrders, orderSteps, manufacturingSteps, stepFields, getStepFields, getStepValue]);
-
-  const totalInProgress = useMemo(() => {
-    return stepDistribution.reduce((totals, step) => ({
-      quantity: totals.quantity + (step.totalQuantity || 0),
-      weight: totals.weight + (step.totalWeight || 0),
-      orders: totals.orders + step.orderCount
-    }), { quantity: 0, weight: 0, orders: 0 });
-  }, [stepDistribution]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="animate-pulse space-y-3">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+  const getStepStatusColor = (pending: number, inProgress: number, completed: number) => {
+    const total = pending + inProgress + completed;
+    if (total === 0) return 'bg-gray-500';
+    if (completed === total) return 'bg-green-500';
+    if (inProgress > 0) return 'bg-blue-500';
+    return 'bg-amber-500';
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Summary Card */}
-      <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Factory className="h-5 w-5 text-blue-600" />
-            Manufacturing Progress Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-700">{totalInProgress.quantity}</div>
-              <div className="text-xs text-gray-600">Total Quantity</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-700">{totalInProgress.weight.toFixed(2)}</div>
-              <div className="text-xs text-gray-600">Total Weight</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-700">{totalInProgress.orders}</div>
-              <div className="text-xs text-gray-600">Active Steps</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Step Distribution Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {stepDistribution.map((step, index) => (
-          <Card key={step.stepId} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-gray-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
-                    {step.stepOrder}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {stepDistribution.map((step) => {
+          const total = step.pending + step.inProgress + step.completed;
+          const progressPercentage = getProgressPercentage(step.completed, total);
+          
+          return (
+            <Card key={step.stepName} className="relative overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getStepStatusColor(step.pending, step.inProgress, step.completed)}`} />
+                    <span className="truncate">{step.stepName}</span>
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    Step {step.stepOrder}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Orders</p>
+                      <p className="font-semibold">{step.orderCount}</p>
+                    </div>
                   </div>
-                  <span className="truncate">{step.stepName}</span>
-                </div>
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                  Active
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Quantity */}
-              <div className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-700">Quantity</span>
-                </div>
-                {step.hasQuantityField ? (
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-emerald-800">{step.totalQuantity}</span>
-                    {step.quantityUnit && (
-                      <span className="text-sm text-emerald-600 ml-1">{step.quantityUnit}</span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Quantity</p>
+                      <p className="font-semibold">{step.totalQuantity}</p>
+                    </div>
                   </div>
-                ) : (
-                  <span className="text-sm text-gray-500 italic">Not Applicable</span>
-                )}
-              </div>
-
-              {/* Weight */}
-              <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Weight className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-700">Weight</span>
                 </div>
-                {step.hasWeightField ? (
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-orange-800">{step.totalWeight?.toFixed(2)}</span>
-                    {step.weightUnit && (
-                      <span className="text-sm text-orange-600 ml-1">{step.weightUnit}</span>
-                    )}
+
+                {/* Progress */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{progressPercentage}%</span>
                   </div>
-                ) : (
-                  <span className="text-sm text-gray-500 italic">Not Applicable</span>
-                )}
-              </div>
-
-              {/* Order Count */}
-              <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-700">Orders</span>
+                  <Progress value={progressPercentage} className="h-2" />
                 </div>
-                <span className="text-lg font-bold text-purple-800">{step.orderCount}</span>
-              </div>
 
-              {/* Progress Indicator */}
-              <div className="mt-3 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-3 w-3 text-gray-500" />
-                  <span className="text-xs text-gray-500">
-                    Step {step.stepOrder} of workflow
-                  </span>
+                {/* Status Breakdown */}
+                <div className="flex justify-between text-xs">
+                  <div className="text-center">
+                    <div className="font-semibold text-amber-600">{step.pending}</div>
+                    <div className="text-muted-foreground">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-blue-600">{step.inProgress}</div>
+                    <div className="text-muted-foreground">In Progress</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-green-600">{step.completed}</div>
+                    <div className="text-muted-foreground">Completed</div>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Empty State */}
       {stepDistribution.length === 0 && (
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-8 text-center">
-            <Factory className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Manufacturing Steps</h3>
-            <p className="text-gray-600">There are currently no manufacturing orders in progress.</p>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Manufacturing Steps</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure manufacturing steps to see production distribution
+            </p>
           </CardContent>
         </Card>
       )}

@@ -5,20 +5,20 @@ import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { Tables } from '@/integrations/supabase/types';
 
-export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | null) => {
+export const useStepDetailsData = (step: Tables<'manufacturing_order_step_data'> | null) => {
   const { manufacturingSteps, orderSteps, getStepFields, isLoading: isLoadingStepsData } = useManufacturingSteps();
   const { getStepValue, isLoading: isLoadingValues } = useManufacturingStepValues();
   const { manufacturingOrders } = useManufacturingOrders();
 
   const order = useMemo(() => {
     if (!step) return null;
-    const foundOrder = manufacturingOrders.find(o => o.id === step.manufacturing_order_id) || null;
+    const foundOrder = manufacturingOrders.find(o => o.id === step.order_id) || null;
     return foundOrder;
   }, [step, manufacturingOrders]);
 
   const currentStepDefinition = useMemo(() => {
     if (!step || !manufacturingSteps.length) return null;
-    const foundStep = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
+    const foundStep = manufacturingSteps.find(s => s.step_name === step.step_name);
     return foundStep;
   }, [step, manufacturingSteps]);
 
@@ -46,12 +46,12 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | n
       return [];
     }
 
-    const currentStepDefinition = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
+    const currentStepDefinition = manufacturingSteps.find(s => s.step_name === step.step_name);
     if (!currentStepDefinition) {
       return [];
     }
 
-    const allOrderStepsForOrder = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
+    const allOrderStepsForOrder = orderSteps.filter(os => String(os.order_id) === String(order.id));
 
     const allStepDefinitions = manufacturingSteps
       .slice()
@@ -61,7 +61,7 @@ export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | n
     const previousStepDefinitions = allStepDefinitions.filter(def => Number(def.step_order) < currentStepOrder);
 
     const result = previousStepDefinitions.map(prevStepDef => {
-      const orderStep = allOrderStepsForOrder.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
+      const orderStep = allOrderStepsForOrder.find(os => os.step_name === prevStepDef.step_name);
 
       if (!orderStep) {
         return {
