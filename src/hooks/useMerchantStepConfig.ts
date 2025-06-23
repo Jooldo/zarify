@@ -109,24 +109,39 @@ export const useMerchantStepConfig = () => {
 
       if (merchantError) throw merchantError;
 
-      // Use upsert with conflict resolution to prevent duplicate key errors
-      const { data, error } = await supabase
+      // First try to update existing record
+      const { data: updateResult, error: updateError } = await supabase
         .from('merchant_step_field_config')
-        .upsert({
-          merchant_id: merchantId,
-          step_name: updateData.step_name,
-          field_key: updateData.field_key,
+        .update({
           is_visible: updateData.is_visible,
           unit: updateData.unit,
-        }, {
-          onConflict: 'merchant_id,step_name,field_key',
-          ignoreDuplicates: false
         })
+        .eq('merchant_id', merchantId)
+        .eq('step_name', updateData.step_name)
+        .eq('field_key', updateData.field_key)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      // If no existing record was updated, insert a new one
+      if (!updateResult && !updateError) {
+        const { data, error } = await supabase
+          .from('merchant_step_field_config')
+          .insert({
+            merchant_id: merchantId,
+            step_name: updateData.step_name,
+            field_key: updateData.field_key,
+            is_visible: updateData.is_visible,
+            unit: updateData.unit,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      if (updateError) throw updateError;
+      return updateResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchant-step-field-config'] });
