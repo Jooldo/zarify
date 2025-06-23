@@ -31,6 +31,12 @@ export interface StepCardData {
   orderStepData?: any;
   rawMaterials?: any[];
   instanceNumber?: number;
+  flowColorScheme?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    border: string;
+  };
   [key: string]: any;
 }
 
@@ -45,13 +51,53 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   });
   
   const getStatusColor = (status: string) => {
+    if (!data.flowColorScheme) {
+      // Fallback to default colors if no color scheme is provided
+      switch (status.toLowerCase()) {
+        case 'pending': return 'bg-gray-100 text-gray-800';
+        case 'in_progress': return 'bg-blue-100 text-blue-800';
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'blocked': return 'bg-red-100 text-red-800';
+        case 'skipped': return 'bg-yellow-100 text-yellow-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    }
+
+    // Use flow color scheme
+    const { primary, secondary } = data.flowColorScheme;
     switch (status.toLowerCase()) {
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      case 'skipped': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': 
+        return `text-gray-600`;
+      case 'in_progress': 
+        return `text-white`;
+      case 'completed': 
+        return `text-white`;
+      case 'blocked': 
+        return `bg-red-100 text-red-800`;
+      case 'skipped': 
+        return `bg-yellow-100 text-yellow-800`;
+      default: 
+        return `text-gray-600`;
+    }
+  };
+
+  const getStatusBackgroundColor = (status: string) => {
+    if (!data.flowColorScheme) return '';
+    
+    const { primary, secondary, accent } = data.flowColorScheme;
+    switch (status.toLowerCase()) {
+      case 'pending': 
+        return secondary;
+      case 'in_progress': 
+        return primary;
+      case 'completed': 
+        return accent;
+      case 'blocked': 
+        return '#fee2e2';
+      case 'skipped': 
+        return '#fef3c7';
+      default: 
+        return secondary;
     }
   };
 
@@ -114,6 +160,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     hasCallback: !!data.onStartNextStep,
     shouldShowButton: !!nextStepName && !!data.onStartNextStep
   });
+
+  // Get colors from flow color scheme
+  const colors = data.flowColorScheme || {
+    primary: '#3b82f6',
+    secondary: '#dbeafe',
+    accent: '#1d4ed8',
+    border: '#2563eb'
+  };
   
   return (
     <div 
@@ -121,18 +175,35 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       onClick={handleClick}
       style={{ width: '100%', height: '100%' }}
     >
-      <Card className="w-full h-full shadow-md border-l-4 border-l-blue-500">
+      <Card 
+        className="w-full h-full shadow-md border-l-4"
+        style={{ 
+          borderLeftColor: colors.border,
+          backgroundColor: isOrderCard ? colors.secondary : '#ffffff'
+        }}
+      >
         <CardHeader className="pb-2 px-4 pt-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold truncate text-gray-900">{displayStepName}</CardTitle>
+              <CardTitle 
+                className="text-base font-semibold truncate"
+                style={{ color: isOrderCard ? colors.accent : colors.primary }}
+              >
+                {displayStepName}
+              </CardTitle>
               {!isOrderCard && (
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-xs mt-0.5" style={{ color: colors.primary }}>
                   Step {data.stepOrder}
                 </div>
               )}
             </div>
-            <Badge className={`text-xs px-2 py-1 flex-shrink-0 ${getStatusColor(data.status)}`}>
+            <Badge 
+              className={`text-xs px-2 py-1 flex-shrink-0 ${getStatusColor(data.status)}`}
+              style={{ 
+                backgroundColor: getStatusBackgroundColor(data.status),
+                borderColor: colors.border
+              }}
+            >
               {data.status.replace('_', ' ')}
             </Badge>
           </div>
@@ -140,9 +211,18 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         
         <CardContent className="px-4 pb-3 pt-1">
           {/* Order Information Section */}
-          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+          <div 
+            className="rounded-lg p-3 mb-3"
+            style={{ 
+              backgroundColor: isOrderCard ? '#ffffff' : colors.secondary,
+              border: `1px solid ${colors.border}20`
+            }}
+          >
             <div className="flex items-center gap-2 mb-2">
-              <Package className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <Package 
+                className="h-4 w-4 flex-shrink-0" 
+                style={{ color: colors.primary }}
+              />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm text-gray-900 truncate">{data.orderNumber}</div>
                 <div className="text-xs text-gray-600 truncate">{data.productCode || data.productName}</div>
@@ -158,8 +238,11 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             {!isOrderCard && (
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${data.progress}%` }}
+                  className="h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${data.progress}%`,
+                    backgroundColor: colors.primary
+                  }}
                 />
               </div>
             )}
@@ -192,23 +275,44 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               {/* Metrics Row */}
               <div className="flex gap-2 flex-wrap">
                 {data.orderStepData.quantity_assigned > 0 && (
-                  <div className="bg-blue-50 px-2 py-1 rounded text-xs border border-blue-200">
-                    <span className="text-blue-600 font-medium">Qty:</span>
-                    <span className="text-blue-800 ml-1">{data.orderStepData.quantity_assigned}</span>
+                  <div 
+                    className="px-2 py-1 rounded text-xs border"
+                    style={{ 
+                      backgroundColor: `${colors.primary}10`,
+                      borderColor: `${colors.primary}30`,
+                      color: colors.accent
+                    }}
+                  >
+                    <span className="font-medium">Qty:</span>
+                    <span className="ml-1">{data.orderStepData.quantity_assigned}</span>
                   </div>
                 )}
                 
                 {data.orderStepData.weight_assigned > 0 && (
-                  <div className="bg-purple-50 px-2 py-1 rounded text-xs border border-purple-200">
-                    <span className="text-purple-600 font-medium">Wt:</span>
-                    <span className="text-purple-800 ml-1">{data.orderStepData.weight_assigned}g</span>
+                  <div 
+                    className="px-2 py-1 rounded text-xs border"
+                    style={{ 
+                      backgroundColor: `${colors.primary}10`,
+                      borderColor: `${colors.primary}30`,
+                      color: colors.accent
+                    }}
+                  >
+                    <span className="font-medium">Wt:</span>
+                    <span className="ml-1">{data.orderStepData.weight_assigned}g</span>
                   </div>
                 )}
                 
                 {data.orderStepData.purity > 0 && (
-                  <div className="bg-amber-50 px-2 py-1 rounded text-xs border border-amber-200">
-                    <span className="text-amber-600 font-medium">Purity:</span>
-                    <span className="text-amber-800 ml-1">{data.orderStepData.purity}%</span>
+                  <div 
+                    className="px-2 py-1 rounded text-xs border"
+                    style={{ 
+                      backgroundColor: `${colors.primary}10`,
+                      borderColor: `${colors.primary}30`,
+                      color: colors.accent
+                    }}
+                  >
+                    <span className="font-medium">Purity:</span>
+                    <span className="ml-1">{data.orderStepData.purity}%</span>
                   </div>
                 )}
               </div>
@@ -222,7 +326,20 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNextStep}
-                className="w-full flex items-center justify-center gap-2 h-8 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                className="w-full flex items-center justify-center gap-2 h-8 text-xs font-medium"
+                style={{
+                  borderColor: colors.border,
+                  color: colors.primary,
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = colors.secondary;
+                  e.currentTarget.style.color = colors.accent;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = colors.primary;
+                }}
               >
                 <Play className="h-3 w-3" />
                 Start {nextStepName}
@@ -236,12 +353,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       <Handle 
         type="target" 
         position={Position.Top} 
-        className="w-3 h-3 bg-gray-400 border-2 border-white" 
+        className="w-3 h-3 border-2 border-white" 
+        style={{ backgroundColor: colors.primary }}
       />
       <Handle 
         type="source" 
         position={Position.Bottom} 
-        className="w-3 h-3 bg-gray-400 border-2 border-white"
+        className="w-3 h-3 border-2 border-white"
+        style={{ backgroundColor: colors.primary }}
       />
     </div>
   );
