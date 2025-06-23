@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ManufacturingOrderStepData {
@@ -8,6 +7,7 @@ export interface ManufacturingOrderStepData {
   step_name: string;
   instance_id?: string;
   instance_number?: number;
+  parent_instance_id?: string; // New field for tracking parent relationships
   quantity_assigned?: number;
   quantity_received?: number;
   weight_assigned?: number;
@@ -34,6 +34,7 @@ export interface CreateStepData {
   order_id: string;
   step_name: string;
   instance_number?: number;
+  parent_instance_id?: string; // Add parent reference
   [key: string]: any;
 }
 
@@ -63,6 +64,7 @@ export const createManufacturingOrderStep = async (stepData: CreateStepData): Pr
       order_id: stepData.order_id,
       step_name: stepData.step_name,
       instance_number: instanceNumber,
+      parent_instance_id: stepData.parent_instance_id, // Include parent reference
       ...stepData,
     })
     .select()

@@ -59,12 +59,41 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       return;
     }
 
+    // Find the parent instance ID if creating a child step
+    let parentInstanceId = null;
+    if (sourceInstanceNumber && stepName !== 'Jhalai') {
+      const parentStepName = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)
+        .find(step => {
+          const currentStepIndex = manufacturingSteps
+            .filter(s => s.is_active)
+            .sort((a, b) => a.step_order - b.step_order)
+            .findIndex(s => s.step_name === nextStepName);
+          const stepIndex = manufacturingSteps
+            .filter(s => s.is_active)
+            .sort((a, b) => a.step_order - b.step_order)
+            .findIndex(s => s.step_name === step.step_name);
+          return stepIndex === currentStepIndex - 1;
+        })?.step_name;
+
+      if (parentStepName) {
+        const parentStep = orderSteps.find(step => 
+          step.step_name === parentStepName && 
+          step.instance_number === sourceInstanceNumber &&
+          String(step.order_id) === String(orderId)
+        );
+        parentInstanceId = parentStep?.id;
+      }
+    }
+
     try {
       await createStep({
         manufacturingOrderId: orderId,
         stepName: nextStepName,
         fieldValues: {
-          sourceInstanceNumber: sourceInstanceNumber // Pass the source instance for proper tracking
+          sourceInstanceNumber: sourceInstanceNumber,
+          parent_instance_id: parentInstanceId // Pass the parent instance ID
         }
       });
 
@@ -73,7 +102,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     } catch (error) {
       console.error('Failed to start next step:', error);
     }
-  }, [createStep, manufacturingSteps, refetchSteps]);
+  }, [createStep, manufacturingSteps, refetchSteps, orderSteps]);
 
   // Combine the passed callback with our implementation
   const combinedStartNextStep = useCallback((orderId: string, stepName?: string, sourceInstanceNumber?: number) => {
@@ -154,33 +183,28 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // Order instances properly
+        // Order instances using parent_instance_id relationships when available
         let orderedInstances;
         
         if (stepIndex === 0) {
-          // First step: just sort by instance number
+          // First step: sort by instance number
           orderedInstances = stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
         } else {
-          // Subsequent steps: group by source instance relationship
+          // Subsequent steps: try to use parent_instance_id relationships first
           const previousStep = activeSteps[stepIndex - 1];
           const previousInstances = stepsByName[previousStep.step_name] || [];
           
-          // Create groups based on source relationship
+          // Create groups based on parent_instance_id if available
           const instanceGroups: any[][] = [];
           const ungroupedInstances: any[] = [];
           
-          // For each previous instance, find its children in current step
+          // For each previous instance, find its children using parent_instance_id
           previousInstances
             .sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
             .forEach(prevInstance => {
-              const children = stepInstances.filter(currentInstance => {
-                // Check if this instance was created from the previous instance
-                if (currentInstance.notes && currentInstance.notes.includes('Created from instance #')) {
-                  const sourceInstanceNumber = parseInt(currentInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '0');
-                  return sourceInstanceNumber === (prevInstance.instance_number || 1);
-                }
-                return false;
-              });
+              const children = stepInstances.filter(currentInstance => 
+                currentInstance.parent_instance_id === prevInstance.id
+              );
               
               if (children.length > 0) {
                 // Sort children by instance number
@@ -189,7 +213,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               }
             });
           
-          // Find instances without clear parent relationship
+          // Find instances without parent_instance_id relationship
           stepInstances.forEach(instance => {
             const hasParent = instanceGroups.some(group => 
               group.some(child => child.id === instance.id)
@@ -199,7 +223,32 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           });
           
-          // Combine grouped and ungrouped instances
+          // Fallback to notes-based grouping for ungrouped instances
+          if (ungroupedInstances.length > 0) {
+            previousInstances
+              .sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
+              .forEach(prevInstance => {
+                const children = ungroupedInstances.filter(currentInstance => {
+                  if (currentInstance.notes && currentInstance.notes.includes('Created from instance #')) {
+                    const sourceInstanceNumber = parseInt(currentInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '0');
+                    return sourceInstanceNumber === (prevInstance.instance_number || 1);
+                  }
+                  return false;
+                });
+                
+                if (children.length > 0) {
+                  children.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
+                  instanceGroups.push(children);
+                  // Remove these from ungrouped
+                  children.forEach(child => {
+                    const index = ungroupedInstances.indexOf(child);
+                    if (index > -1) ungroupedInstances.splice(index, 1);
+                  });
+                }
+              });
+          }
+          
+          // Combine grouped and remaining ungrouped instances
           orderedInstances = [
             ...instanceGroups.flat(),
             ...ungroupedInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
@@ -242,7 +291,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges with proper source targeting
+          // Create edges with proper source targeting using parent_instance_id when available
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -253,11 +302,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             
             if (previousInstances.length > 0) {
               let sourceInstance = null;
-              if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
+              
+              // First try to use parent_instance_id
+              if (orderStep.parent_instance_id) {
+                sourceInstance = previousInstances.find(inst => inst.id === orderStep.parent_instance_id);
+              }
+              
+              // Fallback to notes-based relationship
+              if (!sourceInstance && orderStep.notes && orderStep.notes.includes('Created from instance #')) {
                 const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
                 sourceInstance = previousInstances.find(inst => inst.instance_number === sourceInstanceNumber);
               }
               
+              // Final fallback to most recent completed/in-progress instance
               if (!sourceInstance) {
                 const sortedPreviousInstances = previousInstances
                   .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
