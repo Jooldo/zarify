@@ -16,58 +16,6 @@ const nodeTypes = {
   manufacturingStep: ManufacturingStepCard,
 };
 
-// Color schemes for different manufacturing order flows
-const flowColorSchemes = [
-  {
-    primary: '#3b82f6', // blue
-    secondary: '#dbeafe',
-    accent: '#1d4ed8',
-    border: '#2563eb'
-  },
-  {
-    primary: '#10b981', // emerald
-    secondary: '#d1fae5',
-    accent: '#047857',
-    border: '#059669'
-  },
-  {
-    primary: '#8b5cf6', // violet
-    secondary: '#ede9fe',
-    accent: '#6d28d9',
-    border: '#7c3aed'
-  },
-  {
-    primary: '#f59e0b', // amber
-    secondary: '#fef3c7',
-    accent: '#d97706',
-    border: '#f59e0b'
-  },
-  {
-    primary: '#ef4444', // red
-    secondary: '#fee2e2',
-    accent: '#dc2626',
-    border: '#ef4444'
-  },
-  {
-    primary: '#06b6d4', // cyan
-    secondary: '#cffafe',
-    accent: '#0891b2',
-    border: '#06b6d4'
-  },
-  {
-    primary: '#84cc16', // lime
-    secondary: '#ecfccb',
-    accent: '#65a30d',
-    border: '#84cc16'
-  },
-  {
-    primary: '#ec4899', // pink
-    secondary: '#fce7f3',
-    accent: '#be185d',
-    border: '#ec4899'
-  }
-];
-
 interface ReactFlowViewProps {
   manufacturingOrders: ManufacturingOrder[];
   onViewDetails?: (order: ManufacturingOrder) => void;
@@ -142,7 +90,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants
+    // Layout constants remain the same
     const ORDER_SPACING = 1200;
     const VERTICAL_SPACING = 300;
     const PARALLEL_INSTANCE_SPACING = 650;
@@ -152,9 +100,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
     manufacturingOrders.forEach((order, orderIndex) => {
       const orderY = START_Y + (orderIndex * ORDER_SPACING);
-      
-      // Assign color scheme to this order's flow
-      const colorScheme = flowColorSchemes[orderIndex % flowColorSchemes.length];
       
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
@@ -183,7 +128,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         priority: order.priority,
         dueDate: order.due_date,
         isJhalaiStep: false,
-        flowColorScheme: colorScheme, // Add color scheme to data
       };
 
       const orderNode: Node = {
@@ -191,12 +135,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         type: 'manufacturingStep',
         position: { x: 100, y: orderY },
         data: orderNodeData,
-        style: { 
-          width: CARD_WIDTH, 
-          height: CARD_HEIGHT,
-          border: `3px solid ${colorScheme.border}`,
-          boxShadow: `0 4px 8px ${colorScheme.primary}20`
-        },
+        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
@@ -291,7 +230,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             isJhalaiStep: false,
             instanceNumber: orderStep?.instance_number || 1,
             orderStepData: orderStep,
-            flowColorScheme: colorScheme, // Add color scheme to step data
           };
 
           const stepNode: Node = {
@@ -299,17 +237,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             type: 'manufacturingStep',
             position: { x: instanceX, y: currentY },
             data: stepNodeData,
-            style: { 
-              width: CARD_WIDTH, 
-              height: CARD_HEIGHT,
-              border: `2px solid ${colorScheme.border}`,
-              boxShadow: `0 2px 4px ${colorScheme.primary}15`
-            },
+            style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation with color scheme
+          // Enhanced edge creation remains the same
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -348,9 +281,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
           const isAnimated = orderStep?.status === 'in_progress';
-          const strokeColor = orderStep?.status === 'completed' ? colorScheme.accent : 
-                             orderStep?.status === 'in_progress' ? colorScheme.primary : 
-                             `${colorScheme.primary}60`; // 60% opacity for pending
+          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
+                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
 
           edges.push({
             id: edgeId,
@@ -360,7 +292,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             animated: isAnimated,
             style: {
               stroke: strokeColor,
-              strokeWidth: orderStep?.status === 'completed' || orderStep?.status === 'in_progress' ? 3 : 2,
+              strokeWidth: 2,
             },
           });
         });
