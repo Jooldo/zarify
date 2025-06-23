@@ -18,56 +18,56 @@ const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Map current route to active tab
+  // Map current route to active tab (adjusted for /app prefix)
   const getActiveTabFromRoute = (pathname: string) => {
-    if (pathname === '/') return 'dashboard';
-    if (pathname === '/orders') return 'orders';
-    if (pathname === '/inventory') return 'fg-inventory';
-    if (pathname === '/config') return 'config';
-    if (pathname === '/users') return 'customers';
-    if (pathname === '/activity') return 'activity';
-    if (pathname === '/settings/merchant') return 'merchant-configurations';
-    if (pathname === '/settings/general') return 'general-settings';
-    if (pathname === '/catalogue') return 'catalogue-management';
+    if (pathname === '/app' || pathname === '/app/') return 'dashboard';
+    if (pathname === '/app/orders') return 'orders';
+    if (pathname === '/app/inventory') return 'fg-inventory';
+    if (pathname === '/app/config') return 'config';
+    if (pathname === '/app/users') return 'customers';
+    if (pathname === '/app/activity') return 'activity';
+    if (pathname === '/app/settings/merchant') return 'merchant-configurations';
+    if (pathname === '/app/settings/general') return 'general-settings';
+    if (pathname === '/app/catalogue') return 'catalogue-management';
     return 'dashboard';
   };
 
-  // Handle tab changes by navigating to appropriate routes
+  // Handle tab changes by navigating to appropriate routes (with /app prefix)
   const handleTabChange = (tab: string) => {
     switch (tab) {
       case 'dashboard':
-        navigate('/');
+        navigate('/app');
         break;
       case 'orders':
-        navigate('/orders');
+        navigate('/app/orders');
         break;
       case 'fg-inventory':
       case 'rm-inventory':
-        navigate('/inventory');
+        navigate('/app/inventory');
         break;
       case 'config':
-        navigate('/config');
+        navigate('/app/config');
         break;
       case 'customers':
       case 'suppliers':
       case 'workers':
       case 'roles':
-        navigate('/users');
+        navigate('/app/users');
         break;
       case 'activity':
-        navigate('/activity');
+        navigate('/app/activity');
         break;
       case 'merchant-configurations':
-        navigate('/settings/merchant');
+        navigate('/app/settings/merchant');
         break;
       case 'general-settings':
-        navigate('/settings/general');
+        navigate('/app/settings/general');
         break;
       case 'catalogue-management':
-        navigate('/catalogue');
+        navigate('/app/catalogue');
         break;
       default:
-        navigate('/');
+        navigate('/app');
     }
   };
 
