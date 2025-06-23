@@ -1,11 +1,9 @@
-
 import { useState, useMemo, useEffect } from 'react';
 import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders';
 import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
 import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
 import { useInvoices } from '@/hooks/useInvoices';
 import { startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns';
-import PageHeader from '@/components/ui/PageHeader';
 import OrdersHeader from './orders/OrdersHeader';
 import OrdersTable from './orders/OrdersTable';
 import OrdersStatsHeader from './orders/OrdersStatsHeader';
@@ -300,12 +298,7 @@ const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
   }), [flattenedOrders, searchTerm, filters, getOverallOrderStatus, getStockAvailable, orders]);
 
   return (
-    <div className="p-6 space-y-6">
-      <PageHeader 
-        title="Orders Management" 
-        description="Manage customer orders, track fulfillment status, and monitor delivery schedules"
-      />
-      
+    <div className="space-y-4">
       <OrdersStatsHeader orderStats={orderStats} />
       
       <OrdersHeader 

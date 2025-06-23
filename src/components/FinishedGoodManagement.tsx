@@ -1,8 +1,9 @@
 
-import { Package } from 'lucide-react';
+import { Package, Factory, Table, Kanban, Workflow } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigation } from '@/contexts/NavigationContext';
 import FinishedGoodsInventory from './FinishedGoodsInventory';
+import ManufacturingDashboard from './manufacturing/ManufacturingDashboard';
 
 interface FinishedGoodManagementProps {
   activeTab: string;
@@ -16,6 +17,8 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
     switch (activeTab) {
       case 'fg-inventory':
         return <FinishedGoodsInventory />;
+      case 'fg-manufacturing':
+        return <ManufacturingDashboard />;
       default:
         return <FinishedGoodsInventory />;
     }
@@ -32,17 +35,21 @@ const FinishedGoodManagement = ({ activeTab, onTabChange }: FinishedGoodManageme
                 Finished Good Management
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage inventory
+                Manage inventory and manufacturing
               </p>
             </div>
           </div>
 
           {showTabNavigation && (
             <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-1 bg-muted h-12">
+              <TabsList className="grid w-full grid-cols-2 bg-muted h-12">
                 <TabsTrigger value="fg-inventory" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Package className="h-4 w-4" />
                   Inventory
+                </TabsTrigger>
+                <TabsTrigger value="fg-manufacturing" className="flex items-center gap-2 data-[state=active]:bg-background">
+                  <Factory className="h-4 w-4" />
+                  Manufacturing
                 </TabsTrigger>
               </TabsList>
             </Tabs>

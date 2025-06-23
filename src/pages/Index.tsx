@@ -1,126 +1,207 @@
 
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import AppSidebar from '@/components/AppSidebar';
-import { NavigationProvider } from '@/contexts/NavigationContext';
-import UnifiedDashboard from '@/components/dashboard/UnifiedDashboard';
-import OrdersTab from '@/components/OrdersTab';
-import InventoryTab from '@/components/InventoryTab';
-import FinishedGoodsInventory from '@/components/FinishedGoodsInventory';
-import RawMaterialInventory from '@/components/RawMaterialInventory';
-import FinishedGoodManagement from '@/components/FinishedGoodManagement';
-import ProcurementRequestsSection from '@/components/ProcurementRequestsSection';
-import ProductConfigTab from '@/components/ProductConfigTab';
-import UsersTab from '@/components/UsersTab';
-import ActivityLogsTab from '@/components/ActivityLogsTab';
-import MerchantConfigurations from '@/components/settings/MerchantConfigurations';
-import GeneralSettings from '@/components/settings/GeneralSettings';
-import CatalogueManagement from '@/components/catalogue/CatalogueManagement';
-import DevelopmentDashboard from '@/components/development/DevelopmentDashboard';
-import NotFound from '@/pages/NotFound';
+import React, { useState } from "react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/AppSidebar";
+import OrdersTab, { OrderFilters } from "@/components/OrdersTab";
+import UsersTab from "@/components/UsersTab";
+import ActivityLogsTab from "@/components/ActivityLogsTab";
+import VisualDashboard from "@/components/dashboard/VisualDashboard";
+import RawMaterialManagement from "@/components/RawMaterialManagement";
+import FinishedGoodManagement from "@/components/FinishedGoodManagement";
+import ManufacturingSettings from "@/components/manufacturing/config/ManufacturingSettings";
+import MerchantConfigurations from "@/components/settings/MerchantConfigurations";
+import GeneralSettings from "@/components/settings/GeneralSettings";
+import CatalogueManagement from "@/components/catalogue/CatalogueManagement";
 
 const Index = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [initialOrderFilters, setInitialOrderFilters] = useState<OrderFilters | null>(null);
 
-  // Map current route to active tab (adjusted for /app prefix)
-  const getActiveTabFromRoute = (pathname: string) => {
-    if (pathname === '/app' || pathname === '/app/') return 'dashboard';
-    if (pathname === '/app/orders') return 'orders';
-    if (pathname === '/app/inventory') return 'fg-inventory';
-    if (pathname === '/app/inventory/finished-goods') return 'fg-inventory';
-    if (pathname === '/app/inventory/raw-materials') return 'rm-inventory';
-    if (pathname === '/app/manufacturing') return 'fg-manufacturing';
-    if (pathname === '/app/procurement') return 'rm-procurement';
-    if (pathname === '/app/config') return 'config';
-    if (pathname === '/app/users') return 'customers';
-    if (pathname === '/app/activity') return 'activity';
-    if (pathname === '/app/settings/merchant') return 'merchant-configurations';
-    if (pathname === '/app/settings/general') return 'general-settings';
-    if (pathname === '/app/catalogue') return 'catalogue-management';
-    if (pathname === '/app/dev') return 'development';
-    return 'dashboard';
+  const handleNavigateToTab = (tab: string, filters?: Partial<OrderFilters>) => {
+    // Handle removed tabs by redirecting to appropriate alternatives
+    if (tab === 'rm-home') {
+      tab = 'rm-inventory'; // Redirect rm-home to rm-inventory
+    }
+    if (tab === 'fg-analytics') {
+      tab = 'fg-inventory'; // Redirect fg-analytics to fg-inventory
+    }
+    
+    if (tab === 'orders' && filters) {
+      const newFilters: OrderFilters = {
+        customer: '', orderStatus: '', suborderStatus: '', category: '', subcategory: '',
+        dateRange: '', minAmount: '', maxAmount: '', hasDeliveryDate: false,
+        overdueDelivery: false, lowStock: false, stockAvailable: false,
+        expectedDeliveryFrom: null, expectedDeliveryTo: null, expectedDeliveryRange: '',
+        ...filters
+      };
+      setInitialOrderFilters(newFilters);
+    } else {
+      setInitialOrderFilters(null);
+    }
+    setActiveTab(tab);
   };
 
-  // Handle tab changes by navigating to appropriate routes (with /app prefix)
-  const handleTabChange = (tab: string) => {
-    switch (tab) {
-      case 'dashboard':
-        navigate('/app');
-        break;
-      case 'orders':
-        navigate('/app/orders');
-        break;
-      case 'fg-inventory':
-        navigate('/app/inventory/finished-goods');
-        break;
-      case 'rm-inventory':
-        navigate('/app/inventory/raw-materials');
-        break;
-      case 'fg-manufacturing':
-        navigate('/app/manufacturing');
-        break;
-      case 'rm-procurement':
-        navigate('/app/procurement');
-        break;
-      case 'config':
-        navigate('/app/config');
-        break;
-      case 'customers':
-      case 'suppliers':
-      case 'workers':
-      case 'roles':
-        navigate('/app/users');
-        break;
-      case 'activity':
-        navigate('/app/activity');
-        break;
-      case 'merchant-configurations':
-        navigate('/app/settings/merchant');
-        break;
-      case 'general-settings':
-        navigate('/app/settings/general');
-        break;
-      case 'catalogue-management':
-        navigate('/app/catalogue');
-        break;
-      case 'development':
-        navigate('/app/dev');
-        break;
+  const handleFiltersConsumed = () => {
+    setInitialOrderFilters(null);
+  };
+
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return "";
+      case "orders":
+        return "Orders";
+      case "rm-inventory":
+        return "Raw Material Inventory";
+      case "rm-procurement":
+        return "Raw Material Procurement";
+      case "fg-inventory":
+        return "Finished Goods Inventory";
+      case "fg-manufacturing":
+        return "Finished Goods Manufacturing";
+      case "customers":
+        return "Customers";
+      case "suppliers":
+        return "Suppliers";
+      case "workers":
+        return "Workers";
+      case "roles":
+        return "User Roles";
+      case "activity":
+        return "Activity Logs";
+      case "catalogue-management":
+        return "Product Catalogues";
+      case "merchant-configurations":
+        return "Merchant Configurations";
+      case "general-settings":
+        return "General Settings";
       default:
-        navigate('/app');
+        return "";
     }
   };
 
-  const activeTab = getActiveTabFromRoute(location.pathname);
+  const isRawMaterialTab = () => {
+    return ['rm-inventory', 'rm-procurement'].includes(activeTab);
+  };
+
+  const isFinishedGoodTab = () => {
+    return ['fg-inventory', 'fg-manufacturing'].includes(activeTab);
+  };
+
+  const isUsersTab = () => {
+    // Updated to include 'roles' explicitly
+    const userTabs = ['users', 'customers', 'suppliers', 'workers', 'roles'];
+    const isUserTab = userTabs.includes(activeTab);
+    console.log('🔍 Checking if is users tab:', { activeTab, userTabs, isUserTab });
+    return isUserTab;
+  };
+
+  const isSettingsTab = () => {
+    return ['merchant-configurations', 'general-settings'].includes(activeTab);
+  };
+
+  const pageTitle = getPageTitle();
+
+  console.log('🎯 Index component state:', { activeTab, pageTitle, isUsersTab: isUsersTab() });
 
   return (
-    <SidebarProvider>
-      <NavigationProvider>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-          <main className="flex-1 bg-gray-50">
-            <Routes>
-              <Route index element={<div className="p-6"><UnifiedDashboard /></div>} />
-              <Route path="orders" element={<OrdersTab />} />
-              <Route path="inventory" element={<div className="p-6"><InventoryTab /></div>} />
-              <Route path="inventory/finished-goods" element={<div className="p-6"><FinishedGoodsInventory /></div>} />
-              <Route path="inventory/raw-materials" element={<div className="p-6"><RawMaterialInventory /></div>} />
-              <Route path="manufacturing" element={<div className="p-6"><FinishedGoodManagement activeTab="fg-manufacturing" onTabChange={handleTabChange} /></div>} />
-              <Route path="procurement" element={<div className="p-6"><ProcurementRequestsSection /></div>} />
-              <Route path="config" element={<div className="p-6"><ProductConfigTab /></div>} />
-              <Route path="users" element={<div className="p-6"><UsersTab activeTab="customers" onTabChange={() => {}} /></div>} />
-              <Route path="activity" element={<div className="p-6"><ActivityLogsTab /></div>} />
-              <Route path="settings/merchant" element={<div className="p-6"><MerchantConfigurations /></div>} />
-              <Route path="settings/general" element={<div className="p-6"><GeneralSettings /></div>} />
-              <Route path="catalogue" element={<div className="p-6"><CatalogueManagement /></div>} />
-              <Route path="dev" element={<div className="p-6"><DevelopmentDashboard /></div>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
+    <div className="min-h-screen bg-gray-50">
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex w-full min-h-screen">
+          <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
+
+          <SidebarInset className="overflow-auto">
+            {/* Header with Sidebar Toggle */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              {pageTitle && (
+                <div className="flex items-center gap-2 px-3">
+                  <h1 className="text-lg font-semibold">{pageTitle}</h1>
+                </div>
+              )}
+            </header>
+
+            {/* Raw Material Management - Full width with its own layout */}
+            {isRawMaterialTab() && (
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <RawMaterialManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {/* Finished Good Management - Full width with its own layout */}
+            {isFinishedGoodTab() && (
+              <Tabs value={activeTab} className="w-full">
+                <TabsContent value={activeTab} className="space-y-0 mt-0">
+                  <div className="px-4 sm:px-6 lg:px-8">
+                    <FinishedGoodManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {/* Users Management - Full width with its own layout */}
+            {isUsersTab() && (
+              <div className="px-4 sm:px-6 lg:px-8">
+                <UsersTab 
+                  activeTab={activeTab === 'users' ? 'customers' : activeTab} 
+                  onTabChange={handleNavigateToTab} 
+                />
+              </div>
+            )}
+
+            {/* Settings Management - Full width with its own layout */}
+            {isSettingsTab() && (
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
+                {activeTab === 'merchant-configurations' && (
+                  <MerchantConfigurations />
+                )}
+                {activeTab === 'general-settings' && (
+                  <GeneralSettings />
+                )}
+              </div>
+            )}
+
+            {/* Other tabs with optimized layout */}
+            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && (
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
+                {/* Main Content */}
+                <Tabs value={activeTab} className="w-full">
+                  <TabsContent value="dashboard" className="space-y-6 mt-0">
+                    <VisualDashboard onNavigateToTab={handleNavigateToTab} />
+                  </TabsContent>
+
+                  <TabsContent value="orders" className="space-y-6 mt-0">
+                    <OrdersTab
+                      initialFilters={initialOrderFilters}
+                      onFiltersConsumed={handleFiltersConsumed}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="catalogue-management" className="space-y-6 mt-0">
+                    <CatalogueManagement />
+                  </TabsContent>
+
+                  <TabsContent value="activity" className="space-y-6 mt-0">
+                    <ActivityLogsTab />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+          </SidebarInset>
         </div>
-      </NavigationProvider>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 };
 
