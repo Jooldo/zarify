@@ -10,6 +10,7 @@ import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Factory, Package, Maximize, Minimize } from 'lucide-react';
+import { calculateHierarchicalLayout, DEFAULT_LAYOUT_CONFIG } from '@/utils/hierarchicalLayoutUtils';
 
 // Custom node types
 const nodeTypes = {
@@ -128,27 +129,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Enhanced layout constants for better center alignment and no overlap
-    const CARD_WIDTH = 380;
-    const CARD_HEIGHT = 240;
-    const ORDER_Y_SPACING = 900; // Increased for better separation
-    const STEP_Y_SPACING = 320;  // Increased for better separation
-    const INSTANCE_X_SPACING = 420;
-    const ORDER_CARD_X = 50;     // Fixed position for order cards
-    const STEPS_START_X = 500;   // Start position for step cards - better separation
-
     const activeSteps = manufacturingSteps
       .filter(step => step.is_active)
       .sort((a, b) => a.step_order - b.step_order);
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      const orderY = 50 + (orderIndex * ORDER_Y_SPACING);
-      
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
 
-      // Create manufacturing order node - fixed position for center alignment
+      // Create manufacturing order node
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -168,14 +158,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: ORDER_CARD_X, y: orderY },
+        position: { x: 0, y: 0 }, // Will be positioned by layout algorithm
         data: orderNodeData,
-        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
+        style: { width: DEFAULT_LAYOUT_CONFIG.nodeWidth, height: DEFAULT_LAYOUT_CONFIG.nodeHeight },
       };
 
       nodes.push(orderNode);
 
-      // Process each step type with improved positioning
+      // Process each step type
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = thisOrderSteps.filter(orderStep => orderStep.step_name === step.step_name);
         
@@ -186,12 +176,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         // Sort instances by instance number
         stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-        const stepY = orderY; // Same Y as order for horizontal alignment
-
-        // Position instances horizontally with consistent spacing from order card
+        // Create nodes for each instance
         stepInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = STEPS_START_X + (stepIndex * INSTANCE_X_SPACING) + (instanceIndex * 50); // Small offset for multiple instances
-          
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
             stepOrder: step.step_order,
@@ -216,14 +202,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           const stepNode: Node = {
             id: stepNodeId,
             type: 'manufacturingStep',
-            position: { x: instanceX, y: stepY },
+            position: { x: 0, y: 0 }, // Will be positioned by layout algorithm
             data: stepNodeData,
-            style: { width: CARD_WIDTH, height: CARD_HEIGHT },
+            style: { width: DEFAULT_LAYOUT_CONFIG.nodeWidth, height: DEFAULT_LAYOUT_CONFIG.nodeHeight },
           };
 
           nodes.push(stepNode);
 
-          // Create edges with step-coherent styling
+          // Create edges with hierarchical relationships
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -261,7 +247,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           // Step-coherent edge styling
           const baseColor = getStepColor(step.step_name);
           let strokeColor = baseColor;
-          let strokeWidth = 2;
+          let strokeWidth = 3;
           let strokeDasharray = undefined;
           
           switch (orderStep?.status) {
@@ -304,8 +290,19 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       });
     });
 
-    console.log('Generated nodes:', nodes.length, 'edges:', edges.length);
-    return { nodes, edges };
+    console.log('Generated nodes before layout:', nodes.length, 'edges:', edges.length);
+    
+    // Apply hierarchical layout
+    const layoutResult = calculateHierarchicalLayout(nodes, edges, {
+      ...DEFAULT_LAYOUT_CONFIG,
+      horizontalSpacing: 120,
+      verticalSpacing: 350,
+      rootX: 50,
+      rootY: 50,
+    });
+
+    console.log('Generated nodes after layout:', layoutResult.nodes.length, 'edges:', layoutResult.edges.length);
+    return layoutResult;
   }, [manufacturingOrders, manufacturingSteps, orderSteps]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -444,6 +441,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             fitView
             attributionPosition="bottom-left"
             proOptions={{ hideAttribution: true }}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
           >
             <Background color="#e5e7eb" gap={20} />
             <Controls />
