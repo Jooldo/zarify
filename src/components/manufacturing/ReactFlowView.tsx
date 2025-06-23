@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -91,12 +90,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Dynamic layout constants with increased spacing for better parent-child alignment
+    // Tree layout constants for dynamic positioning
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const BASE_PARALLEL_INSTANCE_SPACING = 800; // Increased from 600 for better parent-child alignment
-    const JHALAI_INSTANCE_SPACING = 1000; // Further increased for first step
-    const CHILD_SPACING_MULTIPLIER = 1.2; // Reduced multiplier as base spacing is now larger
+    const INSTANCE_HORIZONTAL_SPACING = 600; // Base spacing between instances
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -117,50 +114,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Calculate child step counts for dynamic spacing
-      const stepChildCounts = new Map<string, number>();
       const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
-      activeSteps.forEach((step, stepIndex) => {
-        if (stepIndex < activeSteps.length - 1) {
-          const nextStep = activeSteps[stepIndex + 1];
-          const nextStepInstances = stepsByName[nextStep.step_name] || [];
-          stepChildCounts.set(step.step_name, nextStepInstances.length);
-        } else {
-          stepChildCounts.set(step.step_name, 0);
-        }
-      });
-
-      // Create manufacturing order node
-      const orderNodeData: StepCardData = {
-        stepName: 'Manufacturing Order',
-        stepOrder: 0,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        productName: order.product_name,
-        status: order.status as any,
-        progress: 0,
-        productCode: order.product_configs?.product_code,
-        quantityRequired: order.quantity_required,
-        priority: order.priority,
-        dueDate: order.due_date,
-        isJhalaiStep: false,
-      };
-
-      const orderNode: Node = {
-        id: `order-${order.id}`,
-        type: 'manufacturingStep',
-        position: { x: 100, y: orderY },
-        data: orderNodeData,
-        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
-      };
-
-      nodes.push(orderNode);
-
-      // Create step nodes with improved spacing for parent-child alignment
-      let currentY = orderY + BASE_VERTICAL_SPACING;
+      // First pass: Calculate positions for all step instances
+      const stepPositions = new Map<string, { instances: any[], centerX: number, y: number }>();
       
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = stepsByName[step.step_name] || [];
@@ -168,17 +127,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         if (stepInstances.length === 0) {
           return;
         }
-
-        // Calculate dynamic spacing based on child steps and step type
-        const childCount = stepChildCounts.get(step.step_name) || 0;
-        const hasChildren = childCount > 0;
-        const isFirstStep = stepIndex === 0; // Usually Jhalai
-        
-        // Use increased spacing for better parent-child alignment
-        let baseSpacing = isFirstStep ? JHALAI_INSTANCE_SPACING : BASE_PARALLEL_INSTANCE_SPACING;
-        const dynamicSpacing = hasChildren 
-          ? baseSpacing * CHILD_SPACING_MULTIPLIER
-          : baseSpacing;
 
         // Enhanced ordering logic for instances
         let orderedInstances;
@@ -232,16 +180,125 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with improved spacing and center alignment
+        // Calculate positions for this step's instances
         const instanceCount = orderedInstances.length;
-        const totalWidth = (instanceCount - 1) * dynamicSpacing;
+        const totalWidth = (instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING;
         
-        // Center alignment: calculate starting X position to center the group
-        const centerX = 100 + (CARD_WIDTH / 2); // Center of the order card
-        const startX = centerX - (totalWidth / 2);
+        // For tree-like layout, we'll calculate the center position based on children
+        let centerX: number;
+        
+        if (stepIndex === 0) {
+          // First step positions based on order card center
+          centerX = 100 + (CARD_WIDTH / 2);
+        } else {
+          // For subsequent steps, center based on parent positions
+          const previousStep = activeSteps[stepIndex - 1];
+          const previousPositions = stepPositions.get(previousStep.step_name);
+          
+          if (previousPositions) {
+            centerX = previousPositions.centerX;
+          } else {
+            centerX = 100 + (CARD_WIDTH / 2);
+          }
+        }
 
-        orderedInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = startX + (instanceIndex * dynamicSpacing);
+        const currentY = orderY + BASE_VERTICAL_SPACING + (stepIndex * BASE_VERTICAL_SPACING);
+        
+        stepPositions.set(step.step_name, {
+          instances: orderedInstances,
+          centerX,
+          y: currentY
+        });
+      });
+
+      // Second pass: Adjust parent positions based on children and create nodes
+      const adjustedPositions = new Map<string, { centerX: number, y: number }>();
+      
+      // Work backwards from the last step to adjust parent positions
+      for (let stepIndex = activeSteps.length - 1; stepIndex >= 0; stepIndex--) {
+        const step = activeSteps[stepIndex];
+        const stepData = stepPositions.get(step.step_name);
+        
+        if (!stepData) continue;
+
+        let finalCenterX = stepData.centerX;
+
+        // If this step has children, adjust position based on children's center
+        if (stepIndex < activeSteps.length - 1) {
+          const nextStep = activeSteps[stepIndex + 1];
+          const childrenData = stepPositions.get(nextStep.step_name);
+          
+          if (childrenData && childrenData.instances.length > 0) {
+            // Calculate center of children that are connected to this step
+            const connectedChildren = childrenData.instances.filter(childInstance => {
+              if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
+                const sourceInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '0');
+                return stepData.instances.some(parentInstance => parentInstance.instance_number === sourceInstanceNumber);
+              }
+              return false;
+            });
+
+            if (connectedChildren.length > 0) {
+              const childrenSpacing = (connectedChildren.length - 1) * INSTANCE_HORIZONTAL_SPACING;
+              const childrenCenterX = childrenData.centerX;
+              finalCenterX = childrenCenterX;
+            }
+          }
+        }
+
+        adjustedPositions.set(step.step_name, {
+          centerX: finalCenterX,
+          y: stepData.y
+        });
+
+        // Update the stepPositions with the adjusted center
+        stepPositions.set(step.step_name, {
+          ...stepData,
+          centerX: finalCenterX
+        });
+      }
+
+      // Create order node (positioned to align with first step)
+      const firstStepData = stepPositions.get(activeSteps[0]?.step_name);
+      const orderX = firstStepData ? firstStepData.centerX - (CARD_WIDTH / 2) : 100;
+
+      const orderNodeData: StepCardData = {
+        stepName: 'Manufacturing Order',
+        stepOrder: 0,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName: order.product_name,
+        status: order.status as any,
+        progress: 0,
+        productCode: order.product_configs?.product_code,
+        quantityRequired: order.quantity_required,
+        priority: order.priority,
+        dueDate: order.due_date,
+        isJhalaiStep: false,
+      };
+
+      const orderNode: Node = {
+        id: `order-${order.id}`,
+        type: 'manufacturingStep',
+        position: { x: orderX, y: orderY },
+        data: orderNodeData,
+        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
+      };
+
+      nodes.push(orderNode);
+
+      // Create step nodes using calculated positions
+      activeSteps.forEach((step, stepIndex) => {
+        const stepData = stepPositions.get(step.step_name);
+        
+        if (!stepData) return;
+
+        const instanceCount = stepData.instances.length;
+        const totalWidth = (instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING;
+        const startX = stepData.centerX - (totalWidth / 2);
+
+        stepData.instances.forEach((orderStep, instanceIndex) => {
+          const instanceX = startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING);
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -264,14 +321,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           const stepNode: Node = {
             id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
             type: 'manufacturingStep',
-            position: { x: instanceX, y: currentY },
+            position: { x: instanceX, y: stepData.y },
             data: stepNodeData,
             style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation with better routing
+          // Create edges with improved routing
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -325,13 +382,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             },
           });
         });
-
-        // Increase vertical spacing for next step with improved calculation
-        const verticalSpacing = hasChildren 
-          ? BASE_VERTICAL_SPACING * CHILD_SPACING_MULTIPLIER
-          : BASE_VERTICAL_SPACING;
-        
-        currentY += verticalSpacing;
       });
     });
 
