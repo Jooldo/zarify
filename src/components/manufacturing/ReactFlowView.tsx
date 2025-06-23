@@ -3,6 +3,7 @@ import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, us
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import UpdateStepDialog from './UpdateStepDialog';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
@@ -26,6 +27,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   onStartNextStep 
 }) => {
   const { manufacturingSteps, orderSteps, refetch: refetchSteps } = useManufacturingSteps();
+  const { createStep, isCreating } = useCreateManufacturingStep();
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
   const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
@@ -36,11 +38,49 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     hasOnStartNextStep: !!onStartNextStep
   });
 
-  // Provide a default onStartNextStep if none is passed
-  const handleStartNextStep = onStartNextStep || ((orderId: string) => {
-    console.log('Default onStartNextStep called for order:', orderId);
-    // You can add default behavior here, like showing a toast message
-  });
+  // Handle starting a new manufacturing step
+  const handleStartNextStep = useCallback(async (orderId: string, stepName?: string) => {
+    console.log('Starting next step for order:', orderId, 'step:', stepName);
+    
+    // If no specific step name provided, determine the next step
+    let nextStepName = stepName;
+    if (!nextStepName) {
+      // For Manufacturing Order cards, start with the first step (Jhalai)
+      const firstStep = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order)[0];
+      nextStepName = firstStep?.step_name;
+    }
+
+    if (!nextStepName) {
+      console.error('No next step found');
+      return;
+    }
+
+    try {
+      await createStep({
+        manufacturingOrderId: orderId,
+        stepName: nextStepName,
+        fieldValues: {} // Empty field values for now
+      });
+
+      // Refresh the data to show the new step
+      await refetchSteps();
+    } catch (error) {
+      console.error('Failed to start next step:', error);
+    }
+  }, [createStep, manufacturingSteps, refetchSteps]);
+
+  // Combine the passed callback with our implementation
+  const combinedStartNextStep = useCallback((orderId: string, stepName?: string) => {
+    // Call our implementation first
+    handleStartNextStep(orderId, stepName);
+    
+    // Then call the passed callback if it exists
+    if (onStartNextStep) {
+      onStartNextStep(orderId);
+    }
+  }, [handleStartNextStep, onStartNextStep]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
@@ -201,7 +241,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
   // Update node data with callbacks
   const nodesWithCallbacks = useMemo(() => {
-    console.log('Creating nodes with callbacks, onStartNextStep available:', !!handleStartNextStep);
+    console.log('Creating nodes with callbacks, onStartNextStep available:', !!combinedStartNextStep);
     
     return nodes.map(node => ({
       ...node,
@@ -211,10 +251,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         orderSteps,
         onStepClick,
         onOrderClick,
-        onStartNextStep: handleStartNextStep, // Always provide the callback
+        onStartNextStep: combinedStartNextStep, // Use the combined callback
       },
     }));
-  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, handleStartNextStep]);
+  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, combinedStartNextStep]);
 
   if (manufacturingOrders.length === 0) {
     return (

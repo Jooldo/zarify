@@ -27,7 +27,7 @@ export interface StepCardData {
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
   onOrderClick?: (orderId: string) => void;
-  onStartNextStep?: (orderId: string) => void;
+  onStartNextStep?: (orderId: string, stepName?: string) => void;
   orderStepData?: any;
   rawMaterials?: any[];
   [key: string]: any;
@@ -85,8 +85,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   const handleStartNextStep = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('Start next step clicked for order:', data.orderId);
+    
     if (data.onStartNextStep) {
-      data.onStartNextStep(data.orderId);
+      const isOrderCard = data.stepName === 'Manufacturing Order';
+      const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
+      
+      console.log('Starting step:', nextStepName, 'for order:', data.orderId);
+      data.onStartNextStep(data.orderId, nextStepName);
     }
   };
 
