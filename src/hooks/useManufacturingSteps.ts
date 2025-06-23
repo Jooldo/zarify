@@ -8,14 +8,27 @@ export type ManufacturingStep = Tables<'manufacturing_steps'>;
 export type ManufacturingStepField = Omit<Tables<'manufacturing_step_fields'>, 'field_options'> & {
   field_options: { unit?: string; options?: string[] } | null;
 };
+
 export type ManufacturingOrderStep = Tables<'manufacturing_order_step_data'> & {
   workers?: { name: string | null } | null;
+  manufacturing_steps?: ManufacturingStep | null;
+  manufacturing_order_id?: string;
+  manufacturing_step_id?: string;
+};
+
+export type ManufacturingStepValue = {
+  id: string;
+  manufacturing_order_step_id: string;
+  field_id: string;
+  field_value: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export const useManufacturingSteps = () => {
   const queryClient = useQueryClient();
   
-  const { data: manufacturingSteps = [], isLoading: isLoadingSteps } = useQuery<Tables<'manufacturing_steps'>[]>({
+  const { data: manufacturingSteps = [], isLoading: isLoadingSteps } = useQuery<ManufacturingStep[]>({
     queryKey: ['manufacturing_steps'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -32,7 +45,11 @@ export const useManufacturingSteps = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_order_step_data')
-        .select('*');
+        .select(`
+          *,
+          workers (name),
+          manufacturing_steps (*)
+        `);
       if (error) {
         console.error("Error fetching order step data", error);
         throw error;
@@ -83,7 +100,7 @@ export const useManufacturingSteps = () => {
   
   const isLoading = isLoadingSteps || isLoadingOrderSteps || isLoadingStepFields;
 
-  const updateStep = async (stepId: string, updates: Partial<Tables<'manufacturing_steps'>>) => {
+  const updateStep = async (stepId: string, updates: Partial<ManufacturingStep>) => {
     const { error } = await supabase
       .from('manufacturing_steps')
       .update(updates)

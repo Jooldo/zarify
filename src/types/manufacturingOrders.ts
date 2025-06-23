@@ -1,3 +1,4 @@
+
 export interface CreateManufacturingOrderData {
   product_name: string;
   product_config_id: string;
@@ -18,8 +19,8 @@ export interface ManufacturingOrder {
   product_name: string;
   product_config_id: string;
   quantity_required: number;
-  priority: string;
-  status: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold' | 'tagged_in';
   due_date?: string;
   special_instructions?: string;
   created_at: string;

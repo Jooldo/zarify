@@ -10,7 +10,7 @@ export interface ManufacturingOrder {
   product_name: string;
   quantity_required: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold' | 'tagged_in';
   due_date?: string;
   special_instructions?: string;
   created_by?: string;
@@ -18,10 +18,31 @@ export interface ManufacturingOrder {
   updated_at: string;
   started_at?: string;
   completed_at?: string;
+  product_config_id?: string;
+  product_configs?: {
+    product_code: string;
+    category: string;
+    subcategory: string;
+    size_value: number;
+    weight_range?: string;
+    product_config_materials?: Array<{
+      id: string;
+      quantity_required: number;
+      unit: string;
+      raw_material_id: string;
+      raw_materials?: {
+        id: string;
+        name: string;
+        current_stock: number;
+        unit: string;
+      };
+    }>;
+  };
 }
 
 export interface CreateManufacturingOrderData {
   product_name: string;
+  product_config_id: string;
   quantity_required: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date?: string;
@@ -32,16 +53,42 @@ export const useManufacturingOrders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: manufacturingOrders = [], isLoading, error } = useQuery<ManufacturingOrder[]>({
+  const { 
+    data: manufacturingOrders = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery<ManufacturingOrder[]>({
     queryKey: ['manufacturing-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manufacturing_orders')
-        .select('*')
+        .select(`
+          *,
+          product_configs (
+            product_code,
+            category,
+            subcategory,
+            size_value,
+            weight_range,
+            product_config_materials (
+              id,
+              quantity_required,
+              unit,
+              raw_material_id,
+              raw_materials (
+                id,
+                name,
+                current_stock,
+                unit
+              )
+            )
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as ManufacturingOrder[];
     },
   });
 
@@ -63,6 +110,7 @@ export const useManufacturingOrders = () => {
           order_number: orderNumber,
           merchant_id: merchantId,
           product_name: orderData.product_name,
+          product_config_id: orderData.product_config_id,
           quantity_required: orderData.quantity_required,
           priority: orderData.priority,
           due_date: orderData.due_date,
@@ -149,9 +197,15 @@ export const useManufacturingOrders = () => {
     manufacturingOrders,
     isLoading,
     error,
+    refetch,
     createOrder: createOrderMutation.mutate,
-    updateOrder: updateOrderMutation.mutate,
+    updateOrder: (id: string, updates: Partial<ManufacturingOrder>) => 
+      updateOrderMutation.mutate({ id, updates }),
     deleteOrder: deleteOrderMutation.mutate,
+    isCreating: createOrderMutation.isPending,
+    isUpdating: updateOrderMutation.isPending,
+    isDeleting: deleteOrderMutation.isPending,
+    // Legacy names for backward compatibility
     isCreatingOrder: createOrderMutation.isPending,
     isUpdatingOrder: updateOrderMutation.isPending,
     isDeletingOrder: deleteOrderMutation.isPending,

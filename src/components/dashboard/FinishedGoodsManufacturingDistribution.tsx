@@ -5,9 +5,10 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Package, User, Clock } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 
 interface FinishedGoodsManufacturingDistributionProps {
-  manufacturingOrders: any[];
+  manufacturingOrders: ManufacturingOrder[];
 }
 
 const FinishedGoodsManufacturingDistribution = ({ manufacturingOrders }: FinishedGoodsManufacturingDistributionProps) => {

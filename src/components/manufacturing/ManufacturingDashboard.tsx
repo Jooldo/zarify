@@ -146,7 +146,7 @@ const ManufacturingDashboard = () => {
       if (reactFlowFilters.orderNumber && !order.order_number.toLowerCase().includes(reactFlowFilters.orderNumber.toLowerCase())) return false;
       
       // Get order steps for this order
-      const orderOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+      const orderOrderSteps = orderSteps.filter(step => step.order_id === order.id);
       
       // Quick filters
       if (reactFlowFilters.hasInProgressSteps) {
