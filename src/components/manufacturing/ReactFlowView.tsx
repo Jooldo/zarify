@@ -1,6 +1,6 @@
 
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
+import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -120,10 +120,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Improved layout constants for better alignment
+    // Layout constants with consistent sizing
     const CARD_WIDTH = 380;
-    const CARD_HEIGHT = 220;
-    const ORDER_Y_SPACING = 700;
+    const CARD_HEIGHT = 240;
+    const ORDER_Y_SPACING = 800;
     const STEP_Y_SPACING = 300;
     const INSTANCE_X_SPACING = 420;
     const START_X = 100;
@@ -140,7 +140,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
 
-      // Create manufacturing order node with improved styling
+      // Create manufacturing order node
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -167,7 +167,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Process each step type with improved positioning
+      // Process each step type
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = thisOrderSteps.filter(orderStep => orderStep.step_name === step.step_name);
         
@@ -180,7 +180,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
         const stepY = orderY + ((stepIndex + 1) * STEP_Y_SPACING);
 
-        // Position instances horizontally with better spacing
+        // Position instances horizontally
         stepInstances.forEach((orderStep, instanceIndex) => {
           const instanceX = START_X + (instanceIndex * INSTANCE_X_SPACING);
           
@@ -215,7 +215,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges with improved styling
+          // Create edges with proper styling
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -246,31 +246,31 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Create edge with improved styling
+          // Create edge with proper MarkerType enum
           const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
           const isAnimated = orderStep?.status === 'in_progress';
           
           // Enhanced edge styling based on status
-          let strokeColor = '#9ca3af'; // default gray
+          let strokeColor = '#9ca3af';
           let strokeWidth = 2;
           let strokeDasharray = undefined;
           
           switch (orderStep?.status) {
             case 'completed':
-              strokeColor = '#10b981'; // green
+              strokeColor = '#10b981';
               strokeWidth = 3;
               break;
             case 'in_progress':
-              strokeColor = '#3b82f6'; // blue
+              strokeColor = '#3b82f6';
               strokeWidth = 3;
               break;
             case 'blocked':
-              strokeColor = '#ef4444'; // red
+              strokeColor = '#ef4444';
               strokeWidth = 2;
               strokeDasharray = '5,5';
               break;
             default:
-              strokeColor = '#d1d5db'; // light gray
+              strokeColor = '#d1d5db';
               strokeWidth = 2;
               strokeDasharray = '3,3';
           }
@@ -287,7 +287,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               strokeDasharray: strokeDasharray,
             },
             markerEnd: {
-              type: 'arrowclosed',
+              type: MarkerType.ArrowClosed,
               color: strokeColor,
             },
           });
