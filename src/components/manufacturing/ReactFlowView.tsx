@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -92,30 +91,20 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const edges: Edge[] = [];
     
     // Updated spacing for better layout
-    const ORDER_SPACING = 1200; // Increased spacing between orders to prevent overlap
-    const VERTICAL_SPACING = 300; // Increased vertical spacing between step levels
-    const PARALLEL_INSTANCE_SPACING = 650; // Increased horizontal spacing for parallel instances
-    const CARD_WIDTH = 500; // Wide cards
-    const CARD_HEIGHT = 200; // Increased height for better content layout
-    const START_Y = 80; // Starting Y position
+    const ORDER_SPACING = 1200; // Spacing between different orders
+    const VERTICAL_SPACING = 300; // Vertical spacing between step levels
+    const PARALLEL_INSTANCE_SPACING = 650; // Horizontal spacing for parallel instances
+    const CARD_WIDTH = 500;
+    const CARD_HEIGHT = 200;
+    const START_Y = 80;
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Calculate order position with increased spacing
       const orderY = START_Y + (orderIndex * ORDER_SPACING);
       
       // Get order steps for this order
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
-
-      // Group order steps by step name and instance number
-      const stepsByName = thisOrderSteps.reduce((acc, step) => {
-        if (!acc[step.step_name]) {
-          acc[step.step_name] = [];
-        }
-        acc[step.step_name].push(step);
-        return acc;
-      }, {} as Record<string, any[]>);
 
       // Create manufacturing order node
       const orderNodeData: StepCardData = {
@@ -143,118 +132,124 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with better spacing and proper source tracking
-      let currentY = orderY + VERTICAL_SPACING;
-      
+      // Group order steps by step name and source instance for proper ordering
       const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
-      activeSteps.forEach((step, stepIndex) => {
-        const stepInstances = stepsByName[step.step_name] || [];
+      // Build a hierarchy map to track source relationships
+      const sourceInstanceMap = new Map<string, any[]>();
+      
+      // Parse notes to extract source instance information
+      thisOrderSteps.forEach(step => {
+        const sourceInstanceKey = step.notes && step.notes.includes('Created from instance #')
+          ? step.notes.match(/Created from instance #(\d+)/)?.[1] || '1'
+          : '1'; // Default to instance 1 if no source found
         
-        if (stepInstances.length === 0) {
+        const key = `${step.step_name}-source-${sourceInstanceKey}`;
+        if (!sourceInstanceMap.has(key)) {
+          sourceInstanceMap.set(key, []);
+        }
+        sourceInstanceMap.get(key)!.push(step);
+      });
+
+      // Create step nodes with proper grouping by source instance
+      let currentY = orderY + VERTICAL_SPACING;
+      
+      activeSteps.forEach((step, stepIndex) => {
+        // Get all instances for this step, grouped by their source
+        const stepInstanceGroups = new Map<string, any[]>();
+        
+        thisOrderSteps
+          .filter(orderStep => orderStep.step_name === step.step_name)
+          .forEach(orderStep => {
+            // Extract source instance from notes or default to '1'
+            const sourceInstance = orderStep.notes && orderStep.notes.includes('Created from instance #')
+              ? orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1'
+              : '1';
+            
+            if (!stepInstanceGroups.has(sourceInstance)) {
+              stepInstanceGroups.set(sourceInstance, []);
+            }
+            stepInstanceGroups.get(sourceInstance)!.push(orderStep);
+          });
+
+        if (stepInstanceGroups.size === 0) {
           return;
         }
 
-        // Sort instances by instance_number
-        stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
+        // Sort source groups by source instance number for consistent ordering
+        const sortedSourceGroups = Array.from(stepInstanceGroups.entries())
+          .sort(([a], [b]) => parseInt(a) - parseInt(b));
 
-        // Calculate positions for parallel instances with increased spacing
-        const instanceCount = stepInstances.length;
-        const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
-        
-        // Center the instances around the main flow
-        const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
+        let horizontalPosition = 0;
 
-        stepInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
-          
-          const stepNodeData: StepCardData = {
-            stepName: step.step_name,
-            stepOrder: step.step_order,
-            orderId: order.id,
-            orderNumber: order.order_number,
-            productName: order.product_name,
-            status: orderStep?.status as any || 'pending',
-            progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
-            assignedWorker: orderStep?.assigned_worker || undefined,
-            productCode: order.product_configs?.product_code,
-            quantityRequired: order.quantity_required,
-            priority: order.priority,
-            dueDate: orderStep?.due_date || order.due_date,
-            isJhalaiStep: false,
-            instanceNumber: orderStep?.instance_number || 1,
-            orderStepData: orderStep,
-          };
+        sortedSourceGroups.forEach(([sourceInstance, instancesFromSource]) => {
+          // Sort instances within each source group by instance number
+          instancesFromSource.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-          const stepNode: Node = {
-            id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
-            type: 'manufacturingStep',
-            position: { x: instanceX, y: currentY },
-            data: stepNodeData,
-            style: { width: CARD_WIDTH, height: CARD_HEIGHT },
-          };
-
-          nodes.push(stepNode);
-
-          // Enhanced edge creation with proper source tracking
-          let sourceNodeId: string;
-          
-          if (stepIndex === 0) {
-            // First step connects to manufacturing order
-            sourceNodeId = `order-${order.id}`;
-          } else {
-            // Connect to the specific source instance based on notes or fallback logic
-            const previousStep = activeSteps[stepIndex - 1];
-            const previousInstances = stepsByName[previousStep.step_name] || [];
+          instancesFromSource.forEach((orderStep, instanceIndex) => {
+            const instanceX = 100 + (horizontalPosition * PARALLEL_INSTANCE_SPACING);
             
-            if (previousInstances.length > 0) {
-              // Try to find the source instance from notes
-              let sourceInstance = null;
-              if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
-                const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
-                sourceInstance = previousInstances.find(inst => inst.instance_number === sourceInstanceNumber);
-              }
-              
-              // Fallback to most recent completed instance if no specific source found
-              if (!sourceInstance) {
-                const sortedPreviousInstances = previousInstances
-                  .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
-                  .sort((a, b) => {
-                    if (a.status === 'completed' && b.status !== 'completed') return -1;
-                    if (b.status === 'completed' && a.status !== 'completed') return 1;
-                    if (a.completed_at && b.completed_at) {
-                      return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
-                    }
-                    return (b.instance_number || 1) - (a.instance_number || 1);
-                  });
-                
-                sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
-              }
-              
-              sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance.instance_number || 1}`;
-            } else {
+            const stepNodeData: StepCardData = {
+              stepName: step.step_name,
+              stepOrder: step.step_order,
+              orderId: order.id,
+              orderNumber: order.order_number,
+              productName: order.product_name,
+              status: orderStep?.status as any || 'pending',
+              progress: orderStep?.status === 'completed' ? 100 : orderStep?.status === 'in_progress' ? 50 : 0,
+              assignedWorker: orderStep?.assigned_worker || undefined,
+              productCode: order.product_configs?.product_code,
+              quantityRequired: order.quantity_required,
+              priority: order.priority,
+              dueDate: orderStep?.due_date || order.due_date,
+              isJhalaiStep: false,
+              instanceNumber: orderStep?.instance_number || 1,
+              orderStepData: orderStep,
+            };
+
+            const stepNode: Node = {
+              id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
+              type: 'manufacturingStep',
+              position: { x: instanceX, y: currentY },
+              data: stepNodeData,
+              style: { width: CARD_WIDTH, height: CARD_HEIGHT },
+            };
+
+            nodes.push(stepNode);
+
+            // Create edges with proper source tracking
+            let sourceNodeId: string;
+            
+            if (stepIndex === 0) {
+              // First step connects to manufacturing order
               sourceNodeId = `order-${order.id}`;
+            } else {
+              // Connect to the specific source instance
+              const previousStep = activeSteps[stepIndex - 1];
+              sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance}`;
             }
-          }
 
-          // Create edge with proper styling
-          const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
-          const isAnimated = orderStep?.status === 'in_progress';
-          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
-                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
+            // Create edge with proper styling
+            const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
+            const isAnimated = orderStep?.status === 'in_progress';
+            const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
+                               orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
 
-          edges.push({
-            id: edgeId,
-            source: sourceNodeId,
-            target: stepNode.id,
-            type: 'smoothstep',
-            animated: isAnimated,
-            style: {
-              stroke: strokeColor,
-              strokeWidth: 2,
-            },
+            edges.push({
+              id: edgeId,
+              source: sourceNodeId,
+              target: stepNode.id,
+              type: 'smoothstep',
+              animated: isAnimated,
+              style: {
+                stroke: strokeColor,
+                strokeWidth: 2,
+              },
+            });
+
+            horizontalPosition++;
           });
         });
 
