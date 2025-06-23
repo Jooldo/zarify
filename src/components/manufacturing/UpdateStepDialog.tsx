@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -235,11 +236,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         manufacturingOrderId: step.order_id,
         stepName: 'Jhalai',
         fieldValues: {
-          parent_instance_id: step.id, // Set the current step as parent
+          parent_instance_id: null, // No parent for rework Jhalai step
           quantity_assigned: parseFloat(reworkQuantity),
           weight_assigned: parseFloat(reworkWeight),
           is_rework: true,
-          origin_step_id: step.id,
+          origin_step_id: step.id, // The current step where rework is initiated
           status: 'pending'
         }
       });
