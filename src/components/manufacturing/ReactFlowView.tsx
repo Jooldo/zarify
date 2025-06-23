@@ -22,6 +22,51 @@ interface ReactFlowViewProps {
   onStartNextStep?: (orderId: string) => void;
 }
 
+// Visual style configurations for different step types
+const getStepVisualStyle = (stepName: string, stepOrder: number, isOrderCard: boolean) => {
+  if (isOrderCard) {
+    return {
+      borderColor: 'border-blue-500',
+      bgColor: 'bg-blue-50',
+      headerBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      accentColor: '#3b82f6'
+    };
+  }
+
+  const stepStyles = {
+    'Jhalai': {
+      borderColor: 'border-emerald-500',
+      bgColor: 'bg-emerald-50',
+      headerBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+      accentColor: '#10b981'
+    },
+    'Dhol': {
+      borderColor: 'border-purple-500',
+      bgColor: 'bg-purple-50',
+      headerBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      accentColor: '#8b5cf6'
+    },
+    'Casting': {
+      borderColor: 'border-amber-500',
+      bgColor: 'bg-amber-50',
+      headerBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      accentColor: '#f59e0b'
+    }
+  };
+
+  return stepStyles[stepName as keyof typeof stepStyles] || {
+    borderColor: 'border-gray-500',
+    bgColor: 'bg-gray-50',
+    headerBg: 'bg-gray-100',
+    iconColor: 'text-gray-600',
+    accentColor: '#6b7280'
+  };
+};
+
 const ReactFlowView: React.FC<ReactFlowViewProps> = ({ 
   manufacturingOrders,
   onViewDetails,
@@ -90,7 +135,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants remain the same
+    // Layout constants
     const ORDER_SPACING = 1200;
     const VERTICAL_SPACING = 300;
     const PARALLEL_INSTANCE_SPACING = 650;
@@ -114,7 +159,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Create manufacturing order node
+      // Create manufacturing order node with visual styling
+      const orderVisualStyle = getStepVisualStyle('Manufacturing Order', 0, true);
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -128,6 +174,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         priority: order.priority,
         dueDate: order.due_date,
         isJhalaiStep: false,
+        visualStyle: orderVisualStyle,
+        isOrderCard: true,
       };
 
       const orderNode: Node = {
@@ -140,7 +188,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering
+      // Create step nodes with improved ordering and visual differentiation
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -154,7 +202,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // New ordering logic: Group by parent relationship, then by instance number
+        // Enhanced ordering logic with parent relationship grouping
         let orderedInstances;
         
         if (stepIndex === 0) {
@@ -211,8 +259,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
         const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
 
+        // Get visual style for this step type
+        const stepVisualStyle = getStepVisualStyle(step.step_name, step.step_order, false);
+
         orderedInstances.forEach((orderStep, instanceIndex) => {
           const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
+          
+          // Determine if this instance is part of a group (has siblings from same parent)
+          const isPartOfGroup = instanceCount > 1;
+          const groupIndex = Math.floor(instanceIndex / (instanceCount / (instanceGroups.length || 1)));
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -230,6 +285,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             isJhalaiStep: false,
             instanceNumber: orderStep?.instance_number || 1,
             orderStepData: orderStep,
+            visualStyle: stepVisualStyle,
+            isPartOfGroup,
+            groupIndex,
+            isOrderCard: false,
           };
 
           const stepNode: Node = {
@@ -242,7 +301,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation remains the same
+          // Enhanced edge creation with visual styling
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -281,8 +340,26 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
           const isAnimated = orderStep?.status === 'in_progress';
-          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
-                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
+          
+          // Enhanced edge styling based on step type and status
+          let strokeColor = stepVisualStyle.accentColor;
+          let strokeWidth = 2;
+          
+          switch (orderStep?.status) {
+            case 'completed':
+              strokeColor = '#10b981'; // Green for completed
+              strokeWidth = 3;
+              break;
+            case 'in_progress':
+              strokeColor = stepVisualStyle.accentColor;
+              strokeWidth = 3;
+              break;
+            case 'pending':
+            default:
+              strokeColor = '#9ca3af'; // Gray for pending
+              strokeWidth = 2;
+              break;
+          }
 
           edges.push({
             id: edgeId,
@@ -292,7 +369,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             animated: isAnimated,
             style: {
               stroke: strokeColor,
-              strokeWidth: 2,
+              strokeWidth,
+            },
+            markerEnd: {
+              type: 'arrowclosed',
+              color: strokeColor,
             },
           });
         });
