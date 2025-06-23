@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -173,7 +172,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     <SelectValue placeholder="Select worker" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {workers.map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.name}
