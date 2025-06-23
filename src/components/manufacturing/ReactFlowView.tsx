@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -86,14 +87,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    let yOffset = 0;
-    const VERTICAL_SPACING = 400; // Increased for better spacing
-    const HORIZONTAL_SPACING = 400;
-    const PARALLEL_INSTANCE_SPACING = 100; // Vertical spacing between parallel instances
-    const INSTANCE_HORIZONTAL_OFFSET = 50; // Small horizontal offset for instances
+    let xOffset = 0;
+    const HORIZONTAL_SPACING = 600; // Space between different orders
+    const VERTICAL_SPACING = 250; // Space between step levels (vertical layout)
+    const PARALLEL_INSTANCE_SPACING = 350; // Horizontal spacing between parallel instances
+    const CARD_WIDTH = 400; // Wider cards
+    const CARD_HEIGHT = 180; // Shorter cards
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      const orderY = yOffset + (orderIndex * VERTICAL_SPACING);
+      const orderX = xOffset + (orderIndex * HORIZONTAL_SPACING);
       
       // Get order steps for this order
       const thisOrderSteps = Array.isArray(orderSteps) 
@@ -109,7 +111,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Create manufacturing order node
+      // Create manufacturing order node at top
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -128,14 +130,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: 50, y: orderY },
+        position: { x: orderX, y: 50 },
         data: orderNodeData,
+        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
       // Create step nodes for each configured manufacturing step and their instances
-      let currentX = 50 + HORIZONTAL_SPACING;
+      let currentY = 50 + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
@@ -154,12 +157,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
         // Calculate center position for this step's instances
         const instanceCount = stepInstances.length;
-        const totalInstanceHeight = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
-        const centerY = orderY - (totalInstanceHeight / 2);
+        const totalInstanceWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
+        const centerX = orderX - (totalInstanceWidth / 2);
 
         stepInstances.forEach((orderStep, instanceIndex) => {
-          const instanceY = centerY + (instanceIndex * PARALLEL_INSTANCE_SPACING);
-          const instanceX = currentX + (instanceIndex * INSTANCE_HORIZONTAL_OFFSET);
+          const instanceX = centerX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
+          const instanceY = currentY;
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -185,11 +188,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             type: 'manufacturingStep',
             position: { x: instanceX, y: instanceY },
             data: stepNodeData,
+            style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Create edges from previous step to current step instances
+          // Create edges from source to current step instances
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -201,7 +205,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             const previousInstances = stepsByName[previousStep.step_name] || [];
             
             if (previousInstances.length > 0) {
-              // Sort by completion time or instance number
+              // Sort by completion time or instance number and pick the best source
               const sortedPreviousInstances = previousInstances
                 .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
                 .sort((a, b) => {
@@ -238,13 +242,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               stroke: strokeColor,
               strokeWidth: 2,
             },
-            // Use different source/target handles for parallel instances to avoid overlap
-            sourceHandle: instanceIndex > 0 ? `source-${instanceIndex}` : undefined,
-            targetHandle: instanceIndex > 0 ? `target-${instanceIndex}` : undefined,
           });
         });
 
-        currentX += HORIZONTAL_SPACING;
+        currentY += VERTICAL_SPACING;
       });
     });
 
@@ -340,7 +341,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
   return (
     <>
-      <div className="h-[600px] w-full border rounded-lg bg-gray-50">
+      <div className="h-[800px] w-full border rounded-lg bg-gray-50">
         <ReactFlow
           nodes={nodesWithCallbacks}
           edges={edges}

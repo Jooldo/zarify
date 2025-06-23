@@ -118,11 +118,12 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     <div 
       className="relative cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleClick}
+      style={{ width: '100%', height: '100%' }}
     >
-      <Card className="w-64 shadow-md">
+      <Card className="w-full h-full shadow-md">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">{displayStepName}</CardTitle>
+            <CardTitle className="text-sm font-medium truncate">{displayStepName}</CardTitle>
             <Badge className={`text-xs ${getStatusColor(data.status)}`}>
               {data.status.replace('_', ' ')}
             </Badge>
@@ -134,127 +135,83 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
           )}
         </CardHeader>
         
-        <CardContent className="pt-0 space-y-2">
+        <CardContent className="pt-0 space-y-2 h-full">
           {/* Order Information */}
           <div className="text-xs space-y-1">
             <div className="flex items-center gap-1">
-              <Package className="h-3 w-3 text-muted-foreground" />
-              <span className="font-medium">{data.orderNumber}</span>
+              <Package className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <span className="font-medium truncate">{data.orderNumber}</span>
             </div>
-            <div className="text-muted-foreground font-semibold">{data.productCode || data.productName}</div>
+            <div className="text-muted-foreground font-semibold truncate">{data.productCode || data.productName}</div>
             {/* Show quantity for manufacturing order cards */}
             {isOrderCard && data.quantityRequired && (
               <div className="text-muted-foreground">Qty: {data.quantityRequired}</div>
             )}
           </div>
 
-          {/* Step-specific information */}
+          {/* Step-specific information - Compact layout */}
           {!isOrderCard && data.orderStepData && (
-            <div className="space-y-2 text-xs border-t pt-2">
+            <div className="space-y-1 text-xs border-t pt-2">
               {/* Assigned Worker */}
               {data.orderStepData.assigned_worker && (
                 <div className="flex items-center gap-1">
-                  <User className="h-3 w-3 text-muted-foreground" />
-                  <span>{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
+                  <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  <span className="truncate">{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
                 </div>
               )}
 
               {/* Due Date */}
               {data.orderStepData.due_date && (
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span>{format(new Date(data.orderStepData.due_date), 'MMM dd, yyyy')}</span>
+                  <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  <span className="truncate">{format(new Date(data.orderStepData.due_date), 'MMM dd, yyyy')}</span>
                 </div>
               )}
 
-              {/* Started/Completed Times */}
-              {data.orderStepData.started_at && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-green-600" />
-                  <span className="text-green-600">Started: {format(new Date(data.orderStepData.started_at), 'MMM dd, HH:mm')}</span>
-                </div>
-              )}
-
-              {data.orderStepData.completed_at && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-blue-600" />
-                  <span className="text-blue-600">Completed: {format(new Date(data.orderStepData.completed_at), 'MMM dd, HH:mm')}</span>
-                </div>
-              )}
-
-              {/* Field Values */}
-              <div className="grid grid-cols-2 gap-1">
+              {/* Field Values - Compact grid */}
+              <div className="grid grid-cols-3 gap-1 text-xs">
                 {data.orderStepData.quantity_assigned > 0 && (
-                  <div className="bg-blue-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Qty Assigned:</div>
+                  <div className="bg-blue-50 p-1 rounded">
+                    <div className="text-muted-foreground text-xs">Qty:</div>
                     <div className="font-medium">{data.orderStepData.quantity_assigned}</div>
                   </div>
                 )}
                 
-                {data.orderStepData.quantity_received > 0 && (
-                  <div className="bg-green-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Qty Received:</div>
-                    <div className="font-medium">{data.orderStepData.quantity_received}</div>
-                  </div>
-                )}
-                
                 {data.orderStepData.weight_assigned > 0 && (
-                  <div className="bg-blue-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Weight Assigned:</div>
+                  <div className="bg-purple-50 p-1 rounded">
+                    <div className="text-muted-foreground text-xs">Wt:</div>
                     <div className="font-medium">{data.orderStepData.weight_assigned}g</div>
                   </div>
                 )}
                 
-                {data.orderStepData.weight_received > 0 && (
-                  <div className="bg-green-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Weight Received:</div>
-                    <div className="font-medium">{data.orderStepData.weight_received}g</div>
-                  </div>
-                )}
-                
                 {data.orderStepData.purity > 0 && (
-                  <div className="bg-gray-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Purity:</div>
+                  <div className="bg-gray-50 p-1 rounded">
+                    <div className="text-muted-foreground text-xs">Purity:</div>
                     <div className="font-medium">{data.orderStepData.purity}%</div>
                   </div>
                 )}
-                
-                {data.orderStepData.wastage > 0 && (
-                  <div className="bg-red-50 p-1 rounded text-xs">
-                    <div className="text-muted-foreground">Wastage:</div>
-                    <div className="font-medium">{data.orderStepData.wastage}</div>
-                  </div>
-                )}
               </div>
-
-              {/* Notes */}
-              {data.orderStepData.notes && (
-                <div className="bg-gray-50 p-2 rounded text-xs">
-                  <div className="text-muted-foreground mb-1">Notes:</div>
-                  <div>{data.orderStepData.notes}</div>
-                </div>
-              )}
             </div>
           )}
 
           {/* Progress bar for non-order cards */}
           {!isOrderCard && (
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                 style={{ width: `${data.progress}%` }}
               />
             </div>
           )}
 
-          {/* Start Next Step button - show when there's a next step and callback */}
+          {/* Start Next Step button - compact */}
           {nextStepName && data.onStartNextStep && (
-            <div className="pt-2">
+            <div className="pt-1">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNextStep}
-                className="w-full flex items-center gap-1"
+                className="w-full flex items-center gap-1 h-7 text-xs"
               >
                 <Play className="h-3 w-3" />
                 Start {nextStepName}
@@ -267,12 +224,12 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       {/* React Flow Handles */}
       <Handle 
         type="target" 
-        position={Position.Left} 
+        position={Position.Top} 
         className="w-3 h-3 bg-gray-400 border-2 border-white" 
       />
       <Handle 
         type="source" 
-        position={Position.Right} 
+        position={Position.Bottom} 
         className="w-3 h-3 bg-gray-400 border-2 border-white"
       />
     </div>
