@@ -44,6 +44,7 @@ interface StepSummary {
   totalActiveInstances: number;
   weightAssigned: number;
   weightReceived: number;
+  reworkWeight: number;
   completionPercentage: number;
 }
 
@@ -184,12 +185,27 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         sum + (instance.weight_received || 0), 0
       );
 
+      // Calculate rework weight for this step
+      const reworkWeight = thisOrderSteps
+        .filter(orderStep => {
+          // Find rework instances that are the same step name and have an origin_step_id
+          if (!orderStep.origin_step_id || orderStep.step_name !== step.step_name) {
+            return false;
+          }
+          
+          // Check if the origin step is also the same step name (direct rework)
+          const originStep = thisOrderSteps.find(os => os.id === orderStep.origin_step_id);
+          return originStep && originStep.step_name === step.step_name;
+        })
+        .reduce((sum, instance) => sum + (instance.weight_assigned || 0), 0);
+
       return {
         stepName: step.step_name,
         stepOrder: step.step_order,
         totalActiveInstances,
         weightAssigned,
         weightReceived,
+        reworkWeight,
         completionPercentage: 0 // Not used anymore but kept for interface compatibility
       };
     });
