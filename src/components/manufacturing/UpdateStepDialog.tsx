@@ -39,9 +39,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [status, setStatus] = useState('');
-  const [assignedWorker, setAssignedWorker] = useState('');
-  const [dueDate, setDueDate] = useState<Date | undefined>();
-  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get current step fields that match this step
@@ -78,6 +75,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
           case 'wastage':
             initialValues[field.field_key] = step.wastage || '';
             break;
+          case 'assigned_worker':
+            initialValues[field.field_key] = step.assigned_worker || '';
+            break;
+          case 'due_date':
+            initialValues[field.field_key] = step.due_date ? new Date(step.due_date) : undefined;
+            break;
+          case 'notes':
+            initialValues[field.field_key] = step.notes || '';
+            break;
           default:
             initialValues[field.field_key] = '';
         }
@@ -87,9 +93,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       
       setFieldValues(initialValues);
       setStatus(step.status || '');
-      setAssignedWorker(step.assigned_worker || '');
-      setDueDate(step.due_date ? new Date(step.due_date) : undefined);
-      setNotes(step.notes || '');
     }
   }, [step, open, currentStepFields.length]);
 
@@ -111,13 +114,18 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     try {
       console.log('Submitting update with field values:', fieldValues);
       
+      // Prepare field values with proper handling for dates
+      const processedFieldValues = { ...fieldValues };
+      Object.entries(processedFieldValues).forEach(([key, value]) => {
+        if (key === 'due_date' && value instanceof Date) {
+          processedFieldValues[key] = format(value, 'yyyy-MM-dd');
+        }
+      });
+      
       await updateStep({
         stepId: step.id,
-        fieldValues,
+        fieldValues: processedFieldValues,
         status: status as any,
-        assigned_worker: assignedWorker || undefined,
-        dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-        notes,
         stepName: step.step_name,
         orderNumber: 'Unknown' // This would need to be passed in properly
       });
@@ -127,7 +135,11 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         description: 'Step updated successfully',
       });
 
-      onStepUpdate?.();
+      // Trigger data refresh
+      if (onStepUpdate) {
+        onStepUpdate();
+      }
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating step:', error);
@@ -169,12 +181,15 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             Assigned Worker
             {field.is_visible && <span className="text-red-500 ml-1">*</span>}
           </Label>
-          <Select value={assignedWorker} onValueChange={setAssignedWorker}>
+          <Select 
+            value={value || ''} 
+            onValueChange={(newValue) => handleFieldChange(field.field_key, newValue)}
+          >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
+              <SelectItem value="">Unassigned</SelectItem>
               {workers.map(worker => (
                 <SelectItem key={worker.id} value={worker.id}>
                   {worker.name}
@@ -188,6 +203,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 
     // Handle due date field
     if (field.field_key === 'due_date') {
+      const dateValue = value instanceof Date ? value : (value ? new Date(value) : undefined);
       return (
         <div key={field.id} className="space-y-1">
           <Label className="text-xs font-medium text-gray-600">
@@ -201,22 +217,42 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal h-8 text-sm",
-                  !dueDate && "text-muted-foreground"
+                  !dateValue && "text-muted-foreground"
                 )}
               >
                 <CalendarIcon className="mr-2 h-3 w-3" />
-                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                {dateValue ? format(dateValue, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={dueDate}
-                onSelect={setDueDate}
+                selected={dateValue}
+                onSelect={(date) => handleFieldChange(field.field_key, date)}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
+        </div>
+      );
+    }
+
+    // Handle notes field
+    if (field.field_key === 'notes') {
+      return (
+        <div key={field.id} className="space-y-1 col-span-2">
+          <Label htmlFor={field.field_key} className="text-xs font-medium text-gray-600">
+            {formatFieldLabel(field.field_key)}
+            {field.is_visible && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          <Textarea
+            id={field.field_key}
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+            placeholder={`Enter ${formatFieldLabel(field.field_key)}`}
+            rows={2}
+            className="text-sm resize-none"
+          />
         </div>
       );
     }
@@ -243,12 +279,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   };
 
   if (!step) return null;
-
-  const getWorkerName = (workerId: string | null) => {
-    if (!workerId || workerId === 'unassigned') return 'Unassigned';
-    const worker = workers.find(w => w.id === workerId);
-    return worker ? worker.name : 'Unknown Worker';
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -301,19 +331,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               </CardContent>
             </Card>
           )}
-
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label htmlFor="notes" className="text-xs font-medium text-gray-600">Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about this step..."
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </div>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2 border-t">

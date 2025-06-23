@@ -30,7 +30,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   getPriorityColor,
   getStatusColor
 }) => {
-  const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps, stepFields, refetch: refetchSteps } = useManufacturingSteps();
   const { workers } = useWorkers();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
@@ -76,6 +76,12 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     console.log('Step clicked:', orderStep);
     setSelectedOrderStep(orderStep);
     setUpdateStepDialogOpen(true);
+  };
+
+  const handleStepUpdate = () => {
+    // Refresh the steps data to show updated information
+    refetchSteps();
+    setUpdateStepDialogOpen(false);
   };
 
   const handleTagInComplete = () => {
@@ -461,7 +467,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
         step={selectedOrderStep}
         open={updateStepDialogOpen}
         onOpenChange={setUpdateStepDialogOpen}
-        onStepUpdate={() => {}}
+        onStepUpdate={handleStepUpdate}
       />
 
       <ManufacturingTagInDialog

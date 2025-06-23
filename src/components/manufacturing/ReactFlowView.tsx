@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -23,7 +22,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   manufacturingOrders,
   onViewDetails 
 }) => {
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps, refetch: refetchSteps } = useManufacturingSteps();
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
 
@@ -142,6 +141,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     }
   }, []);
 
+  const handleStepUpdate = () => {
+    // Refresh the steps data to show updated information
+    refetchSteps();
+    setUpdateStepDialogOpen(false);
+  };
+
   // Update node data with callbacks
   const nodesWithCallbacks = useMemo(() => {
     return nodes.map(node => ({
@@ -191,10 +196,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         step={selectedOrderStep}
         open={updateStepDialogOpen}
         onOpenChange={setUpdateStepDialogOpen}
-        onStepUpdate={() => {
-          // Refresh data after update
-          setUpdateStepDialogOpen(false);
-        }}
+        onStepUpdate={handleStepUpdate}
       />
     </>
   );
