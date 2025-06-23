@@ -1,65 +1,54 @@
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
-
-export type ManufacturingStepValue = Tables<'manufacturing_order_step_values'>;
 
 export const useManufacturingStepValues = () => {
-  const queryClient = useQueryClient();
-  
-  const { data: stepValues = [], isLoading } = useQuery<ManufacturingStepValue[]>({
-    queryKey: ['manufacturing-order-step-values'],
+  const { data: stepValues = [], isLoading } = useQuery({
+    queryKey: ['manufacturing_order_step_data_values'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('manufacturing_order_step_values')
+        .from('manufacturing_order_step_data')
         .select('*');
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Helper function to get a specific step value
-  const getStepValue = (stepId: string, fieldId: string) => {
-    return stepValues.find(
-      value => value.manufacturing_order_step_id === stepId && value.field_id === fieldId
-    )?.field_value || '';
-  };
-
-  // Helper function to get all values for a step
-  const getStepValues = (stepId: string) => {
-    return stepValues.filter(value => value.manufacturing_order_step_id === stepId);
-  };
-
-  // Real-time subscription for step values
-  useEffect(() => {
-    const channelName = `step-values-realtime-${Date.now()}-${Math.random()}`;
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'manufacturing_order_step_values'
-        },
-        (payload) => {
-          console.log('Real-time update for step values:', payload);
-          queryClient.invalidateQueries({ queryKey: ['manufacturing-order-step-values'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+  const getStepValue = (stepDataId: string, fieldKey: string) => {
+    const stepData = stepValues.find(step => step.id === stepDataId);
+    if (!stepData) return '';
+    
+    // Map field keys to actual column names in manufacturing_order_step_data
+    const fieldMapping: Record<string, string> = {
+      'quantity_assigned': 'quantity_assigned',
+      'quantity_received': 'quantity_received', 
+      'weight_assigned': 'weight_assigned',
+      'weight_received': 'weight_received',
+      'purity': 'purity',
+      'wastage': 'wastage',
+      'assigned_worker': 'assigned_worker',
+      'due_date': 'due_date',
+      'notes': 'notes',
+      'instructions': 'instructions',
+      'temperature': 'temperature',
+      'pressure': 'pressure',
+      'quality_grade': 'quality_grade',
+      'batch_number': 'batch_number',
+      'machine_used': 'machine_used'
     };
-  }, [queryClient]);
 
-  return { 
-    stepValues, 
-    isLoading, 
-    getStepValue, 
-    getStepValues 
+    const columnName = fieldMapping[fieldKey] || fieldKey;
+    return stepData[columnName as keyof typeof stepData] || '';
+  };
+
+  const getStepValues = (stepDataId: string) => {
+    return stepValues.filter(step => step.id === stepDataId);
+  };
+
+  return {
+    stepValues,
+    getStepValue,
+    getStepValues,
+    isLoading
   };
 };

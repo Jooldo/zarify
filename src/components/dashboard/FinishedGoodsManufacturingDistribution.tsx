@@ -33,56 +33,52 @@ const FinishedGoodsManufacturingDistribution = ({
   const { getStepValue, getStepValues } = useManufacturingStepValues();
 
   const stepDistribution = useMemo(() => {
-    if (!manufacturingOrders.length || !orderSteps.length || !stepFields.length) {
+    if (!Array.isArray(manufacturingOrders) || manufacturingOrders.length === 0 || 
+        !Array.isArray(orderSteps) || orderSteps.length === 0 || 
+        !Array.isArray(stepFields) || stepFields.length === 0) {
       return [];
     }
 
     // Filter in-progress manufacturing orders only
     const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
     
-    // Group order steps by manufacturing step
+    // Group order steps by step name
     const stepGroups = new Map<string, any[]>();
     
     orderSteps.forEach(orderStep => {
-      if (orderStep.status === 'in_progress' && orderStep.manufacturing_steps) {
-        const stepId = orderStep.manufacturing_step_id;
-        if (!stepGroups.has(stepId)) {
-          stepGroups.set(stepId, []);
+      if (orderStep && orderStep.status === 'in_progress') {
+        const stepName = orderStep.step_name;
+        if (!stepGroups.has(stepName)) {
+          stepGroups.set(stepName, []);
         }
-        stepGroups.get(stepId)!.push(orderStep);
+        stepGroups.get(stepName)!.push(orderStep);
       }
     });
 
     // Calculate distribution for each step
     const distribution: StepDistribution[] = [];
     
-    stepGroups.forEach((orderStepsInStep, stepId) => {
-      const manufacturingStep = manufacturingSteps.find(step => step.id === stepId);
-      if (!manufacturingStep) return;
+    stepGroups.forEach((orderStepsInStep, stepName) => {
+      const merchantStep = Array.isArray(manufacturingSteps) ? 
+        manufacturingSteps.find(step => step.step_name === stepName) : null;
+      if (!merchantStep) return;
 
-      const stepFieldsConfig = getStepFields(stepId);
-      const quantityField = stepFieldsConfig.find(field => 
-        ['quantityAssigned', 'quantity_assigned', 'quantity'].includes(field.field_name)
-      );
-      const weightField = stepFieldsConfig.find(field => 
-        ['rawMaterialWeightAssigned', 'weight_assigned', 'weight'].includes(field.field_name)
-      );
+      const stepFieldsConfig = getStepFields(stepName);
+      const hasQuantityField = true; // Always has quantity in our schema
+      const hasWeightField = true; // Always has weight in our schema
 
       let totalQuantity: number | null = null;
       let totalWeight: number | null = null;
-      const hasQuantityField = !!quantityField;
-      const hasWeightField = !!weightField;
 
-      // Get units from field options
-      const quantityUnit = quantityField?.field_options?.unit || null;
-      const weightUnit = weightField?.field_options?.unit || null;
+      // Get units from field options (default values)
+      const quantityUnit = 'pieces';
+      const weightUnit = 'grams';
 
-      // Only calculate totals if fields exist
+      // Calculate totals
       if (hasQuantityField) {
         totalQuantity = 0;
         orderStepsInStep.forEach(orderStep => {
-          const quantityValue = getStepValue(orderStep.id, quantityField!.field_id);
-          const quantity = parseFloat(quantityValue) || 0;
+          const quantity = parseFloat(orderStep.quantity_assigned) || 0;
           totalQuantity! += quantity;
         });
       }
@@ -90,16 +86,15 @@ const FinishedGoodsManufacturingDistribution = ({
       if (hasWeightField) {
         totalWeight = 0;
         orderStepsInStep.forEach(orderStep => {
-          const weightValue = getStepValue(orderStep.id, weightField!.field_id);
-          const weight = parseFloat(weightValue) || 0;
+          const weight = parseFloat(orderStep.weight_assigned) || 0;
           totalWeight! += weight;
         });
       }
 
       distribution.push({
-        stepId,
-        stepName: manufacturingStep.step_name,
-        stepOrder: manufacturingStep.step_order,
+        stepId: merchantStep.id,
+        stepName: merchantStep.step_name,
+        stepOrder: merchantStep.step_order,
         totalQuantity,
         totalWeight,
         orderCount: orderStepsInStep.length,
