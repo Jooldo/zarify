@@ -1,5 +1,6 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
+import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -204,6 +205,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
         // Enhanced ordering logic with parent relationship grouping
         let orderedInstances;
+        let instanceGroups: any[][] = [];
         
         if (stepIndex === 0) {
           // First step: just sort by instance number
@@ -214,7 +216,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           const previousInstances = stepsByName[previousStep.step_name] || [];
           
           // Create groups based on source relationship
-          const instanceGroups: any[][] = [];
           const ungroupedInstances: any[] = [];
           
           // For each previous instance, find its children in current step
@@ -267,7 +268,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           
           // Determine if this instance is part of a group (has siblings from same parent)
           const isPartOfGroup = instanceCount > 1;
-          const groupIndex = Math.floor(instanceIndex / (instanceCount / (instanceGroups.length || 1)));
+          const groupIndex = Math.floor(instanceIndex / Math.max(1, instanceCount / Math.max(1, instanceGroups.length)));
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -372,7 +373,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               strokeWidth,
             },
             markerEnd: {
-              type: 'arrowclosed',
+              type: MarkerType.ArrowClosed,
               color: strokeColor,
             },
           });
