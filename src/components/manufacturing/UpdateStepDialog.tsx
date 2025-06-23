@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   onOpenChange,
   onStepUpdate
 }) => {
-  const { stepFields } = useManufacturingSteps();
+  const { stepFields, refetch } = useManufacturingSteps();
   const { updateStep } = useUpdateManufacturingStep();
   const { workers } = useWorkers();
   const { toast } = useToast();
@@ -46,7 +45,13 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     return step && field.step_name === step.step_name;
   });
 
-  // Initialize form values when step changes
+  // Create a unique key that changes when step data changes
+  const stepDataKey = useMemo(() => {
+    if (!step) return '';
+    return `${step.id}-${step.updated_at}-${step.quantity_assigned}-${step.quantity_received}-${step.weight_assigned}-${step.weight_received}-${step.purity}-${step.wastage}-${step.assigned_worker}`;
+  }, [step]);
+
+  // Initialize form values when step changes or when step data updates
   useEffect(() => {
     if (step && open) {
       console.log('Initializing form with step:', step);
@@ -94,7 +99,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       setFieldValues(initialValues);
       setStatus(step.status || '');
     }
-  }, [step, open, currentStepFields.length]);
+  }, [step, open, currentStepFields.length, stepDataKey]); // Added stepDataKey as dependency
 
   const handleFieldChange = (fieldKey: string, value: any) => {
     console.log('Field changed:', fieldKey, '=', value);
@@ -137,6 +142,9 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         title: 'Success',
         description: 'Step updated successfully',
       });
+
+      // Force refresh of data
+      await refetch();
 
       // Trigger data refresh
       if (onStepUpdate) {

@@ -1,4 +1,5 @@
-import React, { useMemo, useCallback, useState } from 'react';
+
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
@@ -131,6 +132,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Update nodes and edges when data changes
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
   const onStepClick = useCallback((stepData: StepCardData) => {
     console.log('Step clicked in ReactFlow:', stepData);
     
@@ -141,9 +148,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     }
   }, []);
 
-  const handleStepUpdate = () => {
+  const handleStepUpdate = async () => {
     // Refresh the steps data to show updated information
-    refetchSteps();
+    await refetchSteps();
     setUpdateStepDialogOpen(false);
   };
 
