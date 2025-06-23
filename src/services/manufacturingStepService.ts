@@ -7,9 +7,7 @@ export interface ManufacturingOrderStepData {
   step_name: string;
   instance_id?: string;
   instance_number?: number;
-  parent_instance_id?: string;
-  is_rework?: boolean; // New field for rework tracking
-  origin_step_id?: string; // New field for origin step reference
+  parent_instance_id?: string; // New field for tracking parent relationships
   quantity_assigned?: number;
   quantity_received?: number;
   weight_assigned?: number;
@@ -36,9 +34,7 @@ export interface CreateStepData {
   order_id: string;
   step_name: string;
   instance_number?: number;
-  parent_instance_id?: string;
-  is_rework?: boolean; // Add rework support
-  origin_step_id?: string; // Add origin step support
+  parent_instance_id?: string; // Add parent reference
   [key: string]: any;
 }
 
@@ -68,9 +64,7 @@ export const createManufacturingOrderStep = async (stepData: CreateStepData): Pr
       order_id: stepData.order_id,
       step_name: stepData.step_name,
       instance_number: instanceNumber,
-      parent_instance_id: stepData.parent_instance_id,
-      is_rework: stepData.is_rework || false, // Include rework flag
-      origin_step_id: stepData.origin_step_id, // Include origin step reference
+      parent_instance_id: stepData.parent_instance_id, // Include parent reference
       ...stepData,
     })
     .select()

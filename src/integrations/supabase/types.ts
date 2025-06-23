@@ -550,11 +550,9 @@ export type Database = {
           id: string
           instance_id: string | null
           instance_number: number
-          is_rework: boolean
           merchant_id: string
           notes: string | null
           order_id: string
-          origin_step_id: string | null
           parent_instance_id: string | null
           purity: number | null
           quantity_assigned: number | null
@@ -575,11 +573,9 @@ export type Database = {
           id?: string
           instance_id?: string | null
           instance_number?: number
-          is_rework?: boolean
           merchant_id: string
           notes?: string | null
           order_id: string
-          origin_step_id?: string | null
           parent_instance_id?: string | null
           purity?: number | null
           quantity_assigned?: number | null
@@ -600,11 +596,9 @@ export type Database = {
           id?: string
           instance_id?: string | null
           instance_number?: number
-          is_rework?: boolean
           merchant_id?: string
           notes?: string | null
           order_id?: string
-          origin_step_id?: string | null
           parent_instance_id?: string | null
           purity?: number | null
           quantity_assigned?: number | null
@@ -644,13 +638,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "manufacturing_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manufacturing_order_step_data_origin_step_id_fkey"
-            columns: ["origin_step_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturing_order_step_data"
             referencedColumns: ["id"]
           },
           {
