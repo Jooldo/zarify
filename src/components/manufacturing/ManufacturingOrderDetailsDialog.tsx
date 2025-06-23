@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -128,9 +129,9 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   };
 
   const getWorkerName = (workerId: string | null) => {
-    if (!workerId) return 'Unknown Worker';
+    if (!workerId) return null;
     const worker = workers.find(w => w.id === workerId);
-    return worker ? worker.name : 'Unknown Worker';
+    return worker ? worker.name : null;
   };
 
   const renderFieldValues = (fieldValues: any[]) => {
@@ -308,7 +309,13 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                             <p className="font-medium">{format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</p>
                           </div>
                         )}
-                        {orderStep.assigned_worker && (
+                        {orderStep.due_date && (
+                          <div>
+                            <span className="text-muted-foreground">Due Date:</span>
+                            <p className="font-medium">{format(new Date(orderStep.due_date), 'MMM dd, yyyy')}</p>
+                          </div>
+                        )}
+                        {orderStep.assigned_worker && getWorkerName(orderStep.assigned_worker) && (
                           <div>
                             <span className="text-muted-foreground">Assigned Worker:</span>
                             <p className="font-medium">{getWorkerName(orderStep.assigned_worker)}</p>
