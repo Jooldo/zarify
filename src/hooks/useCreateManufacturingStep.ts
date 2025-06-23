@@ -46,19 +46,21 @@ export const useCreateManufacturingStep = () => {
           order_id: data.manufacturingOrderId,
           step_name: data.stepName,
           instance_number: nextInstanceNumber,
-          parent_instance_id: data.fieldValues.parent_instance_id || null, // Use the parent instance ID
-          status: 'in_progress' as const,
+          parent_instance_id: data.fieldValues.parent_instance_id || null,
+          status: data.fieldValues.status || 'in_progress',
           assigned_worker: data.fieldValues.worker || null,
-          quantity_assigned: 0,
+          quantity_assigned: data.fieldValues.quantity_assigned || 0,
           quantity_received: 0,
-          weight_assigned: 0,
+          weight_assigned: data.fieldValues.weight_assigned || 0,
           weight_received: 0,
           purity: 0,
           wastage: 0,
+          is_rework: data.fieldValues.is_rework || false,
+          origin_step_id: data.fieldValues.origin_step_id || null,
           // Store source instance information if provided
           notes: data.fieldValues.sourceInstanceNumber 
             ? `Created from instance #${data.fieldValues.sourceInstanceNumber}` 
-            : null,
+            : (data.fieldValues.is_rework ? 'Created as rework instance' : null),
         };
 
         const { data: step, error: insertError } = await supabase
@@ -80,9 +82,10 @@ export const useCreateManufacturingStep = () => {
       console.log('Step creation successful:', data);
       queryClient.invalidateQueries({ queryKey: ['manufacturing_order_step_data'] });
       queryClient.invalidateQueries({ queryKey: ['manufacturing-orders'] });
+      const stepType = data.is_rework ? 'rework' : 'regular';
       toast({
         title: 'Success',
-        description: `${data.step_name} step #${data.instance_number} started successfully`,
+        description: `${data.step_name} ${stepType} step #${data.instance_number} started successfully`,
       });
     },
     onError: (error: any) => {

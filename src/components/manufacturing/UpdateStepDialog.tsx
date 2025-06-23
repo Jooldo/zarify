@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { findWorkerName, calculateRemainingWeight, calculateRemainingQuantity } from '@/utils/weightCalculations';
+import { useCreateManufacturingStep } from '@/hooks/useCreateManufacturingStep';
 
 interface UpdateStepDialogProps {
   step: ManufacturingOrderStep | null;
@@ -40,6 +41,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
 }) => {
   const { stepFields, refetch } = useManufacturingSteps();
   const { updateStep } = useUpdateManufacturingStep();
+  const { createStep } = useCreateManufacturingStep();
   const { workers } = useWorkers();
   const { toast } = useToast();
   
@@ -226,20 +228,22 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     }
 
     try {
-      // Create a new Jhalai step instance with rework data
-      const reworkData = {
-        orderId: step.order_id,
-        stepName: 'Jhalai',
-        isRework: true,
-        originStepId: step.id,
-        quantityAssigned: parseFloat(reworkQuantity),
-        weightAssigned: parseFloat(reworkWeight),
-        status: 'pending'
-      };
+      setIsSubmitting(true);
 
-      // You'll need to implement this endpoint or use existing step creation logic
-      console.log('Creating rework step:', reworkData);
-      
+      // Create a new Jhalai step instance with rework data
+      await createStep({
+        manufacturingOrderId: step.order_id,
+        stepName: 'Jhalai',
+        fieldValues: {
+          parent_instance_id: step.id, // Set the current step as parent
+          quantity_assigned: parseFloat(reworkQuantity),
+          weight_assigned: parseFloat(reworkWeight),
+          is_rework: true,
+          origin_step_id: step.id,
+          status: 'pending'
+        }
+      });
+
       toast({
         title: 'Success',
         description: `Rework instance created for ${reworkQuantity} pieces (${reworkWeight}kg)`,
@@ -254,6 +258,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         onStepUpdate();
       }
       
+      onOpenChange(false);
+      
     } catch (error) {
       console.error('Error creating rework step:', error);
       toast({
@@ -261,6 +267,8 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         description: 'Failed to create rework instance',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
