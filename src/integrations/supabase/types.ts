@@ -541,6 +541,436 @@ export type Database = {
           },
         ]
       }
+      manufacturing_material_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          manufacturing_order_id: string
+          merchant_id: string
+          quantity_consumed: number | null
+          quantity_reserved: number
+          raw_material_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manufacturing_order_id: string
+          merchant_id: string
+          quantity_consumed?: number | null
+          quantity_reserved: number
+          raw_material_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manufacturing_order_id?: string
+          merchant_id?: string
+          quantity_consumed?: number | null
+          quantity_reserved?: number
+          raw_material_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_manufacturing_order"
+            columns: ["manufacturing_order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_merchant"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_raw_material"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_order_step_values: {
+        Row: {
+          created_at: string
+          field_id: string
+          field_value: string
+          id: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          field_value: string
+          id?: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          field_value?: string
+          id?: string
+          manufacturing_order_step_id?: string
+          merchant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_step_value_manufacturing_order_step_id_fkey"
+            columns: ["manufacturing_order_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_step_values_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_order_steps: {
+        Row: {
+          assigned_worker_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          manufacturing_order_id: string
+          manufacturing_step_id: string
+          merchant_id: string
+          notes: string | null
+          progress_percentage: number | null
+          started_at: string | null
+          status: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          manufacturing_order_id: string
+          manufacturing_step_id: string
+          merchant_id: string
+          notes?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string
+          step_order: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          manufacturing_order_id?: string
+          manufacturing_step_id?: string
+          merchant_id?: string
+          notes?: string | null
+          progress_percentage?: number | null
+          started_at?: string | null
+          status?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_steps_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_manufacturing_order_id_fkey"
+            columns: ["manufacturing_order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_manufacturing_step_id_fkey"
+            columns: ["manufacturing_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_orders: {
+        Row: {
+          assigned_to_step: number | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          manufacturing_quantity: number | null
+          merchant_id: string
+          order_number: string
+          parent_order_id: string | null
+          priority: string
+          product_config_id: string | null
+          product_name: string
+          product_type: string | null
+          quantity_required: number
+          rework_quantity: number | null
+          rework_reason: string | null
+          rework_source_step_id: string | null
+          special_instructions: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_step?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          manufacturing_quantity?: number | null
+          merchant_id: string
+          order_number: string
+          parent_order_id?: string | null
+          priority: string
+          product_config_id?: string | null
+          product_name: string
+          product_type?: string | null
+          quantity_required: number
+          rework_quantity?: number | null
+          rework_reason?: string | null
+          rework_source_step_id?: string | null
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_step?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          manufacturing_quantity?: number | null
+          merchant_id?: string
+          order_number?: string
+          parent_order_id?: string | null
+          priority?: string
+          product_config_id?: string | null
+          product_name?: string
+          product_type?: string | null
+          quantity_required?: number
+          rework_quantity?: number | null
+          rework_reason?: string | null
+          rework_source_step_id?: string | null
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_orders_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_parent_order_id_fkey"
+            columns: ["parent_order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_product_config_id_fkey"
+            columns: ["product_config_id"]
+            isOneToOne: false
+            referencedRelation: "product_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_rework_source_step_id_fkey"
+            columns: ["rework_source_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_step_fields: {
+        Row: {
+          created_at: string
+          field_id: string
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          is_required: boolean
+          manufacturing_step_id: string
+          merchant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          manufacturing_step_id: string
+          merchant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          manufacturing_step_id?: string
+          merchant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_step_fields_manufacturing_step_id_fkey"
+            columns: ["manufacturing_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_step_fields_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_step_previous_data: {
+        Row: {
+          created_at: string
+          id: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          previous_steps_data: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manufacturing_order_step_id: string
+          merchant_id: string
+          previous_steps_data?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manufacturing_order_step_id?: string
+          merchant_id?: string
+          previous_steps_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_step_previous_da_manufacturing_order_step_id_fkey"
+            columns: ["manufacturing_order_step_id"]
+            isOneToOne: true
+            referencedRelation: "manufacturing_order_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_step_previous_data_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_steps: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_duration_hours: number | null
+          id: string
+          is_active: boolean
+          merchant_id: string
+          qc_required: boolean
+          step_name: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id: string
+          qc_required?: boolean
+          step_name: string
+          step_order: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          merchant_id?: string
+          qc_required?: boolean
+          step_name?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_steps_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_types: {
         Row: {
           created_at: string
@@ -1325,9 +1755,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_order_completion_status: {
+        Args: { p_order_id: string }
+        Returns: string
+      }
       check_user_has_admin_role: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      consume_reserved_materials: {
+        Args: { p_manufacturing_order_id: string }
+        Returns: undefined
+      }
+      create_next_manufacturing_step: {
+        Args: { p_manufacturing_order_id: string; p_current_step_order: number }
+        Returns: string
       }
       generate_catalogue_slug: {
         Args: { catalogue_name: string; merchant_id_param: string }
@@ -1337,8 +1779,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_next_manufacturing_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_next_order_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_rework_order_number: {
+        Args: { base_order_number: string }
         Returns: string
       }
       get_next_suborder_id: {
@@ -1374,6 +1824,18 @@ export type Database = {
           p_description?: string
         }
         Returns: string
+      }
+      release_reserved_materials: {
+        Args: { p_manufacturing_order_id: string }
+        Returns: undefined
+      }
+      reserve_raw_materials_for_manufacturing_order: {
+        Args: { p_manufacturing_order_id: string }
+        Returns: undefined
+      }
+      update_raw_material_manufacturing_quantities: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

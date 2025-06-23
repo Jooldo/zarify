@@ -18,7 +18,7 @@ export interface FinishedGoodOrderDetail {
   fulfilled_quantity: number;
   remaining_quantity: number;
   status: string;
-  order_date: string;
+  order_date: string; // Changed from created_date to order_date
 }
 
 // Export the OrderDetail type that was missing
@@ -62,7 +62,7 @@ export const useOrderedQtyDetails = () => {
         fulfilled_quantity: item.fulfilled_quantity || 0,
         remaining_quantity: item.quantity - (item.fulfilled_quantity || 0),
         status: item.status,
-        order_date: item.orders.created_date
+        order_date: item.orders.created_date // Map created_date to order_date
       })) || [];
 
       console.log('📊 Order details found:', details.length);
@@ -84,10 +84,30 @@ export const useOrderedQtyDetails = () => {
       const { data: merchantId, error: merchantError } = await supabase.rpc('get_user_merchant_id');
       if (merchantError) throw merchantError;
 
-      // Since manufacturing orders are removed, set in_manufacturing to 0
-      const inManufacturingByProduct: Record<string, number> = {};
+      // CRITICAL FIX: Get manufacturing orders to calculate in_manufacturing quantities
+      const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
+        .from('manufacturing_orders')
+        .select(`
+          quantity_required,
+          product_configs!inner(product_code)
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['pending', 'in_progress', 'completed']);
 
-      // Get finished goods that use this raw material with correct relationship
+      if (manufacturingOrdersError) {
+        console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
+      }
+
+      // Calculate in_manufacturing quantities by product code
+      const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
+        const productCode = order.product_configs?.product_code;
+        if (productCode) {
+          acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // FIXED QUERY: Get finished goods that use this raw material with correct relationship
       const { data: finishedGoodsUsingMaterial, error: finishedGoodsError } = await supabase
         .from('product_config_materials')
         .select(`
@@ -125,9 +145,9 @@ export const useOrderedQtyDetails = () => {
           return;
         }
         
-        // Calculate shortfall without manufacturing orders (in_manufacturing = 0)
+        // FIXED CALCULATION: Use proper shortfall calculation including manufacturing
         const liveOrderDemand = finishedGood.required_quantity || 0;
-        const inManufacturing = 0; // Manufacturing orders removed
+        const inManufacturing = inManufacturingByProduct[productCode] || 0;
         
         console.log(`🔍 Finished good ${productCode}:`);
         console.log(`   Live order demand: ${liveOrderDemand}`);

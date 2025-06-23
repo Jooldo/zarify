@@ -1,13 +1,15 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import AppSidebar from "@/components/AppSidebar";
 import OrdersTab, { OrderFilters } from "@/components/OrdersTab";
 import UsersTab from "@/components/UsersTab";
 import ActivityLogsTab from "@/components/ActivityLogsTab";
 import VisualDashboard from "@/components/dashboard/VisualDashboard";
 import RawMaterialManagement from "@/components/RawMaterialManagement";
 import FinishedGoodManagement from "@/components/FinishedGoodManagement";
+import ManufacturingSettings from "@/components/manufacturing/config/ManufacturingSettings";
 import MerchantConfigurations from "@/components/settings/MerchantConfigurations";
 import GeneralSettings from "@/components/settings/GeneralSettings";
 import CatalogueManagement from "@/components/catalogue/CatalogueManagement";
@@ -107,7 +109,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50">
       <SidebarProvider defaultOpen={true}>
         <div className="flex w-full min-h-screen">
-          <AppSidebar />
+          <AppSidebar activeTab={activeTab} onTabChange={handleNavigateToTab} />
 
           <SidebarInset className="overflow-auto">
             {/* Header with Sidebar Toggle */}
@@ -139,7 +141,10 @@ const Index = () => {
               <Tabs value={activeTab} className="w-full">
                 <TabsContent value={activeTab} className="space-y-0 mt-0">
                   <div className="px-4 sm:px-6 lg:px-8">
-                    <FinishedGoodManagement />
+                    <FinishedGoodManagement 
+                      activeTab={activeTab} 
+                      onTabChange={handleNavigateToTab} 
+                    />
                   </div>
                 </TabsContent>
               </Tabs>

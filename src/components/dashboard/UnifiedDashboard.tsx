@@ -1,174 +1,133 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Package, Users, ShoppingCart, TrendingUp } from 'lucide-react';
-import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 import { useOrders } from '@/hooks/useOrders';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
+import { useFinishedGoods } from '@/hooks/useFinishedGoods';
+import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { useActivityLog } from '@/hooks/useActivityLog';
+import { format } from 'date-fns';
+import { 
+  Package, 
+  Clock, 
+  CheckCircle, 
+  AlertTriangle,
+  TrendingUp,
+  Factory,
+  Boxes,
+  Calendar
+} from 'lucide-react';
+import OrderDistributionChart from './OrderDistributionChart';
+import OrderTrendsByCategory from './OrderTrendsByCategory';
+import ConversationalQueryWidget from './ConversationalQueryWidget';
+import TodaysInsightsSection from './TodaysInsightsSection';
 import TodaysActivitiesSection from './TodaysActivitiesSection';
+import OrderSection from './OrderSection';
 import FinishedGoodsSection from './FinishedGoodsSection';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+import RawMaterialSection from './RawMaterialSection';
 
 const UnifiedDashboard = () => {
-  const { finishedGoods } = useFinishedGoods();
-  const { orders } = useOrders();
-  const { rawMaterials } = useRawMaterials();
+  const { orders, loading: ordersLoading } = useOrders();
+  const { rawMaterials, loading: rawLoading } = useRawMaterials();
+  const { finishedGoods, loading: finishedLoading } = useFinishedGoods();
+  const { manufacturingOrders, isLoading: manufacturingLoading } = useManufacturingOrders();
+  const { logs, loading: logsLoading } = useActivityLog();
 
-  // Calculate metrics
-  const totalProducts = finishedGoods.length;
-  const totalCustomers = 0; // Placeholder until customers hook is implemented
-  const totalOrders = orders.length;
-  const lowStockItems = finishedGoods.filter(item => 
-    item.current_stock <= (item.threshold || 0)
-  ).length;
-
-  // Prepare chart data
-  const stockData = finishedGoods.slice(0, 8).map(item => ({
-    name: item.product_code,
-    stock: item.current_stock,
-    threshold: item.threshold || 0
-  }));
-
-  const orderStatusData = orders.reduce((acc, order) => {
-    acc[order.status] = (acc[order.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const pieData = Object.entries(orderStatusData).map(([status, count]) => ({
-    name: status,
-    value: count
-  }));
-
-  const rawMaterialsData = rawMaterials.slice(0, 6).map(material => ({
-    name: material.name,
-    current: material.current_stock,
-    minimum: material.minimum_stock
-  }));
+  const today = new Date();
+  const todayString = format(today, 'yyyy-MM-dd');
 
   return (
-    <div className="space-y-6 p-4">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active product configurations</p>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-2">
+            Zarify Dashboard
+          </h1>
+          <p className="text-lg text-gray-600">Real-time manufacturing & inventory insights</p>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-3 rounded-full"></div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">Registered customers</p>
-          </CardContent>
-        </Card>
+        {/* Today's Summary Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+              <Calendar className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Today's Summary</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TodaysInsightsSection 
+              orders={orders}
+              loading={ordersLoading}
+              todayString={todayString}
+            />
+            <TodaysActivitiesSection 
+              logs={logs}
+              loading={logsLoading}
+              todayString={todayString}
+            />
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All time orders</p>
-          </CardContent>
-        </Card>
+        {/* Orders Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg">
+              <Package className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Orders Overview</h2>
+          </div>
+          
+          <OrderSection 
+            orders={orders}
+            loading={ordersLoading}
+          />
+        </section>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{lowStockItems}</div>
-            <p className="text-xs text-muted-foreground">Items below threshold</p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Finished Goods Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
+              <Factory className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Finished Goods</h2>
+          </div>
+          
+          <FinishedGoodsSection 
+            finishedGoods={finishedGoods}
+            manufacturingOrders={manufacturingOrders}
+            loading={finishedLoading || manufacturingLoading}
+          />
+        </section>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Finished Goods Stock Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Finished Goods Stock Levels</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stockData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="stock" fill="#8884d8" name="Current Stock" />
-                <Bar dataKey="threshold" fill="#82ca9d" name="Threshold" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Raw Materials Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+              <Boxes className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Raw Materials</h2>
+          </div>
+          
+          <RawMaterialSection 
+            rawMaterials={rawMaterials}
+            loading={rawLoading}
+          />
+        </section>
 
-        {/* Order Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Status Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Raw Materials Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Materials Stock Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={rawMaterialsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="current" fill="#8884d8" name="Current Stock" />
-              <Bar dataKey="minimum" fill="#ff7300" name="Minimum Stock" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Sections Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TodaysActivitiesSection />
-        <FinishedGoodsSection />
+        {/* Ask Your Data Widget */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Ask Your Data</h2>
+          </div>
+          
+          <ConversationalQueryWidget />
+        </section>
       </div>
     </div>
   );

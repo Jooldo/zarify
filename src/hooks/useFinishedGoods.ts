@@ -70,14 +70,35 @@ export const useFinishedGoods = () => {
 
       console.log('📊 Raw finished goods data from database:', finishedGoodsData);
 
-      // Since manufacturing orders are removed, set in_manufacturing to 0
-      const inManufacturingByProduct: Record<string, number> = {};
+      // Fetch manufacturing orders that are in progress or completed (but not tagged_in) to calculate in_manufacturing
+      const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
+        .from('manufacturing_orders')
+        .select(`
+          quantity_required,
+          product_configs!inner(product_code)
+        `)
+        .eq('merchant_id', merchantId)
+        .in('status', ['pending', 'in_progress', 'completed']);
+
+      if (manufacturingOrdersError) {
+        console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
+      }
+
+      // Calculate in_manufacturing quantities by product code
+      const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
+        const productCode = order.product_configs?.product_code;
+        if (productCode) {
+          acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
 
       console.log('Finished goods fetched:', finishedGoodsData?.length || 0, 'items');
+      console.log('In manufacturing quantities:', inManufacturingByProduct);
 
-      // Use the required_quantity directly from the database and set in_manufacturing to 0
+      // Use the required_quantity directly from the database (now contains remaining quantities) and calculate in_manufacturing
       const finishedGoodsWithRequiredQty = finishedGoodsData?.map(item => {
-        const inManufacturingQuantity = 0; // Manufacturing orders removed
+        const inManufacturingQuantity = inManufacturingByProduct[item.product_code] || 0;
         
         console.log(`Product ${item.product_code}: database_required_quantity=${item.required_quantity}, current_stock=${item.current_stock}, threshold=${item.threshold}, in_manufacturing=${inManufacturingQuantity}`);
         

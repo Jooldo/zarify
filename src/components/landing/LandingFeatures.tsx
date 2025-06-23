@@ -1,95 +1,104 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Package, 
-  Users, 
-  ShoppingBag, 
-  FileText, 
-  BarChart3, 
-  Factory,
-  UserCheck,
-  Book
-} from 'lucide-react';
-
-const features = [
-  {
-    icon: Package,
-    title: 'Inventory Management',
-    description: 'Track raw materials and finished goods with real-time stock levels and automated alerts.',
-  },
-  {
-    icon: ShoppingBag,
-    title: 'Order Management',
-    description: 'Streamline your order process from creation to fulfillment with complete tracking.',
-  },
-  {
-    icon: Users,
-    title: 'Customer Management',
-    description: 'Maintain detailed customer profiles and track order history and preferences.',
-  },
-  {
-    icon: FileText,
-    title: 'Invoice Generation',
-    description: 'Create professional invoices automatically and track payment status.',
-  },
-  {
-    icon: Factory,
-    title: 'Production Planning',
-    description: 'Plan and optimize your production schedules with resource allocation.',
-  },
-  {
-    icon: UserCheck,
-    title: 'Workforce Management',
-    description: 'Manage your team, track performance, and assign tasks efficiently.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Analytics & Reports',
-    description: 'Get insights into your business with comprehensive reports and analytics.',
-  },
-  {
-    icon: Book,
-    title: 'Product Catalogues',
-    description: 'Create beautiful product catalogues to showcase your offerings to customers.',
-  },
-];
+import { Badge } from '@/components/ui/badge';
+import { Package, Users, ClipboardList, BarChart3, Settings, Smartphone } from 'lucide-react';
 
 const LandingFeatures = () => {
+  const features = [
+    {
+      icon: Package,
+      title: "Raw Material Management",
+      description: "Track inventory, automate procurement, manage suppliers with WhatsApp integration",
+      color: "text-emerald-600"
+    },
+    {
+      icon: Settings,
+      title: "Production Workflow",
+      description: "Kanban-style manufacturing tracking with step-by-step quality control",
+      color: "text-blue-600"
+    },
+    {
+      icon: ClipboardList,
+      title: "Order Management",
+      description: "End-to-end order processing from creation to delivery with customer tracking",
+      color: "text-purple-600"
+    },
+    {
+      icon: BarChart3,
+      title: "Analytics & Insights",
+      description: "Real-time dashboards, production metrics, and performance analytics",
+      color: "text-orange-600"
+    },
+    {
+      icon: Users,
+      title: "Team Management",
+      description: "Manage workers, assign tasks, track productivity across your manufacturing team",
+      color: "text-pink-600"
+    },
+    {
+      icon: Smartphone,
+      title: "QR Code Tracking",
+      description: "Tag-based inventory system with QR codes for complete audit trails",
+      color: "text-indigo-600"
+    }
+  ];
+
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Everything You Need to Run Your Business
+    <div className="py-16 bg-white relative">
+      <div className="container mx-auto px-6 lg:px-8">
+        <div className="max-w-3xl mb-12">
+          <Badge className="mb-4 px-3 py-1 bg-gradient-to-r from-emerald-100 to-blue-100 text-emerald-700 border-emerald-200/50 rounded-full text-xs">
+            Complete Platform
+          </Badge>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight text-left">
+            Everything You Need to Run <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">Your Manufacturing</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Our comprehensive business management platform provides all the tools you need 
-            to streamline operations, increase efficiency, and grow your business.
+          <p className="text-base text-gray-600 leading-relaxed">
+            From raw materials to finished jewelry - manage your entire operation in one platform
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-blue-600" />
+        
+        <div className="max-w-4xl relative">
+          {/* Timeline line */}
+          <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gradient-to-b from-emerald-200 via-blue-200 to-purple-200 hidden md:block"></div>
+          
+          <div className="space-y-8">
+            {features.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <div 
+                  key={index} 
+                  className="flex items-start space-x-6 group animate-fade-in"
+                  style={{animationDelay: `${index * 0.15}s`}}
+                >
+                  {/* Animated Icon */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:border-emerald-300">
+                      <IconComponent 
+                        className={`h-6 w-6 ${feature.color} transition-all duration-500 group-hover:scale-125 group-hover:rotate-6`} 
+                      />
+                    </div>
+                    {/* Timeline dot */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-emerald-400 to-blue-400 rounded-full border-2 border-white shadow-sm hidden md:block"></div>
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 pt-2">
+                    <div className="group-hover:translate-x-2 transition-transform duration-300">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                        {feature.title}:
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <CardTitle className="text-lg font-semibold text-gray-900">
-                  {feature.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {feature.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+              );
+            })}
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
