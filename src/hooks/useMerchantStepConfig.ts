@@ -29,7 +29,7 @@ export interface CreateStepData {
   step_order: number;
 }
 
-export interface UpdateFieldVisibilityData {
+export interface FieldConfigUpdate {
   step_name: string;
   field_key: string;
   is_visible: boolean;
@@ -102,39 +102,50 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  const updateFieldVisibilityMutation = useMutation({
-    mutationFn: async (updateData: UpdateFieldVisibilityData) => {
+  const saveAllFieldConfigsMutation = useMutation({
+    mutationFn: async (fieldUpdates: FieldConfigUpdate[]) => {
       const { data: merchantId, error: merchantError } = await supabase
         .rpc('get_user_merchant_id');
 
       if (merchantError) throw merchantError;
 
-      // Use proper upsert with the correct conflict resolution
-      const { data, error } = await supabase
+      // First, delete all existing configurations for this merchant
+      const { error: deleteError } = await supabase
         .from('merchant_step_field_config')
-        .upsert({
-          merchant_id: merchantId,
-          step_name: updateData.step_name,
-          field_key: updateData.field_key,
-          is_visible: updateData.is_visible,
-          unit: updateData.unit,
-        }, {
-          onConflict: 'merchant_id,step_name,field_key',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
+        .delete()
+        .eq('merchant_id', merchantId);
 
-      if (error) throw error;
-      return data;
+      if (deleteError) throw deleteError;
+
+      // Then insert all the new configurations
+      if (fieldUpdates.length > 0) {
+        const insertData = fieldUpdates.map(update => ({
+          merchant_id: merchantId,
+          step_name: update.step_name,
+          field_key: update.field_key,
+          is_visible: update.is_visible,
+          unit: update.unit || null,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('merchant_step_field_config')
+          .insert(insertData);
+
+        if (insertError) throw insertError;
+      }
     },
     onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Field configuration saved successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['merchant-step-field-config'] });
     },
     onError: (error: any) => {
+      console.error('Field config save error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update field visibility',
+        description: error.message || 'Failed to save field configuration',
         variant: 'destructive',
       });
     },
@@ -191,13 +202,13 @@ export const useMerchantStepConfig = () => {
     fieldConfigs,
     isLoading: stepsLoading || fieldConfigsLoading,
     createStep: createStepMutation.mutate,
-    updateFieldVisibility: updateFieldVisibilityMutation.mutate,
+    saveAllFieldConfigs: saveAllFieldConfigsMutation.mutate,
     deleteStep: deleteStepMutation.mutate,
     getVisibleFieldsForStep,
     isFieldVisible,
     getFieldUnit,
     isCreatingStep: createStepMutation.isPending,
-    isUpdatingField: updateFieldVisibilityMutation.isPending,
+    isSavingFieldConfigs: saveAllFieldConfigsMutation.isPending,
     isDeletingStep: deleteStepMutation.isPending,
   };
 };

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Settings, Trash2, GripVertical, Save } from 'lucide-react';
 import { useMasterFields } from '@/hooks/useMasterFields';
-import { useMerchantStepConfig } from '@/hooks/useMerchantStepConfig';
+import { useMerchantStepConfig, FieldConfigUpdate } from '@/hooks/useMerchantStepConfig';
 import { useToast } from '@/hooks/use-toast';
 
 const ManufacturingWorkflowConfig = () => {
@@ -22,18 +22,18 @@ const ManufacturingWorkflowConfig = () => {
     fieldConfigs,
     isLoading,
     createStep,
-    updateFieldVisibility,
+    saveAllFieldConfigs,
     deleteStep,
     isFieldVisible,
     getFieldUnit,
     isCreatingStep,
-    isUpdatingField,
+    isSavingFieldConfigs,
   } = useMerchantStepConfig();
 
   const [newStepName, setNewStepName] = useState('');
   const [isAddStepDialogOpen, setIsAddStepDialogOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<string>('');
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<Map<string, FieldConfigUpdate>>(new Map());
 
   // Unit options for fields
   const unitOptions = [
@@ -72,37 +72,83 @@ const ManufacturingWorkflowConfig = () => {
   };
 
   const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean) => {
+    const key = `${stepName}-${fieldKey}`;
     const currentUnit = getFieldUnit(stepName, fieldKey);
-    setHasUnsavedChanges(true);
     
-    // For immediate feedback, we'll update immediately but also show save option
-    updateFieldVisibility({
+    const update: FieldConfigUpdate = {
       step_name: stepName,
       field_key: fieldKey,
       is_visible: isVisible,
       unit: currentUnit,
+    };
+
+    setPendingChanges(prev => {
+      const newMap = new Map(prev);
+      newMap.set(key, update);
+      return newMap;
     });
   };
 
   const handleUnitChange = (stepName: string, fieldKey: string, unit: string) => {
-    const isVisible = isFieldVisible(stepName, fieldKey);
-    setHasUnsavedChanges(true);
+    const key = `${stepName}-${fieldKey}`;
+    const currentVisibility = isFieldVisible(stepName, fieldKey);
     
-    updateFieldVisibility({
+    const update: FieldConfigUpdate = {
       step_name: stepName,
       field_key: fieldKey,
-      is_visible: isVisible,
+      is_visible: currentVisibility,
       unit: unit,
+    };
+
+    setPendingChanges(prev => {
+      const newMap = new Map(prev);
+      newMap.set(key, update);
+      return newMap;
     });
   };
 
-  const handleSaveConfiguration = () => {
-    // Force refresh the data to ensure everything is saved
-    toast({
-      title: 'Configuration Saved',
-      description: 'Your manufacturing workflow configuration has been saved successfully.',
+  const handleSaveAllChanges = () => {
+    const allFieldUpdates: FieldConfigUpdate[] = [];
+
+    // Add all existing field configurations that haven't been modified
+    fieldConfigs.forEach(config => {
+      const key = `${config.step_name}-${config.field_key}`;
+      if (!pendingChanges.has(key)) {
+        allFieldUpdates.push({
+          step_name: config.step_name,
+          field_key: config.field_key,
+          is_visible: config.is_visible,
+          unit: config.unit,
+        });
+      }
     });
-    setHasUnsavedChanges(false);
+
+    // Add all pending changes
+    pendingChanges.forEach(update => {
+      allFieldUpdates.push(update);
+    });
+
+    // Also add visible fields that don't have existing configs
+    steps.forEach(step => {
+      masterFields.forEach(field => {
+        const key = `${step.step_name}-${field.field_key}`;
+        const existingConfig = fieldConfigs.find(c => c.step_name === step.step_name && c.field_key === field.field_key);
+        const pendingChange = pendingChanges.get(key);
+        
+        if (!existingConfig && !pendingChange) {
+          // This field is visible by default but has no config, add it as not visible
+          allFieldUpdates.push({
+            step_name: step.step_name,
+            field_key: field.field_key,
+            is_visible: false,
+            unit: '',
+          });
+        }
+      });
+    });
+
+    saveAllFieldConfigs(allFieldUpdates);
+    setPendingChanges(new Map());
   };
 
   const handleDeleteStep = (stepId: string, stepName: string) => {
@@ -114,6 +160,26 @@ const ManufacturingWorkflowConfig = () => {
   const shouldShowUnitSelector = (dataType: string) => {
     return ['number', 'decimal'].includes(dataType);
   };
+
+  const getEffectiveFieldVisibility = (stepName: string, fieldKey: string) => {
+    const key = `${stepName}-${fieldKey}`;
+    const pendingChange = pendingChanges.get(key);
+    if (pendingChange) {
+      return pendingChange.is_visible;
+    }
+    return isFieldVisible(stepName, fieldKey);
+  };
+
+  const getEffectiveFieldUnit = (stepName: string, fieldKey: string) => {
+    const key = `${stepName}-${fieldKey}`;
+    const pendingChange = pendingChanges.get(key);
+    if (pendingChange) {
+      return pendingChange.unit || '';
+    }
+    return getFieldUnit(stepName, fieldKey);
+  };
+
+  const hasUnsavedChanges = pendingChanges.size > 0;
 
   if (isLoading) {
     return (
@@ -137,12 +203,12 @@ const ManufacturingWorkflowConfig = () => {
         
         {hasUnsavedChanges && (
           <Button 
-            onClick={handleSaveConfiguration}
-            disabled={isUpdatingField}
+            onClick={handleSaveAllChanges}
+            disabled={isSavingFieldConfigs}
             className="bg-green-600 hover:bg-green-700"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isUpdatingField ? 'Saving...' : 'Save Configuration'}
+            {isSavingFieldConfigs ? 'Saving...' : `Save Changes (${pendingChanges.size})`}
           </Button>
         )}
       </div>
@@ -264,8 +330,8 @@ const ManufacturingWorkflowConfig = () => {
                     
                     <div className="grid gap-4">
                       {masterFields.map((field) => {
-                        const currentUnit = getFieldUnit(step.step_name, field.field_key);
-                        const isVisible = isFieldVisible(step.step_name, field.field_key);
+                        const effectiveUnit = getEffectiveFieldUnit(step.step_name, field.field_key);
+                        const effectiveVisibility = getEffectiveFieldVisibility(step.step_name, field.field_key);
                         
                         return (
                           <div key={field.field_key} className="flex items-center justify-between p-4 border rounded-lg">
@@ -273,8 +339,8 @@ const ManufacturingWorkflowConfig = () => {
                               <div className="flex items-center gap-2 mb-2">
                                 <Label htmlFor={`${step.step_name}-${field.field_key}`} className="font-medium">
                                   {field.label}
-                                  {currentUnit && (
-                                    <span className="text-muted-foreground ml-1">({currentUnit})</span>
+                                  {effectiveUnit && (
+                                    <span className="text-muted-foreground ml-1">({effectiveUnit})</span>
                                   )}
                                 </Label>
                                 <Badge variant="secondary" className="text-xs">
@@ -286,11 +352,11 @@ const ManufacturingWorkflowConfig = () => {
                                   {field.description}
                                 </p>
                               )}
-                              {shouldShowUnitSelector(field.data_type) && isVisible && (
+                              {shouldShowUnitSelector(field.data_type) && effectiveVisibility && (
                                 <div className="mt-2">
                                   <Label className="text-xs text-muted-foreground">Unit</Label>
                                   <Select
-                                    value={currentUnit || ''}
+                                    value={effectiveUnit || ''}
                                     onValueChange={(unit) => handleUnitChange(step.step_name, field.field_key, unit)}
                                   >
                                     <SelectTrigger className="w-[180px] h-8">
@@ -309,7 +375,7 @@ const ManufacturingWorkflowConfig = () => {
                             </div>
                             <Switch
                               id={`${step.step_name}-${field.field_key}`}
-                              checked={isVisible}
+                              checked={effectiveVisibility}
                               onCheckedChange={(checked) => 
                                 handleFieldVisibilityToggle(step.step_name, field.field_key, checked)
                               }
