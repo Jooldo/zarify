@@ -24,9 +24,9 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   stepFields = [],
   onViewDetails
 }) => {
-  const { getStepValue, stepFields: allStepFields } = useManufacturingStepValues();
+  const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
-  const { manufacturingSteps, orderSteps } = useManufacturingSteps();
+  const { manufacturingSteps, orderSteps, stepFields: allStepFields } = useManufacturingSteps();
   const { manufacturingOrders } = useManufacturingOrders();
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
