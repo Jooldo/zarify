@@ -1,5 +1,5 @@
 
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
 import { NavigationProvider } from '@/contexts/NavigationContext';
@@ -15,11 +15,69 @@ import CatalogueManagement from '@/components/catalogue/CatalogueManagement';
 import NotFound from '@/pages/NotFound';
 
 const Index = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Map current route to active tab
+  const getActiveTabFromRoute = (pathname: string) => {
+    if (pathname === '/') return 'dashboard';
+    if (pathname === '/orders') return 'orders';
+    if (pathname === '/inventory') return 'fg-inventory';
+    if (pathname === '/config') return 'config';
+    if (pathname === '/users') return 'customers';
+    if (pathname === '/activity') return 'activity';
+    if (pathname === '/settings/merchant') return 'merchant-configurations';
+    if (pathname === '/settings/general') return 'general-settings';
+    if (pathname === '/catalogue') return 'catalogue-management';
+    return 'dashboard';
+  };
+
+  // Handle tab changes by navigating to appropriate routes
+  const handleTabChange = (tab: string) => {
+    switch (tab) {
+      case 'dashboard':
+        navigate('/');
+        break;
+      case 'orders':
+        navigate('/orders');
+        break;
+      case 'fg-inventory':
+      case 'rm-inventory':
+        navigate('/inventory');
+        break;
+      case 'config':
+        navigate('/config');
+        break;
+      case 'customers':
+      case 'suppliers':
+      case 'workers':
+      case 'roles':
+        navigate('/users');
+        break;
+      case 'activity':
+        navigate('/activity');
+        break;
+      case 'merchant-configurations':
+        navigate('/settings/merchant');
+        break;
+      case 'general-settings':
+        navigate('/settings/general');
+        break;
+      case 'catalogue-management':
+        navigate('/catalogue');
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  const activeTab = getActiveTabFromRoute(location.pathname);
+
   return (
     <SidebarProvider>
       <NavigationProvider>
         <div className="min-h-screen flex w-full">
-          <AppSidebar />
+          <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<UnifiedDashboard />} />
