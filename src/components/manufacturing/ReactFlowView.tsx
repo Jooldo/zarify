@@ -209,7 +209,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges with hierarchical relationships and stepped connectors
+          // Create edges with hierarchical relationships and L-shaped connectors
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -240,7 +240,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Create edge with stepped/elbow styling
+          // Create edge with L-shaped/step styling
           const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
           const isAnimated = orderStep?.status === 'in_progress';
           
@@ -274,7 +274,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             id: edgeId,
             source: sourceNodeId,
             target: stepNodeId,
-            type: 'smoothstep', // Changed to smoothstep for elbow/L-shaped connectors
+            type: 'smoothstep', // L-shaped/elbow connectors
             animated: isAnimated,
             style: {
               stroke: strokeColor,
@@ -292,14 +292,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
     console.log('Generated nodes before layout:', nodes.length, 'edges:', edges.length);
     
-    // Apply improved hierarchical layout with enhanced spacing
+    // Apply compact hierarchical layout with minimal spacing
     const layoutResult = calculateHierarchicalLayout(nodes, edges, {
       ...DEFAULT_LAYOUT_CONFIG,
-      horizontalSpacing: 300, // Further increased for better separation
-      verticalSpacing: 450,   // Enhanced vertical separation
-      rootX: 200,             // Adjusted starting position
-      rootY: 50,
-      minNodeSpacing: 120,    // Enhanced minimum spacing
+      horizontalGap: 50,      // Compact horizontal gap
+      verticalGap: 70,        // Compact vertical gap
+      minSiblingGap: 30,      // Minimal sibling spacing
     });
 
     console.log('Generated nodes after layout:', layoutResult.nodes.length, 'edges:', layoutResult.edges.length);
