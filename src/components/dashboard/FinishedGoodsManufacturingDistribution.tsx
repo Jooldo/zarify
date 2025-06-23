@@ -33,52 +33,56 @@ const FinishedGoodsManufacturingDistribution = ({
   const { getStepValue, getStepValues } = useManufacturingStepValues();
 
   const stepDistribution = useMemo(() => {
-    if (!Array.isArray(manufacturingOrders) || manufacturingOrders.length === 0 || 
-        !Array.isArray(orderSteps) || orderSteps.length === 0 || 
-        !Array.isArray(stepFields) || stepFields.length === 0) {
+    if (!manufacturingOrders.length || !orderSteps.length || !stepFields.length) {
       return [];
     }
 
     // Filter in-progress manufacturing orders only
     const inProgressOrders = manufacturingOrders.filter(order => order.status === 'in_progress');
     
-    // Group order steps by step name
+    // Group order steps by manufacturing step
     const stepGroups = new Map<string, any[]>();
     
     orderSteps.forEach(orderStep => {
-      if (orderStep && orderStep.status === 'in_progress') {
-        const stepName = orderStep.step_name;
-        if (!stepGroups.has(stepName)) {
-          stepGroups.set(stepName, []);
+      if (orderStep.status === 'in_progress' && orderStep.manufacturing_steps) {
+        const stepId = orderStep.manufacturing_step_id;
+        if (!stepGroups.has(stepId)) {
+          stepGroups.set(stepId, []);
         }
-        stepGroups.get(stepName)!.push(orderStep);
+        stepGroups.get(stepId)!.push(orderStep);
       }
     });
 
     // Calculate distribution for each step
     const distribution: StepDistribution[] = [];
     
-    stepGroups.forEach((orderStepsInStep, stepName) => {
-      const merchantStep = Array.isArray(manufacturingSteps) ? 
-        manufacturingSteps.find(step => step.step_name === stepName) : null;
-      if (!merchantStep) return;
+    stepGroups.forEach((orderStepsInStep, stepId) => {
+      const manufacturingStep = manufacturingSteps.find(step => step.id === stepId);
+      if (!manufacturingStep) return;
 
-      const stepFieldsConfig = getStepFields(stepName);
-      const hasQuantityField = true; // Always has quantity in our schema
-      const hasWeightField = true; // Always has weight in our schema
+      const stepFieldsConfig = getStepFields(stepId);
+      const quantityField = stepFieldsConfig.find(field => 
+        ['quantityAssigned', 'quantity_assigned', 'quantity'].includes(field.field_name)
+      );
+      const weightField = stepFieldsConfig.find(field => 
+        ['rawMaterialWeightAssigned', 'weight_assigned', 'weight'].includes(field.field_name)
+      );
 
       let totalQuantity: number | null = null;
       let totalWeight: number | null = null;
+      const hasQuantityField = !!quantityField;
+      const hasWeightField = !!weightField;
 
-      // Get units from field options (default values)
-      const quantityUnit = 'pieces';
-      const weightUnit = 'grams';
+      // Get units from field options
+      const quantityUnit = quantityField?.field_options?.unit || null;
+      const weightUnit = weightField?.field_options?.unit || null;
 
-      // Calculate totals
+      // Only calculate totals if fields exist
       if (hasQuantityField) {
         totalQuantity = 0;
         orderStepsInStep.forEach(orderStep => {
-          const quantity = parseFloat(orderStep.quantity_assigned) || 0;
+          const quantityValue = getStepValue(orderStep.id, quantityField!.field_id);
+          const quantity = parseFloat(quantityValue) || 0;
           totalQuantity! += quantity;
         });
       }
@@ -86,15 +90,16 @@ const FinishedGoodsManufacturingDistribution = ({
       if (hasWeightField) {
         totalWeight = 0;
         orderStepsInStep.forEach(orderStep => {
-          const weight = parseFloat(orderStep.weight_assigned) || 0;
+          const weightValue = getStepValue(orderStep.id, weightField!.field_id);
+          const weight = parseFloat(weightValue) || 0;
           totalWeight! += weight;
         });
       }
 
       distribution.push({
-        stepId: merchantStep.id,
-        stepName: merchantStep.step_name,
-        stepOrder: merchantStep.step_order,
+        stepId,
+        stepName: manufacturingStep.step_name,
+        stepOrder: manufacturingStep.step_order,
         totalQuantity,
         totalWeight,
         orderCount: orderStepsInStep.length,

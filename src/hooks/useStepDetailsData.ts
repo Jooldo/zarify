@@ -3,57 +3,55 @@ import { useMemo } from 'react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
+import { Tables } from '@/integrations/supabase/types';
 
-export const useStepDetailsData = (step: any | null) => {
+export const useStepDetailsData = (step: Tables<'manufacturing_order_steps'> | null) => {
   const { manufacturingSteps, orderSteps, getStepFields, isLoading: isLoadingStepsData } = useManufacturingSteps();
   const { getStepValue, isLoading: isLoadingValues } = useManufacturingStepValues();
   const { manufacturingOrders } = useManufacturingOrders();
 
   const order = useMemo(() => {
     if (!step) return null;
-    const ordersArray = Array.isArray(manufacturingOrders) ? manufacturingOrders : [];
-    const foundOrder = ordersArray.find(o => o.id === step.order_id) || null;
+    const foundOrder = manufacturingOrders.find(o => o.id === step.manufacturing_order_id) || null;
     return foundOrder;
   }, [step, manufacturingOrders]);
 
   const currentStepDefinition = useMemo(() => {
-    if (!step || !Array.isArray(manufacturingSteps) || manufacturingSteps.length === 0) return null;
-    const foundStep = manufacturingSteps.find(s => s.step_name === step.step_name);
+    if (!step || !manufacturingSteps.length) return null;
+    const foundStep = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
     return foundStep;
   }, [step, manufacturingSteps]);
 
   const currentStepFields = useMemo(() => {
     if (!currentStepDefinition) return [];
-    const fields = getStepFields(currentStepDefinition.step_name);
+    const fields = getStepFields(currentStepDefinition.id);
     return fields;
   }, [currentStepDefinition, getStepFields]);
 
   const currentStepValues = useMemo(() => {
     if (!step || currentStepFields.length === 0) return [];
     const values = currentStepFields.map(field => {
-      const fieldKey = field.field_key;
-      const value = step[fieldKey] || '-';
+      const value = getStepValue(step.id, field.field_id);
       return {
-        label: field.field_key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        value: value,
-        unit: null, // Can be extended later
+        label: field.field_label,
+        value: value || '-',
+        unit: field.field_options?.unit,
       };
     });
     return values;
-  }, [step, currentStepFields]);
+  }, [step, currentStepFields, getStepValue]);
 
   const previousStepsData = useMemo(() => {
-    if (!step || !order || !Array.isArray(manufacturingSteps) || manufacturingSteps.length === 0 || 
-        !Array.isArray(orderSteps) || orderSteps.length === 0) {
+    if (!step || !order || !manufacturingSteps.length || !orderSteps.length) {
       return [];
     }
 
-    const currentStepDefinition = manufacturingSteps.find(s => s.step_name === step.step_name);
+    const currentStepDefinition = manufacturingSteps.find(s => s.id === step.manufacturing_step_id);
     if (!currentStepDefinition) {
       return [];
     }
 
-    const allOrderStepsForOrder = orderSteps.filter(os => String(os.order_id) === String(order.id));
+    const allOrderStepsForOrder = orderSteps.filter(os => String(os.manufacturing_order_id) === String(order.id));
 
     const allStepDefinitions = manufacturingSteps
       .slice()
@@ -63,7 +61,7 @@ export const useStepDetailsData = (step: any | null) => {
     const previousStepDefinitions = allStepDefinitions.filter(def => Number(def.step_order) < currentStepOrder);
 
     const result = previousStepDefinitions.map(prevStepDef => {
-      const orderStep = allOrderStepsForOrder.find(os => String(os.step_name) === String(prevStepDef.step_name));
+      const orderStep = allOrderStepsForOrder.find(os => String(os.manufacturing_step_id) === String(prevStepDef.id));
 
       if (!orderStep) {
         return {
@@ -74,15 +72,14 @@ export const useStepDetailsData = (step: any | null) => {
         };
       }
 
-      const fields = getStepFields(prevStepDef.step_name);
+      const fields = getStepFields(prevStepDef.id);
 
       const values = fields.map(field => {
-        const fieldKey = field.field_key;
-        const value = orderStep[fieldKey] || '-';
+        const value = getStepValue(orderStep.id, field.field_id);
         return {
-          label: field.field_key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          value: value,
-          unit: null, // Can be extended later
+          label: field.field_label,
+          value: value || '-',
+          unit: field.field_options?.unit,
         };
       });
 
@@ -95,7 +92,7 @@ export const useStepDetailsData = (step: any | null) => {
     });
 
     return result;
-  }, [step, order, manufacturingSteps, orderSteps, getStepFields]);
+  }, [step, order, manufacturingSteps, orderSteps, getStepFields, getStepValue]);
 
   return {
     order,

@@ -38,18 +38,17 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
   const [assignedToStep, setAssignedToStep] = useState<number>(1);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
-  const activeSteps = useMemo(() => {
-    if (!Array.isArray(manufacturingSteps)) return [];
-    return manufacturingSteps
+  const activeSteps = useMemo(() => 
+    manufacturingSteps
       .filter(step => step.is_active)
-      .sort((a, b) => a.step_order - b.step_order);
-  }, [manufacturingSteps]);
+      .sort((a, b) => a.step_order - b.step_order),
+    [manufacturingSteps]
+  );
 
   const selectedStepFields = useMemo(() => {
-    if (!Array.isArray(stepFields)) return [];
     const selectedStep = activeSteps.find(step => step.step_order === assignedToStep);
     if (selectedStep) {
-      return stepFields.filter(field => field.step_name === selectedStep.step_name);
+      return stepFields.filter(field => field.manufacturing_step_id === selectedStep.id);
     }
     return [];
   }, [activeSteps, stepFields, assignedToStep]);
@@ -63,7 +62,7 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
         const newValues: Record<string, string> = {};
         selectedStepFields.forEach(field => {
           // Keep existing value if it exists, otherwise set to empty string
-          newValues[field.field_key] = prevValues[field.field_key] || '';
+          newValues[field.field_id] = prevValues[field.field_id] || '';
         });
         console.log('Initialized field values:', newValues);
         return newValues;
@@ -73,29 +72,29 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
     }
   }, [selectedStepFields]);
 
-  const handleFieldValueChange = useCallback((fieldKey: string, value: string) => {
-    console.log('Field value changing:', fieldKey, '=', value);
+  const handleFieldValueChange = useCallback((fieldId: string, value: string) => {
+    console.log('Field value changing:', fieldId, '=', value);
     setFieldValues(prev => ({
       ...prev,
-      [fieldKey]: value
+      [fieldId]: value
     }));
   }, []);
 
   const renderField = (field: any) => {
-    const currentValue = fieldValues[field.field_key] || '';
+    const currentValue = fieldValues[field.field_id] || '';
 
-    switch (field.field_key) {
-      case 'assigned_worker':
+    switch (field.field_type) {
+      case 'worker':
         return (
           <Select 
             value={currentValue} 
-            onValueChange={(value) => handleFieldValueChange(field.field_key, value)}
+            onValueChange={(value) => handleFieldValueChange(field.field_id, value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
             <SelectContent>
-              {Array.isArray(workers) && workers.map(worker => (
+              {workers.map(worker => (
                 <SelectItem key={worker.id} value={worker.id}>
                   {worker.name}
                 </SelectItem>
@@ -103,37 +102,30 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
             </SelectContent>
           </Select>
         );
-      case 'quantity_assigned':
-      case 'quantity_received':
-      case 'weight_assigned':
-      case 'weight_received':
-      case 'purity':
-      case 'wastage':
-      case 'temperature':
-      case 'pressure':
+      case 'number':
         return (
           <Input
             type="number"
             value={currentValue}
-            onChange={(e) => handleFieldValueChange(field.field_key, e.target.value)}
-            placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
-      case 'due_date':
+      case 'text':
+        return (
+          <Input
+            type="text"
+            value={currentValue}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
+          />
+        );
+      case 'date':
         return (
           <Input
             type="date"
             value={currentValue}
-            onChange={(e) => handleFieldValueChange(field.field_key, e.target.value)}
-          />
-        );
-      case 'notes':
-      case 'instructions':
-        return (
-          <Textarea
-            value={currentValue}
-            onChange={(e) => handleFieldValueChange(field.field_key, e.target.value)}
-            placeholder={`Enter ${field.field_key}`}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
           />
         );
       default:
@@ -141,8 +133,8 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
           <Input
             type="text"
             value={currentValue}
-            onChange={(e) => handleFieldValueChange(field.field_key, e.target.value)}
-            placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+            onChange={(e) => handleFieldValueChange(field.field_id, e.target.value)}
+            placeholder={`Enter ${field.field_label.toLowerCase()}`}
           />
         );
     }
@@ -160,12 +152,27 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
       return;
     }
 
+    // Validate required fields
+    const requiredFields = selectedStepFields.filter(field => field.is_required);
+    const missingFields = requiredFields.filter(field => 
+      !fieldValues[field.field_id] || fieldValues[field.field_id].toString().trim() === ''
+    );
+    
+    if (missingFields.length > 0) {
+      toast({
+        title: 'Error',
+        description: `Please fill in all required fields: ${missingFields.map(f => f.field_label).join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsCreating(true);
 
     try {
       // Generate unique rework order number using the database function
       const { data: reworkOrderNumber, error: reworkNumberError } = await supabase
-        .rpc('get_next_manufacturing_order_number');
+        .rpc('get_next_rework_order_number', { base_order_number: parentOrder.order_number });
 
       if (reworkNumberError) {
         console.error('Error generating rework order number:', reworkNumberError);
@@ -180,11 +187,16 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
         .insert({
           order_number: reworkOrderNumber,
           product_name: parentOrder.product_name,
+          product_config_id: parentOrder.product_config_id,
           quantity_required: parentOrder.quantity_required,
           priority: parentOrder.priority,
           status: 'pending',
           special_instructions: `Rework from ${parentOrder.order_number} - Step ${currentStep.step_name} - ${reworkReason}`,
-          merchant_id: parentOrder.merchant_id
+          merchant_id: parentOrder.merchant_id,
+          parent_order_id: parentOrder.id,
+          rework_source_step_id: parentOrderStep.id, // Use the manufacturing_order_steps ID
+          rework_reason: reworkReason,
+          assigned_to_step: assignedToStep
         })
         .select()
         .single();
@@ -194,33 +206,52 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
         throw orderError;
       }
 
-      console.log('✅ Created rework order:', {
+      console.log('✅ Created rework order with proper step tracking:', {
         childOrderId: childOrder.id,
-        orderNumber: reworkOrderNumber
+        orderNumber: reworkOrderNumber,
+        rework_source_step_id: parentOrderStep.id,
+        assigned_to_step: assignedToStep
       });
 
-      // Create manufacturing order step data for the assigned step
+      // Create manufacturing order step for the assigned step
       const assignedStep = activeSteps.find(step => step.step_order === assignedToStep);
       if (assignedStep) {
-        const stepData: any = {
-          order_id: childOrder.id,
-          step_name: assignedStep.step_name,
-          status: 'pending',
-          merchant_id: parentOrder.merchant_id
-        };
-
-        // Add field values to step data
-        Object.entries(fieldValues).forEach(([fieldKey, value]) => {
-          if (value && value.toString().trim() !== '') {
-            stepData[fieldKey] = value;
-          }
-        });
-
-        const { error: stepError } = await supabase
-          .from('manufacturing_order_step_data')
-          .insert(stepData);
+        const { data: createdStepData, error: stepError } = await supabase
+          .from('manufacturing_order_steps')
+          .insert({
+            manufacturing_order_id: childOrder.id,
+            manufacturing_step_id: assignedStep.id,
+            step_order: assignedStep.step_order,
+            status: 'pending',
+            merchant_id: parentOrder.merchant_id
+          })
+          .select()
+          .single();
 
         if (stepError) throw stepError;
+
+        // Save field values if any
+        if (selectedStepFields.length > 0 && Object.keys(fieldValues).length > 0) {
+          const stepValueInserts = Object.entries(fieldValues)
+            .filter(([_, value]) => value && value.toString().trim() !== '')
+            .map(([fieldId, value]) => ({
+              manufacturing_order_step_id: createdStepData.id,
+              field_id: fieldId,
+              field_value: value.toString(),
+              merchant_id: parentOrder.merchant_id
+            }));
+
+          if (stepValueInserts.length > 0) {
+            const { error: valuesError } = await supabase
+              .from('manufacturing_order_step_values')
+              .insert(stepValueInserts);
+
+            if (valuesError) {
+              console.error('Error saving field values:', valuesError);
+              // Don't throw here as the order was created successfully
+            }
+          }
+        }
       }
 
       toast({
@@ -347,8 +378,9 @@ const CreateChildOrderDialog: React.FC<CreateChildOrderDialogProps> = ({
                   {selectedStepFields.map(field => (
                     <div key={field.id} className="space-y-2">
                       <Label>
-                        {field.field_key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        {field.is_visible && <span className="text-red-500 ml-1">*</span>}
+                        {field.field_label}
+                        {field.field_options?.unit && ` (${field.field_options.unit})`}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
                       {renderField(field)}
                     </div>

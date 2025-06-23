@@ -11,17 +11,14 @@ export const useWorkerAssignments = (manufacturingOrders: any[]) => {
   const { workers } = useWorkers();
 
   const workerAssignments = useMemo(() => {
-    if (!Array.isArray(orderSteps) || orderSteps.length === 0 || 
-        !Array.isArray(manufacturingSteps) || manufacturingSteps.length === 0 || 
-        !Array.isArray(stepFields) || stepFields.length === 0 || 
-        !Array.isArray(workers) || workers.length === 0) {
+    if (!orderSteps.length || !manufacturingSteps.length || !stepFields.length || !workers.length) {
       return [];
     }
 
     // Filter for order steps with any status except completed
     const activeOrderSteps = orderSteps.filter(
       orderStep => 
-        orderStep &&
+        orderStep.manufacturing_steps &&
         orderStep.status !== 'completed'
     );
 
@@ -31,21 +28,44 @@ export const useWorkerAssignments = (manufacturingOrders: any[]) => {
     const workerMap = new Map<string, WorkerAssignment>();
 
     activeOrderSteps.forEach(orderStep => {
-      if (!orderStep) return;
+      const manufacturingStep = orderStep.manufacturing_steps;
+      if (!manufacturingStep) return;
 
-      const stepFieldsConfig = getStepFields(orderStep.step_name);
+      const stepFieldsConfig = getStepFields(orderStep.manufacturing_step_id);
       
-      // Get worker ID from assigned_worker field
-      const assignedWorkerId = orderStep.assigned_worker;
+      // Find worker field configuration
+      const workerField = stepFieldsConfig.find(field => field.field_type === 'worker');
+      if (!workerField) return;
+
+      // Get worker ID from step values
+      const assignedWorkerId = getStepValue(orderStep.id, workerField.field_id);
       if (!assignedWorkerId) return;
 
       const worker = workers.find(w => w.id === assignedWorkerId);
       if (!worker) return;
 
-      let stepQuantity = orderStep.quantity_assigned || 0;
-      let stepWeight = orderStep.weight_assigned || 0;
-      const quantityUnit = 'pieces'; // Default unit
-      const weightUnit = 'grams'; // Default unit
+      // Find quantity and weight fields
+      const quantityField = stepFieldsConfig.find(field => 
+        ['quantityAssigned', 'quantity_assigned', 'quantity'].includes(field.field_name)
+      );
+      const weightField = stepFieldsConfig.find(field => 
+        ['rawMaterialWeightAssigned', 'weight_assigned', 'weight'].includes(field.field_name)
+      );
+
+      let stepQuantity = 0;
+      let stepWeight = 0;
+      const quantityUnit = quantityField?.field_options?.unit || null;
+      const weightUnit = weightField?.field_options?.unit || null;
+
+      if (quantityField) {
+        const quantityValue = getStepValue(orderStep.id, quantityField.field_id);
+        stepQuantity = parseFloat(quantityValue) || 0;
+      }
+
+      if (weightField) {
+        const weightValue = getStepValue(orderStep.id, weightField.field_id);
+        stepWeight = parseFloat(weightValue) || 0;
+      }
 
       if (!workerMap.has(assignedWorkerId)) {
         workerMap.set(assignedWorkerId, {
@@ -61,12 +81,12 @@ export const useWorkerAssignments = (manufacturingOrders: any[]) => {
       const assignment = workerMap.get(assignedWorkerId)!;
       
       // Check if step already exists for this worker
-      let existingStep = assignment.steps.find(s => s.stepName === orderStep.step_name);
+      let existingStep = assignment.steps.find(s => s.stepName === manufacturingStep.step_name);
       
       if (!existingStep) {
         existingStep = {
-          stepName: orderStep.step_name,
-          stepOrder: 1, // Default order
+          stepName: manufacturingStep.step_name,
+          stepOrder: manufacturingStep.step_order,
           quantity: 0,
           weight: 0,
           quantityUnit,
@@ -88,8 +108,8 @@ export const useWorkerAssignments = (manufacturingOrders: any[]) => {
       existingStep.quantity += stepQuantity;
       existingStep.weight += stepWeight;
       
-      if (!existingStep.orderIds.includes(orderStep.order_id)) {
-        existingStep.orderIds.push(orderStep.order_id);
+      if (!existingStep.orderIds.includes(orderStep.manufacturing_order_id)) {
+        existingStep.orderIds.push(orderStep.manufacturing_order_id);
         assignment.orderCount += 1;
       }
     });
