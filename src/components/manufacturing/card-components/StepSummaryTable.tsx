@@ -8,8 +8,6 @@ interface StepSummary {
   totalActiveInstances: number;
   weightAssigned: number;
   weightReceived: number;
-  reworkWeight: number;
-  quantityReceived: number;
   completionPercentage: number;
 }
 
@@ -28,29 +26,21 @@ const StepSummaryTable: React.FC<StepSummaryTableProps> = ({ stepSummaries }) =>
       </div>
       <div className="space-y-2">
         {stepSummaries.map((summary) => (
-          <div key={summary.stepName} className="grid grid-cols-5 gap-2 text-xs">
+          <div key={summary.stepName} className="grid grid-cols-3 gap-2 text-xs">
             <div className="font-medium text-gray-900 truncate">{summary.stepName}</div>
             <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
               {summary.totalActiveInstances || 0}
             </div>
-            <div className="text-center bg-purple-50 px-2 py-1 rounded text-purple-700 text-sm font-semibold">
+            <div className="text-right bg-purple-50 px-2 py-1 rounded text-purple-700 text-sm font-semibold">
               {summary.weightAssigned > 0 ? `${summary.weightAssigned.toFixed(1)}kg` : '—'}
-            </div>
-            <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
-              {summary.quantityReceived > 0 ? summary.quantityReceived : '—'}
-            </div>
-            <div className="text-center bg-orange-50 px-2 py-1 rounded text-orange-700 text-sm font-semibold">
-              {summary.reworkWeight > 0 ? `${summary.reworkWeight.toFixed(1)}kg` : '—'}
             </div>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-5 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
+      <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-gray-200 text-xs font-medium text-gray-500">
         <div>Step</div>
         <div className="text-center">Active</div>
-        <div className="text-center">Assigned</div>
-        <div className="text-center">Qty Recv</div>
-        <div className="text-center">Rework</div>
+        <div className="text-right">Assigned</div>
       </div>
     </div>
   );

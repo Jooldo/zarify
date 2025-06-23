@@ -21,21 +21,23 @@ const StepProgressSection: React.FC<StepProgressSectionProps> = ({
 }) => {
   if (!data.orderStepData) return null;
 
-  // Calculate rework quantities for this step - count ALL rework instances that originated from this step
+  // Calculate rework quantities for this step - only direct rework instances, not their children
   const getReworkQuantities = () => {
     if (!data.orderSteps || !data.orderStepData) return { quantity: 0, weight: 0 };
     
-    // Find ALL rework instances that originated from this step instance
+    // Find direct rework instances that originated from this step
     // These are instances that have origin_step_id = current step's id
-    const allReworkInstances = data.orderSteps.filter(step => 
-      step.origin_step_id === data.orderStepData.id
+    // AND have the same step_name as the origin (direct rework, not downstream steps)
+    const directReworkInstances = data.orderSteps.filter(step => 
+      step.origin_step_id === data.orderStepData.id && 
+      step.step_name === data.orderStepData.step_name // Only count same-step rework instances
     );
     
-    const totalReworkQuantity = allReworkInstances.reduce((sum, step) => 
+    const totalReworkQuantity = directReworkInstances.reduce((sum, step) => 
       sum + (step.quantity_assigned || 0), 0
     );
     
-    const totalReworkWeight = allReworkInstances.reduce((sum, step) => 
+    const totalReworkWeight = directReworkInstances.reduce((sum, step) => 
       sum + (step.weight_assigned || 0), 0
     );
     
