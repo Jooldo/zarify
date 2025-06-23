@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -185,19 +184,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         sum + (instance.weight_received || 0), 0
       );
 
-      // Calculate completion percentage
-      let completionPercentage = 0;
-      if (weightAssigned > 0) {
-        completionPercentage = Math.round((weightReceived / weightAssigned) * 100 * 100) / 100;
-      }
-
       return {
         stepName: step.step_name,
         stepOrder: step.step_order,
         totalActiveInstances,
         weightAssigned,
         weightReceived,
-        completionPercentage
+        completionPercentage: 0 // Not used anymore but kept for interface compatibility
       };
     });
   };
@@ -388,7 +381,7 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
           {/* Step Details Section - Only for non-order cards */}
           {!isOrderCard && (
             <StepProgressSection 
-              data={data}
+              data={{...data, orderSteps}}
               getWorkerName={getWorkerName}
               stepProgressData={stepProgressData}
               additionalFields={additionalFields}

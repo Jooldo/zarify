@@ -21,6 +21,32 @@ const StepProgressSection: React.FC<StepProgressSectionProps> = ({
 }) => {
   if (!data.orderStepData) return null;
 
+  // Calculate rework quantities for this step
+  const getReworkQuantities = () => {
+    if (!data.orderSteps || !data.orderStepData) return { quantity: 0, weight: 0 };
+    
+    // Find rework instances that originated from this step
+    const reworkInstances = data.orderSteps.filter(step => 
+      step.origin_step_id === data.orderStepData.id
+    );
+    
+    const totalReworkQuantity = reworkInstances.reduce((sum, step) => 
+      sum + (step.quantity_assigned || 0), 0
+    );
+    
+    const totalReworkWeight = reworkInstances.reduce((sum, step) => 
+      sum + (step.weight_assigned || 0), 0
+    );
+    
+    return {
+      quantity: totalReworkQuantity,
+      weight: totalReworkWeight
+    };
+  };
+
+  const reworkQuantities = getReworkQuantities();
+  const hasRework = reworkQuantities.quantity > 0 || reworkQuantities.weight > 0;
+
   return (
     <div className="space-y-3">
       {/* Worker and Due Date Row */}
@@ -65,8 +91,8 @@ const StepProgressSection: React.FC<StepProgressSectionProps> = ({
                 <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
                   {stepProgressData.quantity.received}
                 </div>
-                <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
-                  {stepProgressData.quantity.completion > 0 ? `${stepProgressData.quantity.completion.toFixed(1)}%` : '—'}
+                <div className="text-center bg-orange-50 px-2 py-1 rounded text-orange-700 text-sm font-semibold">
+                  {hasRework ? reworkQuantities.quantity : '—'}
                 </div>
               </div>
             )}
@@ -84,8 +110,8 @@ const StepProgressSection: React.FC<StepProgressSectionProps> = ({
                 <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
                   {stepProgressData.weight.received.toFixed(2)}
                 </div>
-                <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
-                  {stepProgressData.weight.completion > 0 ? `${stepProgressData.weight.completion.toFixed(1)}%` : '—'}
+                <div className="text-center bg-orange-50 px-2 py-1 rounded text-orange-700 text-sm font-semibold">
+                  {hasRework ? reworkQuantities.weight.toFixed(2) : '—'}
                 </div>
               </div>
             )}
@@ -94,7 +120,7 @@ const StepProgressSection: React.FC<StepProgressSectionProps> = ({
             <div>Metric</div>
             <div className="text-center">Assigned</div>
             <div className="text-center">Received</div>
-            <div className="text-center">% Complete</div>
+            <div className="text-center">Rework</div>
           </div>
         </div>
       )}
