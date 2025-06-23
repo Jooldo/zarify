@@ -240,12 +240,10 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
     console.log('📊 Finished goods found:', finishedGoodsData?.length || 0);
 
     // CRITICAL FIX: Fetch manufacturing orders to calculate in_manufacturing quantities
+    // Use separate query since the relation doesn't exist
     const { data: manufacturingOrders, error: manufacturingOrdersError } = await supabase
       .from('manufacturing_orders')
-      .select(`
-        quantity_required,
-        product_configs!inner(product_code)
-      `)
+      .select('quantity_required, product_name')
       .eq('merchant_id', merchantId)
       .in('status', ['pending', 'in_progress', 'completed']);
 
@@ -253,9 +251,9 @@ export const calculateAndUpdateRawMaterialRequirements = async (): Promise<Mater
       console.error('Error fetching manufacturing orders:', manufacturingOrdersError);
     }
 
-    // Calculate in_manufacturing quantities by product code
+    // Calculate in_manufacturing quantities by product code (using product_name from manufacturing_orders)
     const inManufacturingByProduct = manufacturingOrders?.reduce((acc, order) => {
-      const productCode = order.product_configs?.product_code;
+      const productCode = order.product_name; // Use product_name as product code
       if (productCode) {
         acc[productCode] = (acc[productCode] || 0) + order.quantity_required;
       }
