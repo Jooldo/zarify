@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircl
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StartStepDialog from './StartStepDialog';
 import UpdateStepDialog from './UpdateStepDialog';
@@ -31,7 +31,6 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   getStatusColor
 }) => {
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
-  const { getStepValue } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
@@ -43,7 +42,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   const getNextStep = () => {
     const currentOrderSteps = Array.isArray(orderSteps) 
-      ? orderSteps.filter(step => step.order_id === order.id)
+      ? orderSteps.filter(step => String(step.order_id) === String(order.id))
       : [];
     
     if (currentOrderSteps.length === 0) {
@@ -63,7 +62,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   const nextStep = getNextStep();
   const hasStarted = Array.isArray(orderSteps) && 
-    orderSteps.some(step => step.order_id === order.id && step.status !== 'pending');
+    orderSteps.some(step => String(step.order_id) === String(order.id) && step.status !== 'pending');
   const isCompleted = order.status === 'completed';
 
   const handleStartStep = () => {
@@ -84,77 +83,25 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     onOpenChange(false);
   };
 
-  // Get all order steps for this order with their field data - using manufacturing_order_step_data
-  const getOrderStepsWithFieldData = () => {
-    console.log('Getting order steps with field data for order:', order.id);
+  // Get all order steps for this order from manufacturing_order_step_data
+  const getOrderStepsWithData = () => {
+    console.log('Getting order steps for order:', order.id);
     console.log('Available orderSteps:', orderSteps);
-    console.log('Available stepFields:', stepFields);
     
     const currentOrderSteps = Array.isArray(orderSteps)
       ? orderSteps
           .filter(step => {
-            console.log('Checking step:', step.order_id, 'against order:', order.id);
+            console.log('Checking step order_id:', step.order_id, 'against order.id:', order.id);
             return String(step.order_id) === String(order.id);
           })
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       : [];
 
     console.log('Filtered currentOrderSteps:', currentOrderSteps);
-
-    return currentOrderSteps.map(orderStep => {
-      const stepStepFields = Array.isArray(stepFields) 
-        ? stepFields.filter(field => field.step_name === orderStep.step_name && field.is_visible)
-        : [];
-
-      console.log('Step fields for', orderStep.step_name, ':', stepStepFields);
-
-      // Get field values for this step - including database values from manufacturing_order_step_data
-      const fieldValues = stepStepFields.map(field => {
-        let value = null;
-        
-        // Get values directly from the orderStep (manufacturing_order_step_data table)
-        switch (field.field_key) {
-          case 'quantity_assigned':
-            value = orderStep.quantity_assigned || 0;
-            break;
-          case 'quantity_received':
-            value = orderStep.quantity_received || 0;
-            break;
-          case 'weight_assigned':
-            value = orderStep.weight_assigned || 0;
-            break;
-          case 'weight_received':
-            value = orderStep.weight_received || 0;
-            break;
-          case 'purity':
-            value = orderStep.purity || 0;
-            break;
-          case 'wastage':
-            value = orderStep.wastage || 0;
-            break;
-          default:
-            // Try to get custom field values
-            value = getStepValue(orderStep.id, field.field_key) || '-';
-        }
-        
-        return {
-          fieldKey: field.field_key,
-          value: value || '-',
-          unit: field.unit || ''
-        };
-      });
-
-      console.log('Field values for step', orderStep.step_name, ':', fieldValues);
-
-      return {
-        ...orderStep,
-        fields: stepStepFields,
-        fieldValues
-      };
-    });
+    return currentOrderSteps;
   };
 
-  const orderStepsWithData = getOrderStepsWithFieldData();
+  const orderStepsWithData = getOrderStepsWithData();
   console.log('Final orderStepsWithData:', orderStepsWithData);
 
   const getStepStatusColor = (status: string) => {
@@ -174,65 +121,75 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     return worker ? worker.name : null;
   };
 
-  const renderFieldValues = (fieldValues: any[]) => {
-    if (fieldValues.length === 0) return null;
+  const renderStepFieldValues = (orderStep: any) => {
+    const values = [];
+    
+    // Display quantity values
+    if (orderStep.quantity_assigned && orderStep.quantity_assigned > 0) {
+      values.push(
+        <div key="qty_assigned" className="bg-blue-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Qty Assigned:</span>
+          <div className="font-medium">{orderStep.quantity_assigned}</div>
+        </div>
+      );
+    }
+    
+    if (orderStep.quantity_received && orderStep.quantity_received > 0) {
+      values.push(
+        <div key="qty_received" className="bg-green-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Qty Received:</span>
+          <div className="font-medium">{orderStep.quantity_received}</div>
+        </div>
+      );
+    }
+    
+    // Display weight values
+    if (orderStep.weight_assigned && orderStep.weight_assigned > 0) {
+      values.push(
+        <div key="weight_assigned" className="bg-blue-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Weight Assigned:</span>
+          <div className="font-medium">{orderStep.weight_assigned} g</div>
+        </div>
+      );
+    }
+    
+    if (orderStep.weight_received && orderStep.weight_received > 0) {
+      values.push(
+        <div key="weight_received" className="bg-green-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Weight Received:</span>
+          <div className="font-medium">{orderStep.weight_received} g</div>
+        </div>
+      );
+    }
+    
+    // Display other values
+    if (orderStep.purity && orderStep.purity > 0) {
+      values.push(
+        <div key="purity" className="bg-gray-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Purity:</span>
+          <div className="font-medium">{orderStep.purity}%</div>
+        </div>
+      );
+    }
+    
+    if (orderStep.wastage && orderStep.wastage > 0) {
+      values.push(
+        <div key="wastage" className="bg-red-50 p-2 rounded">
+          <span className="text-muted-foreground text-xs">Wastage:</span>
+          <div className="font-medium">{orderStep.wastage}</div>
+        </div>
+      );
+    }
 
-    // Group weight and quantity fields for compact display
-    const weightAssigned = fieldValues.find(f => f.fieldKey === 'weight_assigned');
-    const weightReceived = fieldValues.find(f => f.fieldKey === 'weight_received');
-    const quantityAssigned = fieldValues.find(f => f.fieldKey === 'quantity_assigned');
-    const quantityReceived = fieldValues.find(f => f.fieldKey === 'quantity_received');
-    const otherFields = fieldValues.filter(f => 
-      !['weight_assigned', 'weight_received', 'quantity_assigned', 'quantity_received'].includes(f.fieldKey)
-    );
+    if (values.length === 0) {
+      return null;
+    }
 
     return (
       <div className="space-y-2 text-xs">
-        {/* Weight fields side by side */}
-        {(weightAssigned && weightAssigned.value !== '-' && weightAssigned.value !== 0) || (weightReceived && weightReceived.value !== '-' && weightReceived.value !== 0) ? (
-          <div className="grid grid-cols-2 gap-2">
-            {weightAssigned && weightAssigned.value !== '-' && weightAssigned.value !== 0 && (
-              <div className="bg-blue-50 p-2 rounded">
-                <span className="text-muted-foreground">Weight Assigned:</span>
-                <div className="font-medium">{weightAssigned.value} {weightAssigned.unit}</div>
-              </div>
-            )}
-            {weightReceived && weightReceived.value !== '-' && weightReceived.value !== 0 && (
-              <div className="bg-green-50 p-2 rounded">
-                <span className="text-muted-foreground">Weight Received:</span>
-                <div className="font-medium">{weightReceived.value} {weightReceived.unit}</div>
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        {/* Quantity fields side by side */}
-        {(quantityAssigned && quantityAssigned.value !== '-' && quantityAssigned.value !== 0) || (quantityReceived && quantityReceived.value !== '-' && quantityReceived.value !== 0) ? (
-          <div className="grid grid-cols-2 gap-2">
-            {quantityAssigned && quantityAssigned.value !== '-' && quantityAssigned.value !== 0 && (
-              <div className="bg-blue-50 p-2 rounded">
-                <span className="text-muted-foreground">Qty Assigned:</span>
-                <div className="font-medium">{quantityAssigned.value} {quantityAssigned.unit}</div>
-              </div>
-            )}
-            {quantityReceived && quantityReceived.value !== '-' && quantityReceived.value !== 0 && (
-              <div className="bg-green-50 p-2 rounded">
-                <span className="text-muted-foreground">Qty Received:</span>
-                <div className="font-medium">{quantityReceived.value} {quantityReceived.unit}</div>
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        {/* Other fields */}
-        {otherFields.map((field, index) => (
-          field.value !== '-' && field.value !== 0 && (
-            <div key={index} className="bg-gray-50 p-2 rounded">
-              <span className="text-muted-foreground">{field.fieldKey.replace('_', ' ')}:</span>
-              <div className="font-medium">{field.value} {field.unit}</div>
-            </div>
-          )
-        ))}
+        <div className="grid grid-cols-2 gap-2">
+          {values}
+        </div>
       </div>
     );
   };
@@ -319,7 +276,10 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                     <div 
                       key={orderStep.id} 
                       className="border rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => handleStepClick(orderStep)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStepClick(orderStep);
+                      }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -365,10 +325,10 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                         )}
                       </div>
 
-                      {/* Configured field values */}
-                      {orderStep.fieldValues && orderStep.fieldValues.length > 0 && (
+                      {/* Field values from manufacturing_order_step_data */}
+                      {renderStepFieldValues(orderStep) && (
                         <div className="mt-3 pt-2 border-t">
-                          {renderFieldValues(orderStep.fieldValues)}
+                          {renderStepFieldValues(orderStep)}
                         </div>
                       )}
 
