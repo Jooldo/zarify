@@ -90,10 +90,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Tree layout constants for dynamic positioning
+    // Layout constants remain the same
     const ORDER_SPACING = 1200;
-    const BASE_VERTICAL_SPACING = 300;
-    const INSTANCE_HORIZONTAL_SPACING = 1000;
+    const VERTICAL_SPACING = 300;
+    const PARALLEL_INSTANCE_SPACING = 650;
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -114,13 +114,39 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
+      // Create manufacturing order node
+      const orderNodeData: StepCardData = {
+        stepName: 'Manufacturing Order',
+        stepOrder: 0,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName: order.product_name,
+        status: order.status as any,
+        progress: 0,
+        productCode: order.product_configs?.product_code,
+        quantityRequired: order.quantity_required,
+        priority: order.priority,
+        dueDate: order.due_date,
+        isJhalaiStep: false,
+      };
+
+      const orderNode: Node = {
+        id: `order-${order.id}`,
+        type: 'manufacturingStep',
+        position: { x: 100, y: orderY },
+        data: orderNodeData,
+        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
+      };
+
+      nodes.push(orderNode);
+
+      // Create step nodes with improved ordering
+      let currentY = orderY + VERTICAL_SPACING;
+      
       const activeSteps = manufacturingSteps
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
-      // First pass: Calculate child positions
-      const stepPositions = new Map<string, { instances: any[], positions: number[], y: number }>();
-      
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = stepsByName[step.step_name] || [];
         
@@ -128,7 +154,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // Enhanced ordering logic for instances
+        // New ordering logic: Group by parent relationship, then by instance number
         let orderedInstances;
         
         if (stepIndex === 0) {
@@ -180,135 +206,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for child instances
-        const instancePositions: number[] = [];
+        // Calculate positions for instances with same spacing
         const instanceCount = orderedInstances.length;
-        
-        if (stepIndex === 0) {
-          // First step: position children first, then calculate parent center
-          // Start from a base position and space children evenly
-          const baseX = 600; // Start children to the right
-          const startX = baseX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
-          
-          orderedInstances.forEach((_, instanceIndex) => {
-            instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
-          });
-        } else {
-          // For subsequent steps: position based on parent-child relationships
-          const previousStep = activeSteps[stepIndex - 1];
-          const previousPositions = stepPositions.get(previousStep.step_name);
-          
-          if (previousPositions) {
-            const previousInstances = stepsByName[previousStep.step_name] || [];
-            
-            // Group children by their parent
-            const childrenByParent = new Map<number, any[]>();
-            
-            orderedInstances.forEach(childInstance => {
-              let parentInstanceNumber = 1; // default
-              
-              if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
-                parentInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
-              }
-              
-              if (!childrenByParent.has(parentInstanceNumber)) {
-                childrenByParent.set(parentInstanceNumber, []);
-              }
-              childrenByParent.get(parentInstanceNumber)!.push(childInstance);
-            });
-            
-            // Position children under their respective parents
-            orderedInstances.forEach((childInstance, index) => {
-              let parentInstanceNumber = 1; // default
-              
-              if (childInstance.notes && childInstance.notes.includes('Created from instance #')) {
-                parentInstanceNumber = parseInt(childInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
-              }
-              
-              // Find parent position
-              const parentIndex = previousInstances.findIndex(p => (p.instance_number || 1) === parentInstanceNumber);
-              const parentX = parentIndex >= 0 ? previousPositions.positions[parentIndex] : previousPositions.positions[0];
-              
-              // Get siblings for this parent
-              const siblings = childrenByParent.get(parentInstanceNumber) || [];
-              const siblingIndex = siblings.findIndex(s => s.id === childInstance.id);
-              
-              // Center children under parent
-              if (siblings.length === 1) {
-                instancePositions.push(parentX);
-              } else {
-                const siblingSpacing = INSTANCE_HORIZONTAL_SPACING;
-                const totalSiblingWidth = (siblings.length - 1) * siblingSpacing;
-                const startX = parentX - (totalSiblingWidth / 2);
-                instancePositions.push(startX + (siblingIndex * siblingSpacing));
-              }
-            });
-          } else {
-            // Fallback positioning
-            const baseX = 600;
-            const startX = baseX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
-            orderedInstances.forEach((_, instanceIndex) => {
-              instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
-            });
-          }
-        }
+        const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
+        const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
 
-        const currentY = orderY + BASE_VERTICAL_SPACING + (stepIndex * BASE_VERTICAL_SPACING);
-        
-        stepPositions.set(step.step_name, {
-          instances: orderedInstances,
-          positions: instancePositions,
-          y: currentY
-        });
-      });
-
-      // Now calculate the order card position based on the first step's children center
-      let orderX = 100; // default position
-      
-      const firstStepData = stepPositions.get(activeSteps[0]?.step_name);
-      if (firstStepData && firstStepData.positions.length > 0) {
-        // Calculate the center point of the first step's children
-        const minX = Math.min(...firstStepData.positions);
-        const maxX = Math.max(...firstStepData.positions);
-        const centerX = (minX + maxX) / 2;
-        
-        // Position the order card centered above the children
-        orderX = centerX - (CARD_WIDTH / 2);
-      }
-
-      const orderNodeData: StepCardData = {
-        stepName: 'Manufacturing Order',
-        stepOrder: 0,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        productName: order.product_name,
-        status: order.status as any,
-        progress: 0,
-        productCode: order.product_configs?.product_code,
-        quantityRequired: order.quantity_required,
-        priority: order.priority,
-        dueDate: order.due_date,
-        isJhalaiStep: false,
-      };
-
-      const orderNode: Node = {
-        id: `order-${order.id}`,
-        type: 'manufacturingStep',
-        position: { x: orderX, y: orderY },
-        data: orderNodeData,
-        style: { width: CARD_WIDTH, height: CARD_HEIGHT },
-      };
-
-      nodes.push(orderNode);
-
-      // Create step nodes using calculated positions
-      activeSteps.forEach((step, stepIndex) => {
-        const stepData = stepPositions.get(step.step_name);
-        
-        if (!stepData) return;
-
-        stepData.instances.forEach((orderStep, instanceIndex) => {
-          const instanceX = stepData.positions[instanceIndex];
+        orderedInstances.forEach((orderStep, instanceIndex) => {
+          const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -331,14 +235,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           const stepNode: Node = {
             id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
             type: 'manufacturingStep',
-            position: { x: instanceX, y: stepData.y },
+            position: { x: instanceX, y: currentY },
             data: stepNodeData,
             style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Create edges with improved routing
+          // Enhanced edge creation remains the same
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -392,6 +296,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             },
           });
         });
+
+        currentY += VERTICAL_SPACING;
       });
     });
 
