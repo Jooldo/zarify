@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import RawMaterialStockDisplay from './RawMaterialStockDisplay';
+import ProductCodeSelector from '@/components/orders/ProductCodeSelector';
 
 interface CreateManufacturingOrderDialogProps {
   open: boolean;
@@ -25,8 +27,8 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
   open,
   onOpenChange
 }) => {
+  const [productCode, setProductCode] = useState<string>('');
   const [productConfigId, setProductConfigId] = useState<string>('');
-  const [productName, setProductName] = useState<string>('');
   const [quantityRequired, setQuantityRequired] = useState<number>(1);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -40,8 +42,8 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
   useEffect(() => {
     if (!open) {
       // Reset form when dialog closes
+      setProductCode('');
       setProductConfigId('');
-      setProductName('');
       setQuantityRequired(1);
       setPriority('medium');
       setDueDate(undefined);
@@ -49,11 +51,11 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
     }
   }, [open]);
 
-  const handleProductConfigChange = (configId: string) => {
-    setProductConfigId(configId);
-    const config = productConfigs.find(c => c.id === configId);
+  const handleProductCodeChange = (selectedProductCode: string) => {
+    setProductCode(selectedProductCode);
+    const config = productConfigs.find(c => c.product_code === selectedProductCode);
     if (config) {
-      setProductName(`${config.category}-${config.subcategory}-${config.size_value}${config.weight_range ? `-${config.weight_range}` : ''}`);
+      setProductConfigId(config.id);
     }
   };
 
@@ -113,7 +115,7 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!productConfigId || !productName || quantityRequired <= 0) {
+    if (!productConfigId || !productCode || quantityRequired <= 0) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields correctly.',
@@ -133,7 +135,7 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
 
     try {
       await createOrder({
-        product_name: productName,
+        product_name: productCode,
         product_config_id: productConfigId,
         quantity_required: quantityRequired,
         priority,
@@ -170,25 +172,11 @@ const CreateManufacturingOrderDialog: React.FC<CreateManufacturingOrderDialogPro
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="product-config">Product Configuration *</Label>
-              <Select value={productConfigId} onValueChange={handleProductConfigChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product configuration" />
-                </SelectTrigger>
-                <SelectContent>
-                  {productConfigs.map((config) => (
-                    <SelectItem key={config.id} value={config.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{config.product_code}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {config.category}-{config.subcategory}-{config.size_value}
-                          {config.weight_range && `-${config.weight_range}`}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProductCodeSelector
+                value={productCode}
+                onChange={handleProductCodeChange}
+                disabled={configsLoading}
+              />
             </div>
 
             <div className="space-y-2">

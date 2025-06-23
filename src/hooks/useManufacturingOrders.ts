@@ -62,22 +62,51 @@ export const useManufacturingOrders = () => {
   } = useQuery<ManufacturingOrder[]>({
     queryKey: ['manufacturing-orders'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get manufacturing orders
+      const { data: orders, error: ordersError } = await supabase
         .from('manufacturing_orders')
-        .select(`
-          *
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Transform data to match expected interface with proper type casting
-      const transformedData: ManufacturingOrder[] = (data || []).map(order => ({
-        ...order,
-        quantity_required: Number(order.quantity_required),
-        priority: order.priority as ManufacturingOrder['priority'],
-        status: order.status as ManufacturingOrder['status']
-      }));
+      if (ordersError) throw ordersError;
+
+      // Then get product configs separately and map them
+      const { data: productConfigs, error: configsError } = await supabase
+        .from('product_configs')
+        .select('id, product_code, category, subcategory, size_value, weight_range');
+
+      if (configsError) {
+        console.error('Error fetching product configs:', configsError);
+      }
+
+      // Create a map for easy lookup
+      const configMap = productConfigs?.reduce((acc, config) => {
+        acc[config.id] = config;
+        return acc;
+      }, {} as Record<string, any>) || {};
+
+      // Transform and merge the data
+      const transformedData: ManufacturingOrder[] = (orders || []).map(order => {
+        // Find matching product config by product_name (which should match product_code)
+        const matchingConfig = productConfigs?.find(config => 
+          config.product_code === order.product_name
+        );
+
+        return {
+          ...order,
+          quantity_required: Number(order.quantity_required),
+          priority: order.priority as ManufacturingOrder['priority'],
+          status: order.status as ManufacturingOrder['status'],
+          product_config_id: matchingConfig?.id,
+          product_configs: matchingConfig ? {
+            product_code: matchingConfig.product_code,
+            category: matchingConfig.category,
+            subcategory: matchingConfig.subcategory,
+            size_value: matchingConfig.size_value,
+            weight_range: matchingConfig.weight_range,
+          } : undefined
+        };
+      });
       
       return transformedData;
     },
