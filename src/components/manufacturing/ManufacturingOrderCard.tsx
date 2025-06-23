@@ -40,7 +40,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
     .filter(step => step.status === 'in_progress')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-  // Get next step to start
+  // Get next step to start - improved logic
   const getNextStep = () => {
     if (thisOrderSteps.length === 0) {
       // No steps exist, get the first manufacturing step
@@ -54,7 +54,28 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
       .filter(step => step.status === 'pending')
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
     
-    return nextPendingStep ? manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name) : null;
+    if (nextPendingStep) {
+      return manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name);
+    }
+    
+    // If no pending steps, check if we need to create the next step in sequence
+    const completedStepNames = thisOrderSteps
+      .filter(step => step.status === 'completed')
+      .map(step => step.step_name);
+    
+    const allSteps = manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order);
+    
+    // Find the next step that hasn't been started yet
+    for (const step of allSteps) {
+      const hasBeenStarted = thisOrderSteps.some(orderStep => orderStep.step_name === step.step_name);
+      if (!hasBeenStarted) {
+        return step;
+      }
+    }
+    
+    return null;
   };
 
   const nextStep = getNextStep();
@@ -96,6 +117,11 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
   };
 
   const handleCardClick = () => {
+    setDetailsOpen(true);
+  };
+
+  const handleViewDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setDetailsOpen(true);
   };
 
@@ -186,10 +212,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={(e) => {
-                e.stopPropagation();
-                setDetailsOpen(true);
-              }}
+              onClick={handleViewDetailsClick}
               className="flex-1"
             >
               View Details
