@@ -5,10 +5,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Package, User, Clock } from 'lucide-react';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 
 interface FinishedGoodsManufacturingDistributionProps {
-  manufacturingOrders: ManufacturingOrder[];
+  manufacturingOrders: any[];
 }
 
 const FinishedGoodsManufacturingDistribution = ({ manufacturingOrders }: FinishedGoodsManufacturingDistributionProps) => {
@@ -27,34 +26,38 @@ const FinishedGoodsManufacturingDistribution = ({ manufacturingOrders }: Finishe
     }> = {};
 
     // Initialize all manufacturing steps
-    manufacturingSteps.forEach(step => {
-      distribution[step.step_name] = {
-        stepName: step.step_name,
-        stepOrder: step.step_order,
-        orderCount: 0,
-        totalQuantity: 0,
-        inProgress: 0,
-        completed: 0,
-        pending: 0,
-      };
-    });
+    if (Array.isArray(manufacturingSteps)) {
+      manufacturingSteps.forEach(step => {
+        distribution[step.step_name] = {
+          stepName: step.step_name,
+          stepOrder: step.step_order,
+          orderCount: 0,
+          totalQuantity: 0,
+          inProgress: 0,
+          completed: 0,
+          pending: 0,
+        };
+      });
+    }
 
     // Process order steps
-    orderSteps.forEach(orderStep => {
-      const stepName = orderStep.step_name;
-      if (distribution[stepName]) {
-        distribution[stepName].orderCount += 1;
-        distribution[stepName].totalQuantity += orderStep.quantity_assigned || 0;
-        
-        if (orderStep.status === 'in_progress') {
-          distribution[stepName].inProgress += 1;
-        } else if (orderStep.status === 'completed') {
-          distribution[stepName].completed += 1;
-        } else {
-          distribution[stepName].pending += 1;
+    if (Array.isArray(orderSteps)) {
+      orderSteps.forEach(orderStep => {
+        const stepName = orderStep.step_name;
+        if (distribution[stepName]) {
+          distribution[stepName].orderCount += 1;
+          distribution[stepName].totalQuantity += orderStep.quantity_assigned || 0;
+          
+          if (orderStep.status === 'in_progress') {
+            distribution[stepName].inProgress += 1;
+          } else if (orderStep.status === 'completed') {
+            distribution[stepName].completed += 1;
+          } else {
+            distribution[stepName].pending += 1;
+          }
         }
-      }
-    });
+      });
+    }
 
     return Object.values(distribution).sort((a, b) => a.stepOrder - b.stepOrder);
   }, [manufacturingSteps, orderSteps]);

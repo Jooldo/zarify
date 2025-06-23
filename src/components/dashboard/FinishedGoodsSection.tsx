@@ -128,8 +128,7 @@ const FinishedGoodsSection = ({ finishedGoods, manufacturingOrders, loading }: F
           <p className="text-sm text-gray-600">Real-time view of quantity and weight at each manufacturing step</p>
         </div>
         <FinishedGoodsManufacturingDistribution 
-          manufacturingOrders={manufacturingOrders} 
-          loading={loading} 
+          manufacturingOrders={manufacturingOrders}
         />
       </div>
 

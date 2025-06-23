@@ -12,8 +12,8 @@ export type ManufacturingStepField = Omit<Tables<'manufacturing_step_fields'>, '
 export type ManufacturingOrderStep = Tables<'manufacturing_order_step_data'> & {
   workers?: { name: string | null } | null;
   manufacturing_steps?: ManufacturingStep | null;
-  manufacturing_order_id?: string;
-  manufacturing_step_id?: string;
+  manufacturing_order_id: string;
+  manufacturing_step_id: string;
 };
 
 export type ManufacturingStepValue = {
