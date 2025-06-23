@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -35,6 +34,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   console.log('ReactFlowView props:', {
     ordersCount: manufacturingOrders.length,
     hasOnStartNextStep: !!onStartNextStep
+  });
+
+  // Provide a default onStartNextStep if none is passed
+  const handleStartNextStep = onStartNextStep || ((orderId: string) => {
+    console.log('Default onStartNextStep called for order:', orderId);
+    // You can add default behavior here, like showing a toast message
   });
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
@@ -196,7 +201,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
   // Update node data with callbacks
   const nodesWithCallbacks = useMemo(() => {
-    console.log('Creating nodes with callbacks, onStartNextStep available:', !!onStartNextStep);
+    console.log('Creating nodes with callbacks, onStartNextStep available:', !!handleStartNextStep);
     
     return nodes.map(node => ({
       ...node,
@@ -206,10 +211,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         orderSteps,
         onStepClick,
         onOrderClick,
-        onStartNextStep,
+        onStartNextStep: handleStartNextStep, // Always provide the callback
       },
     }));
-  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, onStartNextStep]);
+  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick, handleStartNextStep]);
 
   if (manufacturingOrders.length === 0) {
     return (
