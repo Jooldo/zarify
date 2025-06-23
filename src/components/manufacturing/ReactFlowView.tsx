@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -90,12 +91,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Dynamic layout constants with increased spacing for Jhalai
+    // Dynamic layout constants with increased spacing for better parent-child alignment
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const BASE_PARALLEL_INSTANCE_SPACING = 600; // Increased from 450
-    const JHALAI_INSTANCE_SPACING = 800; // Extra spacing for Jhalai instances
-    const CHILD_SPACING_MULTIPLIER = 1.5;
+    const BASE_PARALLEL_INSTANCE_SPACING = 800; // Increased from 600 for better parent-child alignment
+    const JHALAI_INSTANCE_SPACING = 1000; // Further increased for first step
+    const CHILD_SPACING_MULTIPLIER = 1.2; // Reduced multiplier as base spacing is now larger
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -158,7 +159,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with dynamic spacing
+      // Create step nodes with improved spacing for parent-child alignment
       let currentY = orderY + BASE_VERTICAL_SPACING;
       
       activeSteps.forEach((step, stepIndex) => {
@@ -173,7 +174,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         const hasChildren = childCount > 0;
         const isFirstStep = stepIndex === 0; // Usually Jhalai
         
-        // Use extra spacing for Jhalai (first step) to prevent connector overlap
+        // Use increased spacing for better parent-child alignment
         let baseSpacing = isFirstStep ? JHALAI_INSTANCE_SPACING : BASE_PARALLEL_INSTANCE_SPACING;
         const dynamicSpacing = hasChildren 
           ? baseSpacing * CHILD_SPACING_MULTIPLIER
@@ -231,10 +232,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with dynamic spacing
+        // Calculate positions for instances with improved spacing and center alignment
         const instanceCount = orderedInstances.length;
         const totalWidth = (instanceCount - 1) * dynamicSpacing;
-        const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
+        
+        // Center alignment: calculate starting X position to center the group
+        const centerX = 100 + (CARD_WIDTH / 2); // Center of the order card
+        const startX = centerX - (totalWidth / 2);
 
         orderedInstances.forEach((orderStep, instanceIndex) => {
           const instanceX = startX + (instanceIndex * dynamicSpacing);
@@ -322,7 +326,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           });
         });
 
-        // Increase vertical spacing for next step if current step has children
+        // Increase vertical spacing for next step with improved calculation
         const verticalSpacing = hasChildren 
           ? BASE_VERTICAL_SPACING * CHILD_SPACING_MULTIPLIER
           : BASE_VERTICAL_SPACING;
