@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -91,14 +90,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Updated spacing for better layout with source-based grouping
-    const ORDER_SPACING = 1200;
-    const VERTICAL_SPACING = 300;
-    const SOURCE_GROUP_SPACING = 650; // Spacing between different source groups
-    const SAME_SOURCE_SPACING = 350; // Spacing between instances from same source
-    const CARD_WIDTH = 500;
-    const CARD_HEIGHT = 240;
-    const START_Y = 80;
+    // Increased spacing for better separation and no overlaps
+    const ORDER_SPACING = 1400; // Increased from 1200
+    const VERTICAL_SPACING = 400; // Increased from 300
+    const SOURCE_GROUP_SPACING = 800; // Increased from 650
+    const SAME_SOURCE_SPACING = 450; // Increased from 350
+    const CARD_WIDTH = 520; // Slightly wider cards
+    const CARD_HEIGHT = 280; // Taller cards for better content display
+    const START_Y = 100;
 
     manufacturingOrders.forEach((order, orderIndex) => {
       const orderY = START_Y + (orderIndex * ORDER_SPACING);
@@ -135,14 +134,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: 100, y: orderY },
+        position: { x: 50, y: orderY },
         data: orderNodeData,
         style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
-      // Create step nodes with source-based grouping
+      // Create step nodes with improved source-based grouping
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -156,11 +155,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // Group instances by their source instance number (extracted from notes)
+        // Group instances by their source instance number
         const instancesBySource = stepInstances.reduce((acc, orderStep) => {
-          let sourceInstance = 'order'; // Default source is the manufacturing order
+          let sourceInstance = 'order';
           
-          // Extract source instance from notes if available
           if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
             const sourceInstanceNumber = orderStep.notes.match(/Created from instance #(\d+)/)?.[1];
             if (sourceInstanceNumber) {
@@ -180,15 +178,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           instancesBySource[sourceKey].sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
         });
 
-        // Calculate positions for source groups
+        // Calculate positions for source groups with better spacing
         const sourceGroups = Object.keys(instancesBySource).sort();
-        let currentX = 100;
+        let currentX = 50; // Start from left edge
 
         sourceGroups.forEach((sourceKey, sourceIndex) => {
           const sourceInstances = instancesBySource[sourceKey];
           
           sourceInstances.forEach((orderStep, instanceIndex) => {
-            const instanceX = currentX + (instanceIndex * SAME_SOURCE_SPACING);
+            // Calculate X position: base position + group offset + instance offset
+            const groupStartX = 50 + (sourceIndex * SOURCE_GROUP_SPACING);
+            const instanceX = groupStartX + (instanceIndex * SAME_SOURCE_SPACING);
             
             const stepNodeData: StepCardData = {
               stepName: step.step_name,
@@ -218,27 +218,23 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
             nodes.push(stepNode);
 
-            // Enhanced edge creation with proper source tracking
+            // Enhanced edge creation
             let sourceNodeId: string;
             
             if (stepIndex === 0) {
-              // First step connects to manufacturing order
               sourceNodeId = `order-${order.id}`;
             } else {
-              // Connect to the specific source instance
               const previousStep = activeSteps[stepIndex - 1];
               const previousInstances = stepsByName[previousStep.step_name] || [];
               
               if (previousInstances.length > 0) {
                 let sourceInstance = null;
                 
-                // Try to find the source instance from notes
                 if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
                   const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
                   sourceInstance = previousInstances.find(inst => inst.instance_number === sourceInstanceNumber);
                 }
                 
-                // Fallback to most recent completed instance if no specific source found
                 if (!sourceInstance) {
                   const sortedPreviousInstances = previousInstances
                     .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
@@ -260,7 +256,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               }
             }
 
-            // Create edge with proper styling
             const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
             const isAnimated = orderStep?.status === 'in_progress';
             const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
@@ -278,9 +273,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
               },
             });
           });
-
-          // Move to next source group position
-          currentX += (sourceInstances.length * SAME_SOURCE_SPACING) + SOURCE_GROUP_SPACING;
         });
 
         currentY += VERTICAL_SPACING;
