@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
@@ -383,13 +382,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 {stepSummaries.map((summary) => (
                   <div key={summary.stepName} className="grid grid-cols-4 gap-2 text-xs">
                     <div className="font-medium text-gray-900 truncate">{summary.stepName}</div>
-                    <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                    <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
                       {summary.totalActiveInstances || 0}
                     </div>
-                    <div className="text-right bg-purple-50 px-2 py-1 rounded text-purple-700">
+                    <div className="text-right bg-purple-50 px-2 py-1 rounded text-purple-700 text-sm font-semibold">
                       {summary.weightAssigned > 0 ? `${summary.weightAssigned.toFixed(1)}kg` : '—'}
                     </div>
-                    <div className="text-right bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                    <div className="text-right bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
                       {summary.completionPercentage > 0 ? `${summary.completionPercentage.toFixed(1)}%` : '—'}
                     </div>
                   </div>
@@ -443,13 +442,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                           <Hash className="h-3 w-3 text-blue-600" />
                           Quantity
                         </div>
-                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
                           {stepProgressData.quantity.assigned}
                         </div>
-                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700">
+                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
                           {stepProgressData.quantity.received}
                         </div>
-                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
                           {stepProgressData.quantity.completion > 0 ? `${stepProgressData.quantity.completion.toFixed(1)}%` : '—'}
                         </div>
                       </div>
@@ -462,13 +461,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                           <Scale className="h-3 w-3 text-purple-600" />
                           Weight (Kg)
                         </div>
-                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700">
+                        <div className="text-center bg-blue-50 px-2 py-1 rounded text-blue-700 text-sm font-semibold">
                           {stepProgressData.weight.assigned.toFixed(2)}
                         </div>
-                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700">
+                        <div className="text-center bg-emerald-50 px-2 py-1 rounded text-emerald-700 text-sm font-semibold">
                           {stepProgressData.weight.received.toFixed(2)}
                         </div>
-                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-medium">
+                        <div className="text-center bg-green-50 px-2 py-1 rounded text-green-700 font-bold text-sm">
                           {stepProgressData.weight.completion > 0 ? `${stepProgressData.weight.completion.toFixed(1)}%` : '—'}
                         </div>
                       </div>
