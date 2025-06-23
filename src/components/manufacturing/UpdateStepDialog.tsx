@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -434,11 +435,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                   ? `${remainingQuantities.quantity} pieces` 
                   : `${remainingQuantities.weight.toFixed(2)} kg`}
               </div>
-              <div className="text-xs text-emerald-600">
-                Parent received: {field.field_key === 'quantity_assigned'
-                  ? `${remainingQuantities.parentQuantityReceived} pieces`
-                  : `${remainingQuantities.parentWeightReceived.toFixed(2)} kg`}
-              </div>
             </div>
           </div>
         )}
@@ -501,7 +497,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
                     {/* Remaining quantities summary */}
                     {remainingQuantities && (
                       <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
-                        <div className="text-sm font-medium text-purple-900 mb-2">Available for Assignment</div>
+                        <div className="text-sm font-medium text-purple-900 mb-2">Available for Assignment to Next Step</div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="flex items-center gap-2">
                             <Hash className="h-4 w-4 text-blue-600" />
