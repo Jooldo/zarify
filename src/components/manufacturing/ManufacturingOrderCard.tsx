@@ -25,7 +25,7 @@ const ManufacturingOrderCard: React.FC<ManufacturingOrderCardProps> = ({
 
   // Get order steps for this specific order
   const thisOrderSteps = Array.isArray(orderSteps) 
-    ? orderSteps.filter(step => step.manufacturing_order_id === order.id)
+    ? orderSteps.filter(step => step.order_id === order.id)
     : [];
 
   // Calculate progress

@@ -71,7 +71,10 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
   console.log('ProductionQueueView - Manufacturing Steps:', manufacturingSteps);
 
   const filteredOrders = useMemo(() => {
-    return manufacturingOrders.filter(order => {
+    const orders = Array.isArray(manufacturingOrders) ? manufacturingOrders : [];
+    const steps = Array.isArray(orderSteps) ? orderSteps : [];
+    
+    return orders.filter(order => {
       // Text search filter
       if (searchTerm) {
         const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -87,7 +90,7 @@ const ProductionQueueView = ({ selectedOrderForFlow, onClearOrderFilter }: Produ
       if (filters.orderNumber && !order.order_number.toLowerCase().includes(filters.orderNumber.toLowerCase())) return false;
       
       // Get order steps for this order
-      const orderOrderSteps = orderSteps.filter(step => step.manufacturing_order_id === order.id);
+      const orderOrderSteps = steps.filter(step => step.order_id === order.id);
       
       // Quick filters
       if (filters.hasInProgressSteps) {

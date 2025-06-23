@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +18,7 @@ export interface ManufacturingOrder {
   started_at?: string;
   completed_at?: string;
   product_config_id?: string;
+  product_type?: string;
   product_configs?: {
     product_code: string;
     category: string;
@@ -194,7 +194,7 @@ export const useManufacturingOrders = () => {
   });
 
   return {
-    manufacturingOrders,
+    manufacturingOrders: Array.isArray(manufacturingOrders) ? manufacturingOrders : [],
     isLoading,
     error,
     refetch,

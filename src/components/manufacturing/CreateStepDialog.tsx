@@ -43,8 +43,8 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
     const newErrors: {[key: string]: string} = {};
     
     stepFields.forEach(field => {
-      if (field.is_required && (!fieldValues[field.field_id] || fieldValues[field.field_id] === '')) {
-        newErrors[field.field_id] = `${field.field_label} is required`;
+      if (field.is_visible && (!fieldValues[field.field_key] || fieldValues[field.field_key] === '')) {
+        newErrors[field.field_key] = `${field.field_key} is required`;
       }
     });
     
@@ -68,203 +68,37 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
   };
 
   const renderField = (field: ManufacturingStepField) => {
-    const fieldValue = fieldValues[field.field_id] || '';
-    const hasError = !!errors[field.field_id];
+    const fieldValue = fieldValues[field.field_key] || '';
+    const hasError = !!errors[field.field_key];
 
-    switch (field.field_type) {
-      case 'worker':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_id} className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            {workersLoading ? (
-              <div className="text-sm text-muted-foreground">Loading workers...</div>
-            ) : workers.length === 0 ? (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="text-sm text-yellow-800">
-                  No workers found. Please seed dummy workers first using the Development Tools.
-                </div>
-              </div>
-            ) : (
-              <Select value={fieldValue} onValueChange={(value) => handleFieldChange(field.field_id, value)}>
-                <SelectTrigger className={hasError ? 'border-red-500' : ''}>
-                  <SelectValue placeholder={`Select ${field.field_label.toLowerCase()}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {workers.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{worker.name}</span>
-                        {worker.role && (
-                          <span className="text-xs text-muted-foreground">{worker.role}</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
-            {workers.length > 0 && (
-              <div className="text-xs text-muted-foreground">
-                {workers.length} worker(s) available
-              </div>
-            )}
+    // Basic text input for all field types since we only have field_key and unit in the database
+    return (
+      <div key={field.id} className="space-y-2">
+        <Label htmlFor={field.field_key} className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          {field.field_key} {field.is_visible && '*'}
+        </Label>
+        <Input
+          id={field.field_key}
+          type="text"
+          value={fieldValue}
+          onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+          placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+          className={hasError ? 'border-red-500' : ''}
+        />
+        {field.unit && (
+          <div className="text-xs text-muted-foreground">
+            Unit: {field.unit}
           </div>
-        );
-
-      case 'date':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !fieldValue && "text-muted-foreground",
-                    hasError && "border-red-500"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {fieldValue ? format(new Date(fieldValue), "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={fieldValue ? new Date(fieldValue) : undefined}
-                  onSelect={(date) => handleFieldChange(field.field_id, date)}
-                  initialFocus
-                  disabled={(date) => date < new Date()}
-                />
-              </PopoverContent>
-            </Popover>
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
+        )}
+        {hasError && (
+          <div className="flex items-center gap-1 text-sm text-red-600">
+            <AlertCircle className="h-3 w-3" />
+            {errors[field.field_key]}
           </div>
-        );
-
-      case 'number':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_id}>
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            <Input
-              id={field.field_id}
-              type="number"
-              value={fieldValue}
-              onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-              placeholder={`Enter ${field.field_label.toLowerCase()}`}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'text':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_id}>
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            <Input
-              id={field.field_id}
-              type="text"
-              value={fieldValue}
-              onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-              placeholder={`Enter ${field.field_label.toLowerCase()}`}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'status':
-        const statusOptions = (field.field_options as { options?: string[] })?.options || ['pending', 'in_progress', 'completed', 'blocked'];
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_id}>
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            <Select value={fieldValue} onValueChange={(value) => handleFieldChange(field.field_id, value)}>
-              <SelectTrigger className={hasError ? 'border-red-500' : ''}>
-                <SelectValue placeholder={`Select ${field.field_label.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option.replace('_', ' ').toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'multiselect':
-        const multiselectOptions = (field.field_options as { options?: string[] })?.options || [];
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_id}>
-              {field.field_label} {field.is_required && '*'}
-            </Label>
-            <Select value={fieldValue} onValueChange={(value) => handleFieldChange(field.field_id, value)}>
-              <SelectTrigger className={hasError ? 'border-red-500' : ''}>
-                <SelectValue placeholder={`Select ${field.field_label.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {multiselectOptions.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {hasError && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
-                <AlertCircle className="h-3 w-3" />
-                {errors[field.field_id]}
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
-    }
+        )}
+      </div>
+    );
   };
 
   const handleSubmit = async () => {
@@ -366,27 +200,6 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
             )}
           </div>
 
-          {/* Raw Materials Context */}
-          {manufacturingOrderData.rawMaterials && manufacturingOrderData.rawMaterials.length > 0 && (
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-              <div className="flex items-center gap-1 mb-2">
-                <Scale className="h-3 w-3 text-amber-600" />
-                <span className="text-xs font-medium text-amber-700">Raw Materials Required</span>
-              </div>
-              <div className="space-y-1">
-                {manufacturingOrderData.rawMaterials.slice(0, 3).map((material, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white px-2 py-1 rounded text-xs">
-                    <span className="font-medium text-amber-800">{material.name}</span>
-                    <span className="text-amber-700">{material.quantity} {material.unit}</span>
-                  </div>
-                ))}
-                {manufacturingOrderData.rawMaterials.length > 3 && (
-                  <p className="text-xs text-amber-700">+{manufacturingOrderData.rawMaterials.length - 3} more materials</p>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Step Information */}
           <div className="bg-green-50 p-3 rounded-lg border border-green-200">
             <div className="flex items-center gap-1 mb-2">
@@ -396,16 +209,6 @@ const CreateStepDialog: React.FC<CreateStepDialogProps> = ({
             <p className="text-xs text-green-800">
               <strong>Step:</strong> {targetStep.step_name}
             </p>
-            {targetStep.description && (
-              <p className="text-xs text-green-800">
-                <strong>Description:</strong> {targetStep.description}
-              </p>
-            )}
-            {targetStep.estimated_duration_hours && (
-              <p className="text-xs text-green-800">
-                <strong>Estimated Duration:</strong> {targetStep.estimated_duration_hours}h
-              </p>
-            )}
           </div>
 
           {/* Dynamic Fields */}

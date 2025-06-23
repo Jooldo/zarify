@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,6 @@ import { Package2, Calendar, User, FileText, Calculator, Play, Truck, CheckCircl
 import { format } from 'date-fns';
 import { ManufacturingOrder } from '@/types/manufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
-import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StartStepDialog from './StartStepDialog';
 import ManufacturingTagInDialog from './ManufacturingTagInDialog';
@@ -20,7 +18,7 @@ interface ManufacturingOrderDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   getPriorityColor: (priority: string) => string;
   getStatusColor: (status: string) => string;
-  onStatusUpdate?: (orderId: string, status: 'pending' | 'in_progress' | 'completed' | 'qc_failed' | 'cancelled') => void;
+  onStatusUpdate?: (orderId: string, status: 'pending' | 'in_progress' | 'completed' | 'cancelled') => void;
 }
 
 const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogProps> = ({
@@ -31,7 +29,6 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   getStatusColor
 }) => {
   const { manufacturingSteps, orderSteps, stepFields } = useManufacturingSteps();
-  const { stepValues } = useManufacturingStepValues();
   const { workers } = useWorkers();
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
   const [tagInDialogOpen, setTagInDialogOpen] = useState(false);
@@ -41,7 +38,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
 
   const getNextStep = () => {
     const currentOrderSteps = Array.isArray(orderSteps) 
-      ? orderSteps.filter(step => step.manufacturing_order_id === order.id)
+      ? orderSteps.filter(step => step.order_id === order.id)
       : [];
     
     if (currentOrderSteps.length === 0) {
@@ -54,16 +51,15 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
     // Find the next pending step
     const nextPendingStep = currentOrderSteps
       .filter(step => step.status === 'pending')
-      .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))[0];
+      .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))[0];
     
-    return nextPendingStep?.manufacturing_steps;
+    return nextPendingStep ? manufacturingSteps.find(s => s.step_name === nextPendingStep.step_name) : null;
   };
 
   const nextStep = getNextStep();
   const hasStarted = Array.isArray(orderSteps) && 
-    orderSteps.some(step => step.manufacturing_order_id === order.id && step.status !== 'pending');
+    orderSteps.some(step => step.order_id === order.id && step.status !== 'pending');
   const isCompleted = order.status === 'completed';
-  const isTaggedIn = order.status === 'tagged_in';
 
   const handleStartStep = () => {
     if (nextStep) {
@@ -81,23 +77,19 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
   const getOrderStepsWithFieldData = () => {
     const currentOrderSteps = Array.isArray(orderSteps)
       ? orderSteps
-          .filter(step => step.manufacturing_order_id === order.id)
-          .sort((a, b) => (a.manufacturing_steps?.step_order || 0) - (b.manufacturing_steps?.step_order || 0))
+          .filter(step => step.order_id === order.id)
+          .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))
       : [];
 
     return currentOrderSteps.map(orderStep => {
-      const stepStepFields = stepFields.filter(field => 
-        field.manufacturing_step_id === orderStep.manufacturing_step_id
-      );
-      
-      const stepStepValues = stepValues.filter(value => 
-        value.manufacturing_order_step_id === orderStep.id
-      );
+      const stepStepFields = Array.isArray(stepFields) 
+        ? stepFields.filter(field => field.step_name === orderStep.step_name)
+        : [];
 
       return {
         ...orderStep,
         fields: stepStepFields,
-        values: stepStepValues
+        values: []
       };
     });
   };
@@ -111,27 +103,14 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
       case 'completed': return 'bg-green-100 text-green-800';
       case 'blocked': return 'bg-red-100 text-red-800';
       case 'skipped': return 'bg-yellow-100 text-yellow-800';
-      case 'tagged_in': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getFieldValue = (fieldId: string, values: any[]) => {
-    const value = values.find(v => v.field_id === fieldId);
-    return value?.field_value || '-';
-  };
-
-  const getWorkerName = (workerId: string) => {
+  const getWorkerName = (workerId: string | null) => {
+    if (!workerId) return 'Unknown Worker';
     const worker = workers.find(w => w.id === workerId);
     return worker ? worker.name : 'Unknown Worker';
-  };
-
-  const getDisplayValue = (field: any, fieldValue: string) => {
-    // If this is a worker field, resolve the ID to a name
-    if (field.field_type === 'worker' && fieldValue && fieldValue !== '-') {
-      return getWorkerName(fieldValue);
-    }
-    return fieldValue;
   };
 
   return (
@@ -202,7 +181,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </CardContent>
             </Card>
 
-            {/* Manufacturing Steps Progress - More Compact */}
+            {/* Manufacturing Steps Progress */}
             {orderStepsWithData.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -217,26 +196,20 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs">
-                            {orderStep.manufacturing_steps?.step_order || index + 1}
+                            {orderStep.step_order || index + 1}
                           </div>
                           <div>
-                            <h4 className="font-medium text-sm">{orderStep.manufacturing_steps?.step_name || orderStep.step_name}</h4>
-                            {orderStep.manufacturing_steps?.description && (
-                              <p className="text-xs text-muted-foreground">{orderStep.manufacturing_steps.description}</p>
-                            )}
+                            <h4 className="font-medium text-sm">{orderStep.step_name}</h4>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={`text-xs ${getStepStatusColor(orderStep.status)}`}>
                             {orderStep.status.replace('_', ' ')}
                           </Badge>
-                          {orderStep.progress_percentage !== null && (
-                            <span className="text-xs font-medium">{orderStep.progress_percentage}%</span>
-                          )}
                         </div>
                       </div>
 
-                      {/* Step timing info - More Compact */}
+                      {/* Step timing info */}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2 text-xs">
                         {orderStep.started_at && (
                           <div>
@@ -250,37 +223,15 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                             <p className="font-medium">{format(new Date(orderStep.completed_at), 'MMM dd, HH:mm')}</p>
                           </div>
                         )}
-                        {orderStep.workers?.name && (
+                        {orderStep.assigned_worker && (
                           <div>
                             <span className="text-muted-foreground">Assigned Worker:</span>
-                            <p className="font-medium">{orderStep.workers.name}</p>
+                            <p className="font-medium">{getWorkerName(orderStep.assigned_worker)}</p>
                           </div>
                         )}
                       </div>
 
-                      {/* Step field data - More Compact */}
-                      {orderStep.fields.length > 0 && (
-                        <div>
-                          <h5 className="font-medium mb-1 text-xs">Step Data:</h5>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {orderStep.fields.map((field) => {
-                              const fieldValue = getFieldValue(field.field_id, orderStep.values);
-                              const displayValue = getDisplayValue(field, fieldValue);
-                              
-                              return (
-                                <div key={field.id} className="bg-muted/50 p-2 rounded text-xs">
-                                  <span className="text-muted-foreground block">{field.field_label}:</span>
-                                  <span className="font-medium">
-                                    {displayValue}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Notes - More Compact */}
+                      {/* Notes */}
                       {orderStep.notes && (
                         <div className="mt-2 pt-2 border-t">
                           <span className="text-xs text-muted-foreground">Notes:</span>
@@ -293,7 +244,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </Card>
             )}
 
-            {/* Raw Material Requirements - More Compact */}
+            {/* Raw Material Requirements */}
             {order.product_configs?.product_config_materials && order.product_configs.product_config_materials.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -333,7 +284,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
               </Card>
             )}
 
-            {/* Special Instructions - More Compact */}
+            {/* Special Instructions */}
             {order.special_instructions && (
               <Card>
                 <CardHeader className="pb-2">
@@ -361,7 +312,7 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 </Button>
               )}
 
-              {isCompleted && !isTaggedIn && (
+              {isCompleted && (
                 <Button 
                   onClick={() => setTagInDialogOpen(true)}
                   className="bg-green-600 hover:bg-green-700 text-white"
@@ -372,17 +323,10 @@ const ManufacturingOrderDetailsDialog: React.FC<ManufacturingOrderDetailsDialogP
                 </Button>
               )}
 
-              {hasStarted && !isCompleted && !isTaggedIn && (
+              {hasStarted && !isCompleted && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Workflow className="h-4 w-4" />
                   <span className="font-medium text-sm">Production In Progress</span>
-                </div>
-              )}
-
-              {isTaggedIn && (
-                <div className="flex items-center gap-2 text-purple-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="font-medium text-sm">Tagged In to Inventory</span>
                 </div>
               )}
             </div>

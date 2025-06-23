@@ -9,7 +9,6 @@ import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } fro
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsDialog from './StepDetailsDialog';
-import { Tables } from '@/integrations/supabase/types';
 
 export interface RawMaterial {
   name: string;
@@ -95,18 +94,20 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   };
 
   // Get the current order step from the database
-  const currentOrderStep = orderSteps.find(step => 
-    step.manufacturing_order_id === data.orderId && 
-    step.manufacturing_steps?.step_order === data.stepOrder
-  );
+  const currentOrderStep = Array.isArray(orderSteps) 
+    ? orderSteps.find(step => 
+        step.order_id === data.orderId && 
+        step.step_name === data.stepName
+      )
+    : undefined;
 
   // Check if this step already exists in the database
   const stepExists = currentOrderStep !== undefined;
 
   // Get all order steps for this specific order
-  const thisOrderSteps = orderSteps.filter(step => 
-    String(step.manufacturing_order_id) === String(data.orderId)
-  );
+  const thisOrderSteps = Array.isArray(orderSteps) 
+    ? orderSteps.filter(step => String(step.order_id) === String(data.orderId))
+    : [];
 
   // ENHANCED CTA LOGIC FOR MERCHANT-SPECIFIC STEPS
   const shouldShowCTA = (() => {
@@ -117,12 +118,12 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       id: currentOrderStep.id,
       stepOrder: currentOrderStep.step_order,
       status: currentOrderStep.status,
-      stepName: currentOrderStep.manufacturing_steps?.step_name
+      stepName: currentOrderStep.step_name
     } : 'NOT FOUND');
     
     console.log(`All order steps for this order (${thisOrderSteps.length} total):`);
     thisOrderSteps.forEach(step => {
-      console.log(`  - ${step.manufacturing_steps?.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
+      console.log(`  - ${step.step_name} (step_order: ${step.step_order}, status: ${step.status})`);
     });
     
     // Rule 1: Manufacturing Order cards - show only if NO manufacturing steps exist yet
@@ -158,7 +159,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         const isImmediateNext = stepOrder === nextStepOrder;
         
         if (isImmediateNext) {
-          console.log(`  - FOUND immediate next step: ${step.manufacturing_steps?.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
+          console.log(`  - FOUND immediate next step: ${step.step_name} (step_order: ${stepOrder}, status: ${step.status})`);
         }
         
         return isImmediateNext;
@@ -189,16 +190,10 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
   const getAssignedWorkerName = () => {
     if (!currentOrderStep) return data.assignedWorker;
     
-    // First check if there's a worker field in step configuration
-    if (data.stepFields) {
-      const workerField = data.stepFields.find(field => field.field_type === 'worker');
-      if (workerField) {
-        const workerId = getStepValue(currentOrderStep.id, workerField.field_id);
-        if (workerId) {
-          const worker = workers.find(w => w.id === workerId);
-          return worker?.name;
-        }
-      }
+    // Use assigned_worker field from the order step
+    if (currentOrderStep.assigned_worker) {
+      const worker = workers.find(w => w.id === currentOrderStep.assigned_worker);
+      return worker?.name;
     }
     
     // Fallback to assigned worker from order step
@@ -222,31 +217,22 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker' && field.is_required) // Only required fields, exclude worker
+      .filter(field => field.is_visible) // Only visible fields
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
         
-        // Get value from database if step exists
-        if (currentOrderStep) {
-          const savedValue = getStepValue(currentOrderStep.id, field.field_id);
-          if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
-            value = savedValue;
-            displayValue = savedValue;
-            
-            // Add unit information for specific field types
-            if (field.field_options?.unit) {
-              displayValue = `${value} ${field.field_options.unit}`;
-            }
-          }
+        // Add unit information for specific field types
+        if (field.unit) {
+          displayValue = `${value} ${field.unit}`;
         }
         
         return {
-          label: field.field_label,
+          label: field.field_key,
           value: displayValue,
-          type: field.field_type,
+          type: 'text',
           isEmpty: value === 'Not set',
-          fieldName: field.field_name
+          fieldName: field.field_key
         };
       });
     
@@ -259,12 +245,6 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       return <Weight className="h-3 w-3 text-muted-foreground" />;
     }
     if (fieldName.toLowerCase().includes('quantity')) {
-      return <Hash className="h-3 w-3 text-muted-foreground" />;
-    }
-    if (fieldType === 'date') {
-      return <Calendar className="h-3 w-3 text-muted-foreground" />;
-    }
-    if (fieldType === 'number') {
       return <Hash className="h-3 w-3 text-muted-foreground" />;
     }
     return <Type className="h-3 w-3 text-muted-foreground" />;
