@@ -1,402 +1,287 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Settings, Trash2, GripVertical, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Plus, Settings, Workflow } from 'lucide-react';
+import { useMerchantStepConfig, CreateStepData, FieldConfigUpdate } from '@/hooks/useMerchantStepConfig';
 import { useMasterFields } from '@/hooks/useMasterFields';
-import { useMerchantStepConfig, FieldConfigUpdate } from '@/hooks/useMerchantStepConfig';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useMerchant } from '@/hooks/useMerchant';
 
 const ManufacturingWorkflowConfig = () => {
-  const { toast } = useToast();
+  const { steps, fieldConfigs, isLoading, createStep, deleteStep, isCreatingStep, isDeletingStep } = useMerchantStepConfig();
   const { masterFields } = useMasterFields();
-  const {
-    steps,
-    fieldConfigs,
-    isLoading,
-    createStep,
-    saveAllFieldConfigs,
-    deleteStep,
-    isFieldVisible,
-    getFieldUnit,
-    isCreatingStep,
-    isSavingFieldConfigs,
-  } = useMerchantStepConfig();
-
+  const { merchant } = useMerchant();
+  const { toast } = useToast();
+  
   const [newStepName, setNewStepName] = useState('');
-  const [isAddStepDialogOpen, setIsAddStepDialogOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<string>('');
-  const [pendingChanges, setPendingChanges] = useState<Map<string, FieldConfigUpdate>>(new Map());
+  const [fieldVisibility, setFieldVisibility] = useState<Record<string, Record<string, boolean>>>({});
+  const [fieldUnits, setFieldUnits] = useState<Record<string, Record<string, string>>>({});
+  const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set());
 
-  // Unit options for fields
-  const unitOptions = [
-    { value: 'grams', label: 'Grams' },
-    { value: 'kilograms', label: 'Kilograms' },
-    { value: 'pieces', label: 'Pieces' },
-    { value: 'carats', label: 'Carats' },
-    { value: 'millimeters', label: 'Millimeters' },
-    { value: 'centimeters', label: 'Centimeters' },
-    { value: 'hours', label: 'Hours' },
-    { value: 'minutes', label: 'Minutes' },
-    { value: 'percent', label: 'Percent' },
-    { value: 'celsius', label: 'Celsius' },
-    { value: 'fahrenheit', label: 'Fahrenheit' },
-  ];
+  // Initialize field visibility and units from existing configs
+  useEffect(() => {
+    const visibility: Record<string, Record<string, boolean>> = {};
+    const units: Record<string, Record<string, string>> = {};
+    
+    steps.forEach(step => {
+      visibility[step.step_name] = {};
+      units[step.step_name] = {};
+      
+      masterFields.forEach(field => {
+        const config = fieldConfigs.find(
+          c => c.step_name === step.step_name && c.field_key === field.field_key
+        );
+        visibility[step.step_name][field.field_key] = config?.is_visible || false;
+        units[step.step_name][field.field_key] = config?.unit || '';
+      });
+    });
+    
+    setFieldVisibility(visibility);
+    setFieldUnits(units);
+  }, [steps, fieldConfigs, masterFields]);
 
-  const handleCreateStep = () => {
-    if (!newStepName.trim()) {
+  const upsertFieldConfig = useCallback(async (stepName: string, fieldKey: string, isVisible: boolean, unit?: string) => {
+    if (!merchant?.id) return;
+
+    const updateKey = `${stepName}-${fieldKey}`;
+    setPendingUpdates(prev => new Set(prev).add(updateKey));
+
+    try {
+      const { error } = await supabase
+        .from('merchant_step_field_config')
+        .upsert({
+          merchant_id: merchant.id,
+          step_name: stepName,
+          field_key: fieldKey,
+          is_visible: isVisible,
+          unit: unit || null,
+        }, {
+          onConflict: 'merchant_id,step_name,field_key'
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating field config:', error);
       toast({
         title: 'Error',
+        description: 'Failed to update field configuration',
+        variant: 'destructive',
+      });
+    } finally {
+      setPendingUpdates(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(updateKey);
+        return newSet;
+      });
+    }
+  }, [merchant?.id, toast]);
+
+  const handleFieldVisibilityChange = useCallback((stepName: string, fieldKey: string, isVisible: boolean) => {
+    setFieldVisibility(prev => ({
+      ...prev,
+      [stepName]: {
+        ...prev[stepName],
+        [fieldKey]: isVisible
+      }
+    }));
+
+    const unit = fieldUnits[stepName]?.[fieldKey] || '';
+    upsertFieldConfig(stepName, fieldKey, isVisible, unit);
+  }, [fieldUnits, upsertFieldConfig]);
+
+  const handleFieldUnitChange = useCallback((stepName: string, fieldKey: string, unit: string) => {
+    setFieldUnits(prev => ({
+      ...prev,
+      [stepName]: {
+        ...prev[stepName],
+        [fieldKey]: unit
+      }
+    }));
+
+    const isVisible = fieldVisibility[stepName]?.[fieldKey] || false;
+    upsertFieldConfig(stepName, fieldKey, isVisible, unit);
+  }, [fieldVisibility, upsertFieldConfig]);
+
+  const handleCreateStep = async () => {
+    if (!newStepName.trim()) {
+      toast({
+        title: 'Validation Error',
         description: 'Please enter a step name',
         variant: 'destructive',
       });
       return;
     }
 
-    const nextOrder = Math.max(...(Array.isArray(steps) ? steps.map(s => s.step_order) : []), 0) + 1;
-    
-    createStep({
+    const stepData: CreateStepData = {
       step_name: newStepName.trim(),
-      step_order: nextOrder,
-    });
+      step_order: steps.length + 1,
+    };
 
+    await createStep(stepData);
     setNewStepName('');
-    setIsAddStepDialogOpen(false);
   };
 
-  const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean) => {
-    const key = `${stepName}-${fieldKey}`;
-    const currentUnit = getFieldUnit(stepName, fieldKey);
-    
-    const update: FieldConfigUpdate = {
-      step_name: stepName,
-      field_key: fieldKey,
-      is_visible: isVisible,
-      unit: currentUnit,
-    };
-
-    setPendingChanges(prev => {
-      const newMap = new Map(prev);
-      newMap.set(key, update);
-      return newMap;
-    });
+  const handleDeleteStep = async (stepId: string) => {
+    await deleteStep(stepId);
   };
-
-  const handleUnitChange = (stepName: string, fieldKey: string, unit: string) => {
-    const key = `${stepName}-${fieldKey}`;
-    const currentVisibility = isFieldVisible(stepName, fieldKey);
-    
-    const update: FieldConfigUpdate = {
-      step_name: stepName,
-      field_key: fieldKey,
-      is_visible: currentVisibility,
-      unit: unit,
-    };
-
-    setPendingChanges(prev => {
-      const newMap = new Map(prev);
-      newMap.set(key, update);
-      return newMap;
-    });
-  };
-
-  const handleSaveAllChanges = () => {
-    const allFieldUpdates: FieldConfigUpdate[] = [];
-
-    // Add all existing field configurations that haven't been modified
-    if (Array.isArray(fieldConfigs)) {
-      fieldConfigs.forEach(config => {
-        const key = `${config.step_name}-${config.field_key}`;
-        if (!pendingChanges.has(key)) {
-          allFieldUpdates.push({
-            step_name: config.step_name,
-            field_key: config.field_key,
-            is_visible: config.is_visible,
-            unit: config.unit,
-          });
-        }
-      });
-    }
-
-    // Add all pending changes
-    pendingChanges.forEach(update => {
-      allFieldUpdates.push(update);
-    });
-
-    // Also add visible fields that don't have existing configs
-    if (Array.isArray(steps) && Array.isArray(masterFields)) {
-      steps.forEach(step => {
-        masterFields.forEach(field => {
-          const key = `${step.step_name}-${field.field_key}`;
-          const existingConfig = Array.isArray(fieldConfigs) ? 
-            fieldConfigs.find(c => c.step_name === step.step_name && c.field_key === field.field_key) : 
-            undefined;
-          const pendingChange = pendingChanges.get(key);
-          
-          if (!existingConfig && !pendingChange) {
-            // This field is visible by default but has no config, add it as not visible
-            allFieldUpdates.push({
-              step_name: step.step_name,
-              field_key: field.field_key,
-              is_visible: false,
-              unit: '',
-            });
-          }
-        });
-      });
-    }
-
-    saveAllFieldConfigs(allFieldUpdates);
-    setPendingChanges(new Map());
-  };
-
-  const handleDeleteStep = (stepId: string, stepName: string) => {
-    if (confirm(`Are you sure you want to delete the "${stepName}" step? This will also remove all field configurations for this step.`)) {
-      deleteStep(stepId);
-    }
-  };
-
-  const shouldShowUnitSelector = (dataType: string) => {
-    return ['number', 'decimal'].includes(dataType);
-  };
-
-  const getEffectiveFieldVisibility = (stepName: string, fieldKey: string) => {
-    const key = `${stepName}-${fieldKey}`;
-    const pendingChange = pendingChanges.get(key);
-    if (pendingChange) {
-      return pendingChange.is_visible;
-    }
-    return isFieldVisible(stepName, fieldKey);
-  };
-
-  const getEffectiveFieldUnit = (stepName: string, fieldKey: string) => {
-    const key = `${stepName}-${fieldKey}`;
-    const pendingChange = pendingChanges.get(key);
-    if (pendingChange) {
-      return pendingChange.unit || '';
-    }
-    return getFieldUnit(stepName, fieldKey);
-  };
-
-  const hasUnsavedChanges = pendingChanges.size > 0;
-  const stepsArray = Array.isArray(steps) ? steps : [];
-  const fieldConfigsArray = Array.isArray(fieldConfigs) ? fieldConfigs : [];
-  const masterFieldsArray = Array.isArray(masterFields) ? masterFields : [];
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-        <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
-        <div className="h-48 bg-gray-200 rounded animate-pulse"></div>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="h-4 bg-gray-200 rounded"></div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
+  const isPendingUpdate = (stepName: string, fieldKey: string) => {
+    return pendingUpdates.has(`${stepName}-${fieldKey}`);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Manufacturing Workflow Configuration</h2>
-          <p className="text-muted-foreground">
-            Configure your manufacturing steps and choose which fields to show for each step.
-          </p>
-        </div>
-        
-        {hasUnsavedChanges && (
-          <Button 
-            onClick={handleSaveAllChanges}
-            disabled={isSavingFieldConfigs}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSavingFieldConfigs ? 'Saving...' : `Save Changes (${pendingChanges.size})`}
-          </Button>
-        )}
-      </div>
-
-      {/* Steps Overview */}
+      {/* Create New Step */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Manufacturing Steps</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Define the sequence of steps in your manufacturing process
-            </p>
-          </div>
-          <Dialog open={isAddStepDialogOpen} onOpenChange={setIsAddStepDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Step
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Manufacturing Step</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="step-name">Step Name</Label>
-                  <Input
-                    id="step-name"
-                    value={newStepName}
-                    onChange={(e) => setNewStepName(e.target.value)}
-                    placeholder="e.g., Jhalai, Dhol, Casting"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddStepDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateStep} disabled={isCreatingStep}>
-                    {isCreatingStep ? 'Creating...' : 'Create Step'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Add Manufacturing Step
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {stepsArray.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No manufacturing steps configured yet.</p>
-              <p className="text-sm">Add your first step to get started.</p>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder="Enter step name (e.g., Cutting, Assembly, Quality Check)"
+                value={newStepName}
+                onChange={(e) => setNewStepName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateStep()}
+              />
             </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {stepsArray.map((step, index) => (
-                <Card key={step.id} className="relative">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Badge variant="outline">{step.step_order}</Badge>
-                        <span className="font-medium">{step.step_name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteStep(step.id, step.step_name)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="text-sm text-muted-foreground">
-                      {fieldConfigsArray.filter(c => c.step_name === step.step_name && c.is_visible).length} 
-                      /{masterFieldsArray.length} fields visible
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+            <Button 
+              onClick={handleCreateStep}
+              disabled={isCreatingStep || !newStepName.trim()}
+            >
+              {isCreatingStep ? 'Adding...' : 'Add Step'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Field Configuration */}
-      {stepsArray.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Field Configuration</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Choose which Zerify fields to show for each manufacturing step and configure their units
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={selectedStep || stepsArray[0]?.step_name} onValueChange={setSelectedStep}>
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 w-full">
-                {stepsArray.map((step) => (
-                  <TabsTrigger key={step.id} value={step.step_name} className="text-xs">
-                    {step.step_name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {stepsArray.map((step) => (
-                <TabsContent key={step.id} value={step.step_name} className="mt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">Fields for {step.step_name}</h3>
-                      <Badge variant="outline">
-                        {fieldConfigsArray.filter(c => c.step_name === step.step_name && c.is_visible).length} visible
-                      </Badge>
-                    </div>
+      {/* Existing Steps Configuration */}
+      <div className="grid gap-6">
+        {steps.map((step) => (
+          <Card key={step.id} className="relative">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Workflow className="h-5 w-5" />
+                  {step.step_name}
+                  <Badge variant="outline" className="ml-2">
+                    Order: {step.step_order}
+                  </Badge>
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteStep(step.id)}
+                  disabled={isDeletingStep}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Field Configuration</span>
+                </div>
+                <div className="grid gap-4">
+                  {masterFields.map((field) => {
+                    const isVisible = fieldVisibility[step.step_name]?.[field.field_key] || false;
+                    const unit = fieldUnits[step.step_name]?.[field.field_key] || '';
+                    const isPending = isPendingUpdate(step.step_name, field.field_key);
                     
-                    <div className="grid gap-4">
-                      {masterFieldsArray.map((field) => {
-                        const effectiveUnit = getEffectiveFieldUnit(step.step_name, field.field_key);
-                        const effectiveVisibility = getEffectiveFieldVisibility(step.step_name, field.field_key);
-                        
-                        return (
-                          <div key={field.field_key} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Label htmlFor={`${step.step_name}-${field.field_key}`} className="font-medium">
-                                  {field.label}
-                                  {effectiveUnit && (
-                                    <span className="text-muted-foreground ml-1">({effectiveUnit})</span>
-                                  )}
-                                </Label>
-                                <Badge variant="secondary" className="text-xs">
-                                  {field.data_type}
-                                </Badge>
-                              </div>
-                              {field.description && (
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  {field.description}
-                                </p>
-                              )}
-                              {shouldShowUnitSelector(field.data_type) && effectiveVisibility && (
-                                <div className="mt-2">
-                                  <Label className="text-xs text-muted-foreground">Unit</Label>
-                                  <Select
-                                    value={effectiveUnit || ''}
-                                    onValueChange={(unit) => handleUnitChange(step.step_name, field.field_key, unit)}
-                                  >
-                                    <SelectTrigger className="w-[180px] h-8">
-                                      <SelectValue placeholder="Select unit" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {unitOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                            </div>
+                    return (
+                      <div key={field.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50 relative">
+                        {isPending && (
+                          <div className="absolute top-1 right-1">
+                            <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
                             <Switch
-                              id={`${step.step_name}-${field.field_key}`}
-                              checked={effectiveVisibility}
+                              checked={isVisible}
                               onCheckedChange={(checked) => 
-                                handleFieldVisibilityToggle(step.step_name, field.field_key, checked)
+                                handleFieldVisibilityChange(step.step_name, field.field_key, checked)
                               }
+                              disabled={isPending}
+                            />
+                            <div>
+                              <Label className="text-sm font-medium">
+                                {field.label}
+                              </Label>
+                              <p className="text-xs text-muted-foreground">
+                                {field.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {isVisible && (
+                          <div className="flex items-center gap-2 ml-4">
+                            <Label className="text-xs text-muted-foreground">Unit:</Label>
+                            <Input
+                              className="w-20 h-8 text-xs"
+                              placeholder="Unit"
+                              value={unit}
+                              onChange={(e) => 
+                                handleFieldUnitChange(step.step_name, field.field_key, e.target.value)
+                              }
+                              disabled={isPending}
                             />
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {steps.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Workflow className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Manufacturing Steps</h3>
+            <p className="text-gray-500 mb-4">
+              Create your first manufacturing step to start configuring your workflow.
+            </p>
           </CardContent>
         </Card>
       )}

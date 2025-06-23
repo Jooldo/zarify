@@ -102,55 +102,6 @@ export const useMerchantStepConfig = () => {
     },
   });
 
-  const saveAllFieldConfigsMutation = useMutation({
-    mutationFn: async (fieldUpdates: FieldConfigUpdate[]) => {
-      const { data: merchantId, error: merchantError } = await supabase
-        .rpc('get_user_merchant_id');
-
-      if (merchantError) throw merchantError;
-
-      // First, delete all existing configurations for this merchant
-      const { error: deleteError } = await supabase
-        .from('merchant_step_field_config')
-        .delete()
-        .eq('merchant_id', merchantId);
-
-      if (deleteError) throw deleteError;
-
-      // Then insert all the new configurations
-      if (fieldUpdates.length > 0) {
-        const insertData = fieldUpdates.map(update => ({
-          merchant_id: merchantId,
-          step_name: update.step_name,
-          field_key: update.field_key,
-          is_visible: update.is_visible,
-          unit: update.unit || null,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('merchant_step_field_config')
-          .insert(insertData);
-
-        if (insertError) throw insertError;
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Field configuration saved successfully',
-      });
-      queryClient.invalidateQueries({ queryKey: ['merchant-step-field-config'] });
-    },
-    onError: (error: any) => {
-      console.error('Field config save error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save field configuration',
-        variant: 'destructive',
-      });
-    },
-  });
-
   const deleteStepMutation = useMutation({
     mutationFn: async (stepId: string) => {
       const { error } = await supabase
@@ -202,13 +153,11 @@ export const useMerchantStepConfig = () => {
     fieldConfigs,
     isLoading: stepsLoading || fieldConfigsLoading,
     createStep: createStepMutation.mutate,
-    saveAllFieldConfigs: saveAllFieldConfigsMutation.mutate,
     deleteStep: deleteStepMutation.mutate,
     getVisibleFieldsForStep,
     isFieldVisible,
     getFieldUnit,
     isCreatingStep: createStepMutation.isPending,
-    isSavingFieldConfigs: saveAllFieldConfigsMutation.isPending,
     isDeletingStep: deleteStepMutation.isPending,
   };
 };
