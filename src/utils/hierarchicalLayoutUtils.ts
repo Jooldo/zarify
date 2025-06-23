@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 
 export interface HierarchicalNode {
@@ -28,12 +27,12 @@ export interface LayoutConfig {
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   nodeWidth: 380,
   nodeHeight: 240,
-  horizontalSpacing: 50, // Minimal horizontal spacing between siblings
-  verticalSpacing: 120,  // Minimal vertical spacing between levels
-  rootX: 50,
-  rootY: 50,
-  minNodeSpacing: 30,    // Minimum space between any two nodes
-  edgeMargin: 20,        // Extra margin for edge routing
+  horizontalSpacing: 60,    // Compact horizontal spacing
+  verticalSpacing: 180,     // Increased vertical spacing between levels
+  rootX: 50,                // Start close to left edge
+  rootY: 50,                // Start close to top
+  minNodeSpacing: 40,       // Minimum space between nodes
+  edgeMargin: 25,           // Margin for edge routing
 };
 
 // Build hierarchy tree from nodes and edges
