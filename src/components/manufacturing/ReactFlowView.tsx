@@ -1,6 +1,5 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
+import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
@@ -91,10 +90,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants with increased spacing to prevent overlaps
-    const ORDER_SPACING = 1400; // Increased from 1200
-    const VERTICAL_SPACING = 350; // Increased from 300
-    const PARALLEL_INSTANCE_SPACING = 700; // Increased from 650
+    // Layout constants remain the same
+    const ORDER_SPACING = 1200;
+    const VERTICAL_SPACING = 300;
+    const PARALLEL_INSTANCE_SPACING = 650;
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -141,7 +140,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering and positioning
+      // Create step nodes with improved ordering
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -155,11 +154,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // Enhanced ordering logic with better grouping
+        // New ordering logic: Group by parent relationship, then by instance number
         let orderedInstances;
         
         if (stepIndex === 0) {
-          // First step: sort by instance number
+          // First step: just sort by instance number
           orderedInstances = stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
         } else {
           // Subsequent steps: group by source instance relationship
@@ -207,7 +206,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with improved spacing to prevent overlaps
+        // Calculate positions for instances with same spacing
         const instanceCount = orderedInstances.length;
         const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
         const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
@@ -243,10 +242,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation with better routing to prevent overlaps
+          // Enhanced edge creation remains the same
           let sourceNodeId: string;
-          let sourceHandle = 'bottom';
-          let targetHandle = 'top';
           
           if (stepIndex === 0) {
             sourceNodeId = `order-${order.id}`;
@@ -287,31 +284,17 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
                              orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
 
-          // Use smoothstep with better routing to prevent overlaps
-          const edge: Edge = {
+          edges.push({
             id: edgeId,
             source: sourceNodeId,
             target: stepNode.id,
-            sourceHandle,
-            targetHandle,
             type: 'smoothstep',
             animated: isAnimated,
             style: {
               stroke: strokeColor,
-              strokeWidth: orderStep?.status === 'completed' ? 3 : 2,
+              strokeWidth: 2,
             },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: strokeColor,
-            },
-            // Add path offset to prevent overlaps when multiple edges connect to same nodes
-            pathOptions: {
-              offset: instanceIndex * 20, // Offset each parallel edge
-              borderRadius: 15,
-            },
-          };
-
-          edges.push(edge);
+          });
         });
 
         currentY += VERTICAL_SPACING;
@@ -456,12 +439,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
-            connectionLineType="smoothstep"
-            defaultEdgeOptions={{
-              type: 'smoothstep',
-              animated: false,
-              style: { strokeWidth: 2 },
-            }}
           >
             <Background />
             <Controls />
