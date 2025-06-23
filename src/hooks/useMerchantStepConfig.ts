@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -108,23 +109,46 @@ export const useMerchantStepConfig = () => {
 
       if (merchantError) throw merchantError;
 
-      // Use proper upsert with ON CONFLICT to handle duplicate key constraint
-      const { data, error } = await supabase
+      // Check if record already exists
+      const { data: existingRecord } = await supabase
         .from('merchant_step_field_config')
-        .upsert({
-          merchant_id: merchantId,
-          step_name: updateData.step_name,
-          field_key: updateData.field_key,
-          is_visible: updateData.is_visible,
-          unit: updateData.unit,
-        }, {
-          onConflict: 'merchant_id,step_name,field_key'
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('merchant_id', merchantId)
+        .eq('step_name', updateData.step_name)
+        .eq('field_key', updateData.field_key)
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (existingRecord) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('merchant_step_field_config')
+          .update({
+            is_visible: updateData.is_visible,
+            unit: updateData.unit,
+          })
+          .eq('id', existingRecord.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('merchant_step_field_config')
+          .insert({
+            merchant_id: merchantId,
+            step_name: updateData.step_name,
+            field_key: updateData.field_key,
+            is_visible: updateData.is_visible,
+            unit: updateData.unit,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchant-step-field-config'] });
