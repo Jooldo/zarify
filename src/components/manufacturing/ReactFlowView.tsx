@@ -90,10 +90,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants remain the same
+    // Dynamic layout constants
     const ORDER_SPACING = 1200;
-    const VERTICAL_SPACING = 300;
-    const PARALLEL_INSTANCE_SPACING = 650;
+    const BASE_VERTICAL_SPACING = 300;
+    const BASE_PARALLEL_INSTANCE_SPACING = 450;
+    const CHILD_SPACING_MULTIPLIER = 1.5; // Increase spacing when children exist
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -113,6 +114,22 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         acc[step.step_name].push(step);
         return acc;
       }, {} as Record<string, any[]>);
+
+      // Calculate child step counts for dynamic spacing
+      const stepChildCounts = new Map<string, number>();
+      const activeSteps = manufacturingSteps
+        .filter(step => step.is_active)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      activeSteps.forEach((step, stepIndex) => {
+        if (stepIndex < activeSteps.length - 1) {
+          const nextStep = activeSteps[stepIndex + 1];
+          const nextStepInstances = stepsByName[nextStep.step_name] || [];
+          stepChildCounts.set(step.step_name, nextStepInstances.length);
+        } else {
+          stepChildCounts.set(step.step_name, 0);
+        }
+      });
 
       // Create manufacturing order node
       const orderNodeData: StepCardData = {
@@ -140,13 +157,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering
-      let currentY = orderY + VERTICAL_SPACING;
+      // Create step nodes with dynamic spacing
+      let currentY = orderY + BASE_VERTICAL_SPACING;
       
-      const activeSteps = manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order);
-
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = stepsByName[step.step_name] || [];
         
@@ -154,7 +167,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // New ordering logic: Group by parent relationship, then by instance number
+        // Calculate dynamic spacing based on child steps
+        const childCount = stepChildCounts.get(step.step_name) || 0;
+        const hasChildren = childCount > 0;
+        const dynamicSpacing = hasChildren 
+          ? BASE_PARALLEL_INSTANCE_SPACING * CHILD_SPACING_MULTIPLIER
+          : BASE_PARALLEL_INSTANCE_SPACING;
+
+        // Enhanced ordering logic for instances
         let orderedInstances;
         
         if (stepIndex === 0) {
@@ -206,13 +226,13 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with same spacing
+        // Calculate positions for instances with dynamic spacing
         const instanceCount = orderedInstances.length;
-        const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
+        const totalWidth = (instanceCount - 1) * dynamicSpacing;
         const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
 
         orderedInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
+          const instanceX = startX + (instanceIndex * dynamicSpacing);
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -242,7 +262,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation remains the same
+          // Enhanced edge creation with better routing
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -297,7 +317,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           });
         });
 
-        currentY += VERTICAL_SPACING;
+        // Increase vertical spacing for next step if current step has children
+        const verticalSpacing = hasChildren 
+          ? BASE_VERTICAL_SPACING * CHILD_SPACING_MULTIPLIER
+          : BASE_VERTICAL_SPACING;
+        
+        currentY += verticalSpacing;
       });
     });
 
