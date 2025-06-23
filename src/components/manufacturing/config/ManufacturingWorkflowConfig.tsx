@@ -69,12 +69,13 @@ const ManufacturingWorkflowConfig = () => {
     setIsAddStepDialogOpen(false);
   };
 
-  const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean, unit?: string) => {
+  const handleFieldVisibilityToggle = (stepName: string, fieldKey: string, isVisible: boolean) => {
+    const currentUnit = getFieldUnit(stepName, fieldKey);
     updateFieldVisibility({
       step_name: stepName,
       field_key: fieldKey,
       is_visible: isVisible,
-      unit: unit,
+      unit: currentUnit,
     });
   };
 
@@ -233,52 +234,60 @@ const ManufacturingWorkflowConfig = () => {
                     </div>
                     
                     <div className="grid gap-4">
-                      {masterFields.map((field) => (
-                        <div key={field.field_key} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Label htmlFor={`${step.step_name}-${field.field_key}`} className="font-medium">
-                                {field.label}
-                              </Label>
-                              <Badge variant="secondary" className="text-xs">
-                                {field.data_type}
-                              </Badge>
-                            </div>
-                            {field.description && (
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {field.description}
-                              </p>
-                            )}
-                            {shouldShowUnitSelector(field.data_type) && isFieldVisible(step.step_name, field.field_key) && (
-                              <div className="mt-2">
-                                <Label className="text-xs text-muted-foreground">Unit</Label>
-                                <Select
-                                  value={getFieldUnit(step.step_name, field.field_key)}
-                                  onValueChange={(unit) => handleUnitChange(step.step_name, field.field_key, unit)}
-                                >
-                                  <SelectTrigger className="w-[180px] h-8">
-                                    <SelectValue placeholder="Select unit" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {unitOptions.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                      {masterFields.map((field) => {
+                        const currentUnit = getFieldUnit(step.step_name, field.field_key);
+                        const isVisible = isFieldVisible(step.step_name, field.field_key);
+                        
+                        return (
+                          <div key={field.field_key} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Label htmlFor={`${step.step_name}-${field.field_key}`} className="font-medium">
+                                  {field.label}
+                                  {currentUnit && (
+                                    <span className="text-muted-foreground ml-1">({currentUnit})</span>
+                                  )}
+                                </Label>
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.data_type}
+                                </Badge>
                               </div>
-                            )}
+                              {field.description && (
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {field.description}
+                                </p>
+                              )}
+                              {shouldShowUnitSelector(field.data_type) && isVisible && (
+                                <div className="mt-2">
+                                  <Label className="text-xs text-muted-foreground">Unit</Label>
+                                  <Select
+                                    value={currentUnit || ''}
+                                    onValueChange={(unit) => handleUnitChange(step.step_name, field.field_key, unit)}
+                                  >
+                                    <SelectTrigger className="w-[180px] h-8">
+                                      <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {unitOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                            <Switch
+                              id={`${step.step_name}-${field.field_key}`}
+                              checked={isVisible}
+                              onCheckedChange={(checked) => 
+                                handleFieldVisibilityToggle(step.step_name, field.field_key, checked)
+                              }
+                            />
                           </div>
-                          <Switch
-                            id={`${step.step_name}-${field.field_key}`}
-                            checked={isFieldVisible(step.step_name, field.field_key)}
-                            onCheckedChange={(checked) => 
-                              handleFieldVisibilityToggle(step.step_name, field.field_key, checked, getFieldUnit(step.step_name, field.field_key))
-                            }
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </TabsContent>
