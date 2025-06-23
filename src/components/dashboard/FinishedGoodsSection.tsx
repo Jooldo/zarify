@@ -6,9 +6,9 @@ import { Package, AlertTriangle } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
 
 const FinishedGoodsSection = () => {
-  const { finishedGoods, isLoading } = useFinishedGoods();
+  const { finishedGoods, loading } = useFinishedGoods();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>

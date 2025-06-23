@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Package, Users, ShoppingCart, TrendingUp } from 'lucide-react';
 import { useFinishedGoods } from '@/hooks/useFinishedGoods';
-import { useCustomers } from '@/hooks/useCustomers';
 import { useOrders } from '@/hooks/useOrders';
 import { useRawMaterials } from '@/hooks/useRawMaterials';
 import TodaysActivitiesSection from './TodaysActivitiesSection';
@@ -14,13 +13,12 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const UnifiedDashboard = () => {
   const { finishedGoods } = useFinishedGoods();
-  const { customers } = useCustomers();
   const { orders } = useOrders();
   const { rawMaterials } = useRawMaterials();
 
   // Calculate metrics
   const totalProducts = finishedGoods.length;
-  const totalCustomers = customers.length;
+  const totalCustomers = 0; // Placeholder until customers hook is implemented
   const totalOrders = orders.length;
   const lowStockItems = finishedGoods.filter(item => 
     item.current_stock <= (item.threshold || 0)
