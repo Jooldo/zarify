@@ -240,7 +240,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Create edge with step-coherent styling
+          // Create edge with step-coherent styling and L-shaped routing
           const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
           const isAnimated = orderStep?.status === 'in_progress';
           
@@ -274,7 +274,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             id: edgeId,
             source: sourceNodeId,
             target: stepNodeId,
-            type: 'straight', // Changed to straight for cleaner vertical lines
+            type: 'smoothstep', // Use smoothstep for L-shaped connectors
             animated: isAnimated,
             style: {
               stroke: strokeColor,
@@ -292,14 +292,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
     console.log('Generated nodes before layout:', nodes.length, 'edges:', edges.length);
     
-    // Apply improved hierarchical layout with better spacing
+    // Apply compact hierarchical layout with minimal spacing
     const layoutResult = calculateHierarchicalLayout(nodes, edges, {
       ...DEFAULT_LAYOUT_CONFIG,
-      horizontalSpacing: 200, // Increased for better separation
-      verticalSpacing: 400,   // Increased for better vertical separation
-      rootX: 100,             // Start further right to accommodate larger trees
-      rootY: 50,
-      minNodeSpacing: 50,     // Minimum space between nodes
+      horizontalSpacing: 60,    // Compact horizontal spacing
+      verticalSpacing: 140,     // Compact vertical spacing
+      rootX: 50,                // Start close to left edge
+      rootY: 50,                // Start close to top
+      minNodeSpacing: 40,       // Minimum space between nodes
+      edgeMargin: 25,           // Margin for edge routing
     });
 
     console.log('Generated nodes after layout:', layoutResult.nodes.length, 'edges:', layoutResult.edges.length);

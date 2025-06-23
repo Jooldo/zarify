@@ -11,6 +11,7 @@ export interface HierarchicalNode {
   width: number;
   height: number;
   subtreeWidth?: number;
+  subtreeHeight?: number;
 }
 
 export interface LayoutConfig {
@@ -21,16 +22,18 @@ export interface LayoutConfig {
   rootX: number;
   rootY: number;
   minNodeSpacing: number;
+  edgeMargin: number;
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   nodeWidth: 380,
   nodeHeight: 240,
-  horizontalSpacing: 150, // Increased for better spacing
-  verticalSpacing: 350,
-  rootX: 400,
+  horizontalSpacing: 50, // Minimal horizontal spacing between siblings
+  verticalSpacing: 120,  // Minimal vertical spacing between levels
+  rootX: 50,
   rootY: 50,
-  minNodeSpacing: 50, // Minimum space between nodes
+  minNodeSpacing: 30,    // Minimum space between any two nodes
+  edgeMargin: 20,        // Extra margin for edge routing
 };
 
 // Build hierarchy tree from nodes and edges
@@ -75,30 +78,45 @@ export const buildHierarchy = (nodes: Node[], edges: Edge[]): HierarchicalNode[]
   return rootNodes;
 };
 
-// Calculate subtree width using bottom-up approach
-const calculateSubtreeWidth = (node: HierarchicalNode, config: LayoutConfig): number => {
+// Calculate subtree dimensions using bottom-up approach
+const calculateSubtreeDimensions = (node: HierarchicalNode, config: LayoutConfig): void => {
   if (node.children.length === 0) {
-    // Leaf node - width is just the node width
+    // Leaf node - dimensions are just the node dimensions
     node.subtreeWidth = node.width;
-    return node.subtreeWidth;
+    node.subtreeHeight = node.height;
+    return;
   }
 
-  // Calculate width for all children first (bottom-up)
-  const childSubtreeWidths = node.children.map(child => 
-    calculateSubtreeWidth(child, config)
-  );
+  // Calculate dimensions for all children first (bottom-up)
+  node.children.forEach(child => calculateSubtreeDimensions(child, config));
 
-  // Total width needed for all children including spacing
-  const totalChildrenWidth = childSubtreeWidths.reduce((sum, width, index) => {
-    return sum + width + (index > 0 ? config.horizontalSpacing : 0);
+  // Calculate total width needed for all children including spacing
+  const totalChildrenWidth = node.children.reduce((sum, child, index) => {
+    return sum + (child.subtreeWidth || 0) + (index > 0 ? config.horizontalSpacing : 0);
   }, 0);
 
-  // Subtree width is the maximum of node width and children total width
+  // Calculate maximum depth of children
+  const maxChildHeight = Math.max(...node.children.map(child => child.subtreeHeight || 0));
+
+  // Subtree dimensions
   node.subtreeWidth = Math.max(node.width, totalChildrenWidth);
-  return node.subtreeWidth;
+  node.subtreeHeight = node.height + config.verticalSpacing + maxChildHeight;
 };
 
-// Position nodes using bottom-up recursive approach
+// Calculate adaptive spacing based on content and connector needs
+const calculateAdaptiveSpacing = (children: HierarchicalNode[], config: LayoutConfig): number => {
+  if (children.length <= 1) return 0;
+  
+  // Base spacing for connectors
+  const baseSpacing = config.horizontalSpacing;
+  
+  // Additional spacing based on node width and edge margin
+  const edgeSpacing = config.edgeMargin * 2;
+  
+  return Math.max(baseSpacing, edgeSpacing);
+};
+
+// Position nodes using bottom-up recursive approach with adaptive spacing
 const positionNodeAndChildren = (
   node: HierarchicalNode,
   centerX: number,
@@ -113,31 +131,83 @@ const positionNodeAndChildren = (
     return;
   }
 
-  // Calculate positions for children
-  const childY = y + config.verticalSpacing;
+  // Calculate adaptive spacing between children
+  const adaptiveSpacing = calculateAdaptiveSpacing(node.children, config);
   
-  // Calculate total width needed for all children
-  const childSubtreeWidths = node.children.map(child => child.subtreeWidth || 0);
-  const totalChildrenWidth = childSubtreeWidths.reduce((sum, width, index) => {
-    return sum + width + (index > 0 ? config.horizontalSpacing : 0);
+  // Calculate positions for children
+  const childY = y + node.height + config.verticalSpacing;
+  
+  // Calculate total width needed for all children with adaptive spacing
+  const totalChildrenWidth = node.children.reduce((sum, child, index) => {
+    return sum + (child.subtreeWidth || 0) + (index > 0 ? adaptiveSpacing : 0);
   }, 0);
 
   // Start positioning children from the left edge of their total span
   let currentX = centerX - totalChildrenWidth / 2;
 
   node.children.forEach((child, index) => {
-    const childSubtreeWidth = childSubtreeWidths[index];
+    const childSubtreeWidth = child.subtreeWidth || 0;
     const childCenterX = currentX + childSubtreeWidth / 2;
     
     // Recursively position child and its subtree
     positionNodeAndChildren(child, childCenterX, childY, config);
     
-    // Move to next child position
-    currentX += childSubtreeWidth + config.horizontalSpacing;
+    // Move to next child position with adaptive spacing
+    currentX += childSubtreeWidth + (index < node.children.length - 1 ? adaptiveSpacing : 0);
   });
 };
 
-// Calculate layout for hierarchical nodes
+// Check and resolve overlaps
+const resolveOverlaps = (hierarchy: HierarchicalNode[], config: LayoutConfig): void => {
+  const allNodes: HierarchicalNode[] = [];
+  
+  // Collect all nodes
+  const collectNodes = (node: HierarchicalNode) => {
+    allNodes.push(node);
+    node.children.forEach(collectNodes);
+  };
+  
+  hierarchy.forEach(collectNodes);
+  
+  // Sort nodes by level and then by x position
+  allNodes.sort((a, b) => {
+    if (a.level !== b.level) return a.level - b.level;
+    return (a.x || 0) - (b.x || 0);
+  });
+  
+  // Group nodes by level
+  const nodesByLevel = new Map<number, HierarchicalNode[]>();
+  allNodes.forEach(node => {
+    if (!nodesByLevel.has(node.level)) {
+      nodesByLevel.set(node.level, []);
+    }
+    nodesByLevel.get(node.level)!.push(node);
+  });
+  
+  // Resolve horizontal overlaps within each level
+  nodesByLevel.forEach((levelNodes, level) => {
+    for (let i = 1; i < levelNodes.length; i++) {
+      const prevNode = levelNodes[i - 1];
+      const currentNode = levelNodes[i];
+      
+      const prevRight = (prevNode.x || 0) + prevNode.width;
+      const currentLeft = currentNode.x || 0;
+      const requiredGap = config.minNodeSpacing;
+      
+      if (prevRight + requiredGap > currentLeft) {
+        const adjustment = prevRight + requiredGap - currentLeft;
+        // Adjust current node and all nodes to its right
+        for (let j = i; j < levelNodes.length; j++) {
+          if (levelNodes[j].x !== undefined) {
+            levelNodes[j].x! += adjustment;
+          }
+        }
+      }
+    }
+  });
+};
+
+// Calculate layout for hierarchical nodes with compact spacing
 export const calculateHierarchicalLayout = (
   nodes: Node[], 
   edges: Edge[], 
@@ -149,33 +219,26 @@ export const calculateHierarchicalLayout = (
     return { nodes, edges };
   }
 
-  // Calculate subtree widths for all nodes (bottom-up)
+  // Calculate subtree dimensions for all nodes (bottom-up)
   hierarchy.forEach(rootNode => {
-    calculateSubtreeWidth(rootNode, config);
+    calculateSubtreeDimensions(rootNode, config);
   });
 
-  // Position each root tree
-  let currentRootCenterX = config.rootX;
+  // Position each root tree with minimal spacing
+  let currentRootX = config.rootX;
   
   hierarchy.forEach((rootNode, index) => {
-    if (index > 0) {
-      // Add spacing between different root trees
-      const previousRootWidth = hierarchy[index - 1].subtreeWidth || 0;
-      const currentRootWidth = rootNode.subtreeWidth || 0;
-      currentRootCenterX += (previousRootWidth + currentRootWidth) / 2 + config.horizontalSpacing * 2;
-    } else {
-      // First root - position at center of its subtree
-      currentRootCenterX += (rootNode.subtreeWidth || 0) / 2;
-    }
+    const rootCenterX = currentRootX + (rootNode.subtreeWidth || 0) / 2;
     
     // Position this root tree
-    positionNodeAndChildren(rootNode, currentRootCenterX, config.rootY, config);
+    positionNodeAndChildren(rootNode, rootCenterX, config.rootY, config);
     
     // Update position for next root tree
-    if (index < hierarchy.length - 1) {
-      currentRootCenterX += (rootNode.subtreeWidth || 0) / 2;
-    }
+    currentRootX += (rootNode.subtreeWidth || 0) + config.horizontalSpacing * 2;
   });
+
+  // Resolve any remaining overlaps
+  resolveOverlaps(hierarchy, config);
 
   // Apply positions to React Flow nodes
   const positionedNodes = nodes.map(node => {
