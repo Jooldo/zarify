@@ -90,12 +90,12 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants - optimized for new card size
-    const ORDER_SPACING = 1200;
-    const VERTICAL_SPACING = 300;
-    const PARALLEL_INSTANCE_SPACING = 400; // Reduced from 1000 to fit new card width
-    const CARD_WIDTH = 350; // Reduced from 500 to match new card design
-    const CARD_HEIGHT = 200;
+    // Layout constants - optimized for compact card design
+    const ORDER_SPACING = 800; // Reduced from 1200
+    const VERTICAL_SPACING = 250; // Reduced from 300
+    const PARALLEL_INSTANCE_SPACING = 380; // Adjusted to match card width + padding
+    const CARD_WIDTH = 350; // Match actual card width
+    const CARD_HEIGHT = 180; // Reduced height for more compact layout
     const START_Y = 80;
 
     manufacturingOrders.forEach((order, orderIndex) => {
@@ -114,7 +114,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Create manufacturing order node
+      // Create manufacturing order node with proper sizing
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -133,14 +133,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: 100, y: orderY },
+        position: { x: 50, y: orderY },
         data: orderNodeData,
         style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering
+      // Create step nodes with improved ordering and positioning
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -154,7 +154,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // New ordering logic: Group by parent relationship, then by instance number
+        // Order instances properly
         let orderedInstances;
         
         if (stepIndex === 0) {
@@ -206,10 +206,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with same spacing
+        // Calculate positions for instances with proper spacing
         const instanceCount = orderedInstances.length;
         const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
-        const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
+        const startX = 50 + (instanceCount > 1 ? -totalWidth / 2 : 0);
 
         orderedInstances.forEach((orderStep, instanceIndex) => {
           const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
@@ -242,7 +242,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation remains the same
+          // Create edges with proper source targeting
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
