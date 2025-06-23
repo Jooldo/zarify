@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -91,10 +90,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Tree layout constants for dynamic positioning - Further increased spacing
+    // Tree layout constants for dynamic positioning
     const ORDER_SPACING = 1200;
     const BASE_VERTICAL_SPACING = 300;
-    const INSTANCE_HORIZONTAL_SPACING = 1200; // Further increased to prevent overlap
+    const INSTANCE_HORIZONTAL_SPACING = 1000;
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
     const START_Y = 80;
@@ -119,8 +118,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         .filter(step => step.is_active)
         .sort((a, b) => a.step_order - b.step_order);
 
-      // First pass: Calculate child positions and determine parent positions
-      const stepPositions = new Map<string, { instances: any[], positions: number[], centerX: number, y: number }>();
+      // First pass: Calculate child positions
+      const stepPositions = new Map<string, { instances: any[], positions: number[], y: number }>();
       
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = stepsByName[step.step_name] || [];
@@ -181,14 +180,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for child instances first
+        // Calculate positions for child instances
         const instancePositions: number[] = [];
         const instanceCount = orderedInstances.length;
         
         if (stepIndex === 0) {
-          // First step: position relative to order card
-          const orderCenterX = 100 + (CARD_WIDTH / 2);
-          const startX = orderCenterX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
+          // First step: position children first, then calculate parent center
+          // Start from a base position and space children evenly
+          const baseX = 600; // Start children to the right
+          const startX = baseX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
           
           orderedInstances.forEach((_, instanceIndex) => {
             instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
@@ -245,31 +245,36 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             });
           } else {
             // Fallback positioning
-            const startX = 100 + (CARD_WIDTH / 2) - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
+            const baseX = 600;
+            const startX = baseX - ((instanceCount - 1) * INSTANCE_HORIZONTAL_SPACING / 2);
             orderedInstances.forEach((_, instanceIndex) => {
               instancePositions.push(startX + (instanceIndex * INSTANCE_HORIZONTAL_SPACING));
             });
           }
         }
 
-        // Calculate center position for parent positioning
-        const minX = Math.min(...instancePositions);
-        const maxX = Math.max(...instancePositions);
-        const centerX = (minX + maxX) / 2;
-
         const currentY = orderY + BASE_VERTICAL_SPACING + (stepIndex * BASE_VERTICAL_SPACING);
         
         stepPositions.set(step.step_name, {
           instances: orderedInstances,
           positions: instancePositions,
-          centerX,
           y: currentY
         });
       });
 
-      // Now position the order card based on the first step's center
+      // Now calculate the order card position based on the first step's children center
+      let orderX = 100; // default position
+      
       const firstStepData = stepPositions.get(activeSteps[0]?.step_name);
-      const orderX = firstStepData ? firstStepData.centerX - (CARD_WIDTH / 2) : 100;
+      if (firstStepData && firstStepData.positions.length > 0) {
+        // Calculate the center point of the first step's children
+        const minX = Math.min(...firstStepData.positions);
+        const maxX = Math.max(...firstStepData.positions);
+        const centerX = (minX + maxX) / 2;
+        
+        // Position the order card centered above the children
+        orderX = centerX - (CARD_WIDTH / 2);
+      }
 
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
