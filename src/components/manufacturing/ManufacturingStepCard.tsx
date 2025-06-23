@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar, User, Settings, CheckCircle2, Truck, ClipboardCheck, Weight, Hash, Type } from 'lucide-react';
-import { ManufacturingStepField, ManufacturingStep, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
+import { MerchantStepConfig, MerchantStepFieldConfig, ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
 import { useManufacturingStepValues } from '@/hooks/useManufacturingStepValues';
 import { useWorkers } from '@/hooks/useWorkers';
 import StepDetailsDialog from './StepDetailsDialog';
@@ -31,7 +32,7 @@ export interface StepCardData extends Record<string, unknown> {
   quantityRequired?: number;
   priority?: string;
   rawMaterials?: RawMaterial[];
-  stepFields?: ManufacturingStepField[];
+  stepFields?: MerchantStepFieldConfig[];
   qcRequired?: boolean;
   dueDate?: string;
   materialAssigned?: boolean;
@@ -41,7 +42,7 @@ export interface StepCardData extends Record<string, unknown> {
 
 interface ManufacturingStepCardProps {
   data: StepCardData;
-  manufacturingSteps?: ManufacturingStep[];
+  manufacturingSteps?: MerchantStepConfig[];
   orderSteps?: ManufacturingOrderStep[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
@@ -75,7 +76,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
         .sort((a, b) => a.step_order - b.step_order)[0];
       
       if (firstStep) {
-        return `Start ${firstStep.stepName}`;
+        return `Start ${firstStep.step_name}`;
       }
       return 'Start Production';
     }
@@ -86,13 +87,13 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
       .find(step => step.step_order === currentStepOrder + 1);
     
     if (nextStep) {
-      return `Start ${nextStep.stepName}`;
+      return `Start ${nextStep.step_name}`;
     }
     
     return `Start ${data.stepName}`;
   };
 
-  // Get the current order step from the database using order_id instead of manufacturing_order_id
+  // Get the current order step from the database using order_id
   const currentOrderStep = Array.isArray(orderSteps) 
     ? orderSteps.find(step => 
         step.order_id === data.orderId && 
@@ -195,7 +196,7 @@ const ManufacturingStepCard: React.FC<ManufacturingStepCardProps> = ({
     }
     
     // Fallback to assigned worker from order step
-    return currentOrderStep.workers?.name || data.assignedWorker;
+    return data.assignedWorker;
   };
 
   const getStepFields = () => {

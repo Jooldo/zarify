@@ -14,7 +14,7 @@ import { Play, Package2, User, CalendarIcon, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
-import { ManufacturingStep } from '@/hooks/useManufacturingSteps';
+import { MerchantStepConfig } from '@/hooks/useManufacturingSteps';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -26,7 +26,7 @@ interface StartStepDialogProps {
   isOpen: boolean;
   onClose: () => void;
   order: ManufacturingOrder | null;
-  step: ManufacturingStep | null;
+  step: MerchantStepConfig | null;
 }
 
 const StartStepDialog: React.FC<StartStepDialogProps> = ({
@@ -46,9 +46,9 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
 
   const stepId = step?.id ? String(step.id) : null;
   
+  // Get current step fields that match this step
   const currentStepFields = stepFields.filter(field => {
-    const fieldStepId = String(field.manufacturing_step_id);
-    return stepId && fieldStepId === stepId;
+    return stepId && field.step_name === step?.step_name;
   });
 
   // Initialize field values only when dialog opens with a new step
@@ -58,11 +58,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       const initialValues: Record<string, any> = {};
       
       currentStepFields.forEach(field => {
-        if (field.field_type === 'status' && field.field_options?.options) {
-          initialValues[field.field_id] = field.field_options.options[0] || '';
-        } else {
-          initialValues[field.field_id] = '';
-        }
+        initialValues[field.field_key] = '';
       });
       
       console.log('Initial values:', initialValues);
@@ -109,22 +105,22 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     return null;
   }
 
-  const handleFieldChange = (fieldId: string, value: any) => {
-    console.log('Field change:', fieldId, value);
+  const handleFieldChange = (fieldKey: string, value: any) => {
+    console.log('Field change:', fieldKey, value);
     setFieldValues(prev => ({
       ...prev,
-      [fieldId]: value
+      [fieldKey]: value
     }));
   };
 
-  const handleSelectChange = (fieldId: string) => (value: string) => {
-    console.log('Select change:', fieldId, value);
-    handleFieldChange(fieldId, value);
+  const handleSelectChange = (fieldKey: string) => (value: string) => {
+    console.log('Select change:', fieldKey, value);
+    handleFieldChange(fieldKey, value);
   };
 
-  const handleDateSelect = (fieldId: string) => (date: Date | undefined) => {
+  const handleDateSelect = (fieldKey: string) => (date: Date | undefined) => {
     if (date) {
-      handleFieldChange(fieldId, format(date, 'yyyy-MM-dd'));
+      handleFieldChange(fieldKey, format(date, 'yyyy-MM-dd'));
     }
   };
 
@@ -147,32 +143,20 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       console.log('Starting step with values:', fieldValues);
       
       let orderStep = orderSteps.find(os => 
-        os.manufacturing_order_id === order.id && 
-        os.manufacturing_step_id === stepId
+        os.order_id === order.id && 
+        os.step_name === step.step_name
       );
 
       let stepIdForUpdate = orderStep?.id;
 
       if (!orderStep) {
         console.log('Creating new order step');
-        // Get the step_order from the manufacturing_steps table
-        const { data: stepData, error: stepError } = await supabase
-          .from('manufacturing_steps')
-          .select('step_order')
-          .eq('id', stepId)
-          .single();
-
-        if (stepError) {
-          console.error('Error fetching step data:', stepError);
-          throw stepError;
-        }
-
+        
         const { data: newOrderStep, error: createError } = await supabase
-          .from('manufacturing_order_steps')
+          .from('manufacturing_order_step_data')
           .insert({
-            manufacturing_order_id: order.id,
-            manufacturing_step_id: stepId,
-            step_order: stepData.step_order,
+            order_id: order.id,
+            step_name: step.step_name,
             status: 'in_progress',
             merchant_id: merchant.id,
             started_at: new Date().toISOString()
@@ -223,109 +207,21 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   };
 
   const renderField = (field: any) => {
-    const value = fieldValues[field.field_id] || '';
+    const value = fieldValues[field.field_key] || '';
 
-    switch (field.field_type) {
-      case 'worker':
-        return (
-          <Select
-            value={value}
-            onValueChange={handleSelectChange(field.field_id)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select worker" />
-            </SelectTrigger>
-            <SelectContent>
-              {workers.map(worker => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-
-      case 'date':
-        return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
-                )}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={handleDateSelect(field.field_id)}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        );
-
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder="Enter number"
-          />
-        );
-
-      case 'status':
-        return (
-          <Select
-            value={value}
-            onValueChange={handleSelectChange(field.field_id)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {field.field_options?.options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-
-      case 'text':
-        return (
-          <Textarea
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder="Enter text"
-            rows={3}
-          />
-        );
-
-      default:
-        return (
-          <Input
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_id, e.target.value)}
-            placeholder={`Enter ${field.field_label}`}
-          />
-        );
-    }
+    // Since we only have basic field structure, render as text input
+    return (
+      <Input
+        value={value}
+        onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+        placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+      />
+    );
   };
 
-  const requiredFields = currentStepFields.filter(field => field.is_required);
+  const requiredFields = currentStepFields.filter(field => field.is_visible);
   const isFormValid = requiredFields.every(field => {
-    const value = fieldValues[field.field_id];
+    const value = fieldValues[field.field_key];
     return value !== undefined && value !== null && value !== '';
   });
 
@@ -385,11 +281,14 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               ) : (
                 <div className="space-y-3">
                   {currentStepFields.map(field => (
-                    <div key={field.field_id} className="space-y-1">
-                      <Label htmlFor={field.field_id} className="text-sm font-medium">
-                        {field.field_label}
-                        {field.is_required && (
+                    <div key={field.id} className="space-y-1">
+                      <Label htmlFor={field.field_key} className="text-sm font-medium">
+                        {field.field_key.replace('_', ' ')}
+                        {field.is_visible && (
                           <span className="text-red-500 ml-1">*</span>
+                        )}
+                        {field.unit && (
+                          <span className="text-muted-foreground text-xs ml-1">({field.unit})</span>
                         )}
                       </Label>
                       {renderField(field)}
