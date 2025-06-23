@@ -41,8 +41,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   });
 
   // Handle starting a new manufacturing step
-  const handleStartNextStep = useCallback(async (orderId: string, stepName?: string) => {
-    console.log('Starting next step for order:', orderId, 'step:', stepName);
+  const handleStartNextStep = useCallback(async (orderId: string, stepName?: string, sourceInstanceNumber?: number) => {
+    console.log('Starting next step for order:', orderId, 'step:', stepName, 'sourceInstance:', sourceInstanceNumber);
     
     // If no specific step name provided, determine the next step
     let nextStepName = stepName;
@@ -63,7 +63,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       await createStep({
         manufacturingOrderId: orderId,
         stepName: nextStepName,
-        fieldValues: {} // Empty field values for now
+        fieldValues: {
+          sourceInstanceNumber: sourceInstanceNumber // Pass the source instance for proper tracking
+        }
       });
 
       // Refresh the data to show the new step
@@ -74,9 +76,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   }, [createStep, manufacturingSteps, refetchSteps]);
 
   // Combine the passed callback with our implementation
-  const combinedStartNextStep = useCallback((orderId: string, stepName?: string) => {
+  const combinedStartNextStep = useCallback((orderId: string, stepName?: string, sourceInstanceNumber?: number) => {
     // Call our implementation first
-    handleStartNextStep(orderId, stepName);
+    handleStartNextStep(orderId, stepName, sourceInstanceNumber);
     
     // Then call the passed callback if it exists
     if (onStartNextStep) {
@@ -88,16 +90,16 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Optimized spacing for no overlap and wider cards
-    const ORDER_SPACING = 800; // Increased spacing between orders
-    const VERTICAL_SPACING = 300; // Increased vertical spacing between step levels
-    const PARALLEL_INSTANCE_SPACING = 450; // Increased horizontal spacing for parallel instances
-    const CARD_WIDTH = 500; // Much wider cards for better space utilization
-    const CARD_HEIGHT = 160; // Shorter height to fit more content vertically
+    // Increased spacing to prevent overlap completely
+    const ORDER_SPACING = 1000; // Much larger spacing between orders
+    const VERTICAL_SPACING = 250; // Spacing between step levels
+    const PARALLEL_INSTANCE_SPACING = 550; // Horizontal spacing for parallel instances
+    const CARD_WIDTH = 500; // Wide cards
+    const CARD_HEIGHT = 140; // Shorter height with optimized content
     const START_Y = 80; // Starting Y position
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      // Calculate order position with proper spacing to prevent overlap
+      // Calculate order position with much larger spacing
       const orderY = START_Y + (orderIndex * ORDER_SPACING);
       
       // Get order steps for this order
@@ -140,7 +142,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with better spacing to prevent overlap
+      // Create step nodes with better spacing
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -157,7 +159,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         // Sort instances by instance_number
         stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-        // Calculate positions for parallel instances with no overlap
+        // Calculate positions for parallel instances with increased spacing
         const instanceCount = stepInstances.length;
         const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
         
@@ -405,8 +407,24 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         order={selectedOrder}
         open={orderDetailsDialogOpen}
         onOpenChange={setOrderDetailsDialogOpen}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
+        getPriorityColor={(priority: string) => {
+          switch (priority) {
+            case 'urgent': return 'bg-red-100 text-red-800 border-red-300';
+            case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
+            case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            case 'low': return 'bg-blue-100 text-blue-800 border-blue-300';
+            default: return 'bg-gray-100 text-gray-800 border-gray-300';
+          }
+        }}
+        getStatusColor={(status: string) => {
+          switch (status) {
+            case 'pending': return 'bg-gray-100 text-gray-800';
+            case 'in_progress': return 'bg-blue-100 text-blue-800';
+            case 'completed': return 'bg-green-100 text-green-800';
+            case 'cancelled': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+          }
+        }}
       />
     </>
   );

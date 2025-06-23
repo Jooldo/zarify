@@ -27,7 +27,7 @@ export interface StepCardData {
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
   onOrderClick?: (orderId: string) => void;
-  onStartNextStep?: (orderId: string, stepName?: string) => void;
+  onStartNextStep?: (orderId: string, stepName?: string, sourceInstanceNumber?: number) => void;
   orderStepData?: any;
   rawMaterials?: any[];
   instanceNumber?: number;
@@ -86,14 +86,15 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
   const handleStartNextStep = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('Start next step clicked for order:', data.orderId);
+    console.log('Start next step clicked for order:', data.orderId, 'from instance:', data.instanceNumber);
     
     if (data.onStartNextStep) {
       const isOrderCard = data.stepName === 'Manufacturing Order';
       const nextStepName = isOrderCard ? 'Jhalai' : getNextStepName(data.stepName);
       
-      console.log('Starting step:', nextStepName, 'for order:', data.orderId);
-      data.onStartNextStep(data.orderId, nextStepName);
+      console.log('Starting step:', nextStepName, 'for order:', data.orderId, 'from source instance:', data.instanceNumber);
+      // Pass the current instance number as the source instance
+      data.onStartNextStep(data.orderId, nextStepName, data.instanceNumber);
     }
   };
 
@@ -121,10 +122,10 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
       style={{ width: '100%', height: '100%' }}
     >
       <Card className="w-full h-full shadow-md">
-        <CardHeader className="pb-2">
+        <CardHeader className="p-3 pb-1">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium truncate">{displayStepName}</CardTitle>
-            <Badge className={`text-xs ${getStatusColor(data.status)}`}>
+            <Badge className={`text-xs px-1.5 py-0.5 ${getStatusColor(data.status)}`}>
               {data.status.replace('_', ' ')}
             </Badge>
           </div>
@@ -135,27 +136,27 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
           )}
         </CardHeader>
         
-        <CardContent className="pt-0 space-y-2">
-          {/* Optimized layout for wider cards */}
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="p-3 pt-1 space-y-2">
+          {/* Optimized compact layout for wider cards */}
+          <div className="grid grid-cols-2 gap-3">
             {/* Left column - Order Information */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="text-xs space-y-1">
                 <div className="flex items-center gap-1">
                   <Package className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <span className="font-medium truncate">{data.orderNumber}</span>
+                  <span className="font-medium truncate text-xs">{data.orderNumber}</span>
                 </div>
-                <div className="text-muted-foreground font-semibold truncate">{data.productCode || data.productName}</div>
+                <div className="text-muted-foreground font-semibold truncate text-xs">{data.productCode || data.productName}</div>
                 {isOrderCard && data.quantityRequired && (
-                  <div className="text-muted-foreground">Qty: {data.quantityRequired}</div>
+                  <div className="text-muted-foreground text-xs">Qty: {data.quantityRequired}</div>
                 )}
               </div>
 
               {/* Progress bar for non-order cards */}
               {!isOrderCard && (
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="w-full bg-gray-200 rounded-full h-1">
                   <div 
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                    className="bg-blue-600 h-1 rounded-full transition-all duration-300"
                     style={{ width: `${data.progress}%` }}
                   />
                 </div>
@@ -164,12 +165,12 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
             {/* Right column - Step-specific information */}
             {!isOrderCard && data.orderStepData && (
-              <div className="space-y-2 text-xs">
+              <div className="space-y-1.5 text-xs">
                 {/* Assigned Worker */}
                 {data.orderStepData.assigned_worker && (
                   <div className="flex items-center gap-1">
                     <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
+                    <span className="truncate text-xs">{getWorkerName(data.orderStepData.assigned_worker) || 'Unknown Worker'}</span>
                   </div>
                 )}
 
@@ -177,28 +178,28 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 {data.orderStepData.due_date && (
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{format(new Date(data.orderStepData.due_date), 'MMM dd')}</span>
+                    <span className="truncate text-xs">{format(new Date(data.orderStepData.due_date), 'MMM dd')}</span>
                   </div>
                 )}
 
-                {/* Field Values - Horizontal layout for wider cards */}
-                <div className="flex gap-2 flex-wrap">
+                {/* Field Values - Compact horizontal layout */}
+                <div className="flex gap-1.5 flex-wrap">
                   {data.orderStepData.quantity_assigned > 0 && (
-                    <div className="bg-blue-50 px-2 py-1 rounded text-xs">
+                    <div className="bg-blue-50 px-1.5 py-0.5 rounded text-xs">
                       <span className="text-muted-foreground">Qty:</span>
                       <span className="font-medium ml-1">{data.orderStepData.quantity_assigned}</span>
                     </div>
                   )}
                   
                   {data.orderStepData.weight_assigned > 0 && (
-                    <div className="bg-purple-50 px-2 py-1 rounded text-xs">
+                    <div className="bg-purple-50 px-1.5 py-0.5 rounded text-xs">
                       <span className="text-muted-foreground">Wt:</span>
                       <span className="font-medium ml-1">{data.orderStepData.weight_assigned}g</span>
                     </div>
                   )}
                   
                   {data.orderStepData.purity > 0 && (
-                    <div className="bg-gray-50 px-2 py-1 rounded text-xs">
+                    <div className="bg-gray-50 px-1.5 py-0.5 rounded text-xs">
                       <span className="text-muted-foreground">Purity:</span>
                       <span className="font-medium ml-1">{data.orderStepData.purity}%</span>
                     </div>
@@ -208,14 +209,14 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
             )}
           </div>
 
-          {/* Start Next Step button - full width for better visibility */}
+          {/* Start Next Step button - compact design */}
           {nextStepName && data.onStartNextStep && (
-            <div className="pt-2 border-t">
+            <div className="pt-1.5 border-t">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNextStep}
-                className="w-full flex items-center justify-center gap-1 h-8 text-xs"
+                className="w-full flex items-center justify-center gap-1 h-7 text-xs"
               >
                 <Play className="h-3 w-3" />
                 Start {nextStepName}

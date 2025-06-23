@@ -34,6 +34,11 @@ export const useCreateManufacturingStep = () => {
         if (instanceError) throw instanceError;
 
         console.log(`Creating ${data.stepName} instance #${nextInstanceNumber} for order ${data.manufacturingOrderId}`);
+        
+        // Log the source instance information for debugging
+        if (data.fieldValues.sourceInstanceNumber) {
+          console.log(`This step originates from instance #${data.fieldValues.sourceInstanceNumber}`);
+        }
 
         // Create the manufacturing order step data with instance tracking
         const stepToInsert = {
@@ -49,6 +54,10 @@ export const useCreateManufacturingStep = () => {
           weight_received: 0,
           purity: 0,
           wastage: 0,
+          // Store source instance information if provided
+          notes: data.fieldValues.sourceInstanceNumber 
+            ? `Created from instance #${data.fieldValues.sourceInstanceNumber}` 
+            : null,
         };
 
         const { data: step, error: insertError } = await supabase
