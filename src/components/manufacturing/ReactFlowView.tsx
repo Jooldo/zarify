@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -41,7 +40,6 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     hasOnStartNextStep: !!onStartNextStep
   });
 
-  // Handle starting a new manufacturing step
   const handleStartNextStep = useCallback(async (orderId: string, stepName?: string, sourceInstanceNumber?: number) => {
     console.log('Starting next step for order:', orderId, 'step:', stepName, 'sourceInstance:', sourceInstanceNumber);
     
@@ -116,31 +114,41 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     }
   }, [handleStartNextStep, onStartNextStep]);
 
+  // Get step color based on step name for connector coherence
+  const getStepColor = (stepName: string) => {
+    const stepColors = {
+      'Jhalai': '#f97316', // orange
+      'Dhol': '#a855f7',   // purple
+      'Casting': '#10b981' // green
+    };
+    return stepColors[stepName as keyof typeof stepColors] || '#6b7280';
+  };
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants with consistent sizing
+    // Enhanced layout constants for better center alignment and no overlap
     const CARD_WIDTH = 380;
     const CARD_HEIGHT = 240;
-    const ORDER_Y_SPACING = 800;
-    const STEP_Y_SPACING = 300;
+    const ORDER_Y_SPACING = 900; // Increased for better separation
+    const STEP_Y_SPACING = 320;  // Increased for better separation
     const INSTANCE_X_SPACING = 420;
-    const START_X = 100;
-    const START_Y = 100;
+    const ORDER_CARD_X = 50;     // Fixed position for order cards
+    const STEPS_START_X = 500;   // Start position for step cards - better separation
 
     const activeSteps = manufacturingSteps
       .filter(step => step.is_active)
       .sort((a, b) => a.step_order - b.step_order);
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      const orderY = START_Y + (orderIndex * ORDER_Y_SPACING);
+      const orderY = 50 + (orderIndex * ORDER_Y_SPACING);
       
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
 
-      // Create manufacturing order node
+      // Create manufacturing order node - fixed position for center alignment
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -160,14 +168,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: START_X, y: orderY },
+        position: { x: ORDER_CARD_X, y: orderY },
         data: orderNodeData,
         style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
-      // Process each step type
+      // Process each step type with improved positioning
       activeSteps.forEach((step, stepIndex) => {
         const stepInstances = thisOrderSteps.filter(orderStep => orderStep.step_name === step.step_name);
         
@@ -178,11 +186,11 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         // Sort instances by instance number
         stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-        const stepY = orderY + ((stepIndex + 1) * STEP_Y_SPACING);
+        const stepY = orderY; // Same Y as order for horizontal alignment
 
-        // Position instances horizontally
+        // Position instances horizontally with consistent spacing from order card
         stepInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = START_X + (instanceIndex * INSTANCE_X_SPACING);
+          const instanceX = STEPS_START_X + (stepIndex * INSTANCE_X_SPACING) + (instanceIndex * 50); // Small offset for multiple instances
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -215,7 +223,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Create edges with proper styling
+          // Create edges with step-coherent styling
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -246,22 +254,23 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             }
           }
 
-          // Create edge with proper MarkerType enum
+          // Create edge with step-coherent styling
           const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
           const isAnimated = orderStep?.status === 'in_progress';
           
-          // Enhanced edge styling based on status
-          let strokeColor = '#9ca3af';
+          // Step-coherent edge styling
+          const baseColor = getStepColor(step.step_name);
+          let strokeColor = baseColor;
           let strokeWidth = 2;
           let strokeDasharray = undefined;
           
           switch (orderStep?.status) {
             case 'completed':
-              strokeColor = '#10b981';
-              strokeWidth = 3;
+              strokeColor = baseColor;
+              strokeWidth = 4;
               break;
             case 'in_progress':
-              strokeColor = '#3b82f6';
+              strokeColor = baseColor;
               strokeWidth = 3;
               break;
             case 'blocked':
@@ -459,6 +468,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         open={updateStepDialogOpen}
         onOpenChange={setUpdateStepDialogOpen}
         onStepUpdate={handleStepUpdate}
+        orderSteps={orderSteps}
+        manufacturingSteps={manufacturingSteps}
       />
 
       <ManufacturingOrderDetailsDialog

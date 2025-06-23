@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, User, Clock, Package, Settings } from 'lucide-react';
+import { CalendarIcon, User, Clock, Package, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrderStep } from '@/hooks/useManufacturingSteps';
@@ -18,19 +18,24 @@ import { useWorkers } from '@/hooks/useWorkers';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface UpdateStepDialogProps {
   step: ManufacturingOrderStep | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStepUpdate?: () => void;
+  orderSteps?: any[];
+  manufacturingSteps?: any[];
 }
 
 const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   step,
   open,
   onOpenChange,
-  onStepUpdate
+  onStepUpdate,
+  orderSteps = [],
+  manufacturingSteps = []
 }) => {
   const { stepFields, refetch } = useManufacturingSteps();
   const { updateStep } = useUpdateManufacturingStep();
@@ -40,6 +45,26 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showParentDetails, setShowParentDetails] = useState(false);
+
+  // Get parent step details
+  const parentStepDetails = useMemo(() => {
+    if (!step || !step.parent_instance_id || !orderSteps.length) {
+      return null;
+    }
+
+    const parentStep = orderSteps.find(orderStep => orderStep.id === step.parent_instance_id);
+    if (!parentStep) return null;
+
+    const parentStepDefinition = manufacturingSteps.find(ms => ms.step_name === parentStep.step_name);
+    const parentStepFields = stepFields.filter(field => field.step_name === parentStep.step_name);
+
+    return {
+      step: parentStep,
+      definition: parentStepDefinition,
+      fields: parentStepFields
+    };
+  }, [step, orderSteps, manufacturingSteps, stepFields]);
 
   // Get current step fields that match this step in consistent order
   const currentStepFields = stepFields.filter(field => {
@@ -221,6 +246,21 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
       .join(' ');
   };
 
+  const formatParentFieldValue = (field: any, value: any) => {
+    if (!value || value === 0) return '-';
+    
+    if (field.field_key === 'weight_assigned' || field.field_key === 'weight_received' || field.field_key === 'wastage') {
+      // Convert grams to kg for display
+      return `${(value / 1000).toFixed(2)} kg`;
+    }
+    
+    if (field.field_key === 'purity') {
+      return `${value}%`;
+    }
+    
+    return value;
+  };
+
   const renderField = (field: any) => {
     const value = fieldValues[field.field_key] || '';
 
@@ -346,11 +386,52 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             </Badge>
           </div>
           <div className="text-sm text-gray-600">
-            {step.step_name}
+            {step.step_name} {step.instance_number && step.instance_number > 1 && `#${step.instance_number}`}
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Parent Step Details */}
+          {parentStepDetails && (
+            <Card>
+              <Collapsible open={showParentDetails} onOpenChange={setShowParentDetails}>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-2 cursor-pointer hover:bg-gray-50">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-purple-600" />
+                        Parent Step: {parentStepDetails.step.step_name}
+                        {parentStepDetails.step.instance_number && parentStepDetails.step.instance_number > 1 && ` #${parentStepDetails.step.instance_number}`}
+                      </div>
+                      {showParentDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        {parentStepDetails.fields.map(field => {
+                          const value = parentStepDetails.step[field.field_key];
+                          if (!value && value !== 0) return null;
+                          
+                          return (
+                            <div key={field.id} className="bg-white rounded p-2 border">
+                              <div className="text-gray-500 mb-1">{formatFieldLabel(field.field_key)}</div>
+                              <div className="font-semibold text-gray-900">
+                                {formatParentFieldValue(field, value)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          )}
+
           {/* Status Only */}
           <div className="space-y-1">
             <Label className="text-xs font-medium text-gray-600">Status</Label>
