@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -527,9 +526,16 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               <Settings className="h-5 w-5 text-blue-600" />
               Update Step
             </DialogTitle>
-            <Badge className={`text-xs ${getStatusColor(step.status)}`}>
-              {step.status?.replace('_', ' ')}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {step.is_rework && (
+                <Badge className="text-xs bg-orange-100 text-orange-800">
+                  Rework
+                </Badge>
+              )}
+              <Badge className={`text-xs ${getStatusColor(step.status)}`}>
+                {step.status?.replace('_', ' ')}
+              </Badge>
+            </div>
           </div>
           <div className="text-sm text-gray-600">
             {step.step_name} {step.instance_number && step.instance_number > 1 && `#${step.instance_number}`}
@@ -614,7 +620,47 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             </Card>
           )}
 
-          {/* Rework Section */}
+          {/* Status Only */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-600">Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Step Configuration Fields in 2x2 Grid */}
+          {currentStepFields.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Package className="h-4 w-4 text-blue-600" />
+                  Step Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 gap-3">
+                  {currentStepFields.map(field => {
+                    // Update field labels to show kg for weight fields
+                    const updatedField = { ...field };
+                    if (field.field_key.includes('weight')) {
+                      updatedField.unit = 'kg';
+                    }
+                    return renderField(updatedField);
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Rework Section - Now below configured fields */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -666,51 +712,6 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               )}
             </CardContent>
           </Card>
-
-          {/* Only show regular fields if not in rework mode */}
-          {!isReworkMode && (
-            <>
-              {/* Status Only */}
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-600">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Step Configuration Fields in 2x2 Grid */}
-              {currentStepFields.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Package className="h-4 w-4 text-blue-600" />
-                      Step Configuration
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 gap-3">
-                      {currentStepFields.map(field => {
-                        // Update field labels to show kg for weight fields
-                        const updatedField = { ...field };
-                        if (field.field_key.includes('weight')) {
-                          updatedField.unit = 'kg';
-                        }
-                        return renderField(updatedField);
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2 border-t">
