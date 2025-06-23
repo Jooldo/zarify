@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { findWorkerName } from '@/utils/weightCalculations';
 
 interface UpdateStepDialogProps {
   step: ManufacturingOrderStep | null;
@@ -249,9 +250,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
   const formatParentFieldValue = (field: any, value: any) => {
     if (!value || value === 0) return '-';
     
+    // Handle assigned worker specially to show worker name instead of ID
+    if (field.field_key === 'assigned_worker') {
+      return findWorkerName(value, workers);
+    }
+    
+    // For weight fields, display in kg (no conversion needed as values are already in kg)
     if (field.field_key === 'weight_assigned' || field.field_key === 'weight_received' || field.field_key === 'wastage') {
-      // Convert grams to kg for display
-      return `${(value / 1000).toFixed(2)} kg`;
+      return `${value} kg`;
     }
     
     if (field.field_key === 'purity') {
@@ -459,7 +465,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="grid grid-cols-2 gap-3">
-                  {currentStepFields.map(field => renderField(field))}
+                  {currentStepFields.map(field => {
+                    // Update field labels to show kg for weight fields
+                    const updatedField = { ...field };
+                    if (field.field_key.includes('weight')) {
+                      updatedField.unit = 'kg';
+                    }
+                    return renderField(updatedField);
+                  })}
                 </div>
               </CardContent>
             </Card>

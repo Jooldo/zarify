@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Play, Package2, User, CalendarIcon, AlertCircle } from 'lucide-react';
+import { Play, Package2, User, CalendarIcon, AlertCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
@@ -20,6 +19,7 @@ import { useWorkers } from '@/hooks/useWorkers';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useMerchant } from '@/hooks/useMerchant';
+import { calculateRemainingWeight } from '@/utils/weightCalculations';
 
 interface StartStepDialogProps {
   isOpen: boolean;
@@ -34,7 +34,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   order,
   step
 }) => {
-  const { stepFields, orderSteps } = useManufacturingSteps();
+  const { stepFields, orderSteps, manufacturingSteps } = useManufacturingSteps();
   const { updateStep } = useUpdateManufacturingStep();
   const { workers } = useWorkers();
   const { merchant } = useMerchant();
@@ -72,6 +72,46 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
     
     return indexA - indexB;
   });
+
+  // Calculate remaining weight for child steps
+  const remainingWeightInfo = React.useMemo(() => {
+    if (!order || !step || !orderSteps.length) return null;
+
+    // Check if this is a child step (not the first step)
+    const activeSteps = manufacturingSteps
+      .filter(s => s.is_active)
+      .sort((a, b) => a.step_order - b.step_order);
+    
+    const currentStepIndex = activeSteps.findIndex(s => s.step_name === step.step_name);
+    if (currentStepIndex <= 0) return null; // This is the first step, no parent
+
+    // Find parent step
+    const parentStep = activeSteps[currentStepIndex - 1];
+    if (!parentStep) return null;
+
+    // Find parent step instance
+    const parentStepInstance = orderSteps.find(orderStep => 
+      orderStep.step_name === parentStep.step_name &&
+      String(orderStep.order_id) === String(order.id)
+    );
+
+    if (!parentStepInstance || !parentStepInstance.weight_received) return null;
+
+    // Calculate remaining weight
+    const remainingWeight = calculateRemainingWeight(
+      parentStepInstance,
+      orderSteps,
+      parentStep.step_name,
+      parentStepInstance.instance_number || 1
+    );
+
+    return {
+      parentStepName: parentStep.step_name,
+      parentWeightReceived: parentStepInstance.weight_received,
+      remainingWeight,
+      hasRemainingWeight: remainingWeight > 0
+    };
+  }, [order, step, orderSteps, manufacturingSteps]);
 
   // Initialize field values only when dialog opens with a new step
   useEffect(() => {
@@ -281,12 +321,45 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
       );
     }
 
-    // Default to text input for other fields
+    // Handle weight fields - show validation for weight_assigned
+    if (field.field_key === 'weight_assigned' && remainingWeightInfo) {
+      const weightValue = parseFloat(value) || 0;
+      const isOverAllocated = weightValue > remainingWeightInfo.remainingWeight;
+      
+      return (
+        <div className="space-y-2">
+          <Input
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+            placeholder="Enter weight in kg"
+            type="number"
+            step="0.01"
+            className={isOverAllocated ? 'border-red-500' : ''}
+          />
+          {isOverAllocated && (
+            <div className="flex items-center gap-1 text-sm text-red-600">
+              <AlertCircle className="h-3 w-3" />
+              Exceeds available weight ({remainingWeightInfo.remainingWeight} kg)
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Default to text input for other fields with proper kg labeling
+    const inputType = field.field_key.includes('weight') || field.field_key.includes('quantity') ? 'number' : 'text';
+    const step = field.field_key.includes('weight') || field.field_key.includes('quantity') ? '0.01' : undefined;
+    const placeholder = field.field_key.includes('weight') 
+      ? `Enter ${field.field_key.replace('_', ' ')} in kg`
+      : `Enter ${field.field_key.replace('_', ' ')}`;
+
     return (
       <Input
         value={value}
         onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-        placeholder={`Enter ${field.field_key.replace('_', ' ')}`}
+        placeholder={placeholder}
+        type={inputType}
+        step={step}
       />
     );
   };
@@ -295,7 +368,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
   const isFormValid = requiredFields.every(field => {
     const value = fieldValues[field.field_key];
     return value !== undefined && value !== null && value !== '';
-  });
+  }) && (!remainingWeightInfo || !fieldValues['weight_assigned'] || parseFloat(fieldValues['weight_assigned']) <= remainingWeightInfo.remainingWeight);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -307,42 +380,77 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
-            Start {step.step_name}
-            <Badge variant="outline" className="ml-2">
-              {order.order_number}
-            </Badge>
+            Start {step?.step_name}
+            {order && (
+              <Badge variant="outline" className="ml-2">
+                {order.order_number}
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleStartStep} className="space-y-4">
           {/* Order Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Package2 className="h-4 w-4" />
-                Order Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Product:</span>
-                  <div className="font-medium">{order.product_name}</div>
+          {order && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Package2 className="h-4 w-4" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Product:</span>
+                    <div className="font-medium">{order.product_name}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Quantity:</span>
+                    <div className="font-medium">{order.quantity_required}</div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Quantity:</span>
-                  <div className="font-medium">{order.quantity_required}</div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Remaining Weight Information */}
+          {remainingWeightInfo && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  Weight Allocation Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parent Step ({remainingWeightInfo.parentStepName}):</span>
+                    <span className="font-medium">{remainingWeightInfo.parentWeightReceived} kg received</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Available for assignment:</span>
+                    <span className={`font-medium ${remainingWeightInfo.hasRemainingWeight ? 'text-green-600' : 'text-red-600'}`}>
+                      {remainingWeightInfo.remainingWeight} kg
+                    </span>
+                  </div>
+                  {!remainingWeightInfo.hasRemainingWeight && (
+                    <div className="text-red-600 text-xs">
+                      No weight available for assignment
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Step Fields */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
-                {step.step_name} Configuration
+                {step?.step_name} Configuration
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -359,7 +467,11 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
                         {field.is_visible && (
                           <span className="text-red-500 ml-1">*</span>
                         )}
-                        {field.unit && (
+                        {/* Show kg unit for weight fields */}
+                        {field.field_key.includes('weight') && (
+                          <span className="text-muted-foreground text-xs ml-1">(kg)</span>
+                        )}
+                        {field.unit && !field.field_key.includes('weight') && (
                           <span className="text-muted-foreground text-xs ml-1">({field.unit})</span>
                         )}
                       </Label>
@@ -386,7 +498,7 @@ const StartStepDialog: React.FC<StartStepDialogProps> = ({
               disabled={!isFormValid || isSubmitting}
               className="bg-primary hover:bg-primary/90"
             >
-              {isSubmitting ? 'Starting...' : `Start ${step.step_name}`}
+              {isSubmitting ? 'Starting...' : `Start ${step?.step_name}`}
             </Button>
           </div>
         </form>
