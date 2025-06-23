@@ -58,6 +58,47 @@ export const useUpdateManufacturingStep = () => {
         stepUpdates.started_at = new Date().toISOString();
       }
 
+      // Handle field values - map them to the correct database columns
+      if (fieldValues) {
+        Object.entries(fieldValues).forEach(([fieldKey, value]) => {
+          if (value !== null && value !== undefined && value !== '') {
+            // Map field keys to database columns
+            switch (fieldKey) {
+              case 'quantity_assigned':
+                stepUpdates.quantity_assigned = parseFloat(value) || 0;
+                break;
+              case 'quantity_received':
+                stepUpdates.quantity_received = parseFloat(value) || 0;
+                break;
+              case 'weight_assigned':
+                stepUpdates.weight_assigned = parseFloat(value) || 0;
+                break;
+              case 'weight_received':
+                stepUpdates.weight_received = parseFloat(value) || 0;
+                break;
+              case 'purity':
+                stepUpdates.purity = parseFloat(value) || 0;
+                break;
+              case 'wastage':
+                stepUpdates.wastage = parseFloat(value) || 0;
+                break;
+              case 'assigned_worker':
+                stepUpdates.assigned_worker = value;
+                break;
+              case 'due_date':
+                stepUpdates.due_date = value;
+                break;
+              default:
+                // For any other custom fields, we could extend this logic
+                console.log(`Unhandled field: ${fieldKey} with value: ${value}`);
+                break;
+            }
+          }
+        });
+      }
+
+      console.log('Final step updates:', stepUpdates);
+
       // Update the manufacturing order step
       const { data, error } = await supabase
         .from('manufacturing_order_step_data')
