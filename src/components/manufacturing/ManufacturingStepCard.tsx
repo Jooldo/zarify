@@ -25,6 +25,7 @@ export interface StepCardData {
   orderSteps?: any[];
   onAddStep?: (stepData: StepCardData) => void;
   onStepClick?: (stepData: StepCardData) => void;
+  onOrderClick?: (orderId: string) => void; // Add this for manufacturing order cards
   orderStepData?: any; // The actual step data from manufacturing_order_step_data
   rawMaterials?: any[]; // Add this property
   [key: string]: any; // Add index signature for compatibility
@@ -52,7 +53,13 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
 
   const handleClick = () => {
     console.log('Card clicked:', data);
-    if (data.onStepClick) {
+    const isOrderCard = data.stepName === 'Manufacturing Order';
+    
+    if (isOrderCard && data.onOrderClick) {
+      // Handle manufacturing order card click
+      data.onOrderClick(data.orderId);
+    } else if (!isOrderCard && data.onStepClick) {
+      // Handle manufacturing step card click
       data.onStepClick(data);
     }
   };
@@ -61,8 +68,8 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   
   return (
     <div 
-      className={`relative ${!isOrderCard ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
-      onClick={!isOrderCard ? handleClick : undefined}
+      className="relative cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={handleClick}
     >
       <Card className="w-64 shadow-md">
         <CardHeader className="pb-2">
@@ -87,6 +94,10 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               <span className="font-medium">{data.orderNumber}</span>
             </div>
             <div className="text-muted-foreground font-semibold">{data.productCode || data.productName}</div>
+            {/* Show quantity for manufacturing order cards */}
+            {isOrderCard && data.quantityRequired && (
+              <div className="text-muted-foreground">Qty: {data.quantityRequired}</div>
+            )}
           </div>
 
           {/* Step-specific information */}

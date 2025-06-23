@@ -6,6 +6,7 @@ import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import ManufacturingStepCard, { StepCardData } from './ManufacturingStepCard';
 import UpdateStepDialog from './UpdateStepDialog';
+import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Factory, Package } from 'lucide-react';
 
@@ -25,7 +26,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 }) => {
   const { manufacturingSteps, orderSteps, refetch: refetchSteps } = useManufacturingSteps();
   const [updateStepDialogOpen, setUpdateStepDialogOpen] = useState(false);
+  const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false);
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
 
   // Create nodes and edges from manufacturing orders
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
@@ -148,10 +151,41 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     }
   }, []);
 
+  const onOrderClick = useCallback((orderId: string) => {
+    console.log('Order clicked in ReactFlow:', orderId);
+    
+    // Find the order and open the details dialog
+    const order = manufacturingOrders.find(o => o.id === orderId);
+    if (order) {
+      setSelectedOrder(order);
+      setOrderDetailsDialogOpen(true);
+    }
+  }, [manufacturingOrders]);
+
   const handleStepUpdate = async () => {
     // Refresh the steps data to show updated information
     await refetchSteps();
     setUpdateStepDialogOpen(false);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800 border-red-300';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'low': return 'bg-blue-100 text-blue-800 border-blue-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   // Update node data with callbacks
@@ -163,9 +197,10 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         manufacturingSteps,
         orderSteps,
         onStepClick,
+        onOrderClick,
       },
     }));
-  }, [nodes, manufacturingSteps, orderSteps, onStepClick]);
+  }, [nodes, manufacturingSteps, orderSteps, onStepClick, onOrderClick]);
 
   if (manufacturingOrders.length === 0) {
     return (
@@ -204,6 +239,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         open={updateStepDialogOpen}
         onOpenChange={setUpdateStepDialogOpen}
         onStepUpdate={handleStepUpdate}
+      />
+
+      <ManufacturingOrderDetailsDialog
+        order={selectedOrder}
+        open={orderDetailsDialogOpen}
+        onOpenChange={setOrderDetailsDialogOpen}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
       />
     </>
   );
