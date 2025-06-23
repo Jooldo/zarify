@@ -11,18 +11,17 @@ import { useUpdateManufacturingStep } from '@/hooks/useUpdateManufacturingStep';
 import { useToast } from '@/hooks/use-toast';
 import UpdateStepDialog from './UpdateStepDialog';
 import StepProgressDialog from './StepProgressDialog';
+import { ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 
 interface ManufacturingStepProgressCardProps {
   step: ManufacturingOrderStep;
-  orderNumber: string;
-  productName: string;
+  order: ManufacturingOrder;
   onStepUpdate?: () => void;
 }
 
 const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps> = ({ 
   step, 
-  orderNumber, 
-  productName,
+  order,
   onStepUpdate 
 }) => {
   const { updateStep } = useUpdateManufacturingStep();
@@ -63,7 +62,7 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
         status: newStatus as any,
         progress: newStatus === 'completed' ? 100 : newStatus === 'in_progress' ? 50 : 0,
         stepName: step.step_name,
-        orderNumber
+        orderNumber: order.order_number
       });
 
       toast({
@@ -110,8 +109,8 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
                 <Package className="h-5 w-5 text-blue-600" />
                 {step.step_name}
               </CardTitle>
-              <p className="text-sm text-gray-600">Order: {orderNumber}</p>
-              <p className="text-sm text-gray-600">Product: {productName}</p>
+              <p className="text-sm text-gray-600">Order: {order.order_number}</p>
+              <p className="text-sm text-gray-600">Product: {order.product_name}</p>
             </div>
             <Badge className={getStatusColor(step.status)}>
               <div className="flex items-center gap-1">
@@ -223,11 +222,10 @@ const ManufacturingStepProgressCard: React.FC<ManufacturingStepProgressCardProps
       />
 
       <StepProgressDialog
-        step={step}
+        order={order}
+        orderSteps={[step]}
         open={isProgressDialogOpen}
         onOpenChange={setIsProgressDialogOpen}
-        orderNumber={orderNumber}
-        productName={productName}
       />
     </>
   );

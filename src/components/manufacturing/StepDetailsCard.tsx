@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,6 @@ import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useManufacturingOrders } from '@/hooks/useManufacturingOrders';
 import UpdateStepDialog from './UpdateStepDialog';
 import StartStepDialog from './StartStepDialog';
-import CreateChildOrderDialog from './CreateChildOrderDialog';
 
 interface StepDetailsCardProps {
   orderStep: any;
@@ -32,7 +32,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
   const { toast } = useToast();
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [startStepDialogOpen, setStartStepDialogOpen] = useState(false);
-  const [showReworkDialog, setShowReworkDialog] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -51,28 +50,28 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     }
     
     const fieldValues = stepFields
-      .filter(field => field.field_type !== 'worker' && field.is_required)
+      .filter(field => field.is_visible)
       .map(field => {
         let value = 'Not set';
         let displayValue = 'Not set';
         
-        const savedValue = getStepValue(orderStep.id, field.field_id);
+        const savedValue = getStepValue(orderStep.id, field.id);
         
         if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
           value = savedValue;
           displayValue = savedValue;
           
-          if (field.field_options?.unit) {
-            displayValue = `${value} ${field.field_options.unit}`;
+          if (field.unit) {
+            displayValue = `${value} ${field.unit}`;
           }
         }
         
         return {
-          label: field.field_label,
+          label: field.field_key,
           value: displayValue,
-          type: field.field_type,
+          type: 'text',
           isEmpty: value === 'Not set',
-          fieldName: field.field_name
+          fieldName: field.field_key
         };
       });
     
@@ -98,21 +97,8 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
   // Get assigned worker name
   const getAssignedWorkerName = () => {
-    if (stepFields) {
-      const workerField = stepFields.find(field => field.field_type === 'worker');
-      if (workerField) {
-        const workerId = getStepValue(orderStep.id, workerField.field_id);
-        if (workerId) {
-          const worker = workers.find(w => w.id === workerId);
-          if (worker) {
-            return worker.name;
-          }
-        }
-      }
-    }
-    
-    if (orderStep.assigned_worker_id) {
-      const worker = workers.find(w => w.id === orderStep.assigned_worker_id);
+    if (orderStep.assigned_worker) {
+      const worker = workers.find(w => w.id === orderStep.assigned_worker);
       if (worker) {
         return worker.name;
       }
@@ -127,39 +113,21 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
   // Check if there's a next step available - improved logic
   const getNextStepInfo = () => {
-    if (!orderStep.manufacturing_steps || !manufacturingSteps.length) return null;
-    
-    const currentStepOrder = orderStep.manufacturing_steps.step_order;
-    
-    // Find the next step in the configured manufacturing steps
+    // Find next step based on created order of steps for this merchant
     const nextStep = manufacturingSteps.find(step => 
-      step.step_order === currentStepOrder + 1 && 
       step.is_active && 
-      step.merchant_id === orderStep.merchant_id
+      step.merchant_id === orderStep.merchant_id &&
+      step.step_name !== orderStep.step_name
     );
-    
-    console.log('Current step order:', currentStepOrder);
-    console.log('Looking for next step with order:', currentStepOrder + 1);
-    console.log('Available manufacturing steps:', manufacturingSteps);
-    console.log('Found next step:', nextStep);
     
     return nextStep;
   };
 
   // Get the manufacturing order data
   const getManufacturingOrder = () => {
-    if (orderStep.manufacturing_orders) {
-      return orderStep.manufacturing_orders;
-    }
-    
-    // If not available in orderStep, find it from manufacturingOrders
     const order = manufacturingOrders.find(order => 
-      order.id === orderStep.manufacturing_order_id
+      order.id === orderStep.order_id
     );
-    
-    console.log('Found manufacturing order:', order);
-    console.log('Order step manufacturing_order_id:', orderStep.manufacturing_order_id);
-    console.log('Available manufacturing orders:', manufacturingOrders);
     
     return order || null;
   };
@@ -173,16 +141,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
     setStartStepDialogOpen(true);
   };
 
-  // Handle setup rework
-  const handleSetupRework = () => {
-    setShowReworkDialog(true);
-  };
-
-  // Handle rework success
-  const handleReworkSuccess = () => {
-    setShowReworkDialog(false);
-  };
-
   const configuredFieldValues = getConfiguredFieldValues();
   const assignedWorkerName = getAssignedWorkerName();
   const nextStep = getNextStepInfo();
@@ -192,18 +150,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
   const handleCardClick = () => {
     setUpdateDialogOpen(true);
-  };
-
-  // Create stepData object for UpdateStepDialog with all required properties and correct order number
-  const stepData = {
-    stepName: orderStep.manufacturing_steps?.step_name || 'Unknown Step',
-    orderNumber: manufacturingOrder?.order_number || 'Loading...',
-    stepFields: stepFields,
-    stepOrder: orderStep.manufacturing_steps?.step_order || 0,
-    orderId: orderStep.manufacturing_order_id || '',
-    productName: manufacturingOrder?.product_name || 'Unknown Product',
-    status: orderStep.status || 'pending',
-    progress: orderStep.progress_percentage || 0
   };
 
   return (
@@ -232,16 +178,10 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className={`text-sm font-medium text-slate-700 flex items-center gap-2`}>
-                {orderStep.manufacturing_steps?.step_name}
-                {orderStep.manufacturing_steps?.qc_required && (
-                  <Badge variant="secondary" className="bg-yellow-50 text-yellow-600 border-yellow-200 text-xs">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    QC
-                  </Badge>
-                )}
+                {orderStep.step_name}
               </CardTitle>
               <p className="text-xs text-slate-500 mt-1">
-                Step {orderStep.manufacturing_steps?.step_order}
+                Step Order: {orderStep.created_at ? format(new Date(orderStep.created_at), 'MMM dd') : 'N/A'}
               </p>
             </div>
             <Badge className={`text-xs border ${getStatusColor(orderStep.status)}`}>
@@ -252,26 +192,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
         <CardContent className="space-y-3">
           
-          {/* Progress */}
-          {orderStep.progress_percentage > 0 && (
-            <div>
-              <div className="flex justify-between text-xs mb-2">
-                <span className="font-medium text-slate-600">Progress</span>
-                <span className={`font-semibold ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
-                  {orderStep.progress_percentage}%
-                </span>
-              </div>
-              <div className={`w-full rounded-full h-2 ${isCompleted ? 'bg-emerald-100' : 'bg-blue-100'}`}>
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    isCompleted ? 'bg-emerald-400' : 'bg-blue-400'
-                  }`}
-                  style={{ width: `${orderStep.progress_percentage}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
-
           {/* Worker Assignment */}
           {assignedWorkerName && (
             <div className={`flex items-center gap-2 text-xs p-2 rounded-md border ${
@@ -308,24 +228,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
           {/* Action Buttons for Completed and In Progress Steps */}
           {(isCompleted || isInProgress) && (
             <div className="space-y-2 pt-2 border-t border-slate-100">
-              {/* Rework Button - now always available for completed/in-progress steps */}
-              <Button
-                size="sm"
-                variant="outline"
-                className={`w-full ${
-                  isCompleted 
-                    ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50' 
-                    : 'border-blue-200 text-blue-600 hover:bg-blue-50'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSetupRework();
-                }}
-              >
-                <Wrench className="h-3 w-3 mr-1" />
-                Setup Rework
-              </Button>
-              
               {/* Next Step Button */}
               {nextStep && (
                 <Button
@@ -369,12 +271,10 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
 
       {/* Update Step Dialog */}
       <UpdateStepDialog
+        step={orderStep}
         open={updateDialogOpen}
         onOpenChange={setUpdateDialogOpen}
-        stepData={stepData}
-        currentOrderStep={orderStep}
-        stepFields={stepFields}
-        previousSteps={[]} // You may need to pass previous steps if required
+        onStepUpdate={() => {}}
       />
 
       {/* Start Step Dialog for Next Step - Always render when dialog is open */}
@@ -384,18 +284,6 @@ const StepDetailsCard: React.FC<StepDetailsCardProps> = ({
         order={manufacturingOrder}
         step={nextStep}
       />
-
-      {/* Rework Dialog */}
-      {showReworkDialog && orderStep.manufacturing_steps && manufacturingOrder && (
-        <CreateChildOrderDialog
-          isOpen={showReworkDialog}
-          onClose={() => setShowReworkDialog(false)}
-          parentOrder={manufacturingOrder}
-          currentStep={orderStep.manufacturing_steps}
-          parentOrderStep={orderStep}
-          onSuccess={handleReworkSuccess}
-        />
-      )}
     </>
   );
 };

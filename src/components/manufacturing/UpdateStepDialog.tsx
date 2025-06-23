@@ -84,7 +84,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
         stepId: step.id,
         fieldValues,
         status: status as any,
-        assignedWorker: assignedWorker || undefined,
+        assigned_worker: assignedWorker || undefined,
         dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         notes,
         stepName: step.step_name,
