@@ -274,7 +274,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             id: edgeId,
             source: sourceNodeId,
             target: stepNodeId,
-            type: 'smoothstep',
+            type: 'straight', // Changed to straight for cleaner vertical lines
             animated: isAnimated,
             style: {
               stroke: strokeColor,
@@ -292,13 +292,14 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
     console.log('Generated nodes before layout:', nodes.length, 'edges:', edges.length);
     
-    // Apply hierarchical layout
+    // Apply improved hierarchical layout with better spacing
     const layoutResult = calculateHierarchicalLayout(nodes, edges, {
       ...DEFAULT_LAYOUT_CONFIG,
-      horizontalSpacing: 120,
-      verticalSpacing: 350,
-      rootX: 50,
+      horizontalSpacing: 200, // Increased for better separation
+      verticalSpacing: 400,   // Increased for better vertical separation
+      rootX: 100,             // Start further right to accommodate larger trees
       rootY: 50,
+      minNodeSpacing: 50,     // Minimum space between nodes
     });
 
     console.log('Generated nodes after layout:', layoutResult.nodes.length, 'edges:', layoutResult.edges.length);
@@ -443,7 +444,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             proOptions={{ hideAttribution: true }}
             minZoom={0.1}
             maxZoom={2}
-            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
           >
             <Background color="#e5e7eb" gap={20} />
             <Controls />
