@@ -53,7 +53,8 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     stepName: data.stepName,
     orderId: data.orderId,
     instanceNumber: data.instanceNumber,
-    hasOnStartNextStep: !!data.onStartNextStep
+    hasOnStartNextStep: !!data.onStartNextStep,
+    isRework: data.orderStepData?.is_rework // Log rework status
   });
 
   // Calculate remaining quantities for parent steps
@@ -266,7 +267,10 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
   const stepProgressData = getStepProgressData();
   const additionalFields = getAdditionalFieldValues();
   
-  // Format step name with instance number for display
+  // Check if this is a rework instance
+  const isRework = data.orderStepData?.is_rework || false;
+  
+  // Format step name with instance number and rework tag for display
   const displayStepName = isOrderCard 
     ? data.stepName 
     : data.instanceNumber && data.instanceNumber > 1 
@@ -331,10 +335,19 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
               <CardTitle className="text-base font-bold truncate text-gray-900 flex items-center gap-2">
                 {isOrderCard ? <Factory className="h-4 w-4 text-indigo-600" /> : <Cog className="h-4 w-4 text-gray-600" />}
                 {displayStepName}
+                {/* Rework Tag */}
+                {isRework && (
+                  <Badge className="text-xs px-2 py-1 bg-orange-100 text-orange-800 border-orange-300">
+                    REWORK
+                  </Badge>
+                )}
               </CardTitle>
               {!isOrderCard && (
                 <div className="text-xs text-gray-600 mt-1 font-medium">
                   Step {data.stepOrder} • Instance {data.instanceNumber || 1}
+                  {isRework && (
+                    <span className="text-orange-600 ml-2">• Rework Item</span>
+                  )}
                 </div>
               )}
             </div>
