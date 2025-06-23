@@ -34,6 +34,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
   const [selectedOrderStep, setSelectedOrderStep] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   console.log('ReactFlowView props:', {
     ordersCount: manufacturingOrders.length,
@@ -90,9 +91,9 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants remain the same
+    // Layout constants - optimized for cleaner connections
     const ORDER_SPACING = 1200;
-    const VERTICAL_SPACING = 300;
+    const VERTICAL_SPACING = 350; // Increased for better separation
     const PARALLEL_INSTANCE_SPACING = 650;
     const CARD_WIDTH = 500;
     const CARD_HEIGHT = 200;
@@ -140,7 +141,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering
+      // Create step nodes with improved ordering and positioning
       let currentY = orderY + VERTICAL_SPACING;
       
       const activeSteps = manufacturingSteps
@@ -154,7 +155,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           return;
         }
 
-        // New ordering logic: Group by parent relationship, then by instance number
+        // Improved ordering logic: Group by parent relationship
         let orderedInstances;
         
         if (stepIndex === 0) {
@@ -206,7 +207,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
           ];
         }
 
-        // Calculate positions for instances with same spacing
+        // Calculate positions for instances with optimized spacing
         const instanceCount = orderedInstances.length;
         const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
         const startX = 100 + (instanceCount > 1 ? -totalWidth / 2 : 0);
@@ -242,7 +243,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           nodes.push(stepNode);
 
-          // Enhanced edge creation remains the same
+          // Enhanced edge creation with improved routing and styling
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
@@ -281,18 +282,45 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
 
           const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
           const isAnimated = orderStep?.status === 'in_progress';
-          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
-                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
+          const isHighlighted = hoveredNodeId === stepNode.id || hoveredNodeId === sourceNodeId;
+          
+          // Improved edge styling with better visual hierarchy
+          let strokeColor = '#9ca3af'; // Default gray
+          let strokeWidth = 2;
+          
+          if (orderStep?.status === 'completed') {
+            strokeColor = '#10b981'; // Green for completed
+            strokeWidth = 3;
+          } else if (orderStep?.status === 'in_progress') {
+            strokeColor = '#3b82f6'; // Blue for in progress
+            strokeWidth = 3;
+          }
+          
+          if (isHighlighted) {
+            strokeWidth = 4;
+            strokeColor = strokeColor === '#9ca3af' ? '#6366f1' : strokeColor;
+          }
 
           edges.push({
             id: edgeId,
             source: sourceNodeId,
             target: stepNode.id,
-            type: 'smoothstep',
+            type: 'smoothstep', // Use smoothstep for cleaner curves
             animated: isAnimated,
             style: {
               stroke: strokeColor,
-              strokeWidth: 2,
+              strokeWidth: strokeWidth,
+              strokeDasharray: orderStep?.status === 'pending' ? '5,5' : undefined,
+            },
+            markerEnd: {
+              type: 'arrowclosed',
+              color: strokeColor,
+              width: 20,
+              height: 20,
+            },
+            pathOptions: {
+              offset: 20, // Add offset to prevent overlapping
+              borderRadius: 10, // Smooth corners
             },
           });
         });
@@ -302,7 +330,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     });
 
     return { nodes, edges };
-  }, [manufacturingOrders, manufacturingSteps, orderSteps]);
+  }, [manufacturingOrders, manufacturingSteps, orderSteps, hoveredNodeId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -312,6 +340,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  // Handle node hover for path highlighting
+  const onNodeMouseEnter = useCallback((_: React.MouseEvent, node: Node) => {
+    setHoveredNodeId(node.id);
+  }, []);
+
+  const onNodeMouseLeave = useCallback(() => {
+    setHoveredNodeId(null);
+  }, []);
 
   const onStepClick = useCallback((stepData: StepCardData) => {
     console.log('Step clicked in ReactFlow:', stepData);
@@ -361,7 +398,7 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     }
   };
 
-  // Update node data with callbacks
+  // Update node data with callbacks and hover handlers
   const nodesWithCallbacks = useMemo(() => {
     console.log('Creating nodes with callbacks, onStartNextStep available:', !!combinedStartNextStep);
     
@@ -436,9 +473,15 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeMouseEnter={onNodeMouseEnter}
+            onNodeMouseLeave={onNodeMouseLeave}
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              style: { strokeWidth: 2 },
+            }}
           >
             <Background />
             <Controls />
