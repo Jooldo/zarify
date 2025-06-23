@@ -76,7 +76,7 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             initialValues[field.field_key] = step.wastage || '';
             break;
           case 'assigned_worker':
-            initialValues[field.field_key] = step.assigned_worker || '';
+            initialValues[field.field_key] = step.assigned_worker || 'unassigned';
             break;
           case 'due_date':
             initialValues[field.field_key] = step.due_date ? new Date(step.due_date) : undefined;
@@ -114,11 +114,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
     try {
       console.log('Submitting update with field values:', fieldValues);
       
-      // Prepare field values with proper handling for dates
+      // Prepare field values with proper handling for dates and worker assignment
       const processedFieldValues = { ...fieldValues };
       Object.entries(processedFieldValues).forEach(([key, value]) => {
         if (key === 'due_date' && value instanceof Date) {
           processedFieldValues[key] = format(value, 'yyyy-MM-dd');
+        }
+        if (key === 'assigned_worker' && value === 'unassigned') {
+          processedFieldValues[key] = null;
         }
       });
       
@@ -182,14 +185,14 @@ const UpdateStepDialog: React.FC<UpdateStepDialogProps> = ({
             {field.is_visible && <span className="text-red-500 ml-1">*</span>}
           </Label>
           <Select 
-            value={value || ''} 
+            value={value || 'unassigned'} 
             onValueChange={(newValue) => handleFieldChange(field.field_key, newValue)}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder="Select worker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
               {workers.map(worker => (
                 <SelectItem key={worker.id} value={worker.id}>
                   {worker.name}
