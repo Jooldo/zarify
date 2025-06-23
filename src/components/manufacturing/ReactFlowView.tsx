@@ -119,31 +119,27 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
-    // Layout constants - optimized for compact card design
-    const ORDER_SPACING = 800; // Reduced from 1200
-    const VERTICAL_SPACING = 250; // Reduced from 300
-    const PARALLEL_INSTANCE_SPACING = 380; // Adjusted to match card width + padding
-    const CARD_WIDTH = 350; // Match actual card width
-    const CARD_HEIGHT = 180; // Reduced height for more compact layout
-    const START_Y = 80;
+    // Fixed layout constants for consistent positioning
+    const CARD_WIDTH = 350;
+    const CARD_HEIGHT = 200;
+    const ORDER_Y_SPACING = 600;
+    const STEP_Y_SPACING = 300;
+    const INSTANCE_X_SPACING = 400;
+    const START_X = 50;
+    const START_Y = 50;
+
+    const activeSteps = manufacturingSteps
+      .filter(step => step.is_active)
+      .sort((a, b) => a.step_order - b.step_order);
 
     manufacturingOrders.forEach((order, orderIndex) => {
-      const orderY = START_Y + (orderIndex * ORDER_SPACING);
+      const orderY = START_Y + (orderIndex * ORDER_Y_SPACING);
       
       const thisOrderSteps = Array.isArray(orderSteps) 
         ? orderSteps.filter(step => String(step.order_id) === String(order.id))
         : [];
 
-      // Group order steps by step name
-      const stepsByName = thisOrderSteps.reduce((acc, step) => {
-        if (!acc[step.step_name]) {
-          acc[step.step_name] = [];
-        }
-        acc[step.step_name].push(step);
-        return acc;
-      }, {} as Record<string, any[]>);
-
-      // Create manufacturing order node with proper sizing
+      // Create manufacturing order node
       const orderNodeData: StepCardData = {
         stepName: 'Manufacturing Order',
         stepOrder: 0,
@@ -162,106 +158,29 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
       const orderNode: Node = {
         id: `order-${order.id}`,
         type: 'manufacturingStep',
-        position: { x: 50, y: orderY },
+        position: { x: START_X, y: orderY },
         data: orderNodeData,
         style: { width: CARD_WIDTH, height: CARD_HEIGHT },
       };
 
       nodes.push(orderNode);
 
-      // Create step nodes with improved ordering and positioning
-      let currentY = orderY + VERTICAL_SPACING;
-      
-      const activeSteps = manufacturingSteps
-        .filter(step => step.is_active)
-        .sort((a, b) => a.step_order - b.step_order);
-
+      // Process each step type
       activeSteps.forEach((step, stepIndex) => {
-        const stepInstances = stepsByName[step.step_name] || [];
+        const stepInstances = thisOrderSteps.filter(orderStep => orderStep.step_name === step.step_name);
         
         if (stepInstances.length === 0) {
           return;
         }
 
-        // Order instances using parent_instance_id relationships when available
-        let orderedInstances;
-        
-        if (stepIndex === 0) {
-          // First step: sort by instance number
-          orderedInstances = stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
-        } else {
-          // Subsequent steps: try to use parent_instance_id relationships first
-          const previousStep = activeSteps[stepIndex - 1];
-          const previousInstances = stepsByName[previousStep.step_name] || [];
-          
-          // Create groups based on parent_instance_id if available
-          const instanceGroups: any[][] = [];
-          const ungroupedInstances: any[] = [];
-          
-          // For each previous instance, find its children using parent_instance_id
-          previousInstances
-            .sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
-            .forEach(prevInstance => {
-              const children = stepInstances.filter(currentInstance => 
-                currentInstance.parent_instance_id === prevInstance.id
-              );
-              
-              if (children.length > 0) {
-                // Sort children by instance number
-                children.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
-                instanceGroups.push(children);
-              }
-            });
-          
-          // Find instances without parent_instance_id relationship
-          stepInstances.forEach(instance => {
-            const hasParent = instanceGroups.some(group => 
-              group.some(child => child.id === instance.id)
-            );
-            if (!hasParent) {
-              ungroupedInstances.push(instance);
-            }
-          });
-          
-          // Fallback to notes-based grouping for ungrouped instances
-          if (ungroupedInstances.length > 0) {
-            previousInstances
-              .sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
-              .forEach(prevInstance => {
-                const children = ungroupedInstances.filter(currentInstance => {
-                  if (currentInstance.notes && currentInstance.notes.includes('Created from instance #')) {
-                    const sourceInstanceNumber = parseInt(currentInstance.notes.match(/Created from instance #(\d+)/)?.[1] || '0');
-                    return sourceInstanceNumber === (prevInstance.instance_number || 1);
-                  }
-                  return false;
-                });
-                
-                if (children.length > 0) {
-                  children.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
-                  instanceGroups.push(children);
-                  // Remove these from ungrouped
-                  children.forEach(child => {
-                    const index = ungroupedInstances.indexOf(child);
-                    if (index > -1) ungroupedInstances.splice(index, 1);
-                  });
-                }
-              });
-          }
-          
-          // Combine grouped and remaining ungrouped instances
-          orderedInstances = [
-            ...instanceGroups.flat(),
-            ...ungroupedInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1))
-          ];
-        }
+        // Sort instances by instance number
+        stepInstances.sort((a, b) => (a.instance_number || 1) - (b.instance_number || 1));
 
-        // Calculate positions for instances with proper spacing
-        const instanceCount = orderedInstances.length;
-        const totalWidth = (instanceCount - 1) * PARALLEL_INSTANCE_SPACING;
-        const startX = 50 + (instanceCount > 1 ? -totalWidth / 2 : 0);
+        const stepY = orderY + ((stepIndex + 1) * STEP_Y_SPACING);
 
-        orderedInstances.forEach((orderStep, instanceIndex) => {
-          const instanceX = startX + (instanceIndex * PARALLEL_INSTANCE_SPACING);
+        // Position instances horizontally
+        stepInstances.forEach((orderStep, instanceIndex) => {
+          const instanceX = START_X + (instanceIndex * INSTANCE_X_SPACING);
           
           const stepNodeData: StepCardData = {
             stepName: step.step_name,
@@ -281,83 +200,84 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
             orderStepData: orderStep,
           };
 
+          const stepNodeId = `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`;
+          
           const stepNode: Node = {
-            id: `step-${order.id}-${step.id}-${orderStep.instance_number || 1}`,
+            id: stepNodeId,
             type: 'manufacturingStep',
-            position: { x: instanceX, y: currentY },
+            position: { x: instanceX, y: stepY },
             data: stepNodeData,
             style: { width: CARD_WIDTH, height: CARD_HEIGHT },
           };
 
           nodes.push(stepNode);
 
-          // Create edges with proper source targeting using parent_instance_id when available
+          // Create edges
           let sourceNodeId: string;
           
           if (stepIndex === 0) {
+            // First step connects to order
             sourceNodeId = `order-${order.id}`;
           } else {
+            // Find parent step instance
             const previousStep = activeSteps[stepIndex - 1];
-            const previousInstances = stepsByName[previousStep.step_name] || [];
+            let parentInstance = null;
             
-            if (previousInstances.length > 0) {
-              let sourceInstance = null;
-              
-              // First try to use parent_instance_id
-              if (orderStep.parent_instance_id) {
-                sourceInstance = previousInstances.find(inst => inst.id === orderStep.parent_instance_id);
-              }
-              
-              // Fallback to notes-based relationship
-              if (!sourceInstance && orderStep.notes && orderStep.notes.includes('Created from instance #')) {
-                const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
-                sourceInstance = previousInstances.find(inst => inst.instance_number === sourceInstanceNumber);
-              }
-              
-              // Final fallback to most recent completed/in-progress instance
-              if (!sourceInstance) {
-                const sortedPreviousInstances = previousInstances
-                  .filter(inst => inst.status === 'completed' || inst.status === 'in_progress')
-                  .sort((a, b) => {
-                    if (a.status === 'completed' && b.status !== 'completed') return -1;
-                    if (b.status === 'completed' && a.status !== 'completed') return 1;
-                    if (a.completed_at && b.completed_at) {
-                      return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
-                    }
-                    return (b.instance_number || 1) - (a.instance_number || 1);
-                  });
+            // Use parent_instance_id if available
+            if (orderStep.parent_instance_id) {
+              parentInstance = thisOrderSteps.find(inst => inst.id === orderStep.parent_instance_id);
+            }
+            
+            // Fallback to notes-based or first available instance
+            if (!parentInstance) {
+              const previousStepInstances = thisOrderSteps.filter(inst => inst.step_name === previousStep.step_name);
+              if (previousStepInstances.length > 0) {
+                // Try to match by notes
+                if (orderStep.notes && orderStep.notes.includes('Created from instance #')) {
+                  const sourceInstanceNumber = parseInt(orderStep.notes.match(/Created from instance #(\d+)/)?.[1] || '1');
+                  parentInstance = previousStepInstances.find(inst => inst.instance_number === sourceInstanceNumber);
+                }
                 
-                sourceInstance = sortedPreviousInstances[0] || previousInstances[0];
+                // Final fallback to first instance
+                if (!parentInstance) {
+                  parentInstance = previousStepInstances[0];
+                }
               }
-              
-              sourceNodeId = `step-${order.id}-${previousStep.id}-${sourceInstance.instance_number || 1}`;
+            }
+            
+            if (parentInstance) {
+              sourceNodeId = `step-${order.id}-${previousStep.id}-${parentInstance.instance_number || 1}`;
             } else {
               sourceNodeId = `order-${order.id}`;
             }
           }
 
-          const edgeId = `edge-${sourceNodeId}-${stepNode.id}`;
-          const isAnimated = orderStep?.status === 'in_progress';
-          const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
-                             orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
+          // Only create edge if source node exists
+          const sourceExists = nodes.some(node => node.id === sourceNodeId) || sourceNodeId === `order-${order.id}`;
+          
+          if (sourceExists) {
+            const edgeId = `edge-${sourceNodeId}-${stepNodeId}`;
+            const isAnimated = orderStep?.status === 'in_progress';
+            const strokeColor = orderStep?.status === 'completed' ? '#10b981' : 
+                               orderStep?.status === 'in_progress' ? '#3b82f6' : '#9ca3af';
 
-          edges.push({
-            id: edgeId,
-            source: sourceNodeId,
-            target: stepNode.id,
-            type: 'smoothstep',
-            animated: isAnimated,
-            style: {
-              stroke: strokeColor,
-              strokeWidth: 2,
-            },
-          });
+            edges.push({
+              id: edgeId,
+              source: sourceNodeId,
+              target: stepNodeId,
+              type: 'smoothstep',
+              animated: isAnimated,
+              style: {
+                stroke: strokeColor,
+                strokeWidth: 2,
+              },
+            });
+          }
         });
-
-        currentY += VERTICAL_SPACING;
       });
     });
 
+    console.log('Generated nodes:', nodes.length, 'edges:', edges.length);
     return { nodes, edges };
   }, [manufacturingOrders, manufacturingSteps, orderSteps]);
 
@@ -515,24 +435,8 @@ const ReactFlowView: React.FC<ReactFlowViewProps> = ({
         order={selectedOrder}
         open={orderDetailsDialogOpen}
         onOpenChange={setOrderDetailsDialogOpen}
-        getPriorityColor={(priority: string) => {
-          switch (priority) {
-            case 'urgent': return 'bg-red-100 text-red-800 border-red-300';
-            case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
-            case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            case 'low': return 'bg-blue-100 text-blue-800 border-blue-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
-          }
-        }}
-        getStatusColor={(status: string) => {
-          switch (status) {
-            case 'pending': return 'bg-gray-100 text-gray-800';
-            case 'in_progress': return 'bg-blue-100 text-blue-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
-          }
-        }}
+        getPriorityColor={getPriorityColor}
+        getStatusColor={getStatusColor}
       />
     </>
   );
