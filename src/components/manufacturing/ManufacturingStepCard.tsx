@@ -1,13 +1,13 @@
-
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, User, Package, Calendar, Play, Factory, Cog } from 'lucide-react';
+import { Clock, User, Package, Calendar, Play, Factory, Cog, Hash, Scale } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
+import { calculateRemainingWeight, calculateRemainingQuantity } from '@/utils/weightCalculations';
 
 export interface StepCardData {
   stepName: string;
@@ -55,6 +55,46 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
     instanceNumber: data.instanceNumber,
     hasOnStartNextStep: !!data.onStartNextStep
   });
+
+  // Calculate remaining quantities for parent steps
+  const remainingQuantities = useMemo(() => {
+    if (!data.orderStepData || !Array.isArray(orderSteps)) {
+      return null;
+    }
+
+    const currentStep = data.orderStepData;
+    const currentStepName = data.stepName;
+    const instanceNumber = data.instanceNumber || 1;
+
+    // Find child steps that use this step as parent
+    const childSteps = orderSteps.filter(orderStep => 
+      orderStep.parent_instance_id === currentStep.id
+    );
+
+    // If no child steps, don't show remaining quantities
+    if (childSteps.length === 0) {
+      return null;
+    }
+
+    const remainingWeight = calculateRemainingWeight(
+      currentStep,
+      childSteps,
+      currentStepName,
+      instanceNumber
+    );
+
+    const remainingQuantity = calculateRemainingQuantity(
+      currentStep,
+      childSteps,
+      currentStepName,
+      instanceNumber
+    );
+
+    return {
+      weight: remainingWeight,
+      quantity: remainingQuantity,
+    };
+  }, [data.orderStepData, data.stepName, data.instanceNumber, orderSteps]);
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -366,6 +406,31 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
                 <div className="text-center">Active</div>
                 <div className="text-right">Assigned</div>
                 <div className="text-right">Complete</div>
+              </div>
+            </div>
+          )}
+
+          {/* Available for Assignment to Next Step - For Parent Steps */}
+          {!isOrderCard && remainingQuantities && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
+              <div className="text-xs font-semibold text-purple-900 mb-2 uppercase tracking-wide">
+                Available for Assignment to Next Step
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <div className="font-semibold text-blue-900">{remainingQuantities.quantity} pieces</div>
+                    <div className="text-xs text-blue-600">Quantity Available</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Scale className="h-4 w-4 text-purple-600" />
+                  <div>
+                    <div className="font-semibold text-purple-900">{remainingQuantities.weight.toFixed(2)} kg</div>
+                    <div className="text-xs text-purple-600">Weight Available</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
