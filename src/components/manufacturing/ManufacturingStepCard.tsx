@@ -44,9 +44,6 @@ interface StepSummary {
   totalActiveInstances: number;
   weightAssigned: number;
   weightReceived: number;
-  reworkAssigned: number;
-  reworkReceived: number;
-  reworkRequested: number;
   completionPercentage: number;
 }
 
@@ -174,39 +171,18 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         orderStep.step_name === step.step_name
       );
 
-      // Separate regular and rework instances
-      const regularInstances = stepInstances.filter(instance => !instance.is_rework);
-      const reworkInstances = stepInstances.filter(instance => instance.is_rework);
-
-      // Calculate metrics for regular instances (exclude rework)
-      const totalActiveInstances = regularInstances.filter(instance => 
+      // Calculate metrics
+      const totalActiveInstances = stepInstances.filter(instance => 
         instance.status === 'in_progress' || instance.status === 'pending'
       ).length;
 
-      const weightAssigned = regularInstances.reduce((sum, instance) => 
+      const weightAssigned = stepInstances.reduce((sum, instance) => 
         sum + (instance.weight_assigned || 0), 0
       );
 
-      const weightReceived = regularInstances.reduce((sum, instance) => 
+      const weightReceived = stepInstances.reduce((sum, instance) => 
         sum + (instance.weight_received || 0), 0
       );
-
-      // Calculate rework metrics (only rework instances)
-      const reworkAssigned = reworkInstances.reduce((sum, instance) => 
-        sum + (instance.weight_assigned || 0), 0
-      );
-
-      const reworkReceived = reworkInstances.reduce((sum, instance) => 
-        sum + (instance.weight_received || 0), 0
-      );
-
-      // Calculate rework requested (quantity/weight requested for rework from origin instances)
-      // This would be the sum of rework instances that originated from this step
-      const reworkRequested = thisOrderSteps.filter(orderStep => 
-        orderStep.origin_step_id && 
-        stepInstances.some(stepInstance => stepInstance.id === orderStep.origin_step_id) &&
-        orderStep.is_rework
-      ).reduce((sum, instance) => sum + (instance.weight_assigned || 0), 0);
 
       return {
         stepName: step.step_name,
@@ -214,9 +190,6 @@ const ManufacturingStepCard: React.FC<{ data: StepCardData }> = memo(({ data }) 
         totalActiveInstances,
         weightAssigned,
         weightReceived,
-        reworkAssigned,
-        reworkReceived,
-        reworkRequested,
         completionPercentage: 0 // Not used anymore but kept for interface compatibility
       };
     });

@@ -49,38 +49,10 @@ export const useCreateManufacturingStep = () => {
 
         if (stepsError) throw stepsError;
 
-        // Determine origin_step_id and parent_instance_id
+        // Determine origin_step_id propagation
         let originStepId = data.fieldValues.origin_step_id || null;
-        let parentInstanceId = data.fieldValues.parent_instance_id || null;
-        let isRework = false;
         
-        // If this has an origin_step_id, set parent_instance_id to origin_step_id
-        if (originStepId) {
-          parentInstanceId = originStepId;
-          
-          // Get origin step details to determine if this should be marked as rework
-          const { data: originStep, error: originError } = await supabase
-            .from('manufacturing_order_step_data')
-            .select('step_name')
-            .eq('id', originStepId)
-            .single();
-
-          if (!originError && originStep) {
-            const currentStepConfig = manufacturingSteps.find(s => s.step_name === data.stepName);
-            const originStepConfig = manufacturingSteps.find(s => s.step_name === originStep.step_name);
-            
-            // Automatically set is_rework if current step order <= origin step order
-            if (currentStepConfig && originStepConfig && 
-                currentStepConfig.step_order <= originStepConfig.step_order) {
-              isRework = true;
-              console.log(`Auto-setting is_rework=true for ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
-            } else {
-              console.log(`Not setting rework - ${data.stepName} has progressed beyond origin step`);
-            }
-          }
-        }
-        
-        // If parent has origin_step_id, check if we should propagate it (for non-rework cases)
+        // If parent has origin_step_id, check if we should propagate it
         if (data.fieldValues.parent_instance_id && !originStepId) {
           // Get parent step data
           const { data: parentStep, error: parentError } = await supabase
@@ -91,23 +63,21 @@ export const useCreateManufacturingStep = () => {
 
           if (!parentError && parentStep?.origin_step_id) {
             // Get origin step details to determine step order
-            const { data: originStepDetails, error: originError } = await supabase
+            const { data: originStep, error: originError } = await supabase
               .from('manufacturing_order_step_data')
               .select('step_name')
               .eq('id', parentStep.origin_step_id)
               .single();
 
-            if (!originError && originStepDetails) {
+            if (!originError && originStep) {
               const currentStepConfig = manufacturingSteps.find(s => s.step_name === data.stepName);
-              const originStepConfig = manufacturingSteps.find(s => s.step_name === originStepDetails.step_name);
+              const originStepConfig = manufacturingSteps.find(s => s.step_name === originStep.step_name);
               
               // Only propagate origin_step_id if current step order <= origin step order
               if (currentStepConfig && originStepConfig && 
                   currentStepConfig.step_order <= originStepConfig.step_order) {
                 originStepId = parentStep.origin_step_id;
-                parentInstanceId = parentStep.origin_step_id; // Set parent to origin for rework chain
-                isRework = true; // Auto-set rework for propagated origin
-                console.log(`Propagating origin_step_id ${originStepId} to ${data.stepName} and setting is_rework=true`);
+                console.log(`Propagating origin_step_i ${originStepId} to ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
               } else {
                 console.log(`Not propagating origin_step_id - ${data.stepName} has progressed beyond origin step`);
               }
@@ -121,7 +91,7 @@ export const useCreateManufacturingStep = () => {
           order_id: data.manufacturingOrderId,
           step_name: data.stepName,
           instance_number: nextInstanceNumber,
-          parent_instance_id: parentInstanceId,
+          parent_instance_id: data.fieldValues.parent_instance_id || null,
           status: data.fieldValues.status || 'in_progress',
           assigned_worker: data.fieldValues.worker || null,
           quantity_assigned: data.fieldValues.quantity_assigned || 0,
@@ -130,12 +100,12 @@ export const useCreateManufacturingStep = () => {
           weight_received: 0,
           purity: 0,
           wastage: 0,
-          is_rework: isRework,
+          is_rework: data.fieldValues.is_rework || false,
           origin_step_id: originStepId,
           // Store source instance information if provided
           notes: data.fieldValues.sourceInstanceNumber 
             ? `Created from instance #${data.fieldValues.sourceInstanceNumber}` 
-            : (isRework ? 'Created as rework instance' : null),
+            : (data.fieldValues.is_rework ? 'Created as rework instance' : null),
         };
 
         console.log('Step data to insert:', stepToInsert);
