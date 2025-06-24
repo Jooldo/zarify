@@ -52,9 +52,9 @@ export const useCreateManufacturingStep = () => {
         // Determine origin_step_id and parent_instance_id
         let originStepId = data.fieldValues.origin_step_id || null;
         let parentInstanceId = data.fieldValues.parent_instance_id || null;
-        let isRework = data.fieldValues.is_rework || false;
+        let isRework = false;
         
-        // If this is a rework step (has origin_step_id), set parent_instance_id to origin_step_id
+        // If this has an origin_step_id, set parent_instance_id to origin_step_id
         if (originStepId) {
           parentInstanceId = originStepId;
           
@@ -69,11 +69,11 @@ export const useCreateManufacturingStep = () => {
             const currentStepConfig = manufacturingSteps.find(s => s.step_name === data.stepName);
             const originStepConfig = manufacturingSteps.find(s => s.step_name === originStep.step_name);
             
-            // Set is_rework if current step order <= origin step order
+            // Automatically set is_rework if current step order <= origin step order
             if (currentStepConfig && originStepConfig && 
                 currentStepConfig.step_order <= originStepConfig.step_order) {
               isRework = true;
-              console.log(`Setting is_rework=true for ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
+              console.log(`Auto-setting is_rework=true for ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
             } else {
               console.log(`Not setting rework - ${data.stepName} has progressed beyond origin step`);
             }
@@ -105,7 +105,9 @@ export const useCreateManufacturingStep = () => {
               if (currentStepConfig && originStepConfig && 
                   currentStepConfig.step_order <= originStepConfig.step_order) {
                 originStepId = parentStep.origin_step_id;
-                console.log(`Propagating origin_step_id ${originStepId} to ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
+                parentInstanceId = parentStep.origin_step_id; // Set parent to origin for rework chain
+                isRework = true; // Auto-set rework for propagated origin
+                console.log(`Propagating origin_step_id ${originStepId} to ${data.stepName} and setting is_rework=true`);
               } else {
                 console.log(`Not propagating origin_step_id - ${data.stepName} has progressed beyond origin step`);
               }
