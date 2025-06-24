@@ -57,8 +57,10 @@ export const useCreateManufacturingStep = () => {
         // If this has an origin_step_id, set parent_instance_id to origin_step_id
         if (originStepId) {
           parentInstanceId = originStepId;
+          isRework = true; // Set rework to true if origin_step_id exists
+          console.log(`Setting is_rework=true because origin_step_id exists: ${originStepId}`);
           
-          // Get origin step details to determine if this should be marked as rework
+          // Get origin step details to determine if this should be marked as rework based on step order
           const { data: originStep, error: originError } = await supabase
             .from('manufacturing_order_step_data')
             .select('step_name')
@@ -69,13 +71,11 @@ export const useCreateManufacturingStep = () => {
             const currentStepConfig = manufacturingSteps.find(s => s.step_name === data.stepName);
             const originStepConfig = manufacturingSteps.find(s => s.step_name === originStep.step_name);
             
-            // Automatically set is_rework if current step order <= origin step order
+            // Additional check: set is_rework if current step order <= origin step order
             if (currentStepConfig && originStepConfig && 
                 currentStepConfig.step_order <= originStepConfig.step_order) {
               isRework = true;
-              console.log(`Auto-setting is_rework=true for ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
-            } else {
-              console.log(`Not setting rework - ${data.stepName} has progressed beyond origin step`);
+              console.log(`Confirming is_rework=true for ${data.stepName} (step order ${currentStepConfig.step_order} <= ${originStepConfig.step_order})`);
             }
           }
         }
