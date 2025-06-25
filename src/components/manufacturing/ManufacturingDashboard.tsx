@@ -1,9 +1,10 @@
+
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Package2, Clock, CheckCircle, Search, Table, Kanban, GitBranch, X } from 'lucide-react';
+import { Plus, Package2, Clock, CheckCircle, Search, Table, Kanban, GitBranch, X, Calendar } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
@@ -11,6 +12,7 @@ import ManufacturingOrdersTable from './ManufacturingOrdersTable';
 import ManufacturingOrderDetailsDialog from './ManufacturingOrderDetailsDialog';
 import ProductionKanbanView from './ProductionKanbanView';
 import ReactFlowView from './ReactFlowView';
+import GanttChartView from './GanttChartView';
 import ManufacturingOrdersFilter from './ManufacturingOrdersFilter';
 import ProductionQueueFilter from './ProductionQueueFilter';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
@@ -342,6 +344,13 @@ const ManufacturingDashboard = () => {
             <Kanban className="h-4 w-4" />
             Kanban View
           </TabsTrigger>
+          <TabsTrigger 
+            value="gantt" 
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            Gantt View
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="table" className="space-y-4">
@@ -439,6 +448,10 @@ const ManufacturingDashboard = () => {
 
         <TabsContent value="kanban" className="mt-4">
           <ProductionKanbanView />
+        </TabsContent>
+
+        <TabsContent value="gantt" className="mt-4">
+          <GanttChartView />
         </TabsContent>
       </Tabs>
 

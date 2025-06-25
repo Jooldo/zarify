@@ -1222,30 +1222,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          assigned_at: string | null
+          assigned_by: string | null
           created_at: string | null
           first_name: string | null
           id: string
           last_name: string | null
           merchant_id: string
-          role: Database["public"]["Enums"]["user_role"] | null
+          permissions: Json | null
+          role: string | null
           updated_at: string | null
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           created_at?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
           merchant_id: string
-          role?: Database["public"]["Enums"]["user_role"] | null
+          permissions?: Json | null
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           created_at?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           merchant_id?: string
-          role?: Database["public"]["Enums"]["user_role"] | null
+          permissions?: Json | null
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1332,6 +1341,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permissions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          is_allowed: boolean
+          module: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          is_allowed?: boolean
+          module: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          is_allowed?: boolean
+          module?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {
@@ -1474,6 +1513,56 @@ export type Database = {
           user_name?: string
         }
         Relationships: []
+      }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          merchant_id: string
+          role: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          merchant_id: string
+          role: string
+          status?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          merchant_id?: string
+          role?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1639,6 +1728,10 @@ export type Database = {
         Args: { catalogue_name: string; merchant_id_param: string }
         Returns: string
       }
+      generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_next_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1676,6 +1769,10 @@ export type Database = {
           assigned_at: string
         }[]
       }
+      has_permission: {
+        Args: { _user_id: string; _module: string; _action: string }
+        Returns: boolean
+      }
       has_role: {
         Args: { _user_id: string; _role: string }
         Returns: boolean
@@ -1688,6 +1785,17 @@ export type Database = {
           p_description?: string
         }
         Returns: string
+      }
+      validate_invitation_token: {
+        Args: { token_param: string }
+        Returns: {
+          invitation_id: string
+          email: string
+          role: string
+          merchant_id: string
+          invited_by: string
+          is_valid: boolean
+        }[]
       }
     }
     Enums: {
