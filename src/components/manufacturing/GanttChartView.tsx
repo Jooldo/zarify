@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import { useWorkers } from '@/hooks/useWorkers';
 import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval } from 'date-fns';
-import { User, Package, Calendar, Hash } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 interface GanttItem {
   id: string;
@@ -12,10 +12,11 @@ interface GanttItem {
   stepName: string;
   startDate: Date;
   endDate: Date;
-  remainingQuantity: number;
-  remainingWeight: number;
+  assignedWeight: number;
+  receivedWeight: number;
   stepOrder: number;
   status: string;
+  completionPercentage: number;
 }
 
 const GanttChartView: React.FC = () => {
@@ -51,16 +52,21 @@ const GanttChartView: React.FC = () => {
       const startDate = new Date(step.created_at);
       const endDate = step.due_date ? new Date(step.due_date) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default to 1 week from now
       
+      const assignedWeight = step.weight_assigned || 0;
+      const receivedWeight = step.weight_received || 0;
+      const completionPercentage = assignedWeight > 0 ? (receivedWeight / assignedWeight) * 100 : 0;
+      
       return {
         id: step.id,
         workerName: workerMap[step.assigned_worker] || 'Unknown Worker',
         stepName: step.step_name,
         startDate,
         endDate,
-        remainingQuantity: (step.quantity_assigned || 0) - (step.quantity_received || 0),
-        remainingWeight: (step.weight_assigned || 0) - (step.weight_received || 0),
+        assignedWeight,
+        receivedWeight,
         stepOrder: stepOrderMap[step.step_name] || 0,
-        status: step.status
+        status: step.status,
+        completionPercentage: Math.min(completionPercentage, 100)
       };
     });
 
@@ -80,37 +86,14 @@ const GanttChartView: React.FC = () => {
     return { items, timelineStart, timelineEnd };
   }, [orderSteps, workers, manufacturingSteps]);
 
-  const getStepColor = (stepName: string, status: string) => {
-    const baseColors = {
-      'Jhalai': 'bg-orange-500',
-      'Dhol': 'bg-purple-500',
-      'Casting': 'bg-green-500'
+  const getStepColors = (stepName: string) => {
+    const colorMap = {
+      'Jhalai': { light: 'bg-orange-200', dark: 'bg-orange-500' },
+      'Dhol': { light: 'bg-purple-200', dark: 'bg-purple-500' },
+      'Casting': { light: 'bg-green-200', dark: 'bg-green-500' }
     };
     
-    const lightColors = {
-      'Jhalai': 'bg-orange-200',
-      'Dhol': 'bg-purple-200',
-      'Casting': 'bg-green-200'
-    };
-
-    if (status === 'in_progress') {
-      return baseColors[stepName as keyof typeof baseColors] || 'bg-gray-500';
-    }
-    return lightColors[stepName as keyof typeof lightColors] || 'bg-gray-200';
-  };
-
-  const getTextColor = (stepName: string, status: string) => {
-    if (status === 'in_progress') {
-      return 'text-white';
-    }
-    
-    const colors = {
-      'Jhalai': 'text-orange-800',
-      'Dhol': 'text-purple-800',
-      'Casting': 'text-green-800'
-    };
-    
-    return colors[stepName as keyof typeof colors] || 'text-gray-800';
+    return colorMap[stepName as keyof typeof colorMap] || { light: 'bg-gray-200', dark: 'bg-gray-500' };
   };
 
   // Calculate timeline grid
@@ -172,7 +155,7 @@ const GanttChartView: React.FC = () => {
             <div className="min-w-max">
               {/* Header with months */}
               <div className="flex border-b bg-gray-50">
-                <div className="w-80 p-4 border-r bg-white font-semibold">
+                <div className="w-64 p-4 border-r bg-white font-semibold">
                   Worker & Task
                 </div>
                 <div className="flex">
@@ -202,29 +185,18 @@ const GanttChartView: React.FC = () => {
                   const duration = differenceInDays(item.endDate, item.startDate) + 1;
                   const barWidth = duration * dayWidth;
                   const barLeft = startOffset * dayWidth;
+                  const progressWidth = (item.completionPercentage / 100) * barWidth;
+                  const colors = getStepColors(item.stepName);
 
                   return (
-                    <div key={item.id} className="flex border-b hover:bg-gray-50 min-h-[80px]">
+                    <div key={item.id} className="flex border-b hover:bg-gray-50 min-h-[60px]">
                       {/* Left panel - Worker and task info */}
-                      <div className="w-80 p-4 border-r flex flex-col justify-center space-y-2">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium text-sm">{item.workerName}</span>
+                      <div className="w-64 p-3 border-r flex flex-col justify-center">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {item.workerName}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{item.stepName}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Hash className="h-3 w-3" />
-                            <span>{item.remainingQuantity} pcs</span>
-                          </div>
-                          {item.remainingWeight > 0 && (
-                            <div>
-                              <span>{item.remainingWeight.toFixed(2)} kg</span>
-                            </div>
-                          )}
+                        <div className="text-xs text-gray-600">
+                          {item.stepName}
                         </div>
                       </div>
 
@@ -241,17 +213,44 @@ const GanttChartView: React.FC = () => {
                           ))}
                         </div>
 
-                        {/* Task bar */}
-                        <div
-                          className={`absolute top-4 h-8 rounded-md flex items-center px-3 text-xs font-medium ${getStepColor(item.stepName, item.status)} ${getTextColor(item.stepName, item.status)}`}
-                          style={{
-                            left: barLeft,
-                            width: Math.max(barWidth, 80) // Minimum width for readability
-                          }}
-                        >
-                          <span className="truncate">
-                            {format(item.startDate, 'MMM d')} - {format(item.endDate, 'MMM d')}
-                          </span>
+                        {/* Task bar container */}
+                        <div className="relative h-full flex flex-col justify-center py-2">
+                          {/* Progress bar */}
+                          <div
+                            className={`relative h-6 rounded-md border ${colors.light}`}
+                            style={{
+                              left: barLeft,
+                              width: Math.max(barWidth, 80) // Minimum width for readability
+                            }}
+                          >
+                            {/* Completed portion */}
+                            <div
+                              className={`h-full ${colors.dark} rounded-md`}
+                              style={{ width: `${item.completionPercentage}%` }}
+                            />
+                            
+                            {/* Date range text */}
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                              {format(item.startDate, 'MMM d')} - {format(item.endDate, 'MMM d')}
+                            </div>
+                            
+                            {/* Assigned weight at the end */}
+                            {item.assignedWeight > 0 && (
+                              <div className="absolute -right-2 top-0 transform translate-x-full text-xs font-medium text-gray-600 bg-white px-1 rounded shadow-sm border">
+                                {item.assignedWeight.toFixed(1)}kg
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Received weight below the bar */}
+                          {item.receivedWeight > 0 && (
+                            <div
+                              className="text-xs text-green-600 font-medium mt-1"
+                              style={{ marginLeft: barLeft + 4 }}
+                            >
+                              ✓ {item.receivedWeight.toFixed(1)}kg received
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -268,15 +267,18 @@ const GanttChartView: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex items-center gap-6">
             <span className="text-sm font-medium">Step Types:</span>
-            {['Jhalai', 'Dhol', 'Casting'].map(step => (
-              <div key={step} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded ${getStepColor(step, 'in_progress')}`} />
-                <span className="text-sm">{step}</span>
-              </div>
-            ))}
+            {['Jhalai', 'Dhol', 'Casting'].map(step => {
+              const colors = getStepColors(step);
+              return (
+                <div key={step} className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded ${colors.dark}`} />
+                  <span className="text-sm">{step}</span>
+                </div>
+              );
+            })}
             <div className="ml-4 flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-200" />
-              <span className="text-sm">Pending</span>
+              <span className="text-sm">Pending Progress</span>
             </div>
           </div>
         </CardContent>
