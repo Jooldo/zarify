@@ -88,12 +88,16 @@ const GanttChartView: React.FC = () => {
 
   const getStepColors = (stepName: string) => {
     const colorMap = {
-      'Jhalai': { light: 'bg-orange-200', dark: 'bg-orange-500' },
-      'Dhol': { light: 'bg-purple-200', dark: 'bg-purple-500' },
-      'Casting': { light: 'bg-green-200', dark: 'bg-green-500' }
+      'Jhalai': { light: 'bg-amber-50 border-amber-200', dark: 'bg-amber-400', text: 'text-amber-900' },
+      'Dhol': { light: 'bg-violet-50 border-violet-200', dark: 'bg-violet-400', text: 'text-violet-900' },
+      'Casting': { light: 'bg-emerald-50 border-emerald-200', dark: 'bg-emerald-400', text: 'text-emerald-900' }
     };
     
-    return colorMap[stepName as keyof typeof colorMap] || { light: 'bg-gray-200', dark: 'bg-gray-500' };
+    return colorMap[stepName as keyof typeof colorMap] || { 
+      light: 'bg-slate-50 border-slate-200', 
+      dark: 'bg-slate-400', 
+      text: 'text-slate-900' 
+    };
   };
 
   // Calculate timeline grid
@@ -116,15 +120,17 @@ const GanttChartView: React.FC = () => {
   }, [ganttData.timelineStart, ganttData.timelineEnd]);
 
   const totalDays = differenceInDays(ganttData.timelineEnd, ganttData.timelineStart) + 1;
-  const dayWidth = 40; // pixels per day
+  const dayWidth = 32; // pixels per day
 
   if (ganttData.items.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Active Tasks</h3>
-          <p className="text-gray-500 text-center">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <Calendar className="h-8 w-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-medium text-slate-900 mb-2">No Active Tasks</h3>
+          <p className="text-slate-500 text-center text-sm max-w-md">
             No manufacturing steps with assigned workers and dates found.
           </p>
         </CardContent>
@@ -133,20 +139,20 @@ const GanttChartView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Worker Workload - Gantt View</h2>
-          <p className="text-sm text-muted-foreground">
-            Timeline view showing worker assignments and task progress
+          <h2 className="text-xl font-semibold text-slate-900">Worker Workload Timeline</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Visual timeline showing worker assignments and task progress
           </p>
         </div>
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="pb-4 border-b border-slate-100">
+          <CardTitle className="text-lg flex items-center gap-2 text-slate-900 font-medium">
+            <Calendar className="h-5 w-5 text-slate-600" />
             Manufacturing Schedule
           </CardTitle>
         </CardHeader>
@@ -154,8 +160,8 @@ const GanttChartView: React.FC = () => {
           <div className="overflow-x-auto">
             <div className="min-w-max">
               {/* Header with months */}
-              <div className="flex border-b bg-gray-50">
-                <div className="w-64 p-4 border-r bg-white font-semibold">
+              <div className="flex border-b border-slate-100 bg-slate-50/50">
+                <div className="w-72 p-4 border-r border-slate-100 bg-white font-medium text-slate-700 text-sm">
                   Worker & Task
                 </div>
                 <div className="flex">
@@ -168,13 +174,29 @@ const GanttChartView: React.FC = () => {
                     return (
                       <div 
                         key={index}
-                        className="border-r border-gray-200 bg-gray-50 p-2 text-center font-medium text-sm"
+                        className="border-r border-slate-100 bg-slate-50/50 p-3 text-center font-medium text-sm text-slate-700"
                         style={{ width: monthDays * dayWidth }}
                       >
                         {format(month, 'MMM yyyy')}
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Day headers */}
+              <div className="flex border-b border-slate-100 bg-slate-25">
+                <div className="w-72 border-r border-slate-100 bg-white"></div>
+                <div className="flex">
+                  {timelineDays.map((day, dayIndex) => (
+                    <div
+                      key={dayIndex}
+                      className="border-r border-slate-50 text-center py-2 text-xs text-slate-500"
+                      style={{ width: dayWidth }}
+                    >
+                      {format(day, 'd')}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -185,18 +207,19 @@ const GanttChartView: React.FC = () => {
                   const duration = differenceInDays(item.endDate, item.startDate) + 1;
                   const barWidth = duration * dayWidth;
                   const barLeft = startOffset * dayWidth;
-                  const progressWidth = (item.completionPercentage / 100) * barWidth;
                   const colors = getStepColors(item.stepName);
 
                   return (
-                    <div key={item.id} className="flex border-b hover:bg-gray-50 min-h-[60px]">
+                    <div key={item.id} className={`flex border-b border-slate-50 hover:bg-slate-25 min-h-[64px] ${index % 2 === 0 ? 'bg-white' : 'bg-slate-25/30'}`}>
                       {/* Left panel - Worker and task info */}
-                      <div className="w-64 p-3 border-r flex flex-col justify-center">
-                        <div className="text-sm font-medium text-gray-900 mb-1">
-                          {item.workerName}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {item.stepName}
+                      <div className="w-72 p-4 border-r border-slate-100 flex items-center">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-900 truncate">
+                            {item.workerName}
+                          </div>
+                          <div className="text-xs text-slate-600 mt-0.5 truncate">
+                            {item.stepName}
+                          </div>
                         </div>
                       </div>
 
@@ -207,37 +230,41 @@ const GanttChartView: React.FC = () => {
                           {timelineDays.map((day, dayIndex) => (
                             <div
                               key={dayIndex}
-                              className="border-r border-gray-100"
+                              className="border-r border-slate-50"
                               style={{ width: dayWidth }}
                             />
                           ))}
                         </div>
 
                         {/* Task bar container */}
-                        <div className="relative h-full flex flex-col justify-center py-2">
+                        <div className="relative h-full flex flex-col justify-center py-3">
                           {/* Progress bar */}
                           <div
-                            className={`relative h-6 rounded-md border ${colors.light}`}
+                            className={`relative h-7 rounded-lg border ${colors.light} shadow-sm`}
                             style={{
                               left: barLeft,
-                              width: Math.max(barWidth, 80) // Minimum width for readability
+                              width: Math.max(barWidth, 100) // Minimum width for readability
                             }}
                           >
                             {/* Completed portion */}
                             <div
-                              className={`h-full ${colors.dark} rounded-md`}
+                              className={`h-full ${colors.dark} rounded-lg transition-all duration-300`}
                               style={{ width: `${item.completionPercentage}%` }}
                             />
                             
                             {/* Date range text */}
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
-                              {format(item.startDate, 'MMM d')} - {format(item.endDate, 'MMM d')}
+                            <div className={`absolute inset-0 flex items-center justify-center text-xs font-medium ${colors.text} px-2`}>
+                              <span className="truncate">
+                                {format(item.startDate, 'dd MMM')} - {format(item.endDate, 'dd MMM')}
+                              </span>
                             </div>
                             
                             {/* Assigned weight at the end */}
                             {item.assignedWeight > 0 && (
-                              <div className="absolute -right-2 top-0 transform translate-x-full text-xs font-medium text-gray-600 bg-white px-1 rounded shadow-sm border">
-                                {item.assignedWeight.toFixed(1)}kg
+                              <div className="absolute left-full top-0 ml-3 flex items-center h-full">
+                                <span className="text-xs font-medium text-slate-600 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200">
+                                  {item.assignedWeight.toFixed(1)}kg
+                                </span>
                               </div>
                             )}
                           </div>
@@ -245,10 +272,11 @@ const GanttChartView: React.FC = () => {
                           {/* Received weight below the bar */}
                           {item.receivedWeight > 0 && (
                             <div
-                              className="text-xs text-green-600 font-medium mt-1"
+                              className="text-xs text-emerald-600 font-medium mt-1.5 flex items-center gap-1"
                               style={{ marginLeft: barLeft + 4 }}
                             >
-                              ✓ {item.receivedWeight.toFixed(1)}kg received
+                              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                              {item.receivedWeight.toFixed(1)}kg received
                             </div>
                           )}
                         </div>
@@ -263,22 +291,22 @@ const GanttChartView: React.FC = () => {
       </Card>
 
       {/* Legend */}
-      <Card>
+      <Card className="border-0 shadow-sm bg-white">
         <CardContent className="p-4">
-          <div className="flex items-center gap-6">
-            <span className="text-sm font-medium">Step Types:</span>
+          <div className="flex items-center gap-8">
+            <span className="text-sm font-medium text-slate-700">Step Types:</span>
             {['Jhalai', 'Dhol', 'Casting'].map(step => {
               const colors = getStepColors(step);
               return (
                 <div key={step} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded ${colors.dark}`} />
-                  <span className="text-sm">{step}</span>
+                  <div className={`w-4 h-4 rounded ${colors.dark} shadow-sm`} />
+                  <span className="text-sm text-slate-600">{step}</span>
                 </div>
               );
             })}
             <div className="ml-4 flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gray-200" />
-              <span className="text-sm">Pending Progress</span>
+              <div className="w-4 h-4 rounded bg-slate-100 border border-slate-200" />
+              <span className="text-sm text-slate-600">Pending Progress</span>
             </div>
           </div>
         </CardContent>
