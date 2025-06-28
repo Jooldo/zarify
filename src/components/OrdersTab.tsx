@@ -1,331 +1,213 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useOrders, OrderItem as FullOrderItem, Order as FullOrder } from '@/hooks/useOrders';
-import { useFinishedGoods, FinishedGood } from '@/hooks/useFinishedGoods';
-import { useCustomerAutocomplete } from '@/hooks/useCustomerAutocomplete';
-import { useInvoices } from '@/hooks/useInvoices';
-import { startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns';
-import OrdersHeader from './orders/OrdersHeader';
-import OrdersTable from './orders/OrdersTable';
-import OrdersStatsHeader from './orders/OrdersStatsHeader';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableRow } from "@/components/ui/table"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Search } from "lucide-react"
+import { format } from "date-fns"
+import { CreateOrderDialog } from './CreateOrderDialog';
+import { useOrders } from '@/hooks/useOrders';
+import { Badge } from '@/components/ui/badge';
+import VoiceCommandButton from './orders/VoiceCommandButton';
 
-export interface OrderFilters {
-  customer: string;
-  orderStatus: string;
-  suborderStatus: string;
-  category: string;
-  subcategory: string;
-  dateRange: string;
-  minAmount: string;
-  maxAmount: string;
-  hasDeliveryDate: boolean;
-  overdueDelivery: boolean;
-  lowStock: boolean;
-  stockAvailable: boolean;
-  expectedDeliveryFrom: Date | null;
-  expectedDeliveryTo: Date | null;
-  expectedDeliveryRange: string;
+interface Order {
+  id: string;
+  order_number: string;
+  customer_id: string;
+  total_amount: number;
+  created_at: string;
+  expected_delivery: string;
+  customers: {
+    name: string;
+    phone: string;
+  };
 }
 
-interface OrdersTabProps {
-  initialFilters?: OrderFilters | null;
-  onFiltersConsumed?: () => void;
-}
+const OrdersTab = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fromDate, setFromDate] = useState<Date | undefined>();
+  const [toDate, setToDate] = useState<Date | undefined>();
+  const { orders, isLoading, refetch } = useOrders();
 
-const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
-  const { orders, loading, refetch } = useOrders();
-  const { finishedGoods, loading: fgLoading, refetch: refetchFinishedGoods } = useFinishedGoods();
-  const { customers } = useCustomerAutocomplete();
-  const { refetch: refetchInvoices } = useInvoices();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<OrderFilters>({
-    customer: '',
-    orderStatus: '',
-    suborderStatus: '',
-    category: '',
-    subcategory: '',
-    dateRange: '',
-    minAmount: '',
-    maxAmount: '',
-    hasDeliveryDate: false,
-    overdueDelivery: false,
-    lowStock: false,
-    stockAvailable: false,
-    expectedDeliveryFrom: null,
-    expectedDeliveryTo: null,
-    expectedDeliveryRange: ''
-  });
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const searchMatch = order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          order.customers?.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-  useEffect(() => {
-    if (initialFilters) {
-      setFilters(initialFilters);
-      if (onFiltersConsumed) {
-        onFiltersConsumed();
-      }
-    }
-  }, [initialFilters, onFiltersConsumed]);
-
-  const orderStats = useMemo(() => {
-    const allOrderItems = orders.flatMap(order => order.order_items);
-    return {
-      total: allOrderItems.length,
-      created: allOrderItems.filter(item => item.status === 'Created').length,
-      inProgress: allOrderItems.filter(item => item.status === 'In Progress' || item.status === 'Partially Fulfilled').length,
-      ready: allOrderItems.filter(item => item.status === 'Ready').length,
-      delivered: allOrderItems.filter(item => item.status === 'Delivered').length,
-    };
-  }, [orders]);
-
-  const { categories, subcategories } = useMemo(() => {
-    const categoriesSet = new Set<string>();
-    const subcategoriesSet = new Set<string>();
-    
-    orders.forEach(order => {
-      order.order_items.forEach(item => {
-        if (item.product_configs?.category) categoriesSet.add(item.product_configs.category);
-        if (item.product_configs?.subcategory) subcategoriesSet.add(item.product_configs.subcategory);
-      });
-    });
-    
-    return {
-      categories: Array.from(categoriesSet).sort(),
-      subcategories: Array.from(subcategoriesSet).sort()
-    };
-  }, [orders]);
-
-  const customerNames = useMemo(() => {
-    const customersSet = new Set<string>();
-    orders.forEach(order => {
-      if (order.customers?.name) customersSet.add(order.customers.name);
-    });
-    return Array.from(customersSet).sort();
-  }, [orders]);
-
-  const getOverallOrderStatus = (orderId: string) => {
-    const order = orders.find(o => o.order_number === orderId);
-    if (!order) return "Created";
-    
-    const statuses = order.order_items.map(sub => sub.status);
-    
-    if (statuses.every(s => s === "Delivered")) return "Delivered";
-    if (statuses.every(s => s === "Ready")) return "Ready";
-    if (statuses.some(s => s === "In Progress" || s === "Partially Fulfilled" || statuses.some(s => s === 'Created' && statuses.some(st => st !== 'Created')))) return "In Progress";
-
-    if (statuses.every(s => s === "Created")) return "Created";
-    
-    if (statuses.some(s => s !== "Created") && statuses.some(s => s === "Created")) {
-        return "In Progress";
-    }
-    
-    return "Created";
-  };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "Created":
-        return "secondary" as const;
-      case "In Progress":
-      case "Partially Fulfilled":
-        return "default" as const;
-      case "Ready":
-        return "default" as const;
-      case "Delivered":
-        return "outline" as const;
-      default:
-        return "secondary" as const;
-    }
-  };
-
-  const getStockAvailable = (productCode: string) => {
-    const finishedGood = finishedGoods.find(item => item.product_code === productCode);
-    return finishedGood ? finishedGood.current_stock : 0;
-  };
-
-  const handleOrderUpdate = async () => {
-    await refetch();
-    await refetchFinishedGoods(); 
-    refetchInvoices();
-  };
-
-  const flattenedOrders = useMemo(() => orders.flatMap(order => 
-    order.order_items.map(suborder => {
-      const sizeValue = suborder.product_configs?.size_value || 'N/A';
-      const weightRange = suborder.product_configs?.weight_range || 'N/A';
-      
-      return {
-        ...suborder, 
-        orderId: order.order_number,
-        customer: order.customers?.name || '',
-        phone: order.customers?.phone || '',
-        createdDate: order.created_at,
-        updatedDate: order.updated_at,
-        expectedDelivery: order.expected_delivery || '',
-        totalOrderAmount: order.total_amount,
-        productCode: suborder.product_configs?.product_code || '',
-        category: suborder.product_configs?.category || '',
-        subcategory: suborder.product_configs?.subcategory || '',
-        size: `${sizeValue}" / ${weightRange}`,
-        price: suborder.total_price 
-      };
-    })
-  ), [orders]);
-
-  const filteredOrders = useMemo(() => flattenedOrders.filter(item => {
-    // Text search filter
-    if (searchTerm) {
-      const searchMatch = item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.suborder_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
       if (!searchMatch) return false;
-    }
 
-    // Apply filters
-    if (filters.customer && item.customer !== filters.customer) return false;
-    if (filters.orderStatus && getOverallOrderStatus(item.orderId) !== filters.orderStatus) return false;
-    if (filters.suborderStatus && item.status !== filters.suborderStatus) return false;
-    if (filters.category && item.category !== filters.category) return false;
-    if (filters.subcategory && item.subcategory !== filters.subcategory) return false;
+      if (fromDate && new Date(order.created_at) < fromDate) return false;
+      if (toDate && new Date(order.created_at) > toDate) return false;
 
-    // Date range filter
-    if (filters.dateRange) {
-      const itemDate = new Date(item.createdDate);
-      const today = new Date();
-      const daysDiff = Math.floor((today.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      switch (filters.dateRange) {
-        case 'Today':
-          if (daysDiff !== 0) return false;
-          break;
-        case 'Last 7 days':
-          if (daysDiff > 7) return false;
-          break;
-        case 'Last 30 days':
-          if (daysDiff > 30) return false;
-          break;
-        case 'Last 90 days':
-          if (daysDiff > 90) return false;
-          break;
-      }
-    }
-
-    // Amount range filter
-    if (filters.minAmount && item.totalOrderAmount < parseFloat(filters.minAmount)) return false;
-    if (filters.maxAmount && item.totalOrderAmount > parseFloat(filters.maxAmount)) return false;
-
-    // Expected delivery date filters
-    if (filters.expectedDeliveryRange) {
-      if (!item.expectedDelivery) return false;
-      
-      const deliveryDate = new Date(item.expectedDelivery);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const deliveryDateNormalized = new Date(deliveryDate);
-      deliveryDateNormalized.setHours(0, 0, 0, 0);
-      
-      const daysDiff = Math.floor((deliveryDateNormalized.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-      switch (filters.expectedDeliveryRange) {
-        case 'Today':
-          if (daysDiff !== 0) return false;
-          break;
-        case 'Next 7 days':
-          if (daysDiff < 0 || daysDiff > 7) return false;
-          break;
-        case 'Next 30 days':
-          if (daysDiff < 0 || daysDiff > 30) return false;
-          break;
-        case 'Past due':
-          if (daysDiff >= 0) return false;
-          break;
-        case 'This Week': {
-            const startOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
-            const endOfThisWeek = endOfWeek(today, { weekStartsOn: 1 });
-            if (!isWithinInterval(deliveryDateNormalized, { start: startOfThisWeek, end: endOfThisWeek })) return false;
-            break;
-        }
-        case 'Next Week': {
-            const startOfNextWeek = startOfWeek(addWeeks(today, 1), { weekStartsOn: 1 });
-            const endOfNextWeek = endOfWeek(addWeeks(today, 1), { weekStartsOn: 1 });
-            if (!isWithinInterval(deliveryDateNormalized, { start: startOfNextWeek, end: endOfNextWeek })) return false;
-            break;
-        }
-      }
-    }
-
-    // Custom expected delivery date range
-    if (filters.expectedDeliveryFrom || filters.expectedDeliveryTo) {
-      if (!item.expectedDelivery) return false;
-      
-      const deliveryDate = new Date(item.expectedDelivery);
-      const deliveryDateNormalized = new Date(deliveryDate);
-      deliveryDateNormalized.setHours(0,0,0,0);
-      
-      if (filters.expectedDeliveryFrom) {
-        const fromDate = new Date(filters.expectedDeliveryFrom);
-        fromDate.setHours(0, 0, 0, 0);
-        if (deliveryDateNormalized < fromDate) return false;
-      }
-      
-      if (filters.expectedDeliveryTo) {
-        const toDate = new Date(filters.expectedDeliveryTo);
-        toDate.setHours(23, 59, 59, 999);
-        if (deliveryDateNormalized > toDate) return false;
-      }
-    }
-
-    // Quick filters
-    if (filters.hasDeliveryDate && !item.expectedDelivery) return false;
-    if (filters.overdueDelivery) {
-      if (!item.expectedDelivery) return false;
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const deliveryDate = new Date(item.expectedDelivery);
-      deliveryDate.setHours(0,0,0,0);
-      if (deliveryDate >= today) return false;
-    }
-    if (filters.lowStock) {
-      const stockAvailableVal = getStockAvailable(item.productCode);
-      if (stockAvailableVal >= item.quantity) return false;
-    }
-    if (filters.stockAvailable) {
-      const stockAvailableVal = getStockAvailable(item.productCode);
-      if (stockAvailableVal < item.quantity) return false;
-    }
-
-    return true;
-  }), [flattenedOrders, searchTerm, filters, getOverallOrderStatus, getStockAvailable, orders]);
+      return true;
+    });
+  }, [orders, searchQuery, fromDate, toDate]);
 
   return (
-    <div className="space-y-4">
-      <OrdersStatsHeader orderStats={orderStats} />
-      
-      <OrdersHeader 
-        searchTerm={searchTerm} 
-        setSearchTerm={setSearchTerm}
-        onOrderCreated={handleOrderUpdate}
-        onFiltersChange={setFilters}
-        customers={customerNames}
-        categories={categories}
-        subcategories={subcategories}
-      />
-      
-      <OrdersTable 
-        filteredOrders={filteredOrders}
-        orders={orders}
-        finishedGoods={finishedGoods}
-        loading={loading || fgLoading}
-        getOverallOrderStatus={getOverallOrderStatus}
-        getStatusVariant={getStatusVariant}
-        getStockAvailable={getStockAvailable}
-        onOrderUpdate={handleOrderUpdate}
-        onFinishedGoodsUpdate={refetchFinishedGoods}
-      />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Orders Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Track and manage all customer orders
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <VoiceCommandButton onOrderCreated={refetch} />
+          <CreateOrderDialog onOrderCreated={refetch} />
+        </div>
+      </div>
 
-      {filteredOrders.length === 0 && !loading && !fgLoading && (
-        <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">No orders found matching your search and filters.</p>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{orders.length}</div>
+            <p className="text-sm text-muted-foreground">All orders in the system</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">Orders awaiting processing</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>In Transit</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">Orders currently in transit</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Delivered Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">Orders successfully delivered</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search orders..."
+              className="pl-10 h-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={
+                  "justify-start text-left font-normal w-[180px] h-8" +
+                  (!fromDate
+                    ? " text-muted-foreground"
+                    : "")
+                }
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {fromDate ? format(fromDate, "PPP") : <span>Pick a from date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={fromDate}
+                onSelect={setFromDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={
+                  "justify-start text-left font-normal w-[180px] h-8" +
+                  (!toDate
+                    ? " text-muted-foreground"
+                    : "")
+                }
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {toDate ? format(toDate, "PPP") : <span>Pick a to date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={toDate}
+                onSelect={setToDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      {isLoading ? (
+        <Card>
+          <CardContent>Loading orders...</CardContent>
+        </Card>
+      ) : filteredOrders.length === 0 ? (
+        <Card>
+          <CardContent>No orders found.</CardContent>
+        </Card>
+      ) : (
+        <div className="border rounded-md">
+          <Table>
+            <TableCaption>A list of your recent orders.</TableCaption>
+            <TableHead>
+              <TableRow>
+                <TableHead>Order Number</TableHead>
+                <TableHead>Customer Name</TableHead>
+                <TableHead>Customer Phone</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Order Date</TableHead>
+                <TableHead>Expected Delivery</TableHead>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.order_number}</TableCell>
+                  <TableCell>{order.customers?.name}</TableCell>
+                  <TableCell>{order.customers?.phone}</TableCell>
+                  <TableCell>{order.total_amount}</TableCell>
+                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {order.expected_delivery ? new Date(order.expected_delivery).toLocaleDateString() : <Badge variant="outline">Not set</Badge>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

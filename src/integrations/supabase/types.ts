@@ -487,6 +487,7 @@ export type Database = {
           status: string
           subtotal: number
           tax_amount: number
+          tax_percentage: number | null
           total_amount: number
           updated_at: string | null
         }
@@ -504,6 +505,7 @@ export type Database = {
           status?: string
           subtotal?: number
           tax_amount?: number
+          tax_percentage?: number | null
           total_amount?: number
           updated_at?: string | null
         }
@@ -521,6 +523,7 @@ export type Database = {
           status?: string
           subtotal?: number
           tax_amount?: number
+          tax_percentage?: number | null
           total_amount?: number
           updated_at?: string | null
         }
@@ -717,6 +720,183 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_rework_movements: {
+        Row: {
+          batch_reference: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          merchant_id: string
+          movement_timestamp: string
+          quantity_moved: number
+          remarks: string | null
+          source_step_id: string
+          target_step_id: string
+          weight_moved: number
+        }
+        Insert: {
+          batch_reference?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          merchant_id: string
+          movement_timestamp?: string
+          quantity_moved?: number
+          remarks?: string | null
+          source_step_id: string
+          target_step_id: string
+          weight_moved?: number
+        }
+        Update: {
+          batch_reference?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          merchant_id?: string
+          movement_timestamp?: string
+          quantity_moved?: number
+          remarks?: string | null
+          source_step_id?: string
+          target_step_id?: string
+          weight_moved?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_rework_movements_source_step_id_fkey"
+            columns: ["source_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_step_data"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_rework_movements_target_step_id_fkey"
+            columns: ["target_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_step_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_step_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_to_worker: string | null
+          assignment_timestamp: string
+          batch_reference: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          merchant_id: string
+          quantity_assigned: number | null
+          remarks: string | null
+          step_data_id: string
+          weight_assigned: number | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to_worker?: string | null
+          assignment_timestamp?: string
+          batch_reference?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          merchant_id: string
+          quantity_assigned?: number | null
+          remarks?: string | null
+          step_data_id: string
+          weight_assigned?: number | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to_worker?: string | null
+          assignment_timestamp?: string
+          batch_reference?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          merchant_id?: string
+          quantity_assigned?: number | null
+          remarks?: string | null
+          step_data_id?: string
+          weight_assigned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_step_assignments_assigned_to_worker_fkey"
+            columns: ["assigned_to_worker"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_step_assignments_step_data_id_fkey"
+            columns: ["step_data_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_step_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_step_receipts: {
+        Row: {
+          batch_reference: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          merchant_id: string
+          quantity_received: number | null
+          receipt_timestamp: string
+          received_by: string | null
+          received_from_worker: string | null
+          remarks: string | null
+          step_data_id: string
+          weight_received: number | null
+        }
+        Insert: {
+          batch_reference?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          merchant_id: string
+          quantity_received?: number | null
+          receipt_timestamp?: string
+          received_by?: string | null
+          received_from_worker?: string | null
+          remarks?: string | null
+          step_data_id: string
+          weight_received?: number | null
+        }
+        Update: {
+          batch_reference?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          merchant_id?: string
+          quantity_received?: number | null
+          receipt_timestamp?: string
+          received_by?: string | null
+          received_from_worker?: string | null
+          remarks?: string | null
+          step_data_id?: string
+          weight_received?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_step_receipts_received_from_worker_fkey"
+            columns: ["received_from_worker"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_step_receipts_step_data_id_fkey"
+            columns: ["step_data_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_step_data"
             referencedColumns: ["id"]
           },
         ]
@@ -1785,6 +1965,10 @@ export type Database = {
           p_description?: string
         }
         Returns: string
+      }
+      update_step_aggregates: {
+        Args: { step_data_id_param: string }
+        Returns: undefined
       }
       validate_invitation_token: {
         Args: { token_param: string }
