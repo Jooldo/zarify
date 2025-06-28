@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,10 +8,27 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Search } from "lucide-react"
 import { format } from "date-fns"
-import { CreateOrderDialog } from './CreateOrderDialog';
 import { useOrders } from '@/hooks/useOrders';
 import { Badge } from '@/components/ui/badge';
 import VoiceCommandButton from './orders/VoiceCommandButton';
+
+export interface OrderFilters {
+  customer: string;
+  orderStatus: string;
+  suborderStatus: string;
+  category: string;
+  subcategory: string;
+  dateRange: string;
+  minAmount: string;
+  maxAmount: string;
+  hasDeliveryDate: boolean;
+  overdueDelivery: boolean;
+  lowStock: boolean;
+  stockAvailable: boolean;
+  expectedDeliveryFrom: Date | null;
+  expectedDeliveryTo: Date | null;
+  expectedDeliveryRange: string;
+}
 
 interface Order {
   id: string;
@@ -25,11 +43,16 @@ interface Order {
   };
 }
 
-const OrdersTab = () => {
+interface OrdersTabProps {
+  initialFilters?: OrderFilters | null;
+  onFiltersConsumed?: () => void;
+}
+
+const OrdersTab = ({ initialFilters, onFiltersConsumed }: OrdersTabProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
-  const { orders, isLoading, refetch } = useOrders();
+  const { orders, loading, refetch } = useOrders();
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
@@ -57,7 +80,9 @@ const OrdersTab = () => {
         </div>
         <div className="flex gap-2">
           <VoiceCommandButton onOrderCreated={refetch} />
-          <CreateOrderDialog onOrderCreated={refetch} />
+          <Button>
+            Create Order
+          </Button>
         </div>
       </div>
 
@@ -171,7 +196,7 @@ const OrdersTab = () => {
       </div>
 
       {/* Orders Table */}
-      {isLoading ? (
+      {loading ? (
         <Card>
           <CardContent>Loading orders...</CardContent>
         </Card>
