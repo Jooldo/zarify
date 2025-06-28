@@ -86,17 +86,27 @@ export const useVoiceCommands = () => {
 
   const processAudio = async (audioBlob: Blob) => {
     try {
-      // Convert audio to base64
+      console.log('Converting audio blob to base64...');
+      
+      // Convert blob to array buffer first
       const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(
-        String.fromCharCode(...new Uint8Array(arrayBuffer))
-      );
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Convert to base64 in smaller chunks to prevent stack overflow
+      const chunkSize = 8192; // Smaller chunk size
+      let base64String = '';
+      
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.slice(i, i + chunkSize);
+        const binaryString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
+        base64String += btoa(binaryString);
+      }
 
-      console.log('Converting speech to text...');
+      console.log('Audio conversion complete, sending to voice-to-text service...');
       
       // Convert speech to text
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('voice-to-text', {
-        body: { audio: base64Audio }
+        body: { audio: base64String }
       });
 
       if (transcriptionError) {
