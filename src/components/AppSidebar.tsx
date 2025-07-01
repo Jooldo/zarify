@@ -100,6 +100,17 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
       ],
     },
     {
+      label: "Manufacturing",
+      id: "manufacturing",
+      items: [
+        {
+          title: "Manufacturing Overview",
+          icon: Factory,
+          tab: "manufacturing-overview",
+        },
+      ],
+    },
+    {
       label: "Finished Goods",
       id: "finished-goods",
       items: [

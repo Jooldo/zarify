@@ -1,10 +1,9 @@
-
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Package2, Clock, CheckCircle, Search, Table, Kanban, GitBranch, X, Calendar } from 'lucide-react';
+import { Plus, Package2, Clock, CheckCircle, Search, Table, Kanban, GitBranch, X, Calendar, LayoutDashboard } from 'lucide-react';
 import { useManufacturingOrders, ManufacturingOrder } from '@/hooks/useManufacturingOrders';
 import { useManufacturingSteps } from '@/hooks/useManufacturingSteps';
 import CreateManufacturingOrderDialog from './CreateManufacturingOrderDialog';
@@ -17,8 +16,9 @@ import ManufacturingOrdersFilter from './ManufacturingOrdersFilter';
 import ProductionQueueFilter from './ProductionQueueFilter';
 import CardSkeleton from '@/components/ui/skeletons/CardSkeleton';
 import { Badge } from '@/components/ui/badge';
+import ManufacturingOverview from './ManufacturingOverview';
 
-interface ManufacturingFilters {
+export interface ManufacturingFilters {
   status: string;
   priority: string;
   productName: string;
@@ -41,7 +41,7 @@ interface ProductionQueueFilters {
 
 const ManufacturingDashboard = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('table');
+  const [activeTab, setActiveTab] = useState('overview');
   const [selectedOrder, setSelectedOrder] = useState<ManufacturingOrder | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -249,80 +249,117 @@ const ManufacturingDashboard = () => {
 
   const isOrderFiltered = Boolean(reactFlowFilters.orderNumber);
 
+  const handleNavigateFromOverview = (section: string) => {
+    switch (section) {
+      case 'workers':
+        // Navigate to workers section - this could be handled by parent component
+        console.log('Navigate to workers');
+        break;
+      case 'create-order':
+        setShowCreateDialog(true);
+        break;
+      case 'orders-table':
+        setActiveTab('table');
+        break;
+      case 'production-queue':
+        setActiveTab('reactflow');
+        break;
+      case 'kanban':
+        setActiveTab('kanban');
+        break;
+      case 'gantt':
+        setActiveTab('gantt');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Manufacturing Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage production orders and track manufacturing progress
-          </p>
+      {/* Header - only show when not on overview */}
+      {activeTab !== 'overview' && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Manufacturing Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage production orders and track manufacturing progress
+            </p>
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Manufacturing Order
+          </Button>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Create Manufacturing Order
-        </Button>
-      </div>
+      )}
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-blue-50 border-blue-200 border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-blue-800">Total Orders</CardTitle>
-            <div className="p-1.5 bg-blue-200 rounded-full">
-              <Package2 className="h-4 w-4 text-blue-700" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold text-blue-900">{totalOrders}</div>
-            <p className="text-xs text-blue-700 mt-0.5">All manufacturing orders</p>
-          </CardContent>
-        </Card>
+      {/* Statistics Cards - only show when not on overview */}
+      {activeTab !== 'overview' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-blue-50 border-blue-200 border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <CardTitle className="text-xs font-medium text-blue-800">Total Orders</CardTitle>
+              <div className="p-1.5 bg-blue-200 rounded-full">
+                <Package2 className="h-4 w-4 text-blue-700" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="text-2xl font-bold text-blue-900">{totalOrders}</div>
+              <p className="text-xs text-blue-700 mt-0.5">All manufacturing orders</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-gray-50 border-gray-200 border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-gray-800">Pending</CardTitle>
-            <div className="p-1.5 bg-gray-200 rounded-full">
-              <Clock className="h-4 w-4 text-gray-700" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold text-gray-900">{pendingOrders}</div>
-            <p className="text-xs text-gray-700 mt-0.5">Awaiting production</p>
-          </CardContent>
-        </Card>
+          <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-gray-50 border-gray-200 border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <CardTitle className="text-xs font-medium text-gray-800">Pending</CardTitle>
+              <div className="p-1.5 bg-gray-200 rounded-full">
+                <Clock className="h-4 w-4 text-gray-700" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="text-2xl font-bold text-gray-900">{pendingOrders}</div>
+              <p className="text-xs text-gray-700 mt-0.5">Awaiting production</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-orange-50 border-orange-200 border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-orange-800">In Progress</CardTitle>
-            <div className="p-1.5 bg-orange-200 rounded-full">
-              <GitBranch className="h-4 w-4 text-orange-700" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold text-orange-900">{inProgressOrders}</div>
-            <p className="text-xs text-orange-700 mt-0.5">Currently being manufactured</p>
-          </CardContent>
-        </Card>
+          <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-orange-50 border-orange-200 border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <CardTitle className="text-xs font-medium text-orange-800">In Progress</CardTitle>
+              <div className="p-1.5 bg-orange-200 rounded-full">
+                <GitBranch className="h-4 w-4 text-orange-700" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="text-2xl font-bold text-orange-900">{inProgressOrders}</div>
+              <p className="text-xs text-orange-700 mt-0.5">Currently being manufactured</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-green-50 border-green-200 border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-green-800">Completed</CardTitle>
-            <div className="p-1.5 bg-green-200 rounded-full">
-              <CheckCircle className="h-4 w-4 text-green-700" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold text-green-900">{completedOrders}</div>
-            <p className="text-xs text-green-700 mt-0.5">Finished production</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out hover:scale-[1.02] bg-green-50 border-green-200 border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <CardTitle className="text-xs font-medium text-green-800">Completed</CardTitle>
+              <div className="p-1.5 bg-green-200 rounded-full">
+                <CheckCircle className="h-4 w-4 text-green-700" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="text-2xl font-bold text-green-900">{completedOrders}</div>
+              <p className="text-xs text-green-700 mt-0.5">Finished production</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-auto">
+          <TabsTrigger 
+            value="overview" 
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
           <TabsTrigger 
             value="table" 
             className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
@@ -352,6 +389,10 @@ const ManufacturingDashboard = () => {
             Gantt View
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="overview" className="space-y-4">
+          <ManufacturingOverview onNavigate={handleNavigateFromOverview} />
+        </TabsContent>
         
         <TabsContent value="table" className="space-y-4">
           {/* Search and Filter Controls */}

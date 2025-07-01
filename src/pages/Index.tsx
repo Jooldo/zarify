@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -13,6 +12,7 @@ import ManufacturingSettings from "@/components/manufacturing/config/Manufacturi
 import MerchantConfigurations from "@/components/settings/MerchantConfigurations";
 import GeneralSettings from "@/components/settings/GeneralSettings";
 import CatalogueManagement from "@/components/catalogue/CatalogueManagement";
+import ManufacturingDashboard from "@/components/manufacturing/ManufacturingDashboard";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -52,6 +52,8 @@ const Index = () => {
         return "";
       case "orders":
         return "Orders";
+      case "manufacturing-overview":
+        return "Manufacturing";
       case "rm-inventory":
         return "Raw Material Inventory";
       case "rm-procurement":
@@ -89,6 +91,10 @@ const Index = () => {
     return ['fg-inventory', 'fg-manufacturing'].includes(activeTab);
   };
 
+  const isManufacturingTab = () => {
+    return activeTab === 'manufacturing-overview';
+  };
+
   const isUsersTab = () => {
     // Updated to include 'roles' explicitly
     const userTabs = ['users', 'customers', 'suppliers', 'workers', 'roles'];
@@ -121,6 +127,13 @@ const Index = () => {
                 </div>
               )}
             </header>
+
+            {/* Manufacturing - Full width with its own layout */}
+            {isManufacturingTab() && (
+              <div className="px-4 sm:px-6 lg:px-8 py-6">
+                <ManufacturingDashboard />
+              </div>
+            )}
 
             {/* Raw Material Management - Full width with its own layout */}
             {isRawMaterialTab() && (
@@ -173,7 +186,7 @@ const Index = () => {
             )}
 
             {/* Other tabs with optimized layout */}
-            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && (
+            {!isRawMaterialTab() && !isFinishedGoodTab() && !isUsersTab() && !isSettingsTab() && !isManufacturingTab() && (
               <div className="px-4 sm:px-6 lg:px-8 py-6">
                 {/* Main Content */}
                 <Tabs value={activeTab} className="w-full">
