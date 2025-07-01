@@ -1,10 +1,10 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface ProductConfigMaterial {
   id: string;
-  product_config_id: string;
   raw_material_id: string;
   quantity_required: number;
   unit: string;
